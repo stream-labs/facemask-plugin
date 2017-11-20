@@ -1,0 +1,10 @@
+/build
+/build32
+/build64
+/#Build
+Debug
+Release
+ipch
+x64
+.vs
+.mayaSwatches

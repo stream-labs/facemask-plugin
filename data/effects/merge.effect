@@ -1,0 +1,44 @@
+uniform float4x4 ViewProj;
+uniform texture2d image;
+uniform texture2d imageMerge;
+
+sampler_state textureSampler {
+	Filter    = Linear;
+	AddressU  = Clamp;
+	AddressV  = Clamp;
+};
+
+struct VertDataIn {
+	float4 pos : POSITION;
+	float2 uv  : TEXCOORD0;
+};
+
+struct VertDataOut {
+	float4 pos : POSITION;
+	float2 uv  : TEXCOORD0;
+};
+
+VertDataOut VSDefault(VertDataIn v_in)
+{
+	VertDataOut vert_out;
+	vert_out.pos = mul(float4(v_in.pos.xyz, 1.0), ViewProj);
+	vert_out.uv  = v_in.uv;
+	return vert_out;
+}
+
+float4 PSAddImageRGBA(VertDataOut v_in) : TARGET
+{
+	float4 rgba = image.Sample(textureSampler, v_in.uv);
+	float4 rgbam = imageMerge.Sample(textureSampler, v_in.uv);
+	
+	return lerp(rgba, rgbam, 1);
+}
+
+technique Draw
+{
+	pass
+	{
+		vertex_shader = VSDefault(v_in);
+		pixel_shader  = PSAddImageRGBA(v_in);
+	}
+}

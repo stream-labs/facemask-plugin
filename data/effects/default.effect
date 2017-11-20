@@ -1,0 +1,43 @@
+uniform float4x4 ViewProj;
+uniform texture2d image;
+uniform float4x4 TexMat = { 
+1.0, 0.0, 0.0, 0.0,
+0.0, 1.0, 0.0, 0.0,
+0.0, 0.0, 1.0, 0.0,
+0.0, 0.0, 0.0, 1.0 };
+uniform float alpha = 1.0;
+
+sampler_state defaultSampler {
+	Filter = Linear;
+	AddressU = Wrap;
+	AddressV = Wrap;
+};
+
+struct VertDataIn {
+	float4 pos : POSITION;
+	float2 uv  : TEXCOORD0;
+};
+
+struct VertDataOut {
+	float4 pos : POSITION;
+	float2 uv  : TEXCOORD0;
+};
+
+VertDataOut VSDefault(VertDataIn v_in) {
+	VertDataOut vert_out;
+	vert_out.pos = mul(float4(v_in.pos.xyz, 1.0), ViewProj);
+	vert_out.uv = mul(float4(v_in.uv, 0.0, 1.0), TexMat).xy;
+	return vert_out;
+}
+
+float4 PSDefault(VertDataOut v_in) : TARGET {
+	float4 samp = image.Sample(defaultSampler, v_in.uv);
+	return float4(samp.rgb, samp.a * alpha);
+}
+
+technique Draw {
+	pass {
+		vertex_shader = VSDefault(v_in);
+		pixel_shader = PSDefault(v_in);
+	}
+}

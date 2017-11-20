@@ -1,0 +1,109 @@
+uniform float4x4 ViewProj;
+uniform texture2d image;
+uniform float exponent = 4.0;
+uniform float strength = 20.0;
+uniform float2 resolution;
+
+//
+// Cheap denoise filter
+//
+// stolen from : https://github.com/spite/Wagner/blob/master/fragment-shaders/denoise-fs.glsl
+//
+
+sampler_state defaultSampler {
+	Filter = Linear;
+	AddressU = Wrap;
+	AddressV = Wrap;
+};
+
+struct VertDataIn {
+	float4 pos : POSITION;
+	float2 uv  : TEXCOORD0;
+};
+
+struct VertDataOut {
+	float4 pos : POSITION;
+	float2 uv  : TEXCOORD0;
+};
+
+//
+// rec709 color conversion taken from color_conversion.effect
+// thanks Michael Dirks
+//
+float4 RGBtoYUV(float4 rgba, float3x3 yuv) {	
+	return float4(
+		rgba.r * yuv._m00 + rgba.g * yuv._m01 + rgba.b * yuv._m02,
+		rgba.r * yuv._m10 + rgba.g * yuv._m11 + rgba.b * yuv._m12,
+		rgba.r * yuv._m20 + rgba.g * yuv._m21 + rgba.b * yuv._m22,
+		rgba.a
+	) + float4(0,0.5,0.5,0);
+}
+
+float4 RGBToYUVA(float4 cin) {
+	const float3x3 mYUV709n = { // Normalized
+		0.2126, 0.7152, 0.0722,
+		-0.1145721060573399, -0.3854278939426601, 0.5,
+		0.5, -0.4541529083058166, -0.0458470916941834
+	};
+	return RGBtoYUV(cin, mYUV709n);
+}
+
+
+
+
+VertDataOut VSDefault(VertDataIn v_in) {
+	VertDataOut vert_out;
+	vert_out.pos = mul(float4(v_in.pos.xyz, 1.0), ViewProj);
+	vert_out.uv = v_in.uv;
+	return vert_out;
+}
+
+float4 PSDenoise(VertDataOut v_in) : TARGET {
+
+	float4 center = image.Sample(defaultSampler, v_in.uv);
+	float4 color = float4(0.0);
+	float total = 0.0;
+	for (float x = -4.0; x <= 4.0; x += 1.0) {
+		for (float y = -4.0; y <= 4.0; y += 1.0) {
+			float4 sample = image.Sample(defaultSampler, v_in.uv + float2(x, y) / resolution);
+			float weight = 1.0 - abs(dot(sample.rgb - center.rgb, float3(0.25)));
+			weight = pow(weight, exponent);
+			color += sample * weight;
+			total += weight;
+		}
+	}
+	
+	return color / total;
+}
+
+float4 PSDenoiseYUV(VertDataOut v_in) : TARGET {
+
+	float4 center = image.Sample(defaultSampler, v_in.uv);
+	float4 color = float4(0.0);
+	float total = 0.0;
+	for (float x = -4.0; x <= 4.0; x += 1.0) {
+		for (float y = -4.0; y <= 4.0; y += 1.0) {
+			float4 sample = image.Sample(defaultSampler, v_in.uv + float2(x, y) / resolution);
+			float weight = 1.0 - abs(dot(sample.rgb - center.rgb, float3(0.25)));
+			weight = pow(weight, exponent);
+			color += sample * weight;
+			total += weight;
+		}
+	}
+	
+	return RGBToYUVA(color / total);
+}
+
+technique Draw {
+	pass {
+		vertex_shader = VSDefault(v_in);
+		pixel_shader = PSDenoise(v_in);
+	}
+}
+
+technique DrawYUV {
+	pass {
+		vertex_shader = VSDefault(v_in);
+		pixel_shader = PSDenoiseYUV(v_in);
+	}
+}

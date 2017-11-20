@@ -1,0 +1,5 @@
+*.VC.db
+*.VC.opendb
+*.vcxproj.user
+build32
+build64
