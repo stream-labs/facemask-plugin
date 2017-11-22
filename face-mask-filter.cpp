@@ -543,7 +543,7 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 			demoModeInDelay = true;
 		}
 	}
-
+	
 	{
 		std::unique_lock<std::mutex> lock(maskDataMutex);
 		if (demoModeOn && !demoModeInDelay) {

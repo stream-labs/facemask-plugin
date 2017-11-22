@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.12)
-PROJECT(obs-facemask-plugin)
+PROJECT(facemask-plugin)
 math(EXPR BITS "8*${CMAKE_SIZEOF_VOID_P}")
 
 ################################################################################
@@ -101,7 +101,7 @@ configure_file(
 )
 
 # Code
-SET(obs-smll_HEADERS
+SET(smll_HEADERS
 	"${SMLLDir}/Config.hpp"
 	"${SMLLDir}/DetectionResults.hpp"
 	"${SMLLDir}/DLibImageWrapper.hpp"
@@ -116,7 +116,7 @@ SET(obs-smll_HEADERS
 	"${SMLLDir}/TestingPipe.hpp"
 	"${SMLLDir}/SingleValueKalman.hpp"
 )
-SET(obs-gs_HEADERS
+SET(gs_HEADERS
 	"${PROJECT_SOURCE_DIR}/gs-effect.h"
 	"${PROJECT_SOURCE_DIR}/gs-vertex.h"
 	"${PROJECT_SOURCE_DIR}/gs-vertexbuffer.h"
@@ -124,7 +124,7 @@ SET(obs-gs_HEADERS
 	"${PROJECT_SOURCE_DIR}/gs-rendertarget.h"
 	"${PROJECT_SOURCE_DIR}/gs-texture.h"
 )
-SET(obs-mask_HEADERS
+SET(mask_HEADERS
 	"${PROJECT_SOURCE_DIR}/mask.h"
 	"${PROJECT_SOURCE_DIR}/mask-instance-data.h"
 	"${PROJECT_SOURCE_DIR}/mask-resource.h"
@@ -139,7 +139,7 @@ SET(obs-mask_HEADERS
 	"${PROJECT_SOURCE_DIR}/mask-resource-sound.h"
 	"${PROJECT_SOURCE_DIR}/mask-resource-emitter.h"
 )
-SET(obs-facemask-plugin_HEADERS
+SET(facemask-plugin_HEADERS
 	"${PROJECT_SOURCE_DIR}/base64.h"
 	"${PROJECT_SOURCE_DIR}/exceptions.h"
 	"${PROJECT_SOURCE_DIR}/face-mask-filter.h"
@@ -148,11 +148,11 @@ SET(obs-facemask-plugin_HEADERS
 	"${PROJECT_SOURCE_DIR}/utils.h"
 	"${PROJECT_BINARY_DIR}/version.h"
 	"${TINYOBJDir}/tiny_obj_loader.h"
-	"${obs-gs_HEADERS}"
-	"${obs-mask_HEADERS}"
-	"${obs-smll_HEADERS}"
+	"${gs_HEADERS}"
+	"${mask_HEADERS}"
+	"${smll_HEADERS}"
 )
-SET(obs-smll_SOURCES
+SET(smll_SOURCES
 	"${SMLLDir}/Config.cpp"
 	"${SMLLDir}/DetectionResults.cpp"
 	"${SMLLDir}/Face.cpp"
@@ -162,7 +162,7 @@ SET(obs-smll_SOURCES
 	"${SMLLDir}/TestingPipe.cpp"
 	"${SMLLDir}/SingleValueKalman.cpp"
 )
-SET(obs-gs_SOURCES
+SET(gs_SOURCES
 	"${PROJECT_SOURCE_DIR}/gs-effect.cpp"
 	"${PROJECT_SOURCE_DIR}/gs-vertex.cpp"
 	"${PROJECT_SOURCE_DIR}/gs-vertexbuffer.cpp"
@@ -170,7 +170,7 @@ SET(obs-gs_SOURCES
 	"${PROJECT_SOURCE_DIR}/gs-rendertarget.cpp"
 	"${PROJECT_SOURCE_DIR}/gs-texture.cpp"
 )
-SET(obs-mask_SOURCES
+SET(mask_SOURCES
 	"${PROJECT_SOURCE_DIR}/mask.cpp"
 	"${PROJECT_SOURCE_DIR}/mask-resource.cpp"
 	"${PROJECT_SOURCE_DIR}/mask-resource-animation.cpp"
@@ -184,18 +184,18 @@ SET(obs-mask_SOURCES
 	"${PROJECT_SOURCE_DIR}/mask-resource-sound.cpp"
 	"${PROJECT_SOURCE_DIR}/mask-resource-emitter.cpp"
 )
-SET(obs-facemask-plugin_SOURCES
+SET(facemask-plugin_SOURCES
 	"${PROJECT_SOURCE_DIR}/base64.cpp"
 	"${PROJECT_SOURCE_DIR}/exceptions.cpp"
 	"${PROJECT_SOURCE_DIR}/face-mask-filter.cpp"
 	"${PROJECT_SOURCE_DIR}/plugin.cpp"
 	"${PROJECT_SOURCE_DIR}/utils.cpp"
 	"${TINYOBJDir}/tiny_obj_loader.cc"
-	"${obs-gs_SOURCES}"
-	"${obs-mask_SOURCES}"
-	"${obs-smll_SOURCES}"
+	"${gs_SOURCES}"
+	"${mask_SOURCES}"
+	"${smll_SOURCES}"
 )
-SET(obs-facemask-plugin_DATA
+SET(facemask-plugin_DATA
 	"${PROJECT_SOURCE_DIR}/data/effects/color_conversion.effect"
 	"${PROJECT_SOURCE_DIR}/data/effects/default.effect"
 	"${PROJECT_SOURCE_DIR}/data/effects/denoise.effect"
@@ -203,7 +203,7 @@ SET(obs-facemask-plugin_DATA
 	"${PROJECT_SOURCE_DIR}/data/effects/phong.effect"
 	"${PROJECT_SOURCE_DIR}/data/locale/en-US.ini"
 )
-SET(obs-facemask-plugin_LIBRARIES
+SET(facemask-plugin_LIBRARIES
 	dlib::dlib
 	${OpenCV_LIBS}
 )
@@ -214,15 +214,15 @@ INCLUDE_DIRECTORIES(
 	"${PATH_OBS_STUDIO}/"
 )
 
-source_group("Data Files" FILES ${obs-facemask-plugin_DATA})
-source_group("Plugin\\Headers" FILES ${obs-facemask-plugin_HEADERS})
-source_group("Plugin\\Sources" FILES ${obs-facemask-plugin_SOURCES})
-source_group("SMLL\\Headers" FILES ${obs-smll_HEADERS})
-source_group("SMLL\\Sources" FILES ${obs-smll_SOURCES})
-source_group("GS\\Headers" FILES ${obs-gs_HEADERS})
-source_group("GS\\Sources" FILES ${obs-gs_SOURCES})
-source_group("Mask\\Headers" FILES ${obs-mask_HEADERS})
-source_group("Mask\\Sources" FILES ${obs-mask_SOURCES})
+source_group("Data Files" FILES ${facemask-plugin_DATA})
+source_group("Plugin\\Headers" FILES ${facemask-plugin_HEADERS})
+source_group("Plugin\\Sources" FILES ${facemask-plugin_SOURCES})
+source_group("SMLL\\Headers" FILES ${smll_HEADERS})
+source_group("SMLL\\Sources" FILES ${smll_SOURCES})
+source_group("GS\\Headers" FILES ${gs_HEADERS})
+source_group("GS\\Sources" FILES ${gs_SOURCES})
+source_group("Mask\\Headers" FILES ${mask_HEADERS})
+source_group("Mask\\Sources" FILES ${mask_SOURCES})
 
 # Compiler Configuration
 add_definitions(-D_CRT_SECURE_NO_WARNINGS) # Hide Microsofts insecurities
@@ -240,14 +240,14 @@ endif()
 ################################################################################
 # Building
 ################################################################################
-ADD_LIBRARY(obs-facemask-plugin MODULE
-	${obs-facemask-plugin_HEADERS}
-	${obs-facemask-plugin_SOURCES}
-	${obs-facemask-plugin_DATA}
+ADD_LIBRARY(facemask-plugin MODULE
+	${facemask-plugin_HEADERS}
+	${facemask-plugin_SOURCES}
+	${facemask-plugin_DATA}
 )
-TARGET_LINK_LIBRARIES(obs-facemask-plugin
+TARGET_LINK_LIBRARIES(facemask-plugin
 	${LIBOBS_LIBRARIES}
-	${obs-facemask-plugin_LIBRARIES}
+	${facemask-plugin_LIBRARIES}
 )
 
 ################################################################################
@@ -255,18 +255,18 @@ TARGET_LINK_LIBRARIES(obs-facemask-plugin
 ################################################################################
 
 
-add_custom_command(TARGET obs-facemask-plugin POST_BUILD
+add_custom_command(TARGET facemask-plugin POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_directory
 	"${PROJECT_SOURCE_DIR}/data"
-	"${DISTRIBUTE_PATH}/$<CONFIG>/data/obs-plugins/obs-facemask-plugin"
+	"${DISTRIBUTE_PATH}/$<CONFIG>/data/obs-plugins/facemask-plugin"
 )
-add_custom_command(TARGET obs-facemask-plugin POST_BUILD
+add_custom_command(TARGET facemask-plugin POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy
-	"$<TARGET_FILE:obs-facemask-plugin>"
-	"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/$<TARGET_FILE_NAME:obs-facemask-plugin>"
+	"$<TARGET_FILE:facemask-plugin>"
+	"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/$<TARGET_FILE_NAME:facemask-plugin>"
 )
-add_custom_command(TARGET obs-facemask-plugin POST_BUILD
+add_custom_command(TARGET facemask-plugin POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy
-	"$<TARGET_FILE_DIR:obs-facemask-plugin>/obs-facemask-plugin.pdb"
-	"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/obs-facemask-plugin.pdb"
+	"$<TARGET_FILE_DIR:facemask-plugin>/facemask-plugin.pdb"
+	"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/facemask-plugin.pdb"
 )
