@@ -974,7 +974,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 					m_partWorld) {
 
 					// load mask
-					maskData = LoadMask(maskJsonFilename);
+					maskData = std::unique_ptr<Mask::MaskData>(LoadMask(maskJsonFilename));
 					currentMaskJsonFilename = maskJsonFilename;
 				}
 
@@ -1009,21 +1009,21 @@ void Plugin::FaceMaskFilter::Instance::LoadDemo() {
 
 	demoMaskDatas.clear();
 	for (int i = 0; i < files.size(); i++) {
-		demoMaskDatas.push_back(LoadMask(demoModeFolder + "\\" + files[i]));
+		demoMaskDatas.push_back(std::unique_ptr<Mask::MaskData>(LoadMask(demoModeFolder + "\\" + files[i])));
 		std::this_thread::sleep_for(std::chrono::microseconds(1));
 	}
 	demoCurrentMask = 0;
 }
 
 
-std::unique_ptr<Mask::MaskData>	
+Mask::MaskData*
 Plugin::FaceMaskFilter::Instance::LoadMask(std::string filename) {
 
 	obs_enter_graphics();
 	PLOG_INFO("Loading mask '%s'...", filename.c_str());
 
 	// new mask data
-	std::unique_ptr<Mask::MaskData> mdat = std::make_unique<Mask::MaskData>();
+	Mask::MaskData* mdat = new Mask::MaskData();
 
 	// Default Parts
 	mdat->AddPart("root", m_partRoot);

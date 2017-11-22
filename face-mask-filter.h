@@ -90,7 +90,7 @@ namespace Plugin {
 			static int32_t StaticMaskDataThreadMain(Instance*);
 			int32_t LocalMaskDataThreadMain();
 
-			std::unique_ptr<Mask::MaskData>	LoadMask(std::string filename);
+			Mask::MaskData*	LoadMask(std::string filename);
 			void LoadDemo();
 
 			void texRenderBegin(int width, int height);
