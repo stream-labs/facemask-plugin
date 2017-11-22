@@ -543,7 +543,27 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 			demoModeInDelay = true;
 		}
 	}
-	
+
+	// TODO: make work with more than 1 face
+	if (faces.length > 0) {
+		const smll::DetectionResult& face = faces[0];
+
+		// update root position
+		m_partRoot->position.x = (float)face.translation[0];
+		m_partRoot->position.y = (float)face.translation[1];
+		m_partRoot->position.z = -(float)face.translation[2];
+		vec3_copy(&m_partWorld->position, &m_partRoot->position);
+		axisang root;
+		axisang_set(&root,
+			(float)face.rotation[0],
+			(float)face.rotation[1],
+			-(float)face.rotation[2],
+			-(float)face.rotation[3]);
+		quat_from_axisang(&m_partRoot->qrotation, &root);
+		m_partRoot->localdirty = true;
+		m_partWorld->localdirty = true;
+	}
+
 	{
 		std::unique_lock<std::mutex> lock(maskDataMutex);
 		if (demoModeOn && !demoModeInDelay) {
@@ -743,10 +763,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			vec4_zero(&black);
 			gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
 
-			// draw face detection data
-			if (drawFaces)
-				smllRenderer->DrawFaces(faces);
-
 			if (drawMask) {
 				// Draw depth-only stuff
 				for (int i = 0; i < faces.length; i++) {
@@ -770,6 +786,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					}
 				}
 			}
+
+			// draw face detection data
+			if (drawFaces)
+				smllRenderer->DrawFaces(faces);
 
 			gs_texrender_end(drawTexRender);
 		}
@@ -839,21 +859,6 @@ void Plugin::FaceMaskFilter::Instance::drawMaskData(const smll::DetectionResult&
 		gs_blend_type::GS_BLEND_SRCALPHA,
 		gs_blend_type::GS_BLEND_INVSRCALPHA
 	);
-
-	m_partRoot->position.x = (float)face.translation[0];
-	m_partRoot->position.y = (float)face.translation[1];
-	m_partRoot->position.z = -(float)face.translation[2];
-	vec3_copy(&m_partWorld->position, &m_partRoot->position);
-	axisang root;
-	axisang_set(&root,
-		(float)face.rotation[0],
-		(float)face.rotation[1],
-		-(float)face.rotation[2],
-		-(float)face.rotation[3]);
-	quat_from_axisang(&m_partRoot->qrotation, &root);
-	m_partRoot->localdirty = true;
-	m_partWorld->localdirty = true;
-
 
 	gs_matrix_push();
 

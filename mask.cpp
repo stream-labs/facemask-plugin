@@ -245,6 +245,7 @@ void  Mask::MaskData::PartCalcMatrix(std::shared_ptr<Mask::Part> part) {
 	// Only if we're dirty
 	if (part->dirty) {
 		if (part->localdirty) {
+		
 			// Calculate local matrix 
 			matrix4_identity(&part->local);
 			matrix4_scale3f(&part->local, &part->local,
