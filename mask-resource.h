@@ -56,7 +56,7 @@ namespace Mask {
 			IBase(Mask::MaskData* parent, std::string name);
 
 			public:
-			~IBase();
+			virtual ~IBase();
 
 			virtual Type GetType() = 0;
 			std::string GetName() {	return m_name; }
