@@ -672,6 +672,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		if (obs_source_process_filter_begin(m_source, GS_RGBA,
 			OBS_NO_DIRECT_RENDERING)) {
 			gs_blend_state_push();
+			gs_projection_push();
 
 			gs_ortho(0, (float)m_baseWidth, 0, (float)m_baseHeight, -1, 1);
 			gs_set_cull_mode(GS_NEITHER);
@@ -693,6 +694,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			obs_source_process_filter_end(m_source,
 				effect ? effect : defaultEffect, m_baseWidth, m_baseHeight);
 
+			gs_projection_pop();
 			gs_blend_state_pop();
 		}
 		gs_texrender_end(m_sourceRenderTarget);

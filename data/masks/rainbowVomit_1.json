@@ -187,15 +187,15 @@
                 "0": {
                     "name": "rainbowVomit_geo_$AssimpFbx$_Scaling",
                     "type": "part-scl-x",
-                    "pre-state": "repeat",
-                    "post-state": "repeat",
+                    "pre-state": "constant",
+                    "post-state": "constant",
                     "values": "eJw7s6dHO+lJkq0tk7eddMtJu8+20vYF9r72uy4W2jMwNNAMAwDmmhy8eAAAAAAAAAA="
                 },
                 "1": {
                     "name": "rainbowVomit_geo1_$AssimpFbx$_Scaling",
                     "type": "part-scl-x",
-                    "pre-state": "repeat",
-                    "post-state": "repeat",
+                    "pre-state": "constant",
+                    "post-state": "constant",
                     "values": "eJw7s6dH+wwezMBgYMvAoGDHwLAIiBnsGRj0gTgCiEuBuIFsDACzKSDNeAAAAAAAAAA="
                 }
             }
