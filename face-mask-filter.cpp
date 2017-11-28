@@ -283,16 +283,35 @@ obs_properties_t * Plugin::FaceMaskFilter::Instance::get_properties(void *ptr) {
 	obs_property_list_add_int(p, kSettingsJsonOption8, 7);
 	obs_property_list_add_int(p, kSettingsJsonOption9, 8);
 	obs_property_list_add_int(p, kSettingsJsonOption10, 9);
+	obs_property_list_add_int(p, kSettingsJsonOption11, 10);
+	obs_property_list_add_int(p, kSettingsJsonOption12, 11);
+	obs_property_list_add_int(p, kSettingsJsonOption13, 12);
+	obs_property_list_add_int(p, kSettingsJsonOption14, 13);
+	obs_property_list_add_int(p, kSettingsJsonOption15, 14);
+	obs_property_list_add_int(p, kSettingsJsonOption16, 15);
+	obs_property_list_add_int(p, kSettingsJsonOption17, 16);
+	obs_property_list_add_int(p, kSettingsJsonOption18, 17);
+	obs_property_list_add_int(p, kSettingsJsonOption19, 18);
+	obs_property_list_add_int(p, kSettingsJsonOption20, 19);
+	obs_property_list_add_int(p, kSettingsJsonOption21, 20);
+	obs_property_list_add_int(p, kSettingsJsonOption22, 21);
+	obs_property_list_add_int(p, kSettingsJsonOption23, 22);
+	obs_property_list_add_int(p, kSettingsJsonOption24, 23);
+	obs_property_list_add_int(p, kSettingsJsonOption25, 24);
+	obs_property_list_add_int(p, kSettingsJsonOption26, 25);
+	obs_property_list_add_int(p, kSettingsJsonOption27, 26);
 	obs_property_set_modified_callback(p, properties_modified);
 
 	// performance setting
+	// - leave this out...has negligible effect
+	/*
 	p = obs_properties_add_list(props, kSettingsPerformance, kSettingsPerformanceDesc,
 		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
 	obs_property_list_add_int(p, kSettingsPerformanceOption1, 0);
 	obs_property_list_add_int(p, kSettingsPerformanceOption2, 1);
 	obs_property_list_add_int(p, kSettingsPerformanceOption3, 2);
 	obs_property_list_add_int(p, kSettingsPerformanceOption4, 3);
-
+	*/
 #else
 
 	// Basic Properties
@@ -392,6 +411,40 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 				filename = obs_module_file(kFileJsonOption9);
 			else if (maskNum == 9)
 				filename = obs_module_file(kFileJsonOption10);
+			else if (maskNum == 10)
+				filename = obs_module_file(kFileJsonOption11);
+			else if (maskNum == 11)
+				filename = obs_module_file(kFileJsonOption12);
+			else if (maskNum == 12)
+				filename = obs_module_file(kFileJsonOption13);
+			else if (maskNum == 13)
+				filename = obs_module_file(kFileJsonOption14);
+			else if (maskNum == 14)
+				filename = obs_module_file(kFileJsonOption15);
+			else if (maskNum == 15)
+				filename = obs_module_file(kFileJsonOption16);
+			else if (maskNum == 16)
+				filename = obs_module_file(kFileJsonOption17);
+			else if (maskNum == 17)
+				filename = obs_module_file(kFileJsonOption18);
+			else if (maskNum == 18)
+				filename = obs_module_file(kFileJsonOption19);
+			else if (maskNum == 19)
+				filename = obs_module_file(kFileJsonOption20);
+			else if (maskNum == 20)
+				filename = obs_module_file(kFileJsonOption21);
+			else if (maskNum == 21)
+				filename = obs_module_file(kFileJsonOption22);
+			else if (maskNum == 22)
+				filename = obs_module_file(kFileJsonOption23);
+			else if (maskNum == 23)
+				filename = obs_module_file(kFileJsonOption24);
+			else if (maskNum == 24)
+				filename = obs_module_file(kFileJsonOption25);
+			else if (maskNum == 25)
+				filename = obs_module_file(kFileJsonOption26);
+			else if (maskNum == 26)
+				filename = obs_module_file(kFileJsonOption27);
 			else
 				filename = obs_module_file(kFileJsonOption1);
 

@@ -72,7 +72,7 @@ void Face::ResetPose() {
 	m_poseInitialized = false;
 	m_cvTranslation = cv::Mat::zeros(3, 1, CV_64F);
 	m_cvRotation = cv::Mat::zeros(3, 1, CV_64F);
-	m_cvTranslation.at<double>(2, 0) = 40.0;
+	//m_cvTranslation.at<double>(2, 0) = 40.0;
 }
 
 
