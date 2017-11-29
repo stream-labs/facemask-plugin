@@ -442,8 +442,9 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 			else
 				filename = obs_module_file(kFileJsonOption1);
 
+			if (maskJsonFilename)
+				bfree(maskJsonFilename);
 			maskJsonFilename = filename;
-			//bfree(filename);
 		}
 
 		int perf = (int)obs_data_get_int(data, kSettingsPerformance);

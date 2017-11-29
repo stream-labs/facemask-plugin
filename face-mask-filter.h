@@ -122,7 +122,7 @@ namespace Plugin {
 			gs_texrender_t	   *detectTexRender;
 			gs_texrender_t	   *trackTexRender;
 
-			const char*			maskJsonFilename;
+			char*				maskJsonFilename;
 			std::string			currentMaskJsonFilename;
 
 			bool				maskDataShutdown;
