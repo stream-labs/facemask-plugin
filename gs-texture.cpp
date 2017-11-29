@@ -192,9 +192,9 @@ GS::Texture::~Texture() {
 				gs_cubetexture_destroy(m_texture);
 				break;
 		}
+		m_texture = nullptr;
 		obs_leave_graphics();
 	}
-	m_texture = nullptr;
 }
 
 void GS::Texture::Load(int unit) {

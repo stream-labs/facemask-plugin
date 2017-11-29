@@ -52,11 +52,11 @@ GS::IndexBuffer::IndexBuffer(uint32_t* buff, size_t len) : IndexBuffer(len) {
 
 GS::IndexBuffer::~IndexBuffer() {
 	// This crashes out in OBS STUDIO. Just leak memory.
-#ifndef OBS_STUDIO_BUILD
+//#ifndef OBS_STUDIO_BUILD
 	obs_enter_graphics(); 
 	gs_indexbuffer_destroy(m_indexBuffer);
 	obs_leave_graphics();
-#endif
+//#endif
 }
 
 gs_indexbuffer_t* GS::IndexBuffer::get() {
