@@ -81,7 +81,7 @@ GS::VertexBuffer::VertexBuffer(Vertex* buff, size_t len) : VertexBuffer(len) {
 
 GS::VertexBuffer::~VertexBuffer() {
 // This crashes out in OBS STUDIO. Just leak memory.
-//#ifndef OBS_STUDIO_BUILD	
+#ifndef OBS_STUDIO_BUILD	
 	if (m_vertexbuffer) {
 		std::memset(&m_vertexbufferdata, 0, sizeof(m_vertexbufferdata));
 		obs_enter_graphics();
@@ -89,7 +89,7 @@ GS::VertexBuffer::~VertexBuffer() {
 		m_vertexbuffer = nullptr;
 		obs_leave_graphics();
 	}
-//#endif
+#endif
 }
 
 void GS::VertexBuffer::set_uv_layers(uint32_t layers) {

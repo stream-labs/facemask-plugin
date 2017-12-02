@@ -43,7 +43,7 @@
 
 #pragma warning( pop )
 
-
+#define FOCAL_LENGTH_FACTOR		(0.9f)
 
 using namespace dlib;
 using namespace std;
@@ -458,8 +458,8 @@ namespace smll {
 		std::vector<int> model_indices;
 		model_indices.push_back(NOSE_TIP);
 		model_indices.push_back(EYE_CENTER);
-		model_indices.push_back(LEFT_INNER_EYE_CORNER);
-		model_indices.push_back(RIGHT_INNER_EYE_CORNER);
+		//model_indices.push_back(LEFT_INNER_EYE_CORNER);
+		//model_indices.push_back(RIGHT_INNER_EYE_CORNER);
 		if (pnpMethod != cv::SOLVEPNP_P3P)
 		{
 			model_indices.push_back(NOSE_2);
@@ -477,7 +477,7 @@ namespace smll {
 
 		// Camera internals
 		// Approximate focal length.
-		double focal_length = (double)m_stageWork.w * 0.75; 
+		double focal_length = (double)m_stageWork.w * FOCAL_LENGTH_FACTOR; 
 		cv::Point2d center = cv::Point2d(m_stageWork.w / 2, m_stageWork.h / 2);
 		cv::Mat camera_matrix = 
 			(cv::Mat_<double>(3, 3) << 

@@ -485,7 +485,7 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	{
 		std::unique_lock<std::mutex> lock(maskDataMutex, std::try_to_lock);
 		if (lock.owns_lock()) {
-			maskJsonFilename = obs_data_get_string(data, P_MASK);
+			maskJsonFilename = (char*)obs_data_get_string(data, P_MASK);
 		}
 	}
 

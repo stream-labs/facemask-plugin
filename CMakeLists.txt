@@ -46,9 +46,6 @@ SET(OpenCV_LIBS
 include_directories("${OpenCV_DIR}/include")
 include_directories("${OpenCV_DIR}/3rdparty/include")
 
-# obs vs. slobs
-add_definitions(-DOBS_STUDIO_BUILD)
-
 # smll
 include_directories("smll")
 SET(SMLLDir "${PROJECT_SOURCE_DIR}/smll")
@@ -82,9 +79,11 @@ OPTION(BUILD_SLOBS "Build for Streamlabs OBS" OFF)
 if(BUILD_SLOBS)
 	SET(DISTRIBUTE_PATH "${PROJECT_BINARY_DIR}/distribute/slobs")
 	SET(DISTRIBUTE_PATH_BIN "obs-plugins")
+	add_definitions(-DSLOBS_BUILD)
 else()
 	SET(DISTRIBUTE_PATH "${PROJECT_BINARY_DIR}/distribute/obs")
 	SET(DISTRIBUTE_PATH_BIN "obs-plugins/${BITS}bit")
+	add_definitions(-DOBS_STUDIO_BUILD)
 endif()
 
 ################################################################################
