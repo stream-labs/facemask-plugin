@@ -43,7 +43,7 @@
 
 #pragma warning( pop )
 
-#define FOCAL_LENGTH_FACTOR		(0.9f)
+#define FOCAL_LENGTH_FACTOR		(1.0f)
 
 using namespace dlib;
 using namespace std;
@@ -458,8 +458,8 @@ namespace smll {
 		std::vector<int> model_indices;
 		model_indices.push_back(NOSE_TIP);
 		model_indices.push_back(EYE_CENTER);
-		//model_indices.push_back(LEFT_INNER_EYE_CORNER);
-		//model_indices.push_back(RIGHT_INNER_EYE_CORNER);
+		model_indices.push_back(LEFT_OUTER_EYE_CORNER);
+		model_indices.push_back(RIGHT_OUTER_EYE_CORNER);
 		if (pnpMethod != cv::SOLVEPNP_P3P)
 		{
 			model_indices.push_back(NOSE_2);
@@ -470,8 +470,6 @@ namespace smll {
 			// model_indices.push_back(CHIN);
 			// model_indices.push_back(LEFT_TEMPLE);
 			// model_indices.push_back(RIGHT_TEMPLE);
-			 model_indices.push_back(LEFT_OUTER_EYE_CORNER);
-			 model_indices.push_back(RIGHT_OUTER_EYE_CORNER);
 		}
 		std::vector<cv::Point3d> model_points = GetLandmarkPoints(model_indices);
 

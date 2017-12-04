@@ -49,8 +49,8 @@ namespace smll {
 	
 	static float FOVA(float aspect)
 	{
-		// odd number, this one
-		return 70.0f / aspect;
+		// field of view angle matched to focal length for solvePNP
+		return 56.0f / aspect;
 	}
 
 	static int TEXUNIT = 0;

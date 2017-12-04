@@ -40,7 +40,8 @@
 
 
 static float FOVA(float aspect) {
-	return 70.0f / aspect;
+	// field of view angle matched to focal length for solvePNP
+	return 56.0f / aspect;
 }
 
 static const float_t NEAR_Z = 1.0f;
