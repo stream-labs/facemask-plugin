@@ -613,8 +613,8 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 		m_partWorld->localdirty = true;
 	}
 
-	{
-		std::unique_lock<std::mutex> lock(maskDataMutex);
+	std::unique_lock<std::mutex> lock(maskDataMutex, std::try_to_lock);
+	if (lock.owns_lock()) {
 		if (demoModeOn && !demoModeInDelay) {
 			if (demoCurrentMask >= 0 && demoCurrentMask < demoMaskDatas.size())
 				demoMaskDatas[demoCurrentMask]->Tick(timeDelta);
