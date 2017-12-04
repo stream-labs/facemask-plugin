@@ -74,9 +74,9 @@ namespace smll {
 		const cv::Mat& m = f.GetCVRotation();
 		double angle = sqrt(m.dot(m));
 		double dividor = angle;
-		if (angle < 0.001) {
-			rotation[0] = 1.0;
-			rotation[1] = 0.0;
+		if (angle < 0.00001) {
+			rotation[0] = 0.0;
+			rotation[1] = 1.0;
 			rotation[2] = 0.0;
 			rotation[3] = 0.0;
 		}
