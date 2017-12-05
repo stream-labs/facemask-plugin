@@ -78,10 +78,6 @@ namespace smll {
 		//      http://www.cs.unc.edu/~tracker/media/pdf/SIGGRAPH2001_CoursePack_08.pdf
 		//
 		enum FilterIndex : uint32_t {
-			//KF_BOUNDS_LEFT,
-			//KF_BOUNDS_BOTTOM,
-			//KF_BOUNDS_RIGHT,
-			//KF_BOUNDS_TOP,
 			KF_TRANS_X,
 			KF_TRANS_Y,
 			KF_TRANS_Z,

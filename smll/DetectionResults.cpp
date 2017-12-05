@@ -116,10 +116,6 @@ namespace smll {
 		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE)) {
 
 			// update the kalman filters
-			//bnd.set_right((long)kalmanFilters[KF_BOUNDS_RIGHT].Update(bnd.right()));
-			//bnd.set_bottom((long)kalmanFilters[KF_BOUNDS_BOTTOM].Update(bnd.bottom()));
-			//bnd.set_left((long)kalmanFilters[KF_BOUNDS_LEFT].Update(bnd.left()));
-			//bnd.set_top((long)kalmanFilters[KF_BOUNDS_TOP].Update(bnd.top()));
 			ntx[0] = kalmanFilters[KF_TRANS_X].Update(ntx[0]);
 			ntx[1] = kalmanFilters[KF_TRANS_Y].Update(ntx[1]);
 			ntx[2] = kalmanFilters[KF_TRANS_Z].Update(ntx[2]);
@@ -136,6 +132,7 @@ namespace smll {
 		rotation[0] = nrot[0];
 		rotation[1] = nrot[1];
 		rotation[2] = nrot[2];
+		rotation[3] = nrot[3];
 		bounds = bnd;
 		for (int i = 0; i < smll::NUM_FACIAL_LANDMARKS; i++) {
 			landmarks[i] = r.landmarks[i];
@@ -185,10 +182,6 @@ namespace smll {
 
 	void DetectionResult::InitKalmanFilters() {
 		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE)) {
-			//kalmanFilters[KF_BOUNDS_RIGHT].Init(bounds.right());
-			//kalmanFilters[KF_BOUNDS_BOTTOM].Init(bounds.bottom());
-			//kalmanFilters[KF_BOUNDS_LEFT].Init(bounds.left());
-			//kalmanFilters[KF_BOUNDS_TOP].Init(bounds.top());
 			kalmanFilters[KF_TRANS_X].Init(translation[0]);
 			kalmanFilters[KF_TRANS_Y].Init(translation[1]);
 			kalmanFilters[KF_TRANS_Z].Init(translation[2]);
