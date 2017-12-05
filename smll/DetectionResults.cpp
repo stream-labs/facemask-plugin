@@ -26,8 +26,8 @@ namespace smll {
 
 	DetectionResult::DetectionResult() 
 		: matched(false), numFramesLost(0) {
-		rotation[0] = 1.0;
-		rotation[1] = 0.0;
+		rotation[0] = 0.0;
+		rotation[1] = 1.0;
 		rotation[2] = 0.0;
 		rotation[3] = 0.0;
 		translation[0] = 0.0;
@@ -51,7 +51,6 @@ namespace smll {
 			landmarks[i] = r.landmarks[i];
 		}
 		CheckForPoseFlip(rotation, translation);
-
 		InitKalmanFilters();
 
 		return *this;
@@ -73,17 +72,16 @@ namespace smll {
 		//   easy use with obs/opengl/whatever
 		const cv::Mat& m = f.GetCVRotation();
 		double angle = sqrt(m.dot(m));
-		double dividor = angle;
-		if (angle < 0.00001) {
+		if (angle < 0.0001) {
 			rotation[0] = 0.0;
 			rotation[1] = 1.0;
 			rotation[2] = 0.0;
 			rotation[3] = 0.0;
 		}
 		else {
-			rotation[0] = m.at<double>(0, 0) / dividor;
-			rotation[1] = m.at<double>(1, 0) / dividor;
-			rotation[2] = m.at<double>(2, 0) / dividor;
+			rotation[0] = m.at<double>(0, 0) / angle;
+			rotation[1] = m.at<double>(1, 0) / angle;
+			rotation[2] = m.at<double>(2, 0) / angle;
 			rotation[3] = angle;
 		}
 
@@ -94,7 +92,6 @@ namespace smll {
 		translation[2] = t.at<double>(2, 0);
 
 		CheckForPoseFlip(rotation, translation);
-
 		InitKalmanFilters();
 
 		return *this;
@@ -108,8 +105,7 @@ namespace smll {
 		return sqrt(x*x + y*y + z*z);
 	}
 
-	void DetectionResult::UpdateResults(const DetectionResult& r, 
-		double smoothingAmount) {
+	void DetectionResult::UpdateResults(const DetectionResult& r) {
 
 		double ntx[3] = { r.translation[0], r.translation[1], r.translation[2] };
 		double nrot[4] = { r.rotation[0], r.rotation[1], r.rotation[2], r.rotation[3] };
@@ -133,27 +129,16 @@ namespace smll {
 			nrot[3] = kalmanFilters[KF_ROT_A].Update(nrot[3]);
 		}
 
-		if (smoothingAmount > 0.0f) {
-			// use smoothing to update current value
-			lerp3(translation, ntx, translation, smoothingAmount);
-			lerp4(rotation, nrot, rotation, smoothingAmount);
-			lerp(bounds, bnd, bounds, smoothingAmount);
-			for (int i = 0; i < smll::NUM_FACIAL_LANDMARKS; i++) {
-				lerp(landmarks[i], r.landmarks[i], landmarks[i], smoothingAmount);
-			}
-		}
-		else {
-			// just copy values
-			translation[0] = ntx[0];
-			translation[1] = ntx[1];
-			translation[2] = ntx[2];
-			rotation[0] = nrot[0];
-			rotation[1] = nrot[1];
-			rotation[2] = nrot[2];
-			bounds = bnd;
-			for (int i = 0; i < smll::NUM_FACIAL_LANDMARKS; i++) {
-				landmarks[i] = r.landmarks[i];
-			}
+		// just copy values
+		translation[0] = ntx[0];
+		translation[1] = ntx[1];
+		translation[2] = ntx[2];
+		rotation[0] = nrot[0];
+		rotation[1] = nrot[1];
+		rotation[2] = nrot[2];
+		bounds = bnd;
+		for (int i = 0; i < smll::NUM_FACIAL_LANDMARKS; i++) {
+			landmarks[i] = r.landmarks[i];
 		}
 	}
 
@@ -198,60 +183,12 @@ namespace smll {
 		}
 	}
 
-	void DetectionResult::lerp(const dlib::rectangle& a, const dlib::rectangle& b,
-		dlib::rectangle& c, double t) {
-		c.set_top((long)lerp((double)a.top(), (double)b.top(), t));
-		c.set_bottom((long)lerp((double)a.bottom(), (double)b.bottom(), t));
-		c.set_left((long)lerp((double)a.left(), (double)b.left(), t));
-		c.set_right((long)lerp((double)a.right(), (double)b.right(), t));
-	}
-
-	void DetectionResult::lerp3(const double* __restrict a,
-		const double* __restrict b, double* __restrict c, double t) {
-		c[0] = lerp(a[0], b[0], t);
-		c[1] = lerp(a[1], b[1], t);
-		c[2] = lerp(a[2], b[2], t);
-	}
-
-	void DetectionResult::lerp4(const double* __restrict a,
-		const double* __restrict b, double* __restrict c, double t) {
-		c[0] = lerp(a[0], b[0], t);
-		c[1] = lerp(a[1], b[1], t);
-		c[2] = lerp(a[2], b[2], t);
-		c[3] = lerp(a[3], b[3], t);
-	}
-
-	void DetectionResult::slerp(const double* __restrict a,
-		const double* __restrict b, double* __restrict c, double t) {
-		double omega = acos((a[0] * b[0]) + (a[1] * b[1]) + (a[2] * b[2]));
-		double sin_o = sin(omega);
-		double sin_mt = sin((1.0 - t) * omega);
-		double sin_t = sin(t * omega);
-
-		if (abs(sin_o) < 0.1) {
-			lerp3(a, b, c, t);
-		}
-		else {
-			sin_mt = sin_mt / sin_o;
-			sin_t = sin_t / sin_o;
-			c[0] = (sin_t * a[0]) + (sin_mt * b[0]);
-			c[1] = (sin_t * a[1]) + (sin_mt * b[1]);
-			c[2] = (sin_t * a[2]) + (sin_mt * b[2]);
-		}
-	}
-
-	void DetectionResult::slerpalerp(const double* __restrict a,
-		const double* __restrict b, double* __restrict c, double t) {
-		slerp(a, b, c, t);
-		c[3] = lerp(a[3], b[3], t);
-	}
-
 	void DetectionResult::InitKalmanFilters() {
 		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE)) {
-			kalmanFilters[KF_BOUNDS_RIGHT].Init(bounds.right());
-			kalmanFilters[KF_BOUNDS_BOTTOM].Init(bounds.bottom());
-			kalmanFilters[KF_BOUNDS_LEFT].Init(bounds.left());
-			kalmanFilters[KF_BOUNDS_TOP].Init(bounds.top());
+			//kalmanFilters[KF_BOUNDS_RIGHT].Init(bounds.right());
+			//kalmanFilters[KF_BOUNDS_BOTTOM].Init(bounds.bottom());
+			//kalmanFilters[KF_BOUNDS_LEFT].Init(bounds.left());
+			//kalmanFilters[KF_BOUNDS_TOP].Init(bounds.top());
 			kalmanFilters[KF_TRANS_X].Init(translation[0]);
 			kalmanFilters[KF_TRANS_Y].Init(translation[1]);
 			kalmanFilters[KF_TRANS_Z].Init(translation[2]);

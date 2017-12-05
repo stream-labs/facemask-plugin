@@ -44,6 +44,8 @@
 #pragma warning( pop )
 
 #define FOCAL_LENGTH_FACTOR		(1.0f)
+#define POSE_RESET_INTERVAL		(30)
+
 
 using namespace dlib;
 using namespace std;
@@ -456,11 +458,12 @@ namespace smll {
 
 		// build set of model points to use for solving 3D pose
 		std::vector<int> model_indices;
-		model_indices.push_back(NOSE_TIP);
 		model_indices.push_back(EYE_CENTER);
 		model_indices.push_back(LEFT_OUTER_EYE_CORNER);
 		model_indices.push_back(RIGHT_OUTER_EYE_CORNER);
-		if (pnpMethod != cv::SOLVEPNP_P3P)
+		model_indices.push_back(NOSE_TIP);
+		if (pnpMethod != cv::SOLVEPNP_P3P &&
+			pnpMethod != cv::SOLVEPNP_AP3P)
 		{
 			model_indices.push_back(NOSE_2);
 			model_indices.push_back(NOSE_3);
@@ -496,6 +499,10 @@ namespace smll {
 				image_points.push_back(cv::Point2d(p[idx].x(), p[idx].y()));
 			}
 
+			if (m_faces[i].IncPoseResetCounter() > POSE_RESET_INTERVAL) {
+				m_faces[i].ResetPose();
+			}
+
 			if (!copyTex)
 				StageTexture(SFT_CAPTURE);
 
@@ -505,16 +512,14 @@ namespace smll {
 					camera_matrix, dist_coeffs,
 					m_faces[i].m_cvRotation, m_faces[i].m_cvTranslation,
 					m_faces[i].m_poseInitialized,
-					75 + (numIterations * 25));
+					numIterations);
 			}
 			else {
-				for (int count = 0; count < numIterations; count++) {
-					cv::solvePnP(model_points, image_points,
-						camera_matrix, dist_coeffs,
-						m_faces[i].m_cvRotation, m_faces[i].m_cvTranslation,
-						m_faces[i].m_poseInitialized,
-						pnpMethod);
-				}
+				cv::solvePnP(model_points, image_points,
+					camera_matrix, dist_coeffs,
+					m_faces[i].m_cvRotation, m_faces[i].m_cvTranslation,
+					m_faces[i].m_poseInitialized,
+					pnpMethod);
 			}
 			m_faces[i].m_poseInitialized = true;
 
@@ -525,7 +530,8 @@ namespace smll {
 			// - make sure it doesn't use these results for next iteration
 			bool flipped = (m_faces[i].m_cvTranslation.at<double>(2, 0) < 0.0);
 			if (flipped) {
-				InvalidatePoses();
+				// this will ensure it gets reset before next calculation
+				m_faces[i].SetPoseResetCounter(POSE_RESET_INTERVAL+1);
 			}
 		}
 	}

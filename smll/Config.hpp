@@ -160,7 +160,7 @@ namespace smll {
 
 	// not a mode of solvePnp, it's a different method
 	// (solvePnpRansac)
-	#define PNP_RANSAC			(cv::SOLVEPNP_UPNP + 1)
+	#define PNP_RANSAC			(cv::SOLVEPNP_AP3P + 1)
 
 	class Config
 	{

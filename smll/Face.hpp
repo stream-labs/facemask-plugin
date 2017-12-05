@@ -79,10 +79,16 @@ namespace smll {
 		const cv::Mat&	GetCVRotation() const { return m_cvRotation; }
 		const cv::Mat&	GetCVTranslation() const { return m_cvTranslation; }
 
+		int IncPoseResetCounter() { return ++m_poseResetCounter; }
+		int GetPoseResetCounter() { return m_poseResetCounter; }
+		void ResetPoseResetCounter() { m_poseResetCounter = 0; }
+		void SetPoseResetCounter(int c) { m_poseResetCounter = c; }
+
 	private:
 		dlib::rectangle				m_bounds;
 		int							m_trackingX;
 		int							m_trackingY;
+		int							m_poseResetCounter;
 		double						m_trackingScale;
 		dlib::point					m_points[NUM_FACIAL_LANDMARKS];
 		dlib::correlation_tracker	m_tracker;
@@ -130,8 +136,7 @@ namespace smll {
 	};
 
 	// Just to keep memory clean, statically allocate faces
-	const int		MAX_FACES = 16;
-
+	const int		MAX_FACES = 1;
 	typedef sarray<Face, MAX_FACES> Faces;
 
 } // smll namespace

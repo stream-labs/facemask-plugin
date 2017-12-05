@@ -35,7 +35,6 @@
 #include "mask-resource-mesh.h"
 #include "mask-resource-effect.h"
 
-#define SMOOTHING_AMOUNT				(0.0)
 #define NUM_FRAMES_TO_LOSE_FACE			(30)
 
 
@@ -1217,7 +1216,7 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 				int closest = findClosest(faces[i], newFaces);
 
 				// smooth new face into ours
-				faces[i].UpdateResults(newFaces[closest], SMOOTHING_AMOUNT);
+				faces[i].UpdateResults(newFaces[closest]);
 				faces[i].numFramesLost = 0;
 				newFaces[closest].matched = true;
 			}
@@ -1248,7 +1247,7 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 				int closest = findClosest(newFaces[i], faces);
 
 				// smooth new face into ours
-				faces[closest].UpdateResults(newFaces[i], SMOOTHING_AMOUNT);
+				faces[closest].UpdateResults(newFaces[i]);
 				faces[closest].numFramesLost = 0;
 				faces[closest].matched = true;
 			}

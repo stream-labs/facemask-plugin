@@ -96,9 +96,11 @@ namespace smll {
 		"Perspective-Three-Point";
 	static const char* const CONFIG_INT_SOLVEPNP_ALGORITHM_DLS =
 		"Direct Least-Squares";
-	static const char* const CONFIG_INT_SOLVEPNP_ALGORITHM_UPNP = 
+	static const char* const CONFIG_INT_SOLVEPNP_ALGORITHM_UPNP =
 		"Exhaustive Linearization (SLOW!!)";
-	static const char* const CONFIG_BOOL_IN_TEST_MODE_DESC = 
+	static const char* const CONFIG_INT_SOLVEPNP_ALGORITHM_AP3P =
+		"Algebraic Perspective-Three-Point";
+	static const char* const CONFIG_BOOL_IN_TEST_MODE_DESC =
 		"Enable Testing Mode";
 
 	// show our "advanced" settings
@@ -180,7 +182,7 @@ namespace smll {
 			CONFIG_INT_SOLVEPNP_ALGORITHM_DESC, cv::SOLVEPNP_ITERATIVE,
 			cv::SOLVEPNP_ITERATIVE, PNP_RANSAC, 1);
 		AddParam(CONFIG_INT_SOLVEPNP_ITERATIONS, 
-			CONFIG_INT_SOLVEPNP_ITERATIONS_DESC, 1, 1, 5, 1);
+			CONFIG_INT_SOLVEPNP_ITERATIONS_DESC, 100, 50, 500, 10);
 
 		AddParam(CONFIG_BOOL_USE_THREADED_MEMCPY,
 			CONFIG_BOOL_USE_THREADED_MEMCPY_DESC, true);
@@ -305,8 +307,10 @@ namespace smll {
 						CONFIG_INT_SOLVEPNP_ALGORITHM_P3P, cv::SOLVEPNP_P3P);
 					obs_property_list_add_int(p,
 						CONFIG_INT_SOLVEPNP_ALGORITHM_DLS, cv::SOLVEPNP_DLS);
-					obs_property_list_add_int(p, 
+					obs_property_list_add_int(p,
 						CONFIG_INT_SOLVEPNP_ALGORITHM_UPNP, cv::SOLVEPNP_UPNP);
+					obs_property_list_add_int(p,
+						CONFIG_INT_SOLVEPNP_ALGORITHM_AP3P, cv::SOLVEPNP_AP3P);
 					break;
 				}
 				obs_properties_add_int_slider(props, it->c_str(), 

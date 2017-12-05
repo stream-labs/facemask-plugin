@@ -37,6 +37,7 @@ namespace smll {
 Face::Face() 
 	: m_trackingX(0)
 	, m_trackingY(0)
+	, m_poseResetCounter(0)
 	, m_trackingScale(1.0)
 	, m_poseInitialized(false) {
 	ResetPose();
@@ -69,6 +70,7 @@ void Face::copy2DDataTo(Face& f) {
 }
 
 void Face::ResetPose() {
+	m_poseResetCounter = 0;
 	m_poseInitialized = false;
 	m_cvTranslation = cv::Mat::zeros(3, 1, CV_64F);
 	m_cvRotation = cv::Mat::zeros(3, 1, CV_64F);

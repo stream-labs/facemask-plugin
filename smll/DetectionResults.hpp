@@ -57,7 +57,7 @@ namespace smll {
 		DetectionResult& operator=(const DetectionResult& r);
 		DetectionResult& operator=(const Face& f);
 
-		void UpdateResults(const DetectionResult& r, double smoothingAmount);
+		void UpdateResults(const DetectionResult& r);
 
 		double DistanceTo(const DetectionResult& r) const;
 
@@ -70,27 +70,6 @@ namespace smll {
 		bool matched;
 		int numFramesLost;
 
-		// Interpolation Methods
-		static inline double lerp(double a, double b, double t) {
-			return (a * (1.0 - t)) + (b * t);
-		}
-		static void lerp(const dlib::rectangle& a, const dlib::rectangle& b,
-			dlib::rectangle& c, double t);
-		static inline void lerp(const dlib::point& a, const dlib::point& b,
-			dlib::point& c, double t) {
-			c.x() = (long)lerp((double)a.x(), (double)b.x(), t);
-			c.y() = (long)lerp((double)a.y(), (double)b.y(), t);
-		}
-		static void	lerp3(const double* __restrict a, const double* __restrict b,
-			double* __restrict c, double t);
-		static void	lerp4(const double* __restrict a, const double* __restrict b,
-			double* __restrict c, double t);
-		static void	slerp(const double* __restrict a, const double* __restrict b,
-			double* __restrict c, double t);
-		static void	slerpalerp(const double* __restrict a,
-			const double* __restrict b, double* __restrict c, double t);
-
-
 
 	private:
 
@@ -99,10 +78,10 @@ namespace smll {
 		//      http://www.cs.unc.edu/~tracker/media/pdf/SIGGRAPH2001_CoursePack_08.pdf
 		//
 		enum FilterIndex : uint32_t {
-			KF_BOUNDS_LEFT,
-			KF_BOUNDS_BOTTOM,
-			KF_BOUNDS_RIGHT,
-			KF_BOUNDS_TOP,
+			//KF_BOUNDS_LEFT,
+			//KF_BOUNDS_BOTTOM,
+			//KF_BOUNDS_RIGHT,
+			//KF_BOUNDS_TOP,
 			KF_TRANS_X,
 			KF_TRANS_Y,
 			KF_TRANS_Z,
