@@ -406,17 +406,6 @@ bool Mask::Resource::Material::Loop(Mask::Part* part) {
 			}
 		}
 
-		// I don't trust that this is identity
-		// (it probably is, but i'm trying to rule out causes of an intermittent bug)
-		if (!texmatset) {
-			matrix4 texmat;
-			matrix4_identity(&texmat);
-			matrix4_transpose(&texmat, &texmat);
-			gs_eparam_t* effparm = gs_effect_get_param_by_name(eff, PARAM_TEXMAT);
-			if (effparm)
-				gs_effect_set_matrix4(effparm, &texmat);
-		}
-
 		// set params for lighting
 		SetLightingParameters(part);
 

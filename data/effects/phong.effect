@@ -1,5 +1,11 @@
-// TRANSFORMS
+// 
+// Phong Shader
+//
+// Largely taken from https://www.3dgep.com/texturing-lighting-directx-11/, converted to OBS
+//
+//
 
+// TRANSFORMS
 // NOTE: There is no gs_effect_set_matrix3. 
 uniform float4x4 ViewProj;
 uniform float4x4 World;
@@ -77,25 +83,24 @@ uniform float shininess = 8.0;
 uniform int transformNormals = 1;
 uniform float alpha = 1.0;
 
+// TEXTURE SAMPLER
 sampler_state textureSampler {
 	Filter    = Anisotropic;
 	AddressU  = Clamp;
 	AddressV  = Clamp;
 };
-/*
-sampler_state normalSampler {
-	Filter    = Linear;
-	AddressU  = Clamp;
-	AddressV  = Clamp;
-};
-*/
+
+// VERTEX IN (to vertex shader)
 struct VertDataIn {
 	float4 pos : POSITION;
 	float4 norm : NORMAL;
 	float4 tangent : TANGENT;
 	float2 uv  : TEXCOORD0;
+	float4 bones  : TEXCOORD1;
+	float4 weights  : TEXCOORD2;
 };
 
+// VERTEX OUT (from vertex shader)
 struct VertDataOut {
 	float4 pos : POSITION;
 	float3 norm : NORMAL;
@@ -105,11 +110,17 @@ struct VertDataOut {
 	float3 bitangent: TEXCOORD2;
 };
 
+
+// smoothstep : used for light attenuation
+//
 float smoothstep(float edge0, float edge1, float x) {
     float t = clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
     return t; //* t * (3.0 - 2.0 * t);
 }
 
+
+// DoLighting:  Calculates lighting for a single light and vert
+//
 float3 DoLighting(
 float3 vpos,
 float3 normal,
@@ -183,7 +194,8 @@ float  lightAngle) {
 }
 
 
-
+// VSPhong : Vertex Shader
+//
 VertDataOut VSPhong(VertDataIn v_in)
 {
 	VertDataOut vert_out;
@@ -206,6 +218,9 @@ VertDataOut VSPhong(VertDataIn v_in)
 	return vert_out;
 }
 
+
+// PSPhong : Pixel Shader
+//
 float4 PSPhong(VertDataOut v_in) : TARGET
 {
 	// world space vertex position
@@ -330,6 +345,9 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 	return float4(outColor.rgb, dffColor.a * alpha);
 }
 
+
+// Draw : Main technique
+//
 technique Draw
 {
 	pass
@@ -338,6 +356,4 @@ technique Draw
 		pixel_shader  = PSPhong(v_in);
 	}
 }
-
-
 

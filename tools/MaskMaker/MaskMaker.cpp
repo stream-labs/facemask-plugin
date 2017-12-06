@@ -1382,7 +1382,7 @@ void command_import(Args& args) {
 
 	// Add all the meshes
 	struct GSVertex {
-		float px, py, pz, pw;
+		float px, py, pz, pw;	// note: vec3 in obs has 4 values
 		float nx, ny, nz, nw;
 		float tx, ty, tz, tw;
 		float u, v, w, ww;
@@ -1395,7 +1395,7 @@ void command_import(Args& args) {
 		float u7, v7, w7, ww7;
 		uint32_t color;
 
-		char fuck_obs[12];
+		char pad[12];			// pad to 16-byte boundary
 
 		GSVertex() {
 			memset(this, 0, sizeof(GSVertex));
