@@ -224,6 +224,7 @@ struct Args {
 	map<string, string> kvpairs;
 	vector<string> files;
 	bool failed;
+	bool lastImageHadAlpha;
 
 	Args(int argc, char** argv) : jptr(nullptr), failed(true) {
 		if (argc < 3) {
@@ -546,6 +547,8 @@ struct Args {
 	json createResourceFromFile(string resFile, string resType=string("")) {
 		json o;
 
+		lastImageHadAlpha = false;
+
 		// read resource file
 		fstream ff(resFile, ios::in | ios::binary);
 		if (!ff.good()) {
@@ -595,6 +598,18 @@ struct Args {
 		
 		string fullPath = getFullResourcePath(resFile);
 		unsigned char* rgba = stbi_load(fullPath.c_str(), &width, &height, &bpp, 4);
+
+		lastImageHadAlpha = false;
+		int count = 0;
+		cout << "Loading image " << resFile << endl;
+		for (unsigned char* p = rgba; count < (width*height); p += 4, count++) {
+			if ((int)p[3] < 255) {
+				lastImageHadAlpha = true;
+				break;
+			}
+		}
+		if (lastImageHadAlpha)
+			cout << "IMAGE HAS ALPHA!!!!" << endl;
 
 		// limit texture sizes
 		int nWidth = width;
@@ -1089,10 +1104,23 @@ void command_merge(Args& args) {
 		}
 	}
 
-	cout << "Merged all files into " << args.filename << endl;
+	string outfilename = "";
+	if (args.filename == "auto") {
+		for (unsigned int i = 0; i < args.files.size(); i++) {
+			if (i != 0)
+				outfilename = outfilename + "+";
+			outfilename = outfilename + get_filename(args.files[i]);
+		}
+		outfilename = outfilename + ".json";
+	}
+	else {
+		outfilename = args.filename;
+	}
+
+	cout << "Merged all files into " << outfilename << endl;
 
 	// write it out
-	args.writeJson(j);
+	args.writeJson(j, outfilename);
 }
 
 int CheckNodeNames(aiNode* node, int count) {
@@ -1466,13 +1494,12 @@ void command_import(Args& args) {
 	// Add all the textures
 	int count = 0;
 	cout << "Importing textures..." << endl;
+	map<string, bool> textureHasAlpha;
 	for (auto it = textureFiles.begin(); it != textureFiles.end(); it++, count++) {
-		bool wantMips = false;
-		if ((it->first.find("ambient") != string::npos) ||
-			(it->first.find("diffuse") != string::npos))
-			wantMips = true;
-
 		json o = args.createImageResourceFromFile(it->second);
+		textureHasAlpha[it->first] = args.lastImageHadAlpha;
+		if (args.lastImageHadAlpha)
+			cout << it->first << " " << " has alpha" << endl;
 		rez[it->first] = o;
 	}
 	cout << "Imported " << count << " textures." << endl;
@@ -1510,6 +1537,15 @@ void command_import(Args& args) {
 		SETTEXPARAM(aiTextureType_NORMALS);
 		SETTEXPARAM(aiTextureType_LIGHTMAP);
 		SETTEXPARAM(aiTextureType_REFLECTION);
+
+		// Opaque flag, set based on diffuse texture
+		bool opaque = true;
+		imgfile = getMaterialTexture(scene->mMaterials[i], aiTextureType_DIFFUSE);
+		if (imgfile.length() > 0) {
+			string paramName = getTextureName(aiTextureType_DIFFUSE);
+			snprintf(temp, sizeof(temp), "%s-%d", paramName.c_str(), i);
+			opaque = !textureHasAlpha[temp];
+		}
 
 		// Only set colors if textures aren't set
 		int namb = mtl->GetTextureCount(aiTextureType_AMBIENT);
@@ -1606,6 +1642,7 @@ void command_import(Args& args) {
 		string effect = "effectPhong";
 		snprintf(temp, sizeof(temp), "material%d", count++);
 		rez[temp] = args.createMaterial(params, effect);
+		rez[temp]["opaque"] = opaque;
 	}
 
 	// Add models
