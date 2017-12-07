@@ -176,5 +176,5 @@ Sticking with the default values is likely the best option, but they are exposed
 
 * [DX11 Texturing and Lighting](https://www.3dgep.com/texturing-lighting-directx-11/)
 
-  ​
+* [Delaunay Triangulation and Voronoi Diagram using OpenCV](https://www.learnopencv.com/delaunay-triangulation-and-voronoi-diagram-using-opencv-c-python/)
 
