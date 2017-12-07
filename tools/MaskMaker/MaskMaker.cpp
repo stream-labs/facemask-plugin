@@ -98,10 +98,11 @@ void usage() {
 	cout << "commands:" << endl;
 	cout << endl;
 	cout << "  create  -  creates a new facemask json file" << endl;
-	cout << endl;
 	cout << "  addres  -  adds a resource" << endl;
-	cout << endl;
 	cout << "  addpart -  adds a part" << endl;
+	cout << "  merge   -  merges jsons" << endl;
+	cout << "  import  -  imports an FBX file and creates a json" << endl;
+	cout << "  tweak   -  tweak (set) values in the json." << endl;
 	cout << endl;
 	cout << "example:" << endl;
 	cout << endl;
@@ -496,7 +497,11 @@ struct Args {
 	}
 
 	void writeJson(const json& j) {
-		fstream fff(filename.c_str(), ios::out);
+		writeJson(j, filename);
+	}
+
+	void writeJson(const json& j, string toFile) {
+		fstream fff(toFile.c_str(), ios::out);
 		fff << j.dump(4) << endl;
 		fff.close();
 	}
@@ -994,8 +999,12 @@ void command_merge(Args& args) {
 			if (k.find("light") == std::string::npos) {
 				k = n + k;
 			}
+			// add the resource to the new json
 			j["resources"][k] = it.value();
+
+			// now fix references by type
 			string tp = j["resources"][k]["type"];
+
 			// fix model references
 			if (tp == "model") {
 				string msh = j["resources"][k]["mesh"];
@@ -1948,6 +1957,60 @@ void command_import(Args& args) {
 }
 
 
+void command_tweak(Args& args) {
+
+	// load json file
+	json j = args.loadJsonFile(args.filename);
+	args.jptr = &j;
+
+	for (auto it = args.kvpairs.begin(); it != args.kvpairs.end(); it++) {
+		vector<string> path = split(it->first, '.');
+
+		switch (path.size()) {
+		case 1:
+			j[path[0]] = it->second;
+			break;
+		case 2:
+			j[path[0]][path[1]] = it->second;
+			break;
+		case 3:
+			j[path[0]][path[1]][path[2]] = it->second;
+			break;
+		case 4:
+			j[path[0]][path[1]][path[2]][path[3]] = it->second;
+			break;
+		case 5:
+			j[path[0]][path[1]][path[2]][path[3]][path[4]] = it->second;
+			break;
+		case 6:
+			j[path[0]][path[1]][path[2]][path[3]][path[4]][path[5]] = it->second;
+			break;
+		case 7:
+			j[path[0]][path[1]][path[2]][path[3]][path[4]][path[5]][path[6]] = it->second;
+			break;
+		case 8:
+			j[path[0]][path[1]][path[2]][path[3]][path[4]][path[5]][path[6]][path[7]] = it->second;
+			break;
+		case 9:
+			j[path[0]][path[1]][path[2]][path[3]][path[4]][path[5]][path[6]][path[7]][path[8]] = it->second;
+			break;
+		case 10:
+			j[path[0]][path[1]][path[2]][path[3]][path[4]][path[5]][path[6]][path[7]][path[8]][path[9]] = it->second;
+			break;
+		default:
+			assert(0);
+			break;
+		}
+	}
+
+	// write it out
+	args.writeJson(j);
+	cout << "Done!" << endl << endl;
+}
+
+
+
+
 int main(int argc, char** argv) {
 
 	// parse arguments
@@ -1969,6 +2032,8 @@ int main(int argc, char** argv) {
 		command_merge(args);
 	else if (args.command == "import")
 		command_import(args);
+	else if (args.command == "tweak")
+		command_tweak(args);
 
 	//getchar();
     return 0;
