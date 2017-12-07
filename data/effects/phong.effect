@@ -258,7 +258,8 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 		float3 r = reflect(normalize(-vpos), normal);
 		float m = 2.0 * sqrt( pow( r.x, 2.0 ) + pow( r.y, 2.0 ) + pow( r.z + 1.0, 2.0 ) );
 		float2 vN = r.xy / m + 0.5;
-
+		vN.y = 1.0 - vN.y; // need to flip Y
+		
 		dffColor = reflectTex.Sample(textureSampler, vN);
 	}
 	
