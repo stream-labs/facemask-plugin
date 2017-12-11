@@ -468,9 +468,10 @@ void Mask::Resource::Material::SetLightingParameters(Mask::Part* part) {
 	// Set up world matrix for lighting 
 	param = gs_effect_get_param_by_name(eff, PARAM_WORLD);
 	if (param) {
-		// go obs. 
+		// go obs. need to transpose matrices sent to shaders from gs.
 		matrix4 w;
-		matrix4_transpose(&w, &part->global);
+		gs_matrix_get(&w);
+		matrix4_transpose(&w, &w);
 		gs_effect_set_matrix4(param, &w);
 	}
 	else {
