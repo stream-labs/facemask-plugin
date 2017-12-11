@@ -129,9 +129,6 @@ namespace Plugin {
 			std::thread			maskDataThread;
 			std::mutex			maskDataMutex;
 			std::unique_ptr<Mask::MaskData>	maskData;
-			std::shared_ptr<Mask::Part> m_partRoot;
-			std::shared_ptr<Mask::Part> m_partWorld;
-			std::shared_ptr<Mask::Part> m_partNose;
 
 			// demo mode
 			bool				demoModeOn;

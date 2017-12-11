@@ -149,20 +149,6 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 		detection.thread = std::thread(StaticThreadMain, this);
 	}
 	
-	
-	// Default Parts
-	// TODO: set up more using landmarks.hpp
-	// 
-	m_partRoot = std::make_shared<Mask::Part>(); 
-	m_partWorld = std::make_shared<Mask::Part>();
-	m_partNose = std::make_shared<Mask::Part>(m_partRoot); 
-	cv::Point3d p = smll::GetLandmarkPoint(smll::NOSE_TIP);
-	vec3_set(&m_partNose->position, (float)p.x, (float)p.y, (float)p.z);
-
-	m_partRoot->isquat = true; 
-	m_partWorld->isquat = true;  
-	m_partNose->isquat = true;
-
 	// start mask data loading thread
 	maskDataThread = std::thread(StaticMaskDataThreadMain, this);
 
@@ -592,26 +578,6 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 		}
 	}
 
-	// TODO: make work with more than 1 face
-	if (faces.length > 0) {
-		const smll::DetectionResult& face = faces[0];
-
-		// update root position
-		m_partRoot->position.x = (float)face.translation[0];
-		m_partRoot->position.y = (float)face.translation[1];
-		m_partRoot->position.z = -(float)face.translation[2];
-		vec3_copy(&m_partWorld->position, &m_partRoot->position);
-		axisang root;
-		axisang_set(&root,
-			(float)face.rotation[0],
-			(float)face.rotation[1],
-			-(float)face.rotation[2],
-			-(float)face.rotation[3]);
-		quat_from_axisang(&m_partRoot->qrotation, &root);
-		m_partRoot->localdirty = true;
-		m_partWorld->localdirty = true;
-	}
-
 	std::unique_lock<std::mutex> lock(maskDataMutex, std::try_to_lock);
 	if (lock.owns_lock()) {
 		if (demoModeOn && !demoModeInDelay) {
@@ -911,6 +877,11 @@ void Plugin::FaceMaskFilter::Instance::drawMaskData(const smll::DetectionResult&
 	);
 
 	gs_matrix_push();
+	gs_matrix_identity();
+	gs_matrix_translate3f((float)face.translation[0],
+		(float)face.translation[1], (float)-face.translation[2]);
+	gs_matrix_rotaa4f((float)face.rotation[0], (float)face.rotation[1],
+		(float)-face.rotation[2], (float)-face.rotation[3]);
 
 	_maskData->Render(depthOnly);
 
@@ -1025,8 +996,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 
 				// time to load mask?
 				if ((maskData == nullptr) &&
-					maskJsonFilename && maskJsonFilename[0] &&
-					m_partWorld) {
+					maskJsonFilename && maskJsonFilename[0]) {
 
 					// load mask
 					maskData = std::unique_ptr<Mask::MaskData>(LoadMask(maskJsonFilename));
@@ -1079,11 +1049,6 @@ Plugin::FaceMaskFilter::Instance::LoadMask(std::string filename) {
 
 	// new mask data
 	Mask::MaskData* mdat = new Mask::MaskData();
-
-	// Default Parts
-	mdat->AddPart("root", m_partRoot);
-	mdat->AddPart("world", m_partWorld);
-	mdat->AddPart("nose", m_partNose);
 
 	// load the json
 	try {

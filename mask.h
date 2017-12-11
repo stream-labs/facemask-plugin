@@ -114,5 +114,6 @@ namespace Mask {
 		std::map<std::string, std::shared_ptr<Part>> m_parts;
 		std::map<std::string, std::shared_ptr<Resource::Animation>> m_animations;
 		obs_data_t* m_data;
+		std::shared_ptr<Mask::Part> m_partWorld;
 	};
 }

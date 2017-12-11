@@ -66,6 +66,13 @@ void Mask::MaskData::Load(std::string file) {
 	if (!m_data)
 		throw std::ios_base::failure(file);
 
+	// World Part
+	m_partWorld = std::make_shared<Mask::Part>();
+	AddPart("world", m_partWorld);
+	// 0,-40,0 is roughly where your face is...consider this origin of lights
+	vec3_set(&m_partWorld->position, 0, 0, -40);
+	m_partWorld->localdirty = true;
+
 	// Metadata
 	if (obs_data_has_user_value(m_data, JSON_METADATA_NAME))
 		m_metaData.name = obs_data_get_string(m_data, JSON_METADATA_NAME);
@@ -211,8 +218,12 @@ std::shared_ptr<Mask::Part> Mask::MaskData::GetPart(std::string name) {
 		throw std::invalid_argument("name must be at least one character long");
 
 	auto kv = m_parts.find(name);
-	if (kv != m_parts.end())
+	if (kv != m_parts.end()) {
+		if (name == "world") {
+			blog(LOG_DEBUG, "FOUND WORLD");
+		}
 		return kv->second;
+	}
 
 	// Lazy Loaded
 	obs_data_item_t* parts = obs_data_item_byname(m_data, JSON_PARTS);
@@ -281,14 +292,25 @@ void  Mask::MaskData::PartCalcMatrix(std::shared_ptr<Mask::Part> part) {
 }
 
 void Mask::MaskData::Tick(float time) {
-	// update animations with the any Part
+	// update animations with the first Part
 	for (auto aakv : m_animations) {
 		if (aakv.second) {
-			Part* p = GetPart("root").get();
-			p->mask = this; // make sure root points to us
+			Part* p = nullptr;
+			for (auto kv : m_parts) {
+				p = kv.second.get();
+				break;
+			}
 			aakv.second->Update(p, time);
 		}
 	}
+
+	/* for fun
+	static float vvv = 0;
+	vec3_set(&m_partWorld->rotation, 0, vvv, 0);
+	m_partWorld->localdirty = true;
+	vvv += 0.05f;
+	*/
+
 	// mark parts dirty
 	for (auto kv : m_parts) {
 		kv.second->dirty = true;
@@ -396,7 +418,11 @@ std::shared_ptr<Mask::Part> Mask::MaskData::LoadPart(std::string name, obs_data_
 	// Parent 
 	if (obs_data_has_user_value(data, S_PARENT)) {
 		std::string parentName = obs_data_get_string(data, S_PARENT);
-		current->parent = GetPart(parentName);
+		// root node is deprecated, but might still be kicking around
+		if (parentName != "root") {
+			blog(LOG_DEBUG, "parent: %s", parentName.c_str());
+			current->parent = GetPart(parentName);
+		}
 	}
 
 	this->AddPart(name, current);

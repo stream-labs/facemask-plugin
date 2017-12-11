@@ -136,7 +136,7 @@ namespace smll {
 	};
 
 	// Just to keep memory clean, statically allocate faces
-	const int		MAX_FACES = 1;
+	const int		MAX_FACES = 8;
 	typedef sarray<Face, MAX_FACES> Faces;
 
 } // smll namespace
