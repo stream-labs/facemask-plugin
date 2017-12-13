@@ -770,6 +770,24 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			if (drawFaces)
 				smllRenderer->DrawFaces(faces);
 
+<<<<<<< Updated upstream
+=======
+			// draw triangulation
+			if (triangulation) {
+				gs_effect_t    *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
+				gs_eparam_t    *color = gs_effect_get_param_by_name(solid, "color");
+
+				struct vec4 veccol;
+				vec4_from_rgba(&veccol, smll::OBSRenderer::MakeColor(0, 255, 0, 255));
+				gs_effect_set_vec4(color, &veccol);
+				while (gs_effect_loop(obs_get_base_effect(OBS_EFFECT_SOLID), "Solid")) {
+					gs_load_vertexbuffer(triangulation);
+					gs_load_indexbuffer(nullptr);
+					gs_draw(GS_LINES, 0, 0);
+				}
+			}
+
+>>>>>>> Stashed changes
 			gs_texrender_end(drawTexRender);
 		}
 		texRenderEnd();
@@ -922,7 +940,12 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 		for (int i = 0; i < smllFaces.length; i++) {
 			own->faces[fidx][i] = smllFaces[i];
 		}
+<<<<<<< Updated upstream
 		own->faces[fidx].length = smllFaces.length;
+=======
+		own->faces[fidx].detectionResults.length = smllFaces.length;
+		own->faces[fidx].triangulationVB = smllFaceDetector->MakeTriangulation();
+>>>>>>> Stashed changes
 
 		{
 			std::unique_lock<std::mutex> lock(detection.mutex);

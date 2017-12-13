@@ -22,7 +22,7 @@ include_directories(${PATH_DLIB})
 
 # OpenCV
 SET(OpenCV_DIR "${PROJECT_SOURCE_DIR}/thirdparty/opencv")
-SET(OpenCV_VERSION "330" CACHE STRING "Version of OpenCV to use. Either 330 or 320.")
+SET(OpenCV_VERSION "331" CACHE STRING "Version of OpenCV to use.")
 SET(OpenCV_LIBS
 	debug "${OpenCV_DIR}/lib/Debug/opencv_calib3d${OpenCV_VERSION}d.lib"
 	optimized "${OpenCV_DIR}/lib/Release/opencv_calib3d${OpenCV_VERSION}.lib"
@@ -38,10 +38,10 @@ SET(OpenCV_LIBS
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/zlib.lib"
 	debug "${OpenCV_DIR}/3rdparty/lib/Debug/ittnotifyd.lib"
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/ittnotify.lib"
+	debug "${OpenCV_DIR}/3rdparty/lib/Debug/ippiwd.lib"
+	optimized "${OpenCV_DIR}/3rdparty/lib/Release/ippiw.lib"
 	debug "${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_${OpenCV_VERSION}/lib/intel64/ippicvmt.lib"
 	optimized "${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_${OpenCV_VERSION}/lib/intel64/ippicvmt.lib"
-	debug "${OpenCV_DIR}/3rdparty/ippicv/ippiw_win/lib/intel64/ipp_iw.lib"
-	optimized "${OpenCV_DIR}/3rdparty/ippicv/ippiw_win/lib/intel64/ipp_iw.lib"
 )
 include_directories("${OpenCV_DIR}/include")
 include_directories("${OpenCV_DIR}/3rdparty/include")
