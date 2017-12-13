@@ -246,11 +246,18 @@ namespace smll {
 		points.insert(points.end(), extrapoints.begin(), extrapoints.end());
 
 		// create subdiv object
-		cv::Rect rect(-CaptureWidth(), -CaptureHeight(), 2*CaptureWidth(), 2*CaptureHeight());
+		cv::Rect rect(0, 0, CaptureWidth(), CaptureHeight());
 		cv::Subdiv2D subdiv(rect);
 
 		// add our points and get triangulation
-		subdiv.insert(points);
+		for (auto p : points) {
+			// note: this crashes if you insert a point outside the rect.
+			// todo: change opencv to reject points rather than throw exceptions
+			//
+			if (rect.contains(p)) {
+				subdiv.insert(points);
+			}
+		}
 		std::vector<cv::Vec6f>	triangleList;
 		subdiv.getTriangleList(triangleList);
 
