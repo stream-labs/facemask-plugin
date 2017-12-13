@@ -72,7 +72,7 @@ static const char* const kFileShapePredictor =
 // I know, this is gross, but temporary 
 static const char* const kFileJsonOption1 = kFileDefaultJson;
 static const char* const kFileJsonOption2 = "masks/Beret2.head.json";
-static const char* const kFileJsonOption3 = "masks/Beret_5 + head.json";
+static const char* const kFileJsonOption3 = "masks/Beret_5+head.json";
 static const char* const kFileJsonOption4 = "masks/bugoutEyes_1.json";
 static const char* const kFileJsonOption5 = "masks/bunnyMask_01_pink.json";
 static const char* const kFileJsonOption6 = "masks/cigar_1.json";
@@ -84,7 +84,7 @@ static const char* const kFileJsonOption11 = "masks/Ears3.head.json";
 static const char* const kFileJsonOption12 = "masks/eyesMask_ver3.json";
 static const char* const kFileJsonOption13 = "masks/flowerCrown_2.head.json";
 static const char* const kFileJsonOption14 = "masks/GagFace_1.json";
-static const char* const kFileJsonOption15 = "masks/glassesHearts_1 + head.json";
+static const char* const kFileJsonOption15 = "masks/glassesHearts_1+head.json";
 static const char* const kFileJsonOption16 = "masks/glasses_Lashes_white_01.head.json";
 static const char* const kFileJsonOption17 = "masks/glasses_superStar_01.head.json";
 static const char* const kFileJsonOption18 = "masks/googly_eyes_hugePupils_03.json";
@@ -96,7 +96,7 @@ static const char* const kFileJsonOption23 = "masks/mustache_typeB.json";
 static const char* const kFileJsonOption24 = "masks/pigEars_02.head.json";
 static const char* const kFileJsonOption25 = "masks/pigHead_01.json";
 static const char* const kFileJsonOption26 = "masks/SheriffHat_1.head.json";
-static const char* const kFileJsonOption27 = "masks/Tiara_gold + head.json";
+static const char* const kFileJsonOption27 = "masks/Tiara_gold+head.json";
 
 static const char* const kSettingsJsonOption1 = "Streamlabs";
 static const char* const kSettingsJsonOption2 = "Beret 2";
