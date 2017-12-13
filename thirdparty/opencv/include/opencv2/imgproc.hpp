@@ -1044,16 +1044,24 @@ public:
      */
     CV_WRAP void getLeadingEdgeList(CV_OUT std::vector<int>& leadingEdgeList) const;
 
-    /** @brief Returns a list of all triangles.
+	/** @brief Returns a list of all triangles.
 
-    @param triangleList Output vector.
+	@param triangleList Output vector.
 
-    The function gives each triangle as a 6 numbers vector, where each two are one of the triangle
-    vertices. i.e. p1_x = v[0], p1_y = v[1], p2_x = v[2], p2_y = v[3], p3_x = v[4], p3_y = v[5].
-     */
-    CV_WRAP void getTriangleList(CV_OUT std::vector<Vec6f>& triangleList) const;
+	The function gives each triangle as a 6 numbers vector, where each two are one of the triangle
+	vertices. i.e. p1_x = v[0], p1_y = v[1], p2_x = v[2], p2_y = v[3], p3_x = v[4], p3_y = v[5].
+	*/
+	CV_WRAP void getTriangleList(CV_OUT std::vector<Vec6f>& triangleList) const;
 
-    /** @brief Returns a list of all Voroni facets.
+	/** @brief Returns a list of all triangles.
+
+	@param triangleList Output vector.
+
+	The function gives each triangle as 3 indices stored in a 3 number vector.
+	*/
+	CV_WRAP void getTriangleIndexList(CV_OUT std::vector<Vec3i>& triangleIndexList) const;
+
+	/** @brief Returns a list of all Voroni facets.
 
     @param idx Vector of vertices IDs to consider. For all vertices you can pass empty vector.
     @param facetList Output vector of the Voroni facets.

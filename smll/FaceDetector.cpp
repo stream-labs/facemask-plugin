@@ -218,6 +218,73 @@ namespace smll {
             m_detectionTimeout = 0;
 		}
 	}
+
+	gs_vertbuffer_t *FaceDetector::MakeTriangulation() {
+		// only 1 face supported
+		if (m_faces.length == 0)
+			return nullptr;
+		Face& face = m_faces[0];
+
+		// list of points for triangulation
+		std::vector<cv::Point2f> points;
+
+		// add facial landmark points
+		dlib::point* facePoints = face.m_points;
+		for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
+			points.push_back(cv::Point2f((float)facePoints[i].x(), (float)facePoints[i].y()));
+		}
+
+		// add extra points
+		std::vector<cv::Point2f> extrapoints;
+		extrapoints.push_back(cv::Point2f(1, 1));
+		extrapoints.push_back(cv::Point2f(CaptureWidth()-1, 1));
+		extrapoints.push_back(cv::Point2f(CaptureWidth()-1, CaptureHeight()-1));
+		extrapoints.push_back(cv::Point2f(1, CaptureHeight()-1));
+		Subdivide(extrapoints);
+		Subdivide(extrapoints);
+		Subdivide(extrapoints);
+		points.insert(points.end(), extrapoints.begin(), extrapoints.end());
+
+		// create subdiv object
+		cv::Rect rect(-CaptureWidth(), -CaptureHeight(), 2*CaptureWidth(), 2*CaptureHeight());
+		cv::Subdiv2D subdiv(rect);
+
+		// add our points and get triangulation
+		subdiv.insert(points);
+		std::vector<cv::Vec6f>	triangleList;
+		subdiv.getTriangleList(triangleList);
+
+		// make vertex buffer
+		obs_enter_graphics();
+		gs_render_start(true);
+		for (unsigned int i = 0; i < triangleList.size(); i++) {
+			cv::Vec6f& v = triangleList[i];
+
+			// LINES
+			gs_vertex2f(v[0], v[1]);
+			gs_vertex2f(v[2], v[3]);
+
+			gs_vertex2f(v[2], v[3]);
+			gs_vertex2f(v[4], v[5]);
+
+			gs_vertex2f(v[4], v[5]);
+			gs_vertex2f(v[0], v[1]);
+		}
+		gs_vertbuffer_t *vertbuff = gs_render_save();
+		obs_leave_graphics();
+
+		return vertbuff;
+	}
+
+	void FaceDetector::Subdivide(std::vector<cv::Point2f>& points) {
+		for (unsigned int i = 0; i < points.size(); i++) {
+			int i2 = (i + 1) % points.size();
+			points.insert(points.begin()+i2, cv::Point2f(
+				(points[i].x + points[i2].x) / 2.0f,
+				(points[i].y + points[i2].y) / 2.0f));
+			i++;
+		}
+	}
     
 	void FaceDetector::InvalidatePoses() {
 		for (int i = 0; i < m_faces.length; i++) {

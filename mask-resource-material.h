@@ -78,7 +78,7 @@ namespace Mask {
 			bool m_opaque;
 
 			gs_address_mode StringToAddressMode(std::string s);
-			void SetLightingParameters(Mask::Part* part);
+			void SetLightingParameters();
 		};
 	}
 }

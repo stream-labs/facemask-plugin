@@ -57,6 +57,9 @@ public:
 					 const OBSTexture& detect, 
 					 const OBSTexture& track);
 
+	gs_vertbuffer_t *MakeTriangulation();
+
+
 	const Face& GetFace(int i) const {
 		if (i < 0 || i >= m_faces.length)
 			throw std::invalid_argument("face point index out of range");
@@ -124,6 +127,8 @@ private:
 	void 	StageAndCopyTexture(SourceFrameType sft);
 	void 	StageTexture(SourceFrameType sft);
 	void 	UnstageTexture(SourceFrameType sft);
+
+	void	Subdivide(std::vector<cv::Point2f>& points);
 };
 
 

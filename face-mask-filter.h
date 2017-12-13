@@ -143,6 +143,9 @@ namespace Plugin {
 			// our current version of detected faces
 			smll::DetectionResults	faces;
 
+			// our current triangulation
+			gs_vertbuffer_t*		triangulation;
+
 			long long			frameCounter;
 
 			bool				drawMask;
@@ -174,11 +177,15 @@ namespace Plugin {
 					long long			frame;
 				};
 				int frameIndex;
-				struct CachedFrame	frames[BUFFER_SIZE];
+				std::array<struct CachedFrame, BUFFER_SIZE> frames;
 
-				// faces circular buffer (detection thred -> main thread)
+				// faces circular buffer (detection thread -> main thread)
+				struct CachedResult {
+					smll::DetectionResults	detectionResults;
+					gs_vertbuffer_t*		triangulationVB;
+				};
 				int facesIndex;
-				std::array<smll::DetectionResults, BUFFER_SIZE> faces;
+				std::array<struct CachedResult, BUFFER_SIZE> faces;
 
 			} detection;
 
