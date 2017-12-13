@@ -370,6 +370,10 @@ void Mask::Resource::Emitter::Render(Mask::Part* part) {
 
 	part->mask->instanceDatas.Push(m_id);
 
+	// get our global matrix
+	matrix4 global;
+	gs_matrix_get(&global);
+
 	// get our instance data
 	std::shared_ptr<EmitterInstanceData> instData =
 		part->mask->instanceDatas.GetData<EmitterInstanceData>();
@@ -397,9 +401,9 @@ void Mask::Resource::Emitter::Render(Mask::Part* part) {
 					gs_matrix_translate(&p->position);
 				else
 					gs_matrix_translate3f(
-						part->global.t.x,
-						part->global.t.y,
-						part->global.t.z);
+						global.t.x,
+						global.t.y,
+						global.t.z);
 				gs_matrix_rotaa4f(1.0f, 0.0f, 0.0f, M_PI);
 
 				float lambda = p->elapsed / m_lifetime;
