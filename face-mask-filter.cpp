@@ -938,7 +938,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			own->faces[fidx].detectionResults[i] = smllFaces[i];
 		}
 		own->faces[fidx].detectionResults.length = smllFaces.length;
-		own->faces[fidx].triangulationVB = nullptr; //disabled smllFaceDetector->MakeTriangulation();
+		own->faces[fidx].triangulationVB = smllFaceDetector->MakeTriangulation();
 
 		{
 			std::unique_lock<std::mutex> lock(detection.mutex);
