@@ -243,6 +243,7 @@ namespace smll {
 		Subdivide(extrapoints);
 		Subdivide(extrapoints);
 		Subdivide(extrapoints);
+		Subdivide(extrapoints);
 		points.insert(points.end(), extrapoints.begin(), extrapoints.end());
 
 		// create subdiv object
@@ -255,7 +256,7 @@ namespace smll {
 			// todo: change opencv to reject points rather than throw exceptions
 			//
 			if (rect.contains(p)) {
-				subdiv.insert(points);
+				subdiv.insert(p);
 			}
 		}
 		std::vector<cv::Vec6f>	triangleList;
