@@ -45,7 +45,6 @@ static const char* const kSettingsDemoFolder = "demoFolder";
 static const char* const kSettingsDemoInterval = "demoInterval";
 static const char* const kSettingsDemoDelay = "demoDelay";
 
-static const char* const kSettingsPerformance = "perfSetting";
 
 
 // setting descriptions
@@ -62,8 +61,6 @@ static const char* const kSettingsDemoModeDesc = "Demo Mode";
 static const char* const kSettingsDemoFolderDesc = "Demo Mode Folder";
 static const char* const kSettingsDemoIntervalDesc = "Demo Mode Interval (seconds)";
 static const char* const kSettingsDemoDelayDesc = "Demo Mode Delay Between Masks (seconds)";
-
-static const char* const kSettingsPerformanceDesc = "Performance Setting";
 
 static const char* const kSettingsEmpty = "";
 
@@ -128,11 +125,4 @@ static const char* const kSettingsJsonOption24 = "Pig Ears";
 static const char* const kSettingsJsonOption25 = "Pig Head";
 static const char* const kSettingsJsonOption26 = "Sherriff Hat";
 static const char* const kSettingsJsonOption27 = "Tiara";
-
-static const char* const kSettingsPerformanceOption1 = "CPU Heavy";
-static const char* const kSettingsPerformanceOption2 = "Moderate GPU (Recommended)";
-static const char* const kSettingsPerformanceOption3 = "More GPU";
-static const char* const kSettingsPerformanceOption4 = "GPU Heavy";
-
-
 
