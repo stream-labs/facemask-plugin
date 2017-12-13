@@ -227,8 +227,7 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	obs_data_set_default_bool(data, kSettingsDeactivated, false);
 
 #if defined(PUBLIC_RELEASE)
-	obs_data_set_default_int(data, P_MASK, 1);
-	obs_data_set_default_int(data, kSettingsPerformance, 1);
+	obs_data_set_default_int(data, P_MASK, 0);
 #else
 	char* jsonName = obs_module_file(kFileDefaultJson);
 	obs_data_set_default_string(data, P_MASK, jsonName);
@@ -284,18 +283,10 @@ obs_properties_t * Plugin::FaceMaskFilter::Instance::get_properties(void *ptr) {
 	obs_property_list_add_int(p, kSettingsJsonOption23, 22);
 	obs_property_list_add_int(p, kSettingsJsonOption24, 23);
 	obs_property_list_add_int(p, kSettingsJsonOption25, 24);
+	obs_property_list_add_int(p, kSettingsJsonOption26, 25);
+	obs_property_list_add_int(p, kSettingsJsonOption27, 26);
 	obs_property_set_modified_callback(p, properties_modified);
 
-	// performance setting
-	// - leave this out...has negligible effect
-	/*
-	p = obs_properties_add_list(props, kSettingsPerformance, kSettingsPerformanceDesc,
-		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
-	obs_property_list_add_int(p, kSettingsPerformanceOption1, 0);
-	obs_property_list_add_int(p, kSettingsPerformanceOption2, 1);
-	obs_property_list_add_int(p, kSettingsPerformanceOption3, 2);
-	obs_property_list_add_int(p, kSettingsPerformanceOption4, 3);
-	*/
 #else
 
 	// Basic Properties
@@ -425,44 +416,16 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 				filename = obs_module_file(kFileJsonOption24);
 			else if (maskNum == 24)
 				filename = obs_module_file(kFileJsonOption25);
+			else if (maskNum == 25)
+				filename = obs_module_file(kFileJsonOption26);
+			else if (maskNum == 26)
+				filename = obs_module_file(kFileJsonOption27);
 			else
 				filename = obs_module_file(kFileJsonOption1);
 
 			if (maskJsonFilename)
 				bfree(maskJsonFilename);
 			maskJsonFilename = filename;
-		}
-
-		int perf = (int)obs_data_get_int(data, kSettingsPerformance);
-		if (perf != performanceSetting) {
-			performanceSetting = perf;
-			switch (performanceSetting) {
-			case 0:
-				smll::Config::singleton().set_bool(smll::CONFIG_BOOL_MAKE_CAPTURE_COPY, true);
-				smll::Config::singleton().set_bool(smll::CONFIG_BOOL_MAKE_DETECT_COPY, true);
-				smll::Config::singleton().set_bool(smll::CONFIG_BOOL_MAKE_TRACK_COPY, true);
-				break;
-			case 1:
-				smll::Config::singleton().set_bool(smll::CONFIG_BOOL_MAKE_CAPTURE_COPY, false);
-				smll::Config::singleton().set_bool(smll::CONFIG_BOOL_MAKE_DETECT_COPY, true);
-				smll::Config::singleton().set_bool(smll::CONFIG_BOOL_MAKE_TRACK_COPY, true);
-				break;
-			case 2:
-				smll::Config::singleton().set_bool(smll::CONFIG_BOOL_MAKE_CAPTURE_COPY, false);
-				smll::Config::singleton().set_bool(smll::CONFIG_BOOL_MAKE_DETECT_COPY, false);
-				smll::Config::singleton().set_bool(smll::CONFIG_BOOL_MAKE_TRACK_COPY, true);
-				break;
-			case 3:
-				smll::Config::singleton().set_bool(smll::CONFIG_BOOL_MAKE_CAPTURE_COPY, false);
-				smll::Config::singleton().set_bool(smll::CONFIG_BOOL_MAKE_DETECT_COPY, false);
-				smll::Config::singleton().set_bool(smll::CONFIG_BOOL_MAKE_TRACK_COPY, false);
-				break;
-			}
-
-			blog(LOG_DEBUG, "perf:  %d %d %d",
-				(int)smll::Config::singleton().get_bool(smll::CONFIG_BOOL_MAKE_CAPTURE_COPY),
-				(int)smll::Config::singleton().get_bool(smll::CONFIG_BOOL_MAKE_DETECT_COPY),
-				(int)smll::Config::singleton().get_bool(smll::CONFIG_BOOL_MAKE_TRACK_COPY));
 		}
 	}
 
