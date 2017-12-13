@@ -103,7 +103,7 @@
 
 /* Intel Integrated Performance Primitives */
 #define HAVE_IPP
-#define HAVE_IPP_ICV_ONLY
+#define HAVE_IPP_ICV
 #define HAVE_IPP_IW
 
 /* Intel IPP Async */
@@ -154,7 +154,7 @@
 #define HAVE_PNG
 
 /* Posix threads (pthreads) */
-/* #undef HAVE_PTHREADS */
+/* #undef HAVE_PTHREAD */
 
 /* parallel_for with pthreads */
 /* #undef HAVE_PTHREADS_PF */
