@@ -706,11 +706,18 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// Draw the source video
 	gs_enable_depth_test(false);
-	gs_set_cull_mode(GS_NEITHER);
+	gs_set_cull_mode(GS_BACK);
 	while (gs_effect_loop(defaultEffect, "Draw")) {
 		gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
 			"image"), sourceTexture);
-		gs_draw_sprite(sourceTexture, 0, m_baseWidth, m_baseHeight);
+		if (triangulationVB) {
+			gs_load_vertexbuffer(triangulationVB);
+			gs_load_indexbuffer(triangulationIB);
+			gs_draw(GS_TRIS, 0, 0);
+		}
+		else {
+			gs_draw_sprite(sourceTexture, 0, m_baseWidth, m_baseHeight);
+		}
 	}
 
 	gs_enable_depth_test(true);
@@ -770,6 +777,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			if (drawFaces)
 				smllRenderer->DrawFaces(faces);
 
+			/* TODO: add lines
+
 			// draw triangulation
 			if (triangulationVB) {
 				gs_effect_t    *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
@@ -784,6 +793,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					gs_draw(GS_LINES, 0, 0);
 				}
 			}
+			*/
 
 			gs_texrender_end(drawTexRender);
 		}
@@ -791,6 +801,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		tex2 = gs_texrender_get_texture(drawTexRender);
 	}
 
+	// TEST MODE PIXEL READING
 	if (smll::Config::singleton().get_bool(smll::CONFIG_BOOL_IN_TEST_MODE))	{
 		if (faces.length > 0) {
 
@@ -938,7 +949,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			own->faces[fidx].detectionResults[i] = smllFaces[i];
 		}
 		own->faces[fidx].detectionResults.length = smllFaces.length;
-		own->faces[fidx].numIndices = smllFaceDetector->MakeTriangulation(&(own->faces[fidx].triangulationVB), &(own->faces[fidx].triangulationIB));
+		smllFaceDetector->MakeTriangulation(&(own->faces[fidx].triangulationVB), &(own->faces[fidx].triangulationIB));
 
 		{
 			std::unique_lock<std::mutex> lock(detection.mutex);
@@ -1153,7 +1164,6 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 			triangulationIB = detection.faces[fidx].triangulationIB;
 			detection.faces[fidx].triangulationIB = nullptr;
 		}
-		numIndices = detection.faces[fidx].numIndices;
 
 		// TEST MODE ONLY : output for testing
 		if (smll::Config::singleton().get_bool(smll::CONFIG_BOOL_IN_TEST_MODE)) {
