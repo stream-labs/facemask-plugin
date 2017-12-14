@@ -129,6 +129,8 @@ private:
 	void 	UnstageTexture(SourceFrameType sft);
 
 	void	Subdivide(std::vector<cv::Point2f>& points);
+	void	ScaleMorph(std::vector<cv::Point2f>& points, 
+		std::vector<int> indices, cv::Point2f& center, cv::Point2f& scale);
 };
 
 

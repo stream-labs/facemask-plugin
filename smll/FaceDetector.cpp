@@ -263,7 +263,36 @@ namespace smll {
 		points.insert(points.end(), extrapoints.begin(), extrapoints.end());
 
 		// WARP POINTS
-		std::vector<cv::Point2f> warpedpoints(points);
+		std::vector<cv::Point2f> warpedpoints = points;
+		
+
+		// HARD-CODED MORPH
+		//
+		//
+		cv::Point2f centerL = points[EYE_LEFT_1] +
+			points[EYE_LEFT_2] +
+			points[EYE_LEFT_3] +
+			points[EYE_LEFT_4] +
+			points[EYE_LEFT_5] +
+			points[EYE_LEFT_6];
+		centerL = centerL / 6.0f;
+		cv::Point2f centerR = points[EYE_RIGHT_1] +
+			points[EYE_RIGHT_2] +
+			points[EYE_RIGHT_3] +
+			points[EYE_RIGHT_4] +
+			points[EYE_RIGHT_5] +
+			points[EYE_RIGHT_6];
+		centerR = centerR / 6.0f;
+		cv::Point2f scale(2.5f, 2.5f);
+
+		ScaleMorph(warpedpoints,
+		{ EYE_LEFT_1, EYE_LEFT_2, EYE_LEFT_3, EYE_LEFT_4, EYE_LEFT_5, EYE_LEFT_6 },
+			centerL, scale);
+		ScaleMorph(warpedpoints,
+		{ EYE_RIGHT_1, EYE_RIGHT_2, EYE_RIGHT_3, EYE_RIGHT_4, EYE_RIGHT_5, EYE_RIGHT_6 },
+			centerR, scale);
+
+
 
 		// create subdiv object
 		cv::Rect rect(0, 0, CaptureWidth()+1, CaptureHeight()+1);
@@ -277,6 +306,7 @@ namespace smll {
 			if (rect.contains(p)) {
 				// note: this crashes if you insert a point outside the rect.
 				int vid = subdiv.insert(p);
+				cv::Point2f k = subdiv.getVertex(vid);
 				vtxMap[vid] = i;
 			}
 		}
@@ -286,8 +316,15 @@ namespace smll {
 		gs_render_start(true);
 		int nv = subdiv.getNumVertices();
 		for (int i = 0; i < nv; i++) {
-			cv::Point2f p = warpedpoints[vtxMap[i]];
-			cv::Point2f uv = points[vtxMap[i]];
+			cv::Point2f p, uv;
+			if (i < 4) {
+				p = subdiv.getVertex(i);
+				uv = p;
+			}
+			else {
+				p = warpedpoints[vtxMap[i]];
+				uv = points[vtxMap[i]];
+			}
 			gs_texcoord(uv.x / width, uv.y / height, 0);
 			gs_vertex2f(p.x, p.y);
 		}
@@ -331,6 +368,14 @@ namespace smll {
 				(points[i].x + points[i2].x) / 2.0f,
 				(points[i].y + points[i2].y) / 2.0f));
 			i++;
+		}
+	}
+
+	void FaceDetector::ScaleMorph(std::vector<cv::Point2f>& points,
+		std::vector<int> indices, cv::Point2f& center, cv::Point2f& scale) {
+		for (auto i : indices) {
+			points[i].x = (points[i].x - center.x) * scale.x + center.x;
+			points[i].y = (points[i].y - center.y) * scale.y + center.y;
 		}
 	}
     

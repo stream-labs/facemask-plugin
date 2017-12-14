@@ -704,9 +704,21 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// start
 	smllRenderer->DrawBegin();
 
+	// Need to wrap for warping
+	gs_sampler_info sinfo;
+	sinfo.address_u = GS_ADDRESS_WRAP;
+	sinfo.address_v = GS_ADDRESS_WRAP;
+	sinfo.address_w = GS_ADDRESS_CLAMP;
+	sinfo.filter = GS_FILTER_POINT;
+	sinfo.border_color = 0;
+	sinfo.max_anisotropy = 0;
+	gs_samplerstate_t* ss = gs_samplerstate_create(&sinfo);
+	gs_load_samplerstate(ss, 0);
+	gs_samplerstate_destroy(ss);
+
 	// Draw the source video
 	gs_enable_depth_test(false);
-	gs_set_cull_mode(GS_BACK);
+	gs_set_cull_mode(GS_NEITHER);
 	while (gs_effect_loop(defaultEffect, "Draw")) {
 		gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
 			"image"), sourceTexture);
@@ -777,8 +789,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			if (drawFaces)
 				smllRenderer->DrawFaces(faces);
 
-			/* TODO: add lines
-
+			
+			/*
 			// draw triangulation
 			if (triangulationVB) {
 				gs_effect_t    *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
@@ -788,12 +800,11 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				vec4_from_rgba(&veccol, smll::OBSRenderer::MakeColor(0, 255, 0, 255));
 				gs_effect_set_vec4(color, &veccol);
 				while (gs_effect_loop(obs_get_base_effect(OBS_EFFECT_SOLID), "Solid")) {
-					gs_load_vertexbuffer(triangulationVB);
 					gs_load_indexbuffer(triangulationIB);
+					gs_load_vertexbuffer(triangulationVB);
 					gs_draw(GS_LINES, 0, 0);
 				}
-			}
-			*/
+			}*/
 
 			gs_texrender_end(drawTexRender);
 		}
