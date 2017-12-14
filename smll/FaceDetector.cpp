@@ -219,11 +219,23 @@ namespace smll {
 		}
 	}
 
-	gs_vertbuffer_t *FaceDetector::MakeTriangulation() {
+	uint32_t FaceDetector::MakeTriangulation(gs_vertbuffer_t** vbuff, gs_indexbuffer_t** ibuff) {
+		// sanity
+		if (!vbuff || !ibuff) {
+			throw std::invalid_argument(
+				"passing null pointers to make triangulation");
+		}
+		*vbuff = nullptr;
+		*ibuff = nullptr;
+
 		// only 1 face supported
 		if (m_faces.length == 0)
-			return nullptr;
+			return 0;
 		Face& face = m_faces[0];
+
+		// save capture width and height
+		float width = (float)CaptureWidth();
+		float height = (float)CaptureHeight();
 
 		// list of points for triangulation
 		std::vector<cv::Point2f> points;
@@ -237,51 +249,69 @@ namespace smll {
 		// add extra points
 		std::vector<cv::Point2f> extrapoints;
 		extrapoints.push_back(cv::Point2f(0, 0));
-		extrapoints.push_back(cv::Point2f(CaptureWidth(), 0));
-		extrapoints.push_back(cv::Point2f(CaptureWidth(), CaptureHeight()));
-		extrapoints.push_back(cv::Point2f(0, CaptureHeight()));
+		extrapoints.push_back(cv::Point2f(width, 0));
+		extrapoints.push_back(cv::Point2f(width, height));
+		extrapoints.push_back(cv::Point2f(0, height));
+		points.insert(points.begin(), extrapoints.begin(), extrapoints.begin()+4);
 		Subdivide(extrapoints);
 		Subdivide(extrapoints);
 		Subdivide(extrapoints);
 		Subdivide(extrapoints);
-		points.insert(points.end(), extrapoints.begin(), extrapoints.end());
+		points.insert(points.end(), extrapoints.begin()+4, extrapoints.end());
 
 		// create subdiv object
 		cv::Rect rect(0, 0, CaptureWidth()+1, CaptureHeight()+1);
 		cv::Subdiv2D subdiv(rect);
 
-		// add our points and get triangulation
+		// add our points to subdiv2d and make vertex buffer
 		for (auto p : points) {
-			// note: this crashes if you insert a point outside the rect.
-			// todo: change opencv to reject points rather than throw exceptions
-			//
 			if (rect.contains(p)) {
+				// note: this crashes if you insert a point outside the rect.
 				subdiv.insert(p);
 			}
 		}
-		std::vector<cv::Vec6f>	triangleList;
-		subdiv.getTriangleList(triangleList);
 
-		// make vertex buffer
+		// make the vertex buffer from the subdiv vertices
+		// NOTE: subdiv2d can and totally will re-arrange the order
+		//       of your vertices!
 		obs_enter_graphics();
 		gs_render_start(true);
-		for (unsigned int i = 0; i < triangleList.size(); i++) {
-			cv::Vec6f& v = triangleList[i];
-
-			// LINES
-			gs_vertex2f(v[0], v[1]);
-			gs_vertex2f(v[2], v[3]);
-
-			gs_vertex2f(v[2], v[3]);
-			gs_vertex2f(v[4], v[5]);
-
-			gs_vertex2f(v[4], v[5]);
-			gs_vertex2f(v[0], v[1]);
+		int nv = subdiv.getNumVertices();
+		for (int i = 0; i < nv; i++) {
+			cv::Point2f p = subdiv.getVertex(i);
+			// vertex buffer
+			gs_texcoord(p.x / width, p.y / height, 0);
+			gs_vertex2f(p.x, p.y);
 		}
-		gs_vertbuffer_t *vertbuff = gs_render_save();
+		*vbuff = gs_render_save();
 		obs_leave_graphics();
 
-		return vertbuff;
+		// get triangulation
+		std::vector<cv::Vec3i>	triangleList;
+		subdiv.getTriangleIndexList(triangleList);
+
+		// DEBUG: convert to lines
+		std::vector<uint32_t> linesList;
+		for (auto t : triangleList) {
+
+			int i0 = t[0];
+			int i1 = t[1];
+			int i2 = t[2];
+			linesList.push_back(i0);
+			linesList.push_back(i1);
+			linesList.push_back(i1);
+			linesList.push_back(i2);
+			linesList.push_back(i2);
+			linesList.push_back(i0);
+		}
+
+		// make index buffer
+		obs_enter_graphics();
+		*ibuff = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
+			linesList.data(), linesList.size(), GS_DYNAMIC);
+		obs_leave_graphics();
+
+		return (uint32_t)linesList.size();
 	}
 
 	void FaceDetector::Subdivide(std::vector<cv::Point2f>& points) {

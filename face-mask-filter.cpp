@@ -119,8 +119,8 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	: m_source(source), m_baseWidth(640), m_baseHeight(480), m_isActive(true), m_isVisible(true),
 	m_isDisabled(false), maskDataShutdown(false), maskJsonFilename(nullptr), maskData(nullptr),
 	demoModeOn(false), demoCurrentMask(0), demoModeInterval(0.0f), demoModeDelay(0.0f),
-	demoModeElapsed(0.0f), demoModeInDelay(false), triangulation(nullptr), frameCounter(0), 
-	drawMask(true),	drawFaces(false), drawFDRect(false), drawTRRect(false),
+	demoModeElapsed(0.0f), demoModeInDelay(false), triangulationVB(nullptr), triangulationIB(nullptr), 
+	frameCounter(0), drawMask(true),	drawFaces(false), drawFDRect(false), drawTRRect(false),
 	filterPreviewMode(false), performanceSetting(-1), testingStage(nullptr) {
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
 
@@ -771,16 +771,16 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				smllRenderer->DrawFaces(faces);
 
 			// draw triangulation
-			if (triangulation) {
+			if (triangulationVB) {
 				gs_effect_t    *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
 				gs_eparam_t    *color = gs_effect_get_param_by_name(solid, "color");
 
 				struct vec4 veccol;
-				vec4_from_rgba(&veccol, smll::OBSRenderer::MakeColor(255, 0, 0, 255));
+				vec4_from_rgba(&veccol, smll::OBSRenderer::MakeColor(0, 255, 0, 255));
 				gs_effect_set_vec4(color, &veccol);
 				while (gs_effect_loop(obs_get_base_effect(OBS_EFFECT_SOLID), "Solid")) {
-					gs_load_vertexbuffer(triangulation);
-					gs_load_indexbuffer(nullptr);
+					gs_load_vertexbuffer(triangulationVB);
+					gs_load_indexbuffer(triangulationIB);
 					gs_draw(GS_LINES, 0, 0);
 				}
 			}
@@ -938,7 +938,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			own->faces[fidx].detectionResults[i] = smllFaces[i];
 		}
 		own->faces[fidx].detectionResults.length = smllFaces.length;
-		own->faces[fidx].triangulationVB = smllFaceDetector->MakeTriangulation();
+		own->faces[fidx].numIndices = smllFaceDetector->MakeTriangulation(&(own->faces[fidx].triangulationVB), &(own->faces[fidx].triangulationIB));
 
 		{
 			std::unique_lock<std::mutex> lock(detection.mutex);
@@ -1135,15 +1135,25 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 		smll::DetectionResults& newFaces = detection.faces[fidx].detectionResults;
 
 		// new triangulation
-		if (triangulation && detection.faces[fidx].triangulationVB) {
-			obs_enter_graphics();
-			gs_vertexbuffer_destroy(triangulation);
-			obs_leave_graphics();
-		}
 		if (detection.faces[fidx].triangulationVB) {
-			triangulation = detection.faces[fidx].triangulationVB;
+			if (triangulationVB) {
+				obs_enter_graphics();
+				gs_vertexbuffer_destroy(triangulationVB);
+				obs_leave_graphics();
+			}
+			triangulationVB = detection.faces[fidx].triangulationVB;
 			detection.faces[fidx].triangulationVB = nullptr;
 		}
+		if (detection.faces[fidx].triangulationIB) {
+			if (triangulationIB) {
+				obs_enter_graphics();
+				gs_indexbuffer_destroy(triangulationIB);
+				obs_leave_graphics();
+			}
+			triangulationIB = detection.faces[fidx].triangulationIB;
+			detection.faces[fidx].triangulationIB = nullptr;
+		}
+		numIndices = detection.faces[fidx].numIndices;
 
 		// TEST MODE ONLY : output for testing
 		if (smll::Config::singleton().get_bool(smll::CONFIG_BOOL_IN_TEST_MODE)) {

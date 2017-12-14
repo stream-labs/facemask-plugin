@@ -144,7 +144,9 @@ namespace Plugin {
 			smll::DetectionResults	faces;
 
 			// our current triangulation
-			gs_vertbuffer_t*		triangulation;
+			int						numIndices;
+			gs_vertbuffer_t*		triangulationVB;
+			gs_indexbuffer_t*		triangulationIB;
 
 			long long			frameCounter;
 
@@ -182,7 +184,9 @@ namespace Plugin {
 				// faces circular buffer (detection thread -> main thread)
 				struct CachedResult {
 					smll::DetectionResults	detectionResults;
+					int						numIndices;
 					gs_vertbuffer_t*		triangulationVB;
+					gs_indexbuffer_t*		triangulationIB;
 				};
 				int facesIndex;
 				std::array<struct CachedResult, BUFFER_SIZE> faces;

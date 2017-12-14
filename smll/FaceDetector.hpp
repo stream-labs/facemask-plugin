@@ -57,7 +57,7 @@ public:
 					 const OBSTexture& detect, 
 					 const OBSTexture& track);
 
-	gs_vertbuffer_t *MakeTriangulation();
+	uint32_t MakeTriangulation(gs_vertbuffer_t** vbuff, gs_indexbuffer_t** ibuff);
 
 
 	const Face& GetFace(int i) const {
