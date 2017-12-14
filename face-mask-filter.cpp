@@ -285,6 +285,7 @@ obs_properties_t * Plugin::FaceMaskFilter::Instance::get_properties(void *ptr) {
 	obs_property_list_add_int(p, kSettingsJsonOption25, 24);
 	obs_property_list_add_int(p, kSettingsJsonOption26, 25);
 	obs_property_list_add_int(p, kSettingsJsonOption27, 26);
+	obs_property_list_add_int(p, kSettingsJsonOption28, 27);
 	obs_property_set_modified_callback(p, properties_modified);
 
 #else
@@ -420,6 +421,8 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 				filename = obs_module_file(kFileJsonOption26);
 			else if (maskNum == 26)
 				filename = obs_module_file(kFileJsonOption27);
+			else if (maskNum == 27)
+				filename = obs_module_file(kFileJsonOption28);
 			else
 				filename = obs_module_file(kFileJsonOption1);
 

@@ -97,6 +97,7 @@ static const char* const kFileJsonOption24 = "masks/pigEars_02.head.json";
 static const char* const kFileJsonOption25 = "masks/pigHead_01.json";
 static const char* const kFileJsonOption26 = "masks/SheriffHat_1.head.json";
 static const char* const kFileJsonOption27 = "masks/Tiara_gold+head.json";
+static const char* const kFileJsonOption28 = "masks/AngelWings.head.json";
 
 static const char* const kSettingsJsonOption1 = "Streamlabs";
 static const char* const kSettingsJsonOption2 = "Beret 2";
@@ -125,4 +126,5 @@ static const char* const kSettingsJsonOption24 = "Pig Ears";
 static const char* const kSettingsJsonOption25 = "Pig Head";
 static const char* const kSettingsJsonOption26 = "Sherriff Hat";
 static const char* const kSettingsJsonOption27 = "Tiara";
+static const char* const kSettingsJsonOption28 = "Angel";
 
