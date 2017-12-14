@@ -236,10 +236,10 @@ namespace smll {
 
 		// add extra points
 		std::vector<cv::Point2f> extrapoints;
-		extrapoints.push_back(cv::Point2f(1, 1));
-		extrapoints.push_back(cv::Point2f(CaptureWidth()-1, 1));
-		extrapoints.push_back(cv::Point2f(CaptureWidth()-1, CaptureHeight()-1));
-		extrapoints.push_back(cv::Point2f(1, CaptureHeight()-1));
+		extrapoints.push_back(cv::Point2f(0, 0));
+		extrapoints.push_back(cv::Point2f(CaptureWidth(), 0));
+		extrapoints.push_back(cv::Point2f(CaptureWidth(), CaptureHeight()));
+		extrapoints.push_back(cv::Point2f(0, CaptureHeight()));
 		Subdivide(extrapoints);
 		Subdivide(extrapoints);
 		Subdivide(extrapoints);
@@ -247,7 +247,7 @@ namespace smll {
 		points.insert(points.end(), extrapoints.begin(), extrapoints.end());
 
 		// create subdiv object
-		cv::Rect rect(0, 0, CaptureWidth(), CaptureHeight());
+		cv::Rect rect(0, 0, CaptureWidth()+1, CaptureHeight()+1);
 		cv::Subdiv2D subdiv(rect);
 
 		// add our points and get triangulation
