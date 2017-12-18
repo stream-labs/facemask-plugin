@@ -146,6 +146,7 @@ namespace Plugin {
 			// our current triangulation
 			gs_vertbuffer_t*		triangulationVB;
 			gs_indexbuffer_t*		triangulationIB;
+			gs_indexbuffer_t*		linesIB;
 
 			long long			frameCounter;
 
@@ -185,8 +186,9 @@ namespace Plugin {
 					smll::DetectionResults	detectionResults;
 					gs_vertbuffer_t*		triangulationVB;
 					gs_indexbuffer_t*		triangulationIB;
-					CachedResult() : triangulationVB(nullptr), 
-						triangulationIB(nullptr) {}
+					gs_indexbuffer_t*		linesIB;
+					CachedResult() : triangulationVB(nullptr),
+						triangulationIB(nullptr), linesIB(nullptr) {}
 				};
 				int facesIndex;
 				std::array<struct CachedResult, BUFFER_SIZE> faces;

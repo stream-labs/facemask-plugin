@@ -178,3 +178,16 @@ Sticking with the default values is likely the best option, but they are exposed
 
 * [Delaunay Triangulation and Voronoi Diagram using OpenCV](https://www.learnopencv.com/delaunay-triangulation-and-voronoi-diagram-using-opencv-c-python/)
 
+* [Curve Fitting - Catmull-Rom spline](https://gist.github.com/pr0digy/1383576)
+
+* [Silhouette Edge Detection Algorithms for use with 3D Models](http://negativesum.net/Members/hoss/resume/SEDAlgorithms.pdf)
+
+* [FaceWarehouse: a 3D Facial Expression Database for Visual Computing](http://gaps-zju.org/facewarehouse/)
+
+* [3D Face Reconstruction with Geometry Details from a Single Image](https://arxiv.org/pdf/1702.05619.pdf)
+
+* [Fine-Grained Head Pose Estimation Without Keypoints](https://arxiv.org/pdf/1710.00925.pdf)
+
+* [Spatial indexing with Quadtrees and Hilbert Curves](http://blog.notdot.net/2009/11/Damn-Cool-Algorithms-Spatial-indexing-with-Quadtrees-and-Hilbert-Curves)
+
+* [Geometric Algorithms](https://www.cs.princeton.edu/~rs/AlgsDS07/16Geometric.pdf)

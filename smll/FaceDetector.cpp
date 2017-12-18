@@ -219,7 +219,8 @@ namespace smll {
 		}
 	}
 
-	uint32_t FaceDetector::MakeTriangulation(gs_vertbuffer_t** vbuff, gs_indexbuffer_t** ibuff) {
+	uint32_t FaceDetector::MakeTriangulation(gs_vertbuffer_t** vbuff, 
+		gs_indexbuffer_t** ibuff, gs_indexbuffer_t** linebuff) {
 		// sanity
 		if (!vbuff || !ibuff) {
 			throw std::invalid_argument(
@@ -249,18 +250,19 @@ namespace smll {
 		for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
 			points.push_back(cv::Point2f((float)facePoints[i].x(), (float)facePoints[i].y()));
 		}
-
+		
 		// add extra points
 		std::vector<cv::Point2f> extrapoints;
 		extrapoints.push_back(cv::Point2f(0, 0));
 		extrapoints.push_back(cv::Point2f(width, 0));
 		extrapoints.push_back(cv::Point2f(width, height));
 		extrapoints.push_back(cv::Point2f(0, height));
-		Subdivide(extrapoints);
-		Subdivide(extrapoints);
-		Subdivide(extrapoints);
-		Subdivide(extrapoints);
+		//Subdivide(extrapoints);
+		//Subdivide(extrapoints);
+		//Subdivide(extrapoints);
+		//Subdivide(extrapoints);
 		points.insert(points.end(), extrapoints.begin(), extrapoints.end());
+		
 
 		// WARP POINTS
 		std::vector<cv::Point2f> warpedpoints = points;
@@ -283,7 +285,17 @@ namespace smll {
 			points[EYE_RIGHT_5] +
 			points[EYE_RIGHT_6];
 		centerR = centerR / 6.0f;
-		cv::Point2f scale(2.5f, 2.5f);
+		cv::Point2f centerM = points[MOUTH_INNER_1] +
+			points[MOUTH_INNER_2] +
+			points[MOUTH_INNER_3] +
+			points[MOUTH_INNER_4] +
+			points[MOUTH_INNER_5] +
+			points[MOUTH_INNER_6] +
+			points[MOUTH_INNER_7] +
+			points[MOUTH_INNER_8];
+		centerM = centerM / 8.0f;
+		cv::Point2f scale(2.3f, 2.8f);
+		cv::Point2f scaleM(1.5f, 1.5f);
 
 		ScaleMorph(warpedpoints,
 		{ EYE_LEFT_1, EYE_LEFT_2, EYE_LEFT_3, EYE_LEFT_4, EYE_LEFT_5, EYE_LEFT_6 },
@@ -291,11 +303,16 @@ namespace smll {
 		ScaleMorph(warpedpoints,
 		{ EYE_RIGHT_1, EYE_RIGHT_2, EYE_RIGHT_3, EYE_RIGHT_4, EYE_RIGHT_5, EYE_RIGHT_6 },
 			centerR, scale);
+		ScaleMorph(warpedpoints,
+		{ MOUTH_INNER_1, MOUTH_INNER_2, MOUTH_INNER_3, MOUTH_INNER_4, MOUTH_INNER_5, MOUTH_INNER_6, MOUTH_INNER_7, MOUTH_INNER_8,
+			MOUTH_OUTER_1, MOUTH_OUTER_2, MOUTH_OUTER_3, MOUTH_OUTER_4, MOUTH_OUTER_5, MOUTH_OUTER_6, MOUTH_OUTER_7, 
+			MOUTH_OUTER_8, MOUTH_OUTER_9, MOUTH_OUTER_10, MOUTH_OUTER_11, MOUTH_OUTER_12 },
+			centerM, scaleM);
 
 
 
 		// create subdiv object
-		cv::Rect rect(0, 0, CaptureWidth()+1, CaptureHeight()+1);
+		cv::Rect rect(0, 0, CaptureWidth() + 1, CaptureHeight() + 1);
 		cv::Subdiv2D subdiv(rect);
 
 		// add our points to subdiv2d
@@ -319,6 +336,10 @@ namespace smll {
 			cv::Point2f p, uv;
 			if (i < 4) {
 				p = subdiv.getVertex(i);
+				if (p.x < 0) p.x = 0;
+				if (p.y < 0) p.y = 0;
+				if (p.x > width) p.x = width;
+				if (p.y > height) p.y = height;
 				uv = p;
 			}
 			else {
@@ -335,22 +356,31 @@ namespace smll {
 		std::vector<cv::Vec3i>	triangleList;
 		subdiv.getTriangleIndexList(triangleList);
 
-		/*
-		// DEBUG: convert to lines
-		std::vector<uint32_t> linesList;
-		for (auto t : triangleList) {
+		// make lines
+		if (linebuff) {
+			if (*linebuff)
+				gs_indexbuffer_destroy(*linebuff);
+			// convert to lines
+			std::vector<uint32_t> linesList;
+			for (auto t : triangleList) {
 
-			int i0 = t[0];
-			int i1 = t[1];
-			int i2 = t[2];
-			linesList.push_back(i0);
-			linesList.push_back(i1);
-			linesList.push_back(i1);
-			linesList.push_back(i2);
-			linesList.push_back(i2);
-			linesList.push_back(i0);
+				int i0 = t[0];
+				int i1 = t[1];
+				int i2 = t[2];
+				linesList.push_back(i0);
+				linesList.push_back(i1);
+				linesList.push_back(i1);
+				linesList.push_back(i2);
+				linesList.push_back(i2);
+				linesList.push_back(i0);
+			}
+
+			// make index buffer
+			obs_enter_graphics();
+			*linebuff = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
+				linesList.data(), linesList.size(), GS_DYNAMIC);
+			obs_leave_graphics();
 		}
-		*/
 
 		// make index buffer
 		obs_enter_graphics();
@@ -368,6 +398,61 @@ namespace smll {
 				(points[i].x + points[i2].x) / 2.0f,
 				(points[i].y + points[i2].y) / 2.0f));
 			i++;
+		}
+	}
+
+	void FaceDetector::CatmullRomSmooth(std::vector<cv::Point2f>& points, int steps) {
+		if (points.size() < 3)
+			return;
+
+		float dt = 1.0f / (float)steps;
+
+		std::vector<cv::Point2f> spline;
+		cv::Point2f p0, p1, p2, p3;
+		float x, y;
+
+		size_t count = points.size() - 1;
+		for (unsigned int i = 0; i <= count; i++) {
+			if (i == 0) {
+				p0 = points[i];
+				p1 = points[i];
+				p2 = points[i + 1];
+				p2 = points[i + 2];
+			}
+			else if (i == count) {
+				p0 = points[count - 2];
+				p1 = points[count - 1];
+				p2 = points[count];
+				p3 = points[count];
+			}
+			else {
+				p0 = points[i - 1];
+				p1 = points[i];
+				p2 = points[i + 1];
+				p3 = points[i + 2];
+
+			}
+
+			for (float t = 0.0f; t <= 1.0f; t += dt) {
+				float t2 = t * t;
+				float t3 = t2 * t;
+
+				x = 0.5f * 
+					((2.0f * p1.x) +
+					 (p2.x - p0.x) * t +
+					 (2.0f * p0.x - 5.0f * p1.x + 4.0f * p2.x - p3.x) * t2 +
+					 (3.0f * p1.x - p0.x - 3.0f * p2.x + p3.x) * t3);
+					
+				y = 0.5f *
+					((2.0f * p1.y) +
+					 (p2.y - p0.y) * t +
+					 (2.0f * p0.y - 5.0f * p1.y + 4.0f * p2.y - p3.y) * t2 +
+					 (3.0f * p1.y - p0.y - 3.0f * p2.y + p3.y) * t3);
+
+				if (!(spline.size() && spline[spline.size() - 1].x == x && spline[spline.size() - 1].y == y)) {
+					spline.push_back(cv::Point2f(x, y));
+				}
+			}
 		}
 	}
 

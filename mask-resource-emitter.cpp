@@ -318,6 +318,7 @@ void Mask::Resource::Emitter::Update(Mask::Part* part, float time) {
 		if (p->alive) {
 			p->elapsed += time;
 			if (p->elapsed > m_lifetime) {
+				// kill particle
 				p->alive = false;
 				continue;
 			}

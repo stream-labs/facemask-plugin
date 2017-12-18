@@ -120,8 +120,8 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	m_isDisabled(false), maskDataShutdown(false), maskJsonFilename(nullptr), maskData(nullptr),
 	demoModeOn(false), demoCurrentMask(0), demoModeInterval(0.0f), demoModeDelay(0.0f),
 	demoModeElapsed(0.0f), demoModeInDelay(false), triangulationVB(nullptr), triangulationIB(nullptr), 
-	frameCounter(0), drawMask(true),	drawFaces(false), drawFDRect(false), drawTRRect(false),
-	filterPreviewMode(false), performanceSetting(-1), testingStage(nullptr) {
+	linesIB(nullptr), frameCounter(0), drawMask(true), drawFaces(false), drawFDRect(false), 
+	drawTRRect(false), filterPreviewMode(false), performanceSetting(-1), testingStage(nullptr) {
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
 
 	obs_enter_graphics();
@@ -709,7 +709,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	sinfo.address_u = GS_ADDRESS_WRAP;
 	sinfo.address_v = GS_ADDRESS_WRAP;
 	sinfo.address_w = GS_ADDRESS_CLAMP;
-	sinfo.filter = GS_FILTER_POINT;
+	sinfo.filter = GS_FILTER_LINEAR;
 	sinfo.border_color = 0;
 	sinfo.max_anisotropy = 0;
 	gs_samplerstate_t* ss = gs_samplerstate_create(&sinfo);
@@ -788,11 +788,9 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			// draw face detection data
 			if (drawFaces)
 				smllRenderer->DrawFaces(faces);
-
 			
-			/*
 			// draw triangulation
-			if (triangulationVB) {
+			if (triangulationVB && linesIB) {
 				gs_effect_t    *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
 				gs_eparam_t    *color = gs_effect_get_param_by_name(solid, "color");
 
@@ -800,11 +798,11 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				vec4_from_rgba(&veccol, smll::OBSRenderer::MakeColor(0, 255, 0, 255));
 				gs_effect_set_vec4(color, &veccol);
 				while (gs_effect_loop(obs_get_base_effect(OBS_EFFECT_SOLID), "Solid")) {
-					gs_load_indexbuffer(triangulationIB);
+					gs_load_indexbuffer(linesIB);
 					gs_load_vertexbuffer(triangulationVB);
 					gs_draw(GS_LINES, 0, 0);
 				}
-			}*/
+			}
 
 			gs_texrender_end(drawTexRender);
 		}
@@ -945,7 +943,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			continue;
 		}
 
-		// copy the face detection results
+		// get the index into the faces buffer
 		{
 			std::unique_lock<std::mutex> lock(detection.mutex);
 			fidx = own->facesIndex;
@@ -960,8 +958,12 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			own->faces[fidx].detectionResults[i] = smllFaces[i];
 		}
 		own->faces[fidx].detectionResults.length = smllFaces.length;
-		smllFaceDetector->MakeTriangulation(&(own->faces[fidx].triangulationVB), &(own->faces[fidx].triangulationIB));
 
+		// Make triangulation for face morphing
+		smllFaceDetector->MakeTriangulation(&(own->faces[fidx].triangulationVB), 
+			&(own->faces[fidx].triangulationIB), &(own->faces[fidx].linesIB));
+
+		// increment face buffer index
 		{
 			std::unique_lock<std::mutex> lock(detection.mutex);
 			own->facesIndex = (fidx + 1) % ThreadData::BUFFER_SIZE;
@@ -1174,6 +1176,15 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 			}
 			triangulationIB = detection.faces[fidx].triangulationIB;
 			detection.faces[fidx].triangulationIB = nullptr;
+		}
+		if (detection.faces[fidx].linesIB) {
+			if (linesIB) {
+				obs_enter_graphics();
+				gs_indexbuffer_destroy(linesIB);
+				obs_leave_graphics();
+			}
+			linesIB = detection.faces[fidx].linesIB;
+			detection.faces[fidx].linesIB = nullptr;
 		}
 
 		// TEST MODE ONLY : output for testing
