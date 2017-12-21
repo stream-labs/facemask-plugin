@@ -91,6 +91,17 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 		LoadObj(tempFile);
 		Utils::DeleteTempFile(tempFile);
 	}
+
+	// calculate center
+	vec3 center;
+	vec3_zero(&center);
+	GS::Vertex* v = m_VertexBuffer->data();
+	unsigned int numV = m_VertexBuffer->size();
+	for (unsigned int i = 0; i < numV; i++, v++) {
+		vec3_add(&center, &center, &(v->position));
+	}
+	vec3_divf(&center, &center, (float)numV);
+	vec4_set(&m_center, center.x, center.y, center.z, 1.0f);
 } 
 
 Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, std::string file)

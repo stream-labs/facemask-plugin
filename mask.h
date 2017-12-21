@@ -79,13 +79,7 @@ namespace Mask {
 
 		virtual ~SortedDrawObject() {}
 
-		virtual float	SortDepth() {
-			// when we are called, the matrix stack
-			// has our matrix, so this is typical
-			matrix4 m;
-			gs_matrix_get(&m);
-			return m.t.z;
-		}
+		virtual float	SortDepth() = 0;
 		virtual void	SortedRender() = 0;
 
 		Part*				sortDrawPart;

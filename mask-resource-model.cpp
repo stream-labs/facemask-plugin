@@ -92,13 +92,17 @@ void Mask::Resource::Model::Render(Mask::Part* part) {
 		part->mask->AddSortedDrawObject(this);
 		return;
 	}
+	DirectRender(part);
+}
 
+void Mask::Resource::Model::DirectRender(Mask::Part* part) {
 	part->mask->instanceDatas.Push(m_id);
 	while (m_material->Loop(part)) {
 		m_mesh->Render(part);
 	}
 	part->mask->instanceDatas.Pop();
 }
+
 
 bool Mask::Resource::Model::IsDepthOnly() {
 	if (m_material != nullptr) {
@@ -118,6 +122,14 @@ bool Mask::Resource::Model::IsOpaque() {
 	return true;
 }
 
+float Mask::Resource::Model::SortDepth() {
+	vec4 c = m_mesh->GetCenter();
+	matrix4 m;
+	gs_matrix_get(&m);
+	vec4_transform(&c, &c, &m);
+	return c.z;
+}
+	
 void Mask::Resource::Model::SortedRender() {
 	sortDrawPart->mask->instanceDatas.Push(m_id);
 	while (m_material->Loop(sortDrawPart)) {

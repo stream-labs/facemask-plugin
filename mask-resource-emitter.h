@@ -27,16 +27,23 @@ namespace Mask {
 
 		class Particle : public SortedDrawObject {
 		public:
+			enum State : uint8_t {
+				DEAD,
+				SPAWNED,
+				ALIVE,
+				NUM_STATES
+			};
+
 			std::size_t		id;
 			vec3			position;
 			vec3			velocity;
 			Emitter*		emitter;
 			float			elapsed;
-			bool			alive;
+			State			state;
 
 			Particle* next;
 
-			Particle() : alive(false) {}
+			Particle() : state(DEAD), emitter(nullptr) {}
 
 			virtual float	SortDepth() override;
 			virtual void	SortedRender() override;

@@ -376,7 +376,7 @@ void Mask::MaskData::Render(bool depthOnly) {
 	if (!depthOnly) {
 		for (unsigned int i = 0; i < NUM_DRAW_BUCKETS; i++) {
 			SortedDrawObject* sdo = m_drawBuckets[i];
-			while (sdo != nullptr) {
+			while (sdo) {
 				Part* part = sdo->sortDrawPart;
 				instanceDatas.Push(part->hash_id);
 				gs_matrix_push();
