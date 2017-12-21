@@ -23,50 +23,49 @@
 namespace Mask {
 	namespace Resource {
 
-		struct Particle {
-			std::size_t  id;
-			vec3	position;
-			vec3	velocity;
-			float	elapsed;
-			bool	alive;
+		class Emitter;
+
+		class Particle : public SortedDrawObject {
+		public:
+			std::size_t		id;
+			vec3			position;
+			vec3			velocity;
+			Emitter*		emitter;
+			float			elapsed;
+			bool			alive;
 
 			Particle* next;
 
 			Particle() : alive(false) {}
-		};
 
-		static const int NumBucketsMultiplier = 10;
+			virtual float	SortDepth() override;
+			virtual void	SortedRender() override;
+		};
 
 		struct EmitterInstanceData : public InstanceData {
 			Particle*	particles;
-			Particle**  buckets;
-			float       minZ, maxZ;
 			float		elapsed;
 			float		delta_time;
+
 			EmitterInstanceData() : particles(nullptr), 
-				buckets(nullptr),
-				minZ(-100.0f), maxZ(100.0f), elapsed(0.0f),
-				delta_time(0.0f) {
-			}
-			void Init(int numParticles) {
+				elapsed(0.0f), delta_time(0.0f) {}
+
+			inline void Init(int numParticles, Emitter* e) {
+				// only init once
 				if (particles != nullptr)
 					return;
 				particles = new Particle[numParticles];
-				int NumBuckets = numParticles * NumBucketsMultiplier;
-				buckets = new Particle*[NumBuckets];
-				memset(buckets, 0, sizeof(Particle*) * NumBuckets);
 				Particle* p = particles;
 				std::hash<int> hasher;
 				for (int i = 0; i < numParticles; i++,p++) {
 					p->id = hasher(i);
+					p->emitter = e;
 				}
 			}
+
 			~EmitterInstanceData() {
 				if (particles) {
 					delete[] particles;
-				}
-				if (buckets) {
-					delete[] buckets;
 				}
 			}
 		};
@@ -84,6 +83,8 @@ namespace Mask {
 			bool IsOpaque();
 
 		protected:
+			// allow Particle class to access protected vars
+			friend class Particle;
 
 			float		m_rateMin, m_rateMax;
 			float		m_lifetime;

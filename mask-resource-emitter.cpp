@@ -235,7 +235,7 @@ void Mask::Resource::Emitter::Update(Mask::Part* part, float time) {
 	// get our instance data
 	std::shared_ptr<EmitterInstanceData> instData =
 		part->mask->instanceDatas.GetData<EmitterInstanceData>();
-	instData->Init(m_numParticles);
+	instData->Init(m_numParticles, this);
 
 	// update our model
 	Particle* p = instData->particles;
@@ -340,29 +340,6 @@ void Mask::Resource::Emitter::Update(Mask::Part* part, float time) {
 		}
 	}
 
-	// Sort particles
-	Particle** pp = instData->buckets;
-	int NumBuckets = m_numParticles * NumBucketsMultiplier;
-	for (int i = 0; i < NumBuckets; i++, pp++) {
-		*pp = nullptr;
-	}
-	p = instData->particles;
-	pp = instData->buckets;
-	for (int i = 0; i < m_numParticles; i++, p++) {
-		if (p->alive) {
-			float z = p->position.z;
-			if (z > instData->maxZ)
-				instData->maxZ = z;
-			if (z < instData->minZ)
-				instData->minZ = z;
-			z = (z - instData->minZ) / (instData->maxZ - instData->minZ);
-			int idx = (int)(z * (float)(NumBuckets - 1));
-			Particle* t = pp[idx];
-			p->next = t;
-			pp[idx] = p;
-		}
-	}
-
 	part->mask->instanceDatas.Pop();
 }
 
@@ -382,58 +359,68 @@ void Mask::Resource::Emitter::Render(Mask::Part* part) {
 		return;
 	}
 
-	// global alpha
-	std::shared_ptr<AlphaInstanceData> aid =
-		part->mask->instanceDatas.GetData<AlphaInstanceData>
-		(AlphaInstanceDataId);
-
-	float saved_alpha = aid->alpha;
-
-	gs_matrix_push();
-	Particle** pp = &instData->buckets[0];
-	int NumBuckets = m_numParticles * NumBucketsMultiplier;
-	for (int i = 0; i < NumBuckets; i++, pp++) {
-		if (*pp) {
-			Particle* p = *pp;
-			while (p) {
-				gs_matrix_identity();
-				if (m_worldSpace)
-					gs_matrix_translate(&p->position);
-				else
-					gs_matrix_translate3f(
-						global.t.x,
-						global.t.y,
-						global.t.z);
-				gs_matrix_rotaa4f(1.0f, 0.0f, 0.0f, M_PI);
-
-				float lambda = p->elapsed / m_lifetime;
-				float s = lambda * (m_scaleEnd - m_scaleStart) + m_scaleStart;
-				gs_matrix_scale3f(s, s, s);
-				aid->alpha = lambda * (m_alphaEnd - m_alphaStart) + m_alphaStart;
-				part->mask->instanceDatas.Push(p->id);
-				m_model->Render(part);
-				part->mask->instanceDatas.Pop();
-				p = p->next;
-			}
+	// add particles as sorted draw objects
+	Particle* p = instData->particles;
+	for (int i = 0; i < m_numParticles; i++, p++) {
+		if (p->alive) {
+			p->sortDrawPart = part;
+			part->mask->AddSortedDrawObject(p);
 		}
 	}
-	gs_matrix_pop();
 
-	aid->alpha = saved_alpha;
 	part->mask->instanceDatas.Pop();
 }
 
-
 bool Mask::Resource::Emitter::IsDepthOnly() {
-	if (m_model != nullptr) {
-		return m_model->IsDepthOnly();
-	}
 	return false;
 }
 
 bool Mask::Resource::Emitter::IsOpaque() {
-	if (m_model != nullptr) {
-		return m_model->IsOpaque();
+	return false;
+}
+
+
+
+float Mask::Resource::Particle::SortDepth() {
+	float z = position.z;
+	if (!emitter->m_worldSpace) {
+		matrix4 m;
+		gs_matrix_get(&m);
+		z += m.t.z;
 	}
-	return true;
+	return z;
+}
+
+void Mask::Resource::Particle::SortedRender() {
+
+	// global alpha
+	std::shared_ptr<AlphaInstanceData> aid =
+		sortDrawPart->mask->instanceDatas.GetData<AlphaInstanceData>
+		(AlphaInstanceDataId);
+
+	float saved_alpha = aid->alpha;
+
+	matrix4 m;
+	gs_matrix_get(&m);
+
+	gs_matrix_push();
+	gs_matrix_identity();
+
+	gs_matrix_translate(&position);
+	if (!emitter->m_worldSpace) {
+		gs_matrix_translate3f(m.t.x,m.t.y,m.t.z);
+	}
+	gs_matrix_rotaa4f(1.0f, 0.0f, 0.0f, M_PI);
+
+	float lambda = elapsed / emitter->m_lifetime;
+	float s = lambda * (emitter->m_scaleEnd - emitter->m_scaleStart) + emitter->m_scaleStart;
+	gs_matrix_scale3f(s, s, s);
+	aid->alpha = lambda * (emitter->m_alphaEnd - emitter->m_alphaStart) + emitter->m_alphaStart;
+
+	sortDrawPart->mask->instanceDatas.Push(id);
+	emitter->m_model->Render(sortDrawPart);
+	sortDrawPart->mask->instanceDatas.Pop();
+
+	gs_matrix_pop();
+	aid->alpha = saved_alpha;
 }

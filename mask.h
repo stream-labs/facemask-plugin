@@ -30,6 +30,7 @@ extern "C" {
 	#include <libobs/graphics/vec3.h>
 	#include <libobs/graphics/matrix4.h>
 	#include <libobs/graphics/quat.h>
+	#include <libobs/graphics/graphics.h>
 	#pragma warning( pop )
 }
 
@@ -78,8 +79,13 @@ namespace Mask {
 
 		virtual ~SortedDrawObject() {}
 
-		virtual float	SortDepth() { 
-			return sortDrawPart->global.t.z; }
+		virtual float	SortDepth() {
+			// when we are called, the matrix stack
+			// has our matrix, so this is typical
+			matrix4 m;
+			gs_matrix_get(&m);
+			return m.t.z;
+		}
 		virtual void	SortedRender() = 0;
 
 		Part*				sortDrawPart;

@@ -38,7 +38,7 @@ namespace Mask {
 			virtual void Render(Mask::Part* part) override;
 			virtual bool IsDepthOnly() override;
 
-			virtual void SortedRender() override;
+			virtual void	SortedRender() override;
 
 			bool IsOpaque();
 
