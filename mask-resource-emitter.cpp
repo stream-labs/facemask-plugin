@@ -280,9 +280,9 @@ void Mask::Resource::Emitter::Update(Mask::Part* part, float time) {
 				// we will set up transform when rendering
 				vec3_zero(&p->position);
 				vec3_set(&p->velocity,
-					RandFloat(m_initialVelocityMin.x, m_initialVelocityMax.x),
-					RandFloat(m_initialVelocityMin.y, m_initialVelocityMax.y),
-					RandFloat(m_initialVelocityMin.z, m_initialVelocityMax.z));
+					RandFloat(m_initialVelocityMin.x, m_initialVelocityMax.x) * time,
+					RandFloat(m_initialVelocityMin.y, m_initialVelocityMax.y) * time,
+					RandFloat(m_initialVelocityMin.z, m_initialVelocityMax.z) * time);
 			}
 		}
 
