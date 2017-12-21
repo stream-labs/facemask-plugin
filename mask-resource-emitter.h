@@ -80,7 +80,8 @@ namespace Mask {
 			virtual void Update(Mask::Part* part, float time) override;
 			virtual void Render(Mask::Part* part) override;
 			virtual bool IsDepthOnly() override;
-			virtual bool IsOpaque() override;
+			
+			bool IsOpaque();
 
 		protected:
 

@@ -28,7 +28,7 @@
 namespace Mask {
 	namespace Resource {
 		class Material : public IBase {
-			public:
+		public:
 			Material(Mask::MaskData* parent, std::string name, obs_data_t* data);
 			virtual ~Material();
 
@@ -39,9 +39,9 @@ namespace Mask {
 			bool Loop(Mask::Part* part);
 
 			bool IsDepthOnly() override { return m_depthOnly; }
-			bool IsOpaque() override { return m_opaque; }
+			bool IsOpaque() { return m_opaque; }
 
-			private:
+		private:
 			struct Parameter {
 				GS::EffectParameter::Type type;
 				union {
@@ -53,7 +53,7 @@ namespace Mask {
 				};
 			};
 
-			protected:
+		protected:
 			std::shared_ptr<Effect> m_effect;
 			std::string m_technique;
 

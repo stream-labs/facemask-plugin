@@ -42,9 +42,17 @@ static const char* const JSON_PARTS = "parts";
 static const char* const JSON_TYPE = "type";
 static const char* const JSON_ANIMATION = "animation";
 
-Mask::MaskData::MaskData() : m_data(nullptr) {}
+static const int NUM_DRAW_BUCKETS = 8 * 1024;
+static const float BUCKETS_MAX_Z = 10.0f;
+static const float BUCKETS_MIN_Z = -100.0f;
+
+Mask::MaskData::MaskData() : m_data(nullptr) {
+	m_drawBuckets = new Mask::SortedDrawObject*[NUM_DRAW_BUCKETS];
+	ClearSortedDrawObjects();
+}
 
 Mask::MaskData::~MaskData() {
+	delete[] m_drawBuckets;
 	Clear();
 }
 
@@ -69,8 +77,8 @@ void Mask::MaskData::Load(std::string file) {
 	// World Part
 	m_partWorld = std::make_shared<Mask::Part>();
 	AddPart("world", m_partWorld);
-	// 0,-40,0 is roughly where your face is...consider this origin of lights
-	vec3_set(&m_partWorld->position, 0, 0, -40);
+	// 0,-50,0 is roughly where your face is...consider this origin of lights
+	vec3_set(&m_partWorld->position, 0, 0, -50);
 	m_partWorld->localdirty = true;
 
 	// Metadata
@@ -252,6 +260,26 @@ std::shared_ptr<Mask::Part> Mask::MaskData::RemovePart(std::string name) {
 	return el;
 }
 
+void  Mask::MaskData::ClearSortedDrawObjects() {
+	SortedDrawObject** sdo = m_drawBuckets;
+	for (unsigned int i = 0; i < NUM_DRAW_BUCKETS; i++) {
+		*sdo = nullptr;
+		sdo++;
+	}
+}
+
+void  Mask::MaskData::AddSortedDrawObject(SortedDrawObject* obj) {
+	float z = obj->SortDepth();
+	if (z > BUCKETS_MAX_Z)
+		z = BUCKETS_MAX_Z;
+	if (z < BUCKETS_MIN_Z)
+		z = BUCKETS_MIN_Z;
+	z = (z - BUCKETS_MIN_Z) / (BUCKETS_MAX_Z - BUCKETS_MIN_Z);
+	int idx = (int)(z * (float)(NUM_DRAW_BUCKETS - 1));
+	obj->nextDrawObject = m_drawBuckets[idx];
+	m_drawBuckets[idx] = obj;
+}
+
 void  Mask::MaskData::PartCalcMatrix(std::shared_ptr<Mask::Part> part) {
 	// Only if we're dirty
 	if (part->dirty) {
@@ -304,13 +332,6 @@ void Mask::MaskData::Tick(float time) {
 		}
 	}
 
-	/* for fun
-	static float vvv = 0;
-	vec3_set(&m_partWorld->rotation, 0, vvv, 0);
-	m_partWorld->localdirty = true;
-	vvv += 0.05f;
-	*/
-
 	// mark parts dirty
 	for (auto kv : m_parts) {
 		kv.second->dirty = true;
@@ -331,6 +352,9 @@ void Mask::MaskData::Tick(float time) {
 }
 
 void Mask::MaskData::Render(bool depthOnly) {
+
+	ClearSortedDrawObjects();
+
 	// OPAQUE
 	for (auto kv : m_parts) {
 		if (kv.second->resources.size() == 0)
@@ -340,8 +364,7 @@ void Mask::MaskData::Render(bool depthOnly) {
 		gs_matrix_mul(&kv.second->global);
 		for (auto it = kv.second->resources.begin();
 			it != kv.second->resources.end(); it++) {
-			if ((*it)->IsDepthOnly() == depthOnly &&
-				(*it)->IsOpaque()) {
+			if ((*it)->IsDepthOnly() == depthOnly) {
 				(*it)->Render(kv.second.get());
 			}
 		}
@@ -350,21 +373,20 @@ void Mask::MaskData::Render(bool depthOnly) {
 	}
 
 	// TRANSPARENT
-	for (auto kv : m_parts) {
-		if (kv.second->resources.size() == 0)
-			continue;
-		instanceDatas.Push(kv.second->hash_id);
-		gs_matrix_push();
-		gs_matrix_mul(&kv.second->global);
-		for (auto it = kv.second->resources.begin();
-			it != kv.second->resources.end(); it++) {
-			if ((*it)->IsDepthOnly() == depthOnly &&
-				!(*it)->IsOpaque()) {
-				(*it)->Render(kv.second.get());
+	if (!depthOnly) {
+		for (unsigned int i = 0; i < NUM_DRAW_BUCKETS; i++) {
+			SortedDrawObject* sdo = m_drawBuckets[i];
+			while (sdo != nullptr) {
+				Part* part = sdo->sortDrawPart;
+				instanceDatas.Push(part->hash_id);
+				gs_matrix_push();
+				gs_matrix_mul(&part->global);
+				sdo->SortedRender();
+				gs_matrix_pop();
+				instanceDatas.Pop();
+				sdo = sdo->nextDrawObject;
 			}
 		}
-		gs_matrix_pop();
-		instanceDatas.Pop();
 	}
 }
 

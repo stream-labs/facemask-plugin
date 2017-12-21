@@ -85,6 +85,14 @@ void Mask::Resource::Model::Update(Mask::Part* part, float time) {
 }
 
 void Mask::Resource::Model::Render(Mask::Part* part) {
+	// Add transparent models as sorted draw objects
+	// to draw in a sorted second render pass 
+	if (!IsOpaque()) {
+		this->sortDrawPart = part;
+		part->mask->AddSortedDrawObject(this);
+		return;
+	}
+
 	part->mask->instanceDatas.Push(m_id);
 	while (m_material->Loop(part)) {
 		m_mesh->Render(part);
@@ -100,8 +108,21 @@ bool Mask::Resource::Model::IsDepthOnly() {
 }
 
 bool Mask::Resource::Model::IsOpaque() {
+	// note: depth only objects are considered opaque
+	if (IsDepthOnly()) {
+		return true;
+	}
 	if (m_material != nullptr) {
 		return m_material->IsOpaque();
 	}
 	return true;
 }
+
+void Mask::Resource::Model::SortedRender() {
+	sortDrawPart->mask->instanceDatas.Push(m_id);
+	while (m_material->Loop(sortDrawPart)) {
+		m_mesh->Render(sortDrawPart);
+	}
+	sortDrawPart->mask->instanceDatas.Pop();
+}
+

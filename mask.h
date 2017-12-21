@@ -73,12 +73,25 @@ namespace Mask {
 		bool isquat;
 	};
 
+	class SortedDrawObject {
+	public:
+
+		virtual ~SortedDrawObject() {}
+
+		virtual float	SortDepth() { 
+			return sortDrawPart->global.t.z; }
+		virtual void	SortedRender() = 0;
+
+		Part*				sortDrawPart;
+		SortedDrawObject*	nextDrawObject;
+	};
+
 	namespace Resource {
 		class Animation;
 	}
 
 	class MaskData {
-		public:
+	public:
 		MaskData();
 		virtual ~MaskData();
 
@@ -97,10 +110,13 @@ namespace Mask {
 		void Tick(float time);
 		void Render(bool depthOnly = false);
 
+		void ClearSortedDrawObjects();
+		void AddSortedDrawObject(SortedDrawObject* obj);
+
 		// global instance datas
 		MaskInstanceDatas	instanceDatas;
 
-		private:
+	private:
 		std::shared_ptr<Part> LoadPart(std::string name, obs_data_t* data);
 		static void PartCalcMatrix(std::shared_ptr<Mask::Part> part);
 
@@ -115,5 +131,6 @@ namespace Mask {
 		std::map<std::string, std::shared_ptr<Resource::Animation>> m_animations;
 		obs_data_t* m_data;
 		std::shared_ptr<Mask::Part> m_partWorld;
+		SortedDrawObject**	m_drawBuckets;
 	};
 }

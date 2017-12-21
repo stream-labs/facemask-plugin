@@ -48,14 +48,14 @@ namespace Mask {
 		};
 
 		class IBase {
-			public:
+		public:
 			static std::shared_ptr<IBase> Load(Mask::MaskData* parent, std::string name, obs_data_t* data);
 			static std::shared_ptr<IBase> LoadDefault(Mask::MaskData* parent, std::string name);
 
-			protected:
+		protected:
 			IBase(Mask::MaskData* parent, std::string name);
 
-			public:
+		public:
 			virtual ~IBase();
 
 			virtual Type GetType() = 0;
@@ -64,9 +64,8 @@ namespace Mask {
 			virtual void Update(Mask::Part* part, float time) = 0;
 			virtual void Render(Mask::Part* part) = 0;
 			virtual bool IsDepthOnly() { return false; }
-			virtual bool IsOpaque() { return true; }
 
-			protected:
+		protected:
 			Mask::MaskData* m_parent;
 			std::string m_name;
 			std::size_t m_id;
