@@ -24,15 +24,22 @@ namespace Mask {
 	namespace Resource {
 
 		struct Particle {
+			enum State : uint8_t {
+				DEAD,
+				SPAWNED,
+				ALIVE,
+				NUM_STATES
+			};
+
 			std::size_t  id;
 			vec3	position;
 			vec3	velocity;
 			float	elapsed;
-			bool	alive;
+			State	state;
 
 			Particle* next;
 
-			Particle() : alive(false) {}
+			Particle() : state(DEAD) {}
 		};
 
 		static const int NumBucketsMultiplier = 10;

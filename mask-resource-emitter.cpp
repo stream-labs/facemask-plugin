@@ -240,7 +240,7 @@ void Mask::Resource::Emitter::Update(Mask::Part* part, float time) {
 	// update our model
 	Particle* p = instData->particles;
 	for (int i = 0; i < m_numParticles; i++, p++) {
-		if (p->alive) {
+		if (p->state == Particle::State::ALIVE) {
 			part->mask->instanceDatas.Push(p->id);
 			m_model->Update(part, time);
 			part->mask->instanceDatas.Pop();
@@ -268,38 +268,21 @@ void Mask::Resource::Emitter::Update(Mask::Part* part, float time) {
 			p = instData->particles;
 			int idx = 0;
 			for (idx = 0; idx < m_numParticles; idx++, p++) {
-				if (!p->alive)
+				if (p->state == Particle::State::DEAD)
 					break;
 			}
 			if (idx < m_numParticles) {
 				// actually spawn a new particle
 				instData->elapsed = 0.0f;
 				p->elapsed = 0.0f;
-				p->alive = true;
+				p->state = Particle::State::SPAWNED;
 
-				if (m_worldSpace) {
-					// transform now to world space
-					vec3_set(&p->position, part->global.t.x,
-						part->global.t.y, part->global.t.z);
-
-					vec4 v;
-					vec4_set(&v,
-						RandFloat(m_initialVelocityMin.x, m_initialVelocityMax.x),
-						RandFloat(m_initialVelocityMin.y, m_initialVelocityMax.y),
-						RandFloat(m_initialVelocityMin.z, m_initialVelocityMax.z),
-						0.0f);
-					vec4_transform(&v, &v, &part->global);
-					vec3_set(&p->velocity, v.x * time, v.y * time, v.z * time);
-				}
-				else {
-					// keep local, we will set up transform when rendering
-					vec3_zero(&p->position);
-					vec3_set(&p->velocity,
-						RandFloat(m_initialVelocityMin.x, m_initialVelocityMax.x),
-						RandFloat(m_initialVelocityMin.y, m_initialVelocityMax.y),
-						RandFloat(m_initialVelocityMin.z, m_initialVelocityMax.z));
-
-				}
+				// we will set up transform when rendering
+				vec3_zero(&p->position);
+				vec3_set(&p->velocity,
+					RandFloat(m_initialVelocityMin.x, m_initialVelocityMax.x) * time,
+					RandFloat(m_initialVelocityMin.y, m_initialVelocityMax.y) * time,
+					RandFloat(m_initialVelocityMin.z, m_initialVelocityMax.z) * time);
 			}
 		}
 
@@ -315,10 +298,11 @@ void Mask::Resource::Emitter::Update(Mask::Part* part, float time) {
 	// Update particles
 	p = instData->particles;
 	for (int i = 0; i < m_numParticles; i++, p++) {
-		if (p->alive) {
+		if (p->state == Particle::State::ALIVE) {
 			p->elapsed += time;
 			if (p->elapsed > m_lifetime) {
-				p->alive = false;
+				// kill particle
+				p->state = Particle::State::DEAD;
 				continue;
 			}
 
@@ -349,7 +333,7 @@ void Mask::Resource::Emitter::Update(Mask::Part* part, float time) {
 	p = instData->particles;
 	pp = instData->buckets;
 	for (int i = 0; i < m_numParticles; i++, p++) {
-		if (p->alive) {
+		if (p->state != Particle::State::DEAD) {
 			float z = p->position.z;
 			if (z > instData->maxZ)
 				instData->maxZ = z;
@@ -396,6 +380,17 @@ void Mask::Resource::Emitter::Render(Mask::Part* part) {
 		if (*pp) {
 			Particle* p = *pp;
 			while (p) {
+				// first time spawned
+				if (p->state == Particle::State::SPAWNED) {
+					if (m_worldSpace) {
+						p->position.x = global.t.x;
+						p->position.y = global.t.y;
+						p->position.z = global.t.z;
+						vec3_transform(&(p->velocity), &(p->velocity), &global);
+					}
+					p->state = Particle::State::ALIVE;
+				}
+
 				gs_matrix_identity();
 				if (m_worldSpace)
 					gs_matrix_translate(&p->position);
