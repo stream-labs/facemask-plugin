@@ -400,6 +400,7 @@ void Mask::Resource::Emitter::Render(Mask::Part* part) {
 						global.t.y,
 						global.t.z);
 				gs_matrix_rotaa4f(1.0f, 0.0f, 0.0f, M_PI);
+				gs_matrix_rotaa4f(0.0f, 0.0f, 1.0f, M_PI);
 
 				float lambda = p->elapsed / m_lifetime;
 				float s = lambda * (m_scaleEnd - m_scaleStart) + m_scaleStart;
