@@ -793,7 +793,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				smllRenderer->DrawFaces(faces);
 			
 			// draw triangulation as lines
-			if (triangulationVB && linesIB) {
+			if (0) {//(triangulationVB && linesIB) {
 				gs_effect_t    *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
 				gs_eparam_t    *color = gs_effect_get_param_by_name(solid, "color");
 				struct vec4 veccol;
@@ -812,7 +812,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		tex2 = gs_texrender_get_texture(drawTexRender);
 	}
 
-	// TEST MODE PIXEL READING
+	// TEST MODE RENDERING
 	if (smll::Config::singleton().get_bool(smll::CONFIG_BOOL_IN_TEST_MODE))	{
 		if (faces.length > 0) {
 
@@ -879,7 +879,7 @@ void Plugin::FaceMaskFilter::Instance::drawMaskData(const smll::DetectionResult&
 	gs_matrix_push();
 	gs_matrix_identity();
 	gs_matrix_translate3f((float)face.translation[0],
-		(float)face.translation[1], (float)-face.translation[2]);
+ 		(float)face.translation[1], (float)-face.translation[2]);
 	gs_matrix_rotaa4f((float)face.rotation[0], (float)face.rotation[1],
 		(float)-face.rotation[2], (float)-face.rotation[3]);
 

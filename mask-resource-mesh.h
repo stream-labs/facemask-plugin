@@ -24,7 +24,7 @@
 namespace Mask {
 	namespace Resource {
 		class Mesh : public IBase {
-			public:
+		public:
 			Mesh(Mask::MaskData* parent, std::string name, std::string file);
 			Mesh(Mask::MaskData* parent, std::string name, obs_data_t* data);
 			virtual ~Mesh();
@@ -38,12 +38,15 @@ namespace Mask {
 				return m_VertexBuffer;
 			}
 
-			private:
+			vec4 GetCenter() { return m_center; }
+
+		private:
 			void LoadObj(std::string file);
 
-			protected:
+		protected:
 			std::shared_ptr<GS::VertexBuffer> m_VertexBuffer;
 			std::shared_ptr<GS::IndexBuffer> m_IndexBuffer;
+			vec4 m_center;
 
 			vec3 CalculateTangent(const GS::Vertex& v0,
 				const GS::Vertex& v1, const GS::Vertex& v2);

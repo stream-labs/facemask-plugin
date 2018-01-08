@@ -85,12 +85,24 @@ void Mask::Resource::Model::Update(Mask::Part* part, float time) {
 }
 
 void Mask::Resource::Model::Render(Mask::Part* part) {
+	// Add transparent models as sorted draw objects
+	// to draw in a sorted second render pass 
+	if (!IsOpaque()) {
+		this->sortDrawPart = part;
+		part->mask->AddSortedDrawObject(this);
+		return;
+	}
+	DirectRender(part);
+}
+
+void Mask::Resource::Model::DirectRender(Mask::Part* part) {
 	part->mask->instanceDatas.Push(m_id);
 	while (m_material->Loop(part)) {
 		m_mesh->Render(part);
 	}
 	part->mask->instanceDatas.Pop();
 }
+
 
 bool Mask::Resource::Model::IsDepthOnly() {
 	if (m_material != nullptr) {
@@ -100,8 +112,29 @@ bool Mask::Resource::Model::IsDepthOnly() {
 }
 
 bool Mask::Resource::Model::IsOpaque() {
+	// note: depth only objects are considered opaque
+	if (IsDepthOnly()) {
+		return true;
+	}
 	if (m_material != nullptr) {
 		return m_material->IsOpaque();
 	}
 	return true;
 }
+
+float Mask::Resource::Model::SortDepth() {
+	vec4 c = m_mesh->GetCenter();
+	matrix4 m;
+	gs_matrix_get(&m);
+	vec4_transform(&c, &c, &m);
+	return c.z;
+}
+	
+void Mask::Resource::Model::SortedRender() {
+	sortDrawPart->mask->instanceDatas.Push(m_id);
+	while (m_material->Loop(sortDrawPart)) {
+		m_mesh->Render(sortDrawPart);
+	}
+	sortDrawPart->mask->instanceDatas.Pop();
+}
+
