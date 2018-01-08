@@ -409,6 +409,7 @@ void Mask::Resource::Particle::SortedRender() {
 		gs_matrix_translate3f(m.t.x, m.t.y, m.t.z);
 	}
 	gs_matrix_rotaa4f(1.0f, 0.0f, 0.0f, M_PI);
+	gs_matrix_rotaa4f(0.0f, 0.0f, 1.0f, M_PI);
 
 	float lambda = elapsed / emitter->m_lifetime;
 	float s = lambda * (emitter->m_scaleEnd - emitter->m_scaleStart) + emitter->m_scaleStart;
