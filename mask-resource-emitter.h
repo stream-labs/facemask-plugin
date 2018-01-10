@@ -101,6 +101,7 @@ namespace Mask {
 			vec3		m_forceMin, m_forceMax;
 			vec3		m_initialVelocityMin, m_initialVelocityMax;
 			int			m_numParticles;
+			float		m_zSortOffset;
 			bool		m_worldSpace;
 			bool		m_inverseRate;
 			std::shared_ptr<Model> m_model;

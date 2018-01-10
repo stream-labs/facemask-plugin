@@ -333,6 +333,8 @@ struct Args {
 				return "true";
 			if (key == "inverse-rate")
 				return "false";
+			if (key == "z-sort-offset")
+				return "0";
 		}
 		if (command == "addpart") {
 			if (key == "parent")
@@ -803,6 +805,7 @@ void command_addres(Args& args) {
 		o["num-particles"] = args.intValue("num-particles");
 		o["world-space"] = args.boolValue("world-space");
 		o["inverse-rate"] = args.boolValue("inverse-rate");
+		o["z-sort-offset"] = args.floatValue("z-sort-offset");
 
 		// these values *could* have min/max values
 		if (args.haveValue("rate-min") && args.haveValue("rate-max")) {
