@@ -1449,50 +1449,69 @@ void command_import(Args& args) {
 			snprintf(temp, sizeof(temp), "mesh%d", i);
 			scene->mMeshes[i]->mName = temp;
 		}
-
 		aiMesh* mesh = scene->mMeshes[i];
-		GSVertex* vertices = new GSVertex[mesh->mNumVertices];
-		for (unsigned int j = 0; j < mesh->mNumVertices; j++) {
-			vertices[j].px = mesh->mVertices[j].x;
-			vertices[j].py = -mesh->mVertices[j].y;
-			vertices[j].pz = mesh->mVertices[j].z;
-			vertices[j].nx = mesh->mNormals[j].x;
-			vertices[j].ny = -mesh->mNormals[j].y;
-			vertices[j].nz = mesh->mNormals[j].z;
-			vertices[j].tx = mesh->mTangents[j].x;
-			vertices[j].ty = mesh->mTangents[j].y;
-			vertices[j].tz = mesh->mTangents[j].z;
-			vertices[j].u = mesh->mTextureCoords[0][j].x;
-			vertices[j].v = 1.0f - mesh->mTextureCoords[0][j].y;
+
+		if (!mesh->mTangents) {
+			cout << "*** MESH HAS NO TANGENTS! NORMAL MAPPING WILL BE SCREWED! ***" << endl;
+		}
+		if (!mesh->mTextureCoords[0]) {
+			cout << "*** MESH HAS NO TEXTURE COORDINATES! HOPE YOU AREN'T TEXTURE MAPPING! ***" << endl;
 		}
 
-		string vertexDataBase64 = 
-			base64_encodeZ((uint8_t*)vertices, sizeof(GSVertex) * mesh->mNumVertices);
+		// is this a skinned mesh?
+		if (mesh->mNumBones > 0) {
 
-		unsigned int* indices = new unsigned int[mesh->mNumFaces * 3];
-		int indIdx = 0;
-		for (unsigned int j = 0; j < mesh->mNumFaces; j++) {
-			aiFace& face = mesh->mFaces[j];
-			assert(face.mNumIndices == 3);
-			indices[indIdx++] = face.mIndices[0];
-			indices[indIdx++] = face.mIndices[1];
-			indices[indIdx++] = face.mIndices[2];
+
+
 		}
+		else {
+			// Create vertex list
+			GSVertex* vertices = new GSVertex[mesh->mNumVertices];
+			for (unsigned int j = 0; j < mesh->mNumVertices; j++) {
+				vertices[j].px = mesh->mVertices[j].x;
+				vertices[j].py = -mesh->mVertices[j].y;
+				vertices[j].pz = mesh->mVertices[j].z;
+				vertices[j].nx = mesh->mNormals[j].x;
+				vertices[j].ny = -mesh->mNormals[j].y;
+				vertices[j].nz = mesh->mNormals[j].z;
+				if (mesh->mTangents) {
+					vertices[j].tx = mesh->mTangents[j].x;
+					vertices[j].ty = mesh->mTangents[j].y;
+					vertices[j].tz = mesh->mTangents[j].z;
+				}
+				if (mesh->mTextureCoords[0]) {
+					vertices[j].u = mesh->mTextureCoords[0][j].x;
+					vertices[j].v = 1.0f - mesh->mTextureCoords[0][j].y;
+				}
+			}
 
-		string indexDataBase64 =
-			base64_encodeZ((uint8_t*)indices, sizeof(unsigned int) * indIdx);
+			string vertexDataBase64 =
+				base64_encodeZ((uint8_t*)vertices, sizeof(GSVertex) * mesh->mNumVertices);
 
-		json o;
-		o["type"] = "mesh";
-		o["vertex-buffer"] = vertexDataBase64;
-		o["index-buffer"] = indexDataBase64;
+			unsigned int* indices = new unsigned int[mesh->mNumFaces * 3];
+			int indIdx = 0;
+			for (unsigned int j = 0; j < mesh->mNumFaces; j++) {
+				aiFace& face = mesh->mFaces[j];
+				assert(face.mNumIndices == 3);
+				indices[indIdx++] = face.mIndices[0];
+				indices[indIdx++] = face.mIndices[1];
+				indices[indIdx++] = face.mIndices[2];
+			}
 
-		rez[mesh->mName.C_Str()] = o;
+			string indexDataBase64 =
+				base64_encodeZ((uint8_t*)indices, sizeof(unsigned int) * indIdx);
 
-		delete[] indices;
-		delete[] vertices;
+			json o;
+			o["type"] = "mesh";
+			o["vertex-buffer"] = vertexDataBase64;
+			o["index-buffer"] = indexDataBase64;
+
+			rez[mesh->mName.C_Str()] = o;
+
+			delete[] indices;
+			delete[] vertices;
+		}
 	}
-
 
 	// Add all the textures
 	int count = 0;
