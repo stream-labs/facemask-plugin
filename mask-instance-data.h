@@ -63,6 +63,9 @@ namespace Mask {
 	//     <part name><model name><material name><sequence name>
 	//   thus producing unique instance data objects for each 
 	//   unique occurrance
+	// - instead of strings, however, the paths are implemented as 
+	//   hash values, which are combined numerically to form 
+	//   unique keys into the instance data
 	// - some resources, like particle emitters, can create multiple
 	//   instances of a resource by pushing and popping instance
 	//   names before calling update on their child resources.
@@ -105,20 +108,22 @@ namespace Mask {
 			}
 		}
 
-		void Push(std::size_t the_id) {
+		inline void Push(std::size_t the_id) {
 			hash_combine(the_id);
 			m_stack.push_back(the_id);
 		}
 
-		void Pop() {
-			m_stack.pop_back();
-			m_currentId = 0;
-			for (size_t i = 0; i < m_stack.size(); i++) {
-				hash_combine(m_stack[i]);
-			}
+		inline void PushDirect(std::size_t the_id) {
+			m_currentId = the_id;
+			m_stack.push_back(the_id);
 		}
 
-		std::size_t CurrentId() {
+		inline void Pop() {
+			m_stack.pop_back();
+			m_currentId = m_stack.size() > 0 ? m_stack[m_stack.size() - 1] : 0;
+		}
+
+		inline std::size_t CurrentId() {
 			return m_currentId;
 		}
 

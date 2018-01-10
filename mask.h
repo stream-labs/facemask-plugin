@@ -84,6 +84,7 @@ namespace Mask {
 
 		Part*				sortDrawPart;
 		SortedDrawObject*	nextDrawObject;
+		size_t				instanceId;
 	};
 
 	namespace Resource {

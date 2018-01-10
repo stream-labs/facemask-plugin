@@ -277,6 +277,7 @@ void  Mask::MaskData::AddSortedDrawObject(SortedDrawObject* obj) {
 	z = (z - BUCKETS_MIN_Z) / (BUCKETS_MAX_Z - BUCKETS_MIN_Z);
 	int idx = (int)(z * (float)(NUM_DRAW_BUCKETS - 1));
 	obj->nextDrawObject = m_drawBuckets[idx];
+	obj->instanceId = instanceDatas.CurrentId();
 	m_drawBuckets[idx] = obj;
 }
 
@@ -378,7 +379,7 @@ void Mask::MaskData::Render(bool depthOnly) {
 			SortedDrawObject* sdo = m_drawBuckets[i];
 			while (sdo) {
 				Part* part = sdo->sortDrawPart;
-				instanceDatas.Push(part->hash_id);
+				instanceDatas.PushDirect(sdo->instanceId);
 				gs_matrix_push();
 				gs_matrix_mul(&part->global);
 				sdo->SortedRender();

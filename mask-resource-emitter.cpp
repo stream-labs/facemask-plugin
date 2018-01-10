@@ -365,7 +365,9 @@ void Mask::Resource::Emitter::Render(Mask::Part* part) {
 				p->state = Particle::State::ALIVE;
 			}
 			p->sortDrawPart = part;
+			part->mask->instanceDatas.Push(p->id);
 			part->mask->AddSortedDrawObject(p);
+			part->mask->instanceDatas.Pop();
 		}
 	}
 
@@ -422,9 +424,7 @@ void Mask::Resource::Particle::SortedRender() {
 	gs_matrix_scale3f(s, s, s);
 	aid->alpha = lambda * (emitter->m_alphaEnd - emitter->m_alphaStart) + emitter->m_alphaStart;
 
-	sortDrawPart->mask->instanceDatas.Push(id);
 	emitter->m_model->DirectRender(sortDrawPart);
-	sortDrawPart->mask->instanceDatas.Pop();
 
 	gs_matrix_pop();
 	aid->alpha = saved_alpha;
