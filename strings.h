@@ -64,8 +64,7 @@ static const char* const kSettingsDemoDelayDesc = "Demo Mode Delay Between Masks
 
 static const char* const kSettingsEmpty = "";
 
-static const char* const kFileDefaultJson = "masks/glasses_Slabs_01.head.json";
+static const char* const kFileDefaultJson = "masks/Streamlabs Glasses.json";
 static const char* const kFileShapePredictor =
 	"shape_predictor_68_face_landmarks.dat";
-
 
