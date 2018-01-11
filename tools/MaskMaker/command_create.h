@@ -16,41 +16,9 @@
 * along with this program; if not, write to the Free Software
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#include "stdafx.h"
-#include "command_create.h"
-#include "command_addres.h"
-#include "command_addpart.h"
-#include "command_import.h"
-#include "command_merge.h"
-#include "command_tweak.h"
+#pragma once
 
+#include "args.h"
 
-using namespace std;
-
-
-
-int main(int argc, char** argv) {
-
-	// parse arguments
-	Args args(argc, argv);
-	if (args.failed)
-		return -1;
-
-	// run command
-	if (args.command == "create")
-		command_create(args);
-	else if (args.command == "addres")
-		command_addres(args);
-	else if (args.command == "addpart")
-		command_addpart(args);
-	else if (args.command == "merge")
-		command_merge(args);
-	else if (args.command == "import")
-		command_import(args);
-	else if (args.command == "tweak")
-		command_tweak(args);
-
-	//getchar();
-    return 0;
-}
+extern void command_create(Args& args);
 

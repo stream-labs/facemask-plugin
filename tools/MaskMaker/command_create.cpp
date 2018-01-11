@@ -17,40 +17,20 @@
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "stdafx.h"
+#include "utils.h"
 #include "command_create.h"
-#include "command_addres.h"
-#include "command_addpart.h"
-#include "command_import.h"
-#include "command_merge.h"
-#include "command_tweak.h"
-
-
-using namespace std;
 
 
 
-int main(int argc, char** argv) {
+void command_create(Args& args) {
 
-	// parse arguments
-	Args args(argc, argv);
-	if (args.failed)
-		return -1;
+	// create new json
+	json j = args.createNewJson();
 
-	// run command
-	if (args.command == "create")
-		command_create(args);
-	else if (args.command == "addres")
-		command_addres(args);
-	else if (args.command == "addpart")
-		command_addpart(args);
-	else if (args.command == "merge")
-		command_merge(args);
-	else if (args.command == "import")
-		command_import(args);
-	else if (args.command == "tweak")
-		command_tweak(args);
+	// write it out
+	args.writeJson(j);
 
-	//getchar();
-    return 0;
+	cout << args.filename << " created." << endl;
 }
+
 

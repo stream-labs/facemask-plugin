@@ -27,6 +27,11 @@ include_directories(${FACEMASK_PLUGIN_DIR})
 
 SET(MaskMaker_HEADERS
 	"args.h"
+	"command_create.h"
+	"command_addres.h"
+	"command_addpart.h"
+	"command_import.h"
+	"command_merge.h"
 	"command_tweak.h"
 	"${FACEMASK_PLUGIN_DIR}/base64.h"
 	"fifo_map.hpp"
@@ -42,6 +47,11 @@ SET(MaskMaker_SOURCES
 	"${FACEMASK_PLUGIN_DIR}/base64.cpp"
 	"args.cpp"
 	"MaskMaker.cpp"
+	"command_create.cpp"
+	"command_addres.cpp"
+	"command_addpart.cpp"
+	"command_import.cpp"
+	"command_merge.cpp"
 	"command_tweak.cpp"
 	"stdafx.cpp"
 	"utils.cpp"
