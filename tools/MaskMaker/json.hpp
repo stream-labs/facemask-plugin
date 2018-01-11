@@ -14673,4 +14673,15 @@ inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std
 #undef NLOHMANN_BASIC_JSON_TPL_DECLARATION
 #undef NLOHMANN_BASIC_JSON_TPL
 
+// [STREAMLABS]
+//
+// Set up JSON to use fifo_map (an ordered version of std::map)
+//
+#include "fifo_map.hpp"
+template<class K, class V, class A>
+using my_obj = nlohmann::fifo_map<K, V, nlohmann::fifo_map_compare< K >, A>;
+using json = nlohmann::basic_json<my_obj>;
+
+
+
 #endif

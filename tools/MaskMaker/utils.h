@@ -1,5 +1,4 @@
 /*
-* Face Masks for SlOBS
 *
 * Copyright (C) 2017 General Workings Inc
 *
@@ -22,6 +21,9 @@
 #include <string>
 #include <fstream>
 #include "base64.h"
+#include "json.hpp"
+
+using namespace std;
 
 namespace Utils {
 
@@ -29,4 +31,17 @@ namespace Utils {
 	extern const char* GetTempFileName();
 	extern const char* Base64ToTempFile(std::string base64String);
 	extern void DeleteTempFile(std::string filename);
+
+	extern std::vector<std::string> split(const std::string &s, char delim);
+	extern string get_extension(string filename);
+	extern string get_filename(string filename);
+	extern string get_filename_ext(string filename);
+	extern string get_dirname(string filename);
+	extern string get_resource_type(string filename);
+	extern string find_resource(const json& j, string type);
+	extern bool is_default_resource(string name);
+	extern bool resource_exists(const json& j, string name, string type);
+	extern bool resource_exists(const json& j, string name);
+	extern bool part_exists(const json& j, string name);
+
 }

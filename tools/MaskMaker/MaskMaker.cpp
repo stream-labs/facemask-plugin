@@ -1,713 +1,27 @@
-// MaskMaker.cpp : Defines the entry point for the console application.
-//
-
+/*
+*
+* Copyright (C) 2017 General Workings Inc
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation; either version 2 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+*/
 #include "stdafx.h"
-#include "json.hpp"
-#include "base64.h"
-#include "fifo_map.hpp"
-#include "utils.h"
-
-// you must define these for stb calls to work
-#define STB_IMAGE_IMPLEMENTATION 
-#define STB_IMAGE_RESIZE_IMPLEMENTATION
-#include "stb_image.h"
-#include "stb_image_resize.h"
-
-// Assimp : open asset importer
-#include <assimp/Importer.hpp>
-#include <assimp/Exporter.hpp>
-#include <assimp/quaternion.h>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
-
-// AVIR : Advanced image resizer
-#include "avir.h"
-
-#include <zlib.h>
-
-// Texture size limit (max in either w/h)
-#define TEXTURE_SIZE_LIMIT		(512)
+#include "command_tweak.h"
 
 
-// Float comparisons
-#define FLT_EQ(X,Y) (((int)((X) * 10000.0f + 0.5f))==((int)((Y) * 10000.0f + 0.5f)))
-#define FLT_NEQ(X,Y) (!FLT_EQ(X,Y))
 
 using namespace std;
-
-static const vector<string> g_defaultResources = {
-	"imageNull",
-	"imageWhite",
-	"imageBlack",
-	"imageRed", 
-	"imageGreen",
-	"imageBlue",
-	"imageYellow",
-	"imageMagenta",
-	"imageCyan",
-
-	"meshTriangle", 
-	"meshQuad", 
-	"meshCube", 
-	"meshSphere", 
-	"meshCylinder",
-	"meshPyramid",
-	"meshTorus", 
-	"meshCone", 
-	"meshHead",
-
-	"effectDefault",
-	"effectPhong"
-};
-
-// Set up JSON to use fifo_map (an ordered version of std::map)
-//
-template<class K, class V, class A>
-using my_obj = nlohmann::fifo_map<K, V, nlohmann::fifo_map_compare< K >, A>;
-using json = nlohmann::basic_json<my_obj>;
-
-#define IS_POWER_2(X) (((X) > 0) && (((X) & ((X)-1)) == 0))
-
-
-// ------------------------------------------------------------------------------
-// https://stackoverflow.com/questions/236129/most-elegant-way-to-split-a-string
-//
-template<typename Out>
-void split(const std::string &s, char delim, Out result) {
-	std::stringstream ss;
-	ss.str(s);
-	std::string item;
-	while (std::getline(ss, item, delim)) {
-		*(result++) = item;
-	}
-}
-std::vector<std::string> split(const std::string &s, char delim) {
-	std::vector<std::string> elems;
-	split(s, delim, std::back_inserter(elems));
-	return elems;
-}
-
-void usage() {
-	cout << endl;
-	cout << "Mask Maker - cheesy tool for making facemask json files" << endl;
-	cout << endl;
-	cout << "usage:" << endl;
-	cout << endl;
-	cout << "  maskmaker.exe <command> [key=value ...] <file.json>" << endl;
-	cout << endl;
-	cout << "commands:" << endl;
-	cout << endl;
-	cout << "  create  -  creates a new facemask json file" << endl;
-	cout << "  addres  -  adds a resource" << endl;
-	cout << "  addpart -  adds a part" << endl;
-	cout << "  merge   -  merges jsons" << endl;
-	cout << "  import  -  imports an FBX file and creates a json" << endl;
-	cout << "  tweak   -  tweak (set) values in the json." << endl;
-	cout << endl;
-	cout << "example:" << endl;
-	cout << endl;
-	cout << "  maskmaker.exe create author=\"Joe Blow\" description=\"My lame helmet\" helmet.json" << endl;
-	cout << "  maskmaker.exe addres file=helmet.obj helmet.json" << endl;
-	cout << "  maskmaker.exe addres file=helmet.png name=\"helmet image\" helmet.json" << endl;
-	cout << "  maskmaker.exe addres file=phong.effect helmet.json" << endl;
-	cout << "  maskmaker.exe addres type=material helmet.json" << endl;
-	cout << "  maskmaker.exe addpart name=helmet helmet.json" << endl;
-	cout << endl;
-}
-
-map<string, vector<string>> jsonKeyNames;
-void initJsonNamesAndValues() {
-	vector<string> create_keys = {
-		"name",
-		"description",
-		"author",
-		"license",
-		"website"
-	};
-	jsonKeyNames["create"] = create_keys;
-
-}
-
-string get_extension(string filename) {
-	vector<string> parts = split(filename, '.');
-	string ext = parts[parts.size() - 1];
-	std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-	return ext;
-}
-
-string get_filename(string filename) {
-	vector<string> parts = split(filename, '\\');
-	string f = parts[parts.size() - 1];
-	parts = split(f, '.');
-	return parts[0];
-}
-
-string get_filename_ext(string filename) {
-	vector<string> parts = split(filename, '\\');
-	return parts[parts.size() - 1];
-}
-
-string get_dirname(string filename) {
-	vector<string> parts = split(filename, '\\');
-	string d;
-	for (int i = 0; i < (parts.size() - 1); i++)
-		d += parts[i] + "\\";
-	return d;
-}
-
-string get_resource_type(string filename) {
-	string ext = get_extension(filename);
-
-	if (ext == "png")
-		return "image";
-	if (ext == "jpg")
-		return "image";
-	if (ext == "obj")
-		return "mesh";
-	if (ext == "wav")
-		return "sound";
-	if (ext == "aiff")
-		return "sound";
-	if (ext == "mp3")
-		return "sound";
-	if (ext == "effect")
-		return "effect";
-	return "binary";
-}
-
-
-string find_resource(const json& j, string type) {
-	for (auto it = j["resources"].begin(); it != j["resources"].end(); it++) {
-		if (it.value()["type"] == type) {
-			return it.key();
-		}
-	}
-	return "";
-}
-
-bool is_default_resource(string name) {
-	return (find(g_defaultResources.begin(), g_defaultResources.end(), name) != g_defaultResources.end());
-}
-
-bool resource_exists(const json& j, string name, string type) {
-	if (j["resources"].find(name) != j["resources"].end()) {
-		if (j["resources"][name]["type"] == type) {
-			return true;
-		}
-	}
-	return is_default_resource(name);
-}
-
-bool resource_exists(const json& j, string name) {
-	if (j["resources"].find(name) != j["resources"].end()) {
-		return true;
-	}
-	return is_default_resource(name);
-}
-
-bool part_exists(const json& j, string name) {
-	if (j["parts"].find(name) != j["parts"].end()) {
-		return true;
-	}
-	return false;
-}
-
-
-
-
-
-
-struct Args {
-	json* jptr;
-	string command;
-	string filename;
-	map<string, string> kvpairs;
-	vector<string> files;
-	bool failed;
-	bool lastImageHadAlpha;
-
-	Args(int argc, char** argv) : jptr(nullptr), failed(true) {
-		if (argc < 3) {
-			usage();
-			return;
-		}
-		command = argv[1];
-		filename = argv[argc - 1];
-		if (command == "merge") {
-			for (int i = 2; i < (argc - 1); i++) {
-				files.push_back(argv[i]);
-			}
-		}
-		else {
-			for (int i = 2; i < (argc - 1); i++) {
-				vector<string> pair = split(argv[i], '=');
-				kvpairs[pair[0]] = pair[1];
-			}
-		}
-		failed = false;
-	}
-
-	void print() {
-		cout << "command: " << command << endl;
-		cout << "file: " << filename << endl;
-		for (auto it = kvpairs.begin(); it != kvpairs.end(); it++) {
-			cout << "kvpair: " << it->first << " = " << it->second << endl;
-		}
-	}
-
-	string default_value(string key) {
-		if (command == "create" ||
-			command == "merge" ||
-			command == "import") {
-			if (key == "name")
-				return get_filename(filename);
-			if (key == "description")
-				return "Streamlabs facemask description";
-			if (key == "author")
-				return "Streamlabs";
-			if (key == "license")
-				return "Copyright 2017 - General Working Inc. - All rights reserved.";
-			if (key == "website")
-				return "http://streamlabs.com/";
-		}
-		if (command == "addres" ||
-			command == "import") {
-			if (key == "filter")
-				return "min-mag-linear-mip-point";
-				//return "min-linear-mag-point-mip-linear";
-			if (key == "technique")
-				return "Draw";
-			if (key == "texture")
-				return find_resource(*jptr, "image");
-			if (key == "effect")
-				return find_resource(*jptr, "effect");
-			if (key == "material")
-				return find_resource(*jptr, "material");
-			if (key == "mesh")
-				return find_resource(*jptr, "mesh");
-			if (key == "model")
-				return find_resource(*jptr, "model");
-			if (key == "mode")
-				return "repeat";
-			if (key == "rate")
-				return "4";
-			if (key == "u-wrap")
-				return "clamp";
-			if (key == "v-wrap")
-				return "clamp";
-			if (key == "w-wrap")
-				return "clamp";
-			if (key == "culling")
-				return "back";
-			if (key == "depth-test")
-				return "less";
-			if (key == "depth-only")
-				return "false";
-			if (key == "lifetime")
-				return "3";
-			if (key == "friction")
-				return "0.9";
-			if (key == "force")
-				return "0,100,0";
-			if (key == "initial-velocity")
-				return "0,0,5000";
-			if (key == "num-particles")
-				return "1000";
-			if (key == "random-start")
-				return "false";
-			if (key == "part")
-				return "emitter1";
-			if (key == "scale-start")
-				return "1.0";
-			if (key == "scale-end")
-				return "1.0";
-			if (key == "alpha-start")
-				return "1.0";
-			if (key == "alpha-end")
-				return "1.0";
-			if (key == "delay")
-				return "0.0";
-			if (key == "opaque")
-				return "true";
-			if (key == "world-space")
-				return "true";
-			if (key == "inverse-rate")
-				return "false";
-			if (key == "z-sort-offset")
-				return "0";
-		}
-		if (command == "addpart") {
-			if (key == "parent")
-				return "root";
-			if (key == "position")
-				return "0,0,0";
-			if (key == "rotation")
-				return "0,0,0";
-			if (key == "scale")
-				return "1,1,1";
-			if (key == "type")
-				return "model";
-			if (key == "model")
-				return find_resource(*jptr, "model");
-			if (key == "sound")
-				return find_resource(*jptr, "sound");
-		}
-
-		return "";
-	}
-
-	bool haveValue(string key) {
-		return kvpairs.find(key) != kvpairs.end();
-	}
-
-	string value(string key) {
-		if (kvpairs.find(key) == kvpairs.end()) {
-			return default_value(key);
-		}
-		return kvpairs[key];
-	}
-
-	float floatValue(string key) {
-		return (float)atof(value(key).c_str());
-	}
-
-	int intValue(string key) {
-		return atoi(value(key).c_str());
-	}
-
-	bool boolValue(string v) {
-		return (value(v) == "true");
-	}
-
-	json makeNumberArray(string v, bool isFloat, int sidx=0) {
-		vector<string> vals = split(v, ',');
-		json vvv;
-		char k[2] = "x";
-		for (int i = sidx; i < vals.size(); i++) {
-			if (isFloat)
-				vvv[k] = (float)atof(vals[i].c_str());
-			else
-				vvv[k] = atoi(vals[i].c_str());
-			if (k[0] == 'z')
-				k[0] = 'w';
-			else if (k[0] == 'w')
-				k[0] = 'a';
-			else
-				k[0]++;
-		}
-		return vvv;
-	}
-
-	json makeFloatArray(string v, int sidx = 0) {
-		return makeNumberArray(v, true, sidx);
-	}
-
-	json makeIntArray(string v, int sidx = 0) {
-		return makeNumberArray(v, false, sidx);
-	}
-
-	json makeMatrix(string v, int sidx = 0) {
-		// TODO : make this work properly
-		return makeNumberArray(v, true, sidx);
-	}
-
-	json getMaterialParams() {
-		json params;
-		for (auto it = kvpairs.begin(); it != kvpairs.end(); it++) {
-			if (it->first != "name" &&
-				it->first != "type" &&
-				it->first != "effect") {
-
-				json parm;
-				string parmName = it->first;
-				vector<string> bits = split(it->second, ',');
-				if (bits.size() < 2) {
-					cout << "Malformed material parameter '" << it->first << "'. skipping." << endl;
-					continue;
-				}
-				string parmType = bits[0];
-				parm["type"] = parmType;
-				if (parmType == "texture") {
-
-					string image = bits[1];
-					if (!resource_exists(*jptr, image, "image")) {
-						cout << "Cannot find image '" << image << "'. skipping." << endl;
-						continue;
-					}
-
-					parm["value"] = image;
-				}
-				else if (parmType == "sequence") {
-
-					string sequence = bits[1];
-					if (!resource_exists(*jptr, sequence, "sequence")) {
-						cout << "Cannot find sequence '" << sequence << "'. skipping." << endl;
-						continue;
-					}
-
-					parm["value"] = sequence;
-				}
-				else if (parmType.find("float") != string::npos) {
-					parm["value"] = makeFloatArray(it->second, 1);
-				}
-				else if (parmType.find("int") != string::npos) {
-					parm["value"] = makeIntArray(it->second, 1);
-				}
-				else if (parmType == "matrix") {
-					cout << "matrix param types don't quite work yet." << endl;
-					parm["value"] = makeMatrix(it->second, 1);
-				}
-
-				params[parmName] = parm;
-			}
-		}
-		return params;
-	}
-
-	bool fileExists(string fname) {
-		fstream f(fname.c_str(), ios::in);
-		bool good = f.good();
-		f.close();
-		return good;
-	}
-
-	json loadJsonFile(string fname) {
-		// load json file
-		json j;
-		fstream f(fname.c_str(), ios::in);
-		if (!f.good()) {
-			cout << "Cannot load json file '"<<fname<<"'." << endl;
-			return j;
-		}
-		f >> j;
-		f.close();
-		return j;
-	}
-
-	json createNewJson() {
-		json j;
-
-		vector<string>& jsonKeys = jsonKeyNames["create"];
-		for (int i = 0; i < jsonKeys.size(); i++) {
-			string k = jsonKeys[i];
-			j[k] = value(k);
-		}
-
-		j["resources"] = {};
-		j["parts"] = {};
-
-		return j;
-	}
-
-	void writeJson(const json& j) {
-		writeJson(j, filename);
-	}
-
-	void writeJson(const json& j, string toFile) {
-		fstream fff(toFile.c_str(), ios::out);
-		fff << j.dump(4) << endl;
-		fff.close();
-	}
-
-	string uniqueResourceName(string name, string resType) {
-		int count = 1;
-		char bb[128];
-		while (name.length() == 0) {
-			snprintf(bb, sizeof(bb), "%s%d", resType.c_str(), count);
-			name = bb;
-			if (resource_exists(*jptr, name, resType)) {
-				count++;
-				name = "";
-			}
-		}
-		return name;
-	}
-
-	string getFullResourcePath(string resFile) {
-		string fullPath = resFile;
-
-		// read resource file
-		fstream ff(fullPath, ios::in | ios::binary);
-		if (!ff.good()) {
-			// try adding the source folder
-			string dirname = get_dirname(value("file"));
-			fullPath = dirname + resFile;
-			ff.open(fullPath, ios::in | ios::binary);
-			if (!ff.good()) {
-				// try bare filename.ext in source folder
-				fullPath = dirname + get_filename_ext(resFile);
-				ff.open(fullPath, ios::in | ios::binary);
-				if (!ff.good()) {
-					return resFile;
-				}
-			}
-		}
-		ff.close();
-		return fullPath;
-	}
-
-	json createResourceFromFile(string resFile, string resType=string("")) {
-		json o;
-
-		lastImageHadAlpha = false;
-
-		// read resource file
-		fstream ff(resFile, ios::in | ios::binary);
-		if (!ff.good()) {
-			// try adding the source folder
-			string dirname = get_dirname(value("file"));
-			ff.open(dirname + resFile, ios::in | ios::binary);
-			if (!ff.good()) {
-				// try bare filename.ext in source folder
-				ff.open(dirname + get_filename_ext(resFile), ios::in | ios::binary);
-				if (!ff.good()) {
-					// ok, we tried...
-					cout << "Can't load the specified resource file: " << resFile << endl;
-					return o;
-				}
-			}
-		}
-		ff.seekg(0, ff.end);
-		streampos dataLen = ff.tellg();
-		ff.seekg(0, ff.beg);
-		uint8_t* buffer = new uint8_t[dataLen];
-		ff.read((char*)buffer, dataLen);
-		ff.close();
-
-		// get resource type
-		if (resType.length() < 1)
-			resType = get_resource_type(resFile);
-
-		// convert data to base64
-		string fileDataBase64 = base64_encodeZ(buffer, (unsigned int)dataLen);
-		delete[] buffer;
-
-		o["type"] = resType;
-		o["data"] = fileDataBase64;
-
-		return o;
-	}
-
-	json createImageResourceFromFile(string resFile, bool wantMips=true) {
-		json o;
-
-		// AVIR image resizer vars
-		avir::CImageResizer<> ImageResizer(8, 0, avir::CImageResizerParamsUltra());
-		avir::CImageResizerVars vars;
-		vars.UseSRGBGamma = true;
-
-		int width, height, bpp;
-		
-		string fullPath = getFullResourcePath(resFile);
-		unsigned char* rgba = stbi_load(fullPath.c_str(), &width, &height, &bpp, 4);
-
-		lastImageHadAlpha = false;
-		int count = 0;
-		cout << "Loading image " << resFile << endl;
-		for (unsigned char* p = rgba; count < (width*height); p += 4, count++) {
-			if ((int)p[3] < 255) {
-				lastImageHadAlpha = true;
-				break;
-			}
-		}
-		if (lastImageHadAlpha)
-			cout << "IMAGE HAS ALPHA!!!!" << endl;
-
-		// limit texture sizes
-		int nWidth = width;
-		int nHeight = height;
-		if (width > height) {
-			if (width > TEXTURE_SIZE_LIMIT) {
-				nHeight = (int)((float)TEXTURE_SIZE_LIMIT * (float)height / (float)width);
-				nWidth = TEXTURE_SIZE_LIMIT;
-			}
-		}
-		else {
-			if (height > TEXTURE_SIZE_LIMIT) {
-				nWidth = (int)((float)TEXTURE_SIZE_LIMIT * (float)width / (float)height);
-				nHeight = TEXTURE_SIZE_LIMIT;
-			}
-		}
-		bool imageScaled = false;
-		if (nWidth != width || nHeight != height) {
-			imageScaled = true;
-			unsigned char* mip = new unsigned char[nWidth * nHeight * 4];
-			ImageResizer.resizeImage(rgba, width, height, 0,
-				mip, nWidth, nHeight, 4, 0, &vars);
-			stbi_image_free(rgba);
-			rgba = mip;
-			width = nWidth;
-			height = nHeight;
-		}
-
-		// convert data to base64
-		string imageDataBase64 = base64_encodeZ(rgba, width * height * 4);
-
-		// possibly make mip maps
-		bool makeMipmaps = IS_POWER_2(width) && IS_POWER_2(height);
-		int mipLevels = 1;
-		if (makeMipmaps && wantMips) {
-			int w = width / 2;
-			int h = height / 2;
-			while (w > 2 && h > 2) {
-				unsigned char* mip = new unsigned char[w * h * 4];
-				//stbir_resize_uint8(rgba, width, height, 0,
-				//	mip, w, h, 0, 4);
-				ImageResizer.resizeImage(rgba, width, height, 0,
-					mip, w, h, 4, 0, &vars);
-
-				string mipDataBase64 = base64_encodeZ(mip, w * h * 4);
-				char key[64];
-				snprintf(key, sizeof(key), "mip-data-%d", mipLevels);
-				o[key] = mipDataBase64;
-
-				delete[] mip;
-				mipLevels++;
-				w /= 2;
-				h /= 2;
-			}
-		}
-
-		// cleanup
-		if (imageScaled) {
-			delete[] rgba;
-		}
-		else {
-			stbi_image_free(rgba);
-		}
-
-		o["type"] = "image";
-		o["width"] = width;
-		o["height"] = height;
-		o["bpp"] = 4;
-		o["mip-levels"] = mipLevels;
-		o["mip-data-0"] = imageDataBase64;
-
-		return o;
-	}
-
-	json createMaterial(json params, string effect) {
-		json o;
-
-		// set json object values
-		o["type"] = "material";
-		o["effect"] = effect;
-		o["technique"] = this->value("technique");
-		o["u-wrap"] = this->value("u-wrap");
-		o["v-wrap"] = this->value("v-wrap");
-		o["w-wrap"] = this->value("w-wrap");
-		o["culling"] = this->value("culling");
-		o["depth-test"] = this->value("depth-test");
-		o["depth-only"] = this->boolValue("depth-only");
-		o["filter"] = this->value("filter");
-		o["opaque"] = this->boolValue("opaque");
-		o["parameters"] = params;
-
-		return o;
-	}
-
-};
-
 
 
 
@@ -745,7 +59,7 @@ void command_addres(Args& args) {
 		}
 
 		// make sure the effect exists
-		if (!resource_exists(j, effect, "effect")) {
+		if (!Utils::resource_exists(j, effect, "effect")) {
 			cout << "Cannot find effect " << effect << "." << endl;
 			return;
 		}
@@ -766,7 +80,7 @@ void command_addres(Args& args) {
 		}
 
 		// make sure the effect exists
-		if (!resource_exists(j, model, "model")) {
+		if (!Utils::resource_exists(j, model, "model")) {
 			cout << "Cannot find model " << model << "." << endl;
 			return;
 		}
@@ -848,7 +162,7 @@ void command_addres(Args& args) {
 		}
 
 		// make sure the image exists
-		if (!resource_exists(j, image, "image")) {
+		if (!Utils::resource_exists(j, image, "image")) {
 			cout << "Cannot find image " << image << "." << endl;
 			return;
 		}
@@ -897,11 +211,11 @@ void command_addres(Args& args) {
 		string material = args.value("material");
 
 		// make sure the resources exist
-		if (!resource_exists(j, mesh, "mesh")) {
+		if (!Utils::resource_exists(j, mesh, "mesh")) {
 			cout << "Cannot find mesh " << mesh << "." << endl;
 			return;
 		}
-		if (!resource_exists(j, material, "material")) {
+		if (!Utils::resource_exists(j, material, "material")) {
 			cout << "Cannot find material " << material << "." << endl;
 			return;
 		}
@@ -929,7 +243,7 @@ void command_addres(Args& args) {
 
 		// make a resource name if need be
 		if (name.length() == 0) {
-			name = get_filename(resFile);
+			name = Utils::get_filename(resFile);
 		}
 	}
 
@@ -960,7 +274,7 @@ void command_addpart(Args& args) {
 
 	// make sure the resource exists
 	if (resource.length() > 0) {
-		if (!resource_exists(j, resource)) {
+		if (!Utils::resource_exists(j, resource)) {
 			cout << "Cannot find resource " << resource << "." << endl;
 			return;
 		}
@@ -972,7 +286,7 @@ void command_addpart(Args& args) {
 	while (name.length() == 0) {
 		snprintf(bb, sizeof(bb), "part%d", count);
 		name = bb;
-		if (part_exists(j, name)) {
+		if (Utils::part_exists(j, name)) {
 			count++;
 			name = "";
 		}
@@ -1007,7 +321,7 @@ void command_merge(Args& args) {
 		json jm = args.loadJsonFile(args.files[i]);
 
 		// prefix
-		string n = get_filename(args.files[i]) + "_";
+		string n = Utils::get_filename(args.files[i]) + "_";
 
 		// merge resources
 		json res = jm["resources"];
@@ -1027,33 +341,33 @@ void command_merge(Args& args) {
 			if (tp == "model") {
 				string msh = j["resources"][k]["mesh"];
 				string mat = j["resources"][k]["material"];
-				if (!is_default_resource(msh))
+				if (!Utils::is_default_resource(msh))
 					j["resources"][k]["mesh"] = n + msh;
-				if (!is_default_resource(mat))
+				if (!Utils::is_default_resource(mat))
 					j["resources"][k]["material"] = n + mat;
 			}
 			// fix emitter references
 			else if (tp == "emitter") {
 				string mdl = j["resources"][k]["model"];
-				if (!is_default_resource(mdl))
+				if (!Utils::is_default_resource(mdl))
 					j["resources"][k]["model"] = n + mdl;
 			}
 			// fix sequence references
 			else if (tp == "sequence") {
 				string img = j["resources"][k]["image"];
-				if (!is_default_resource(img))
+				if (!Utils::is_default_resource(img))
 					j["resources"][k]["image"] = n + img;
 			}
 			// fix material references
 			else if (tp == "material") {
 				string eff = j["resources"][k]["effect"];
-				if (!is_default_resource(eff))
+				if (!Utils::is_default_resource(eff))
 					j["resources"][k]["effect"] = n + eff;
 				json parms = j["resources"][k]["parameters"];
 				for (auto pit = parms.begin(); pit != parms.end(); pit++) {
 					if (pit.value()["type"] == "texture" || pit.value()["type"] == "sequence") {
 						string tt = pit.value()["value"];
-						if (!is_default_resource(tt))
+						if (!Utils::is_default_resource(tt))
 							j["resources"][k]["parameters"][pit.key()]["value"] = n + tt;
 					}
 				}
@@ -1112,7 +426,7 @@ void command_merge(Args& args) {
 		for (unsigned int i = 0; i < args.files.size(); i++) {
 			if (i != 0)
 				outfilename = outfilename + "+";
-			outfilename = outfilename + get_filename(args.files[i]);
+			outfilename = outfilename + Utils::get_filename(args.files[i]);
 		}
 		outfilename = outfilename + ".json";
 	}
@@ -1385,7 +699,7 @@ void command_import(Args& args) {
 
 	// make new json
 	json j = args.createNewJson();
-	j["description"] = "MaskMaker import of " + get_filename(resFile) + "." + get_extension(resFile);
+	j["description"] = "MaskMaker import of " + Utils::get_filename(resFile) + "." + Utils::get_extension(resFile);
 	args.jptr = &j;
 
 	// ASSIMP : Import the scene from whatever file it is (dae/fbx/...)
@@ -2016,69 +1330,12 @@ void command_import(Args& args) {
 }
 
 
-void command_tweak(Args& args) {
-
-	// load json file
-	json j = args.loadJsonFile(args.filename);
-	args.jptr = &j;
-
-	for (auto it = args.kvpairs.begin(); it != args.kvpairs.end(); it++) {
-		vector<string> path = split(it->first, '.');
-
-		switch (path.size()) {
-		case 1:
-			j[path[0]] = it->second;
-			break;
-		case 2:
-			j[path[0]][path[1]] = it->second;
-			break;
-		case 3:
-			j[path[0]][path[1]][path[2]] = it->second;
-			break;
-		case 4:
-			j[path[0]][path[1]][path[2]][path[3]] = it->second;
-			break;
-		case 5:
-			j[path[0]][path[1]][path[2]][path[3]][path[4]] = it->second;
-			break;
-		case 6:
-			j[path[0]][path[1]][path[2]][path[3]][path[4]][path[5]] = it->second;
-			break;
-		case 7:
-			j[path[0]][path[1]][path[2]][path[3]][path[4]][path[5]][path[6]] = it->second;
-			break;
-		case 8:
-			j[path[0]][path[1]][path[2]][path[3]][path[4]][path[5]][path[6]][path[7]] = it->second;
-			break;
-		case 9:
-			j[path[0]][path[1]][path[2]][path[3]][path[4]][path[5]][path[6]][path[7]][path[8]] = it->second;
-			break;
-		case 10:
-			j[path[0]][path[1]][path[2]][path[3]][path[4]][path[5]][path[6]][path[7]][path[8]][path[9]] = it->second;
-			break;
-		default:
-			assert(0);
-			break;
-		}
-	}
-
-	// write it out
-	args.writeJson(j);
-	cout << "Done!" << endl << endl;
-}
-
-
-
-
 int main(int argc, char** argv) {
 
 	// parse arguments
 	Args args(argc, argv);
 	if (args.failed)
 		return -1;
-
-	// init json names
-	initJsonNamesAndValues();
 
 	// run command
 	if (args.command == "create")

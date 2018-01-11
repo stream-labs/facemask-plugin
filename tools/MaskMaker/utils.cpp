@@ -1,5 +1,4 @@
 /*
-* Face Masks for SlOBS
 *
 * Copyright (C) 2017 General Workings Inc
 *
@@ -24,6 +23,31 @@
 #include <fstream>
 #include "base64.h"
 
+
+static const vector<string> g_defaultResources = {
+	"imageNull",
+	"imageWhite",
+	"imageBlack",
+	"imageRed",
+	"imageGreen",
+	"imageBlue",
+	"imageYellow",
+	"imageMagenta",
+	"imageCyan",
+
+	"meshTriangle",
+	"meshQuad",
+	"meshCube",
+	"meshSphere",
+	"meshCylinder",
+	"meshPyramid",
+	"meshTorus",
+	"meshCone",
+	"meshHead",
+
+	"effectDefault",
+	"effectPhong"
+};
 
 namespace Utils {
 
@@ -65,4 +89,111 @@ namespace Utils {
 	void DeleteTempFile(std::string filename) {
 		::DeleteFile(filename.c_str());
 	}
+
+
+	// ------------------------------------------------------------------------------
+	// https://stackoverflow.com/questions/236129/most-elegant-way-to-split-a-string
+	//
+	template<typename Out>
+	void split(const std::string &s, char delim, Out result) {
+		std::stringstream ss;
+		ss.str(s);
+		std::string item;
+		while (std::getline(ss, item, delim)) {
+			*(result++) = item;
+		}
+	}
+	std::vector<std::string> split(const std::string &s, char delim) {
+		std::vector<std::string> elems;
+		split(s, delim, std::back_inserter(elems));
+		return elems;
+	}
+
+
+
+	string get_extension(string filename) {
+		vector<string> parts = split(filename, '.');
+		string ext = parts[parts.size() - 1];
+		std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+		return ext;
+	}
+
+	string get_filename(string filename) {
+		vector<string> parts = split(filename, '\\');
+		string f = parts[parts.size() - 1];
+		parts = split(f, '.');
+		return parts[0];
+	}
+
+	string get_filename_ext(string filename) {
+		vector<string> parts = split(filename, '\\');
+		return parts[parts.size() - 1];
+	}
+
+	string get_dirname(string filename) {
+		vector<string> parts = split(filename, '\\');
+		string d;
+		for (int i = 0; i < (parts.size() - 1); i++)
+			d += parts[i] + "\\";
+		return d;
+	}
+
+	string get_resource_type(string filename) {
+		string ext = get_extension(filename);
+
+		if (ext == "png")
+			return "image";
+		if (ext == "jpg")
+			return "image";
+		if (ext == "obj")
+			return "mesh";
+		if (ext == "wav")
+			return "sound";
+		if (ext == "aiff")
+			return "sound";
+		if (ext == "mp3")
+			return "sound";
+		if (ext == "effect")
+			return "effect";
+		return "binary";
+	}
+
+
+	string find_resource(const json& j, string type) {
+		for (auto it = j["resources"].begin(); it != j["resources"].end(); it++) {
+			if (it.value()["type"] == type) {
+				return it.key();
+			}
+		}
+		return "";
+	}
+
+	bool is_default_resource(string name) {
+		return (find(g_defaultResources.begin(), g_defaultResources.end(), name) != g_defaultResources.end());
+	}
+
+	bool resource_exists(const json& j, string name, string type) {
+		if (j["resources"].find(name) != j["resources"].end()) {
+			if (j["resources"][name]["type"] == type) {
+				return true;
+			}
+		}
+		return is_default_resource(name);
+	}
+
+	bool resource_exists(const json& j, string name) {
+		if (j["resources"].find(name) != j["resources"].end()) {
+			return true;
+		}
+		return is_default_resource(name);
+	}
+
+	bool part_exists(const json& j, string name) {
+		if (j["parts"].find(name) != j["parts"].end()) {
+			return true;
+		}
+		return false;
+	}
+
+
 }

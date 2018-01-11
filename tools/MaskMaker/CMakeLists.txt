@@ -26,6 +26,8 @@ SET(FACEMASK_PLUGIN_DIR "${PROJECT_SOURCE_DIR}/../..")
 include_directories(${FACEMASK_PLUGIN_DIR})
 
 SET(MaskMaker_HEADERS
+	"args.h"
+	"command_tweak.h"
 	"${FACEMASK_PLUGIN_DIR}/base64.h"
 	"fifo_map.hpp"
 	"json.hpp"
@@ -38,7 +40,9 @@ SET(MaskMaker_HEADERS
 
 SET(MaskMaker_SOURCES
 	"${FACEMASK_PLUGIN_DIR}/base64.cpp"
+	"args.cpp"
 	"MaskMaker.cpp"
+	"command_tweak.cpp"
 	"stdafx.cpp"
 	"utils.cpp"
 )
