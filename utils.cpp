@@ -22,6 +22,8 @@
 #include <Windows.h>
 #include <string>
 #include <fstream>
+#include <sstream>
+#include <iterator>
 #include "base64.h"
 
 
@@ -85,6 +87,38 @@ namespace Utils {
 		//Close the handle after use or memory/resource leak
 		FindClose(handle);
 		return r;
+	}
+
+
+	// ------------------------------------------------------------------------------
+	// https://stackoverflow.com/questions/236129/most-elegant-way-to-split-a-string
+	//
+	template<typename Out>
+	void split(const std::string &s, char delim, Out result) {
+		std::stringstream ss;
+		ss.str(s);
+		std::string item;
+		while (std::getline(ss, item, delim)) {
+			*(result++) = item;
+		}
+	}
+	std::vector<std::string> split(const std::string &s, char delim) {
+		std::vector<std::string> elems;
+		split(s, delim, std::back_inserter(elems));
+		return elems;
+	}
+
+
+	extern std::string dirname(const std::string &p) {
+		size_t e = p.length() - 1;
+		const char* pch = p.c_str();
+		while (e >= 0) {
+			if (pch[e] == '/' || pch[e] == '\\')
+				break;
+			e--;
+		}
+		if (e < 0) e = 0;
+		return p.substr(0, e);
 	}
 
 }
