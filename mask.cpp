@@ -42,7 +42,7 @@ static const char* const JSON_PARTS = "parts";
 static const char* const JSON_TYPE = "type";
 static const char* const JSON_ANIMATION = "animation";
 
-static const int NUM_DRAW_BUCKETS = 8 * 1024;
+static const int NUM_DRAW_BUCKETS = 1024;
 static const float BUCKETS_MAX_Z = 10.0f;
 static const float BUCKETS_MIN_Z = -100.0f;
 
