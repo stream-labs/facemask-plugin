@@ -20,6 +20,35 @@
 #include "utils.h"
 #include "command_import.h"
 
+#define MAX_BONES_PER_SKIN		(8)
+
+struct GSVertex {
+	float px, py, pz, pw;	// note: vec3 in obs has 4 values
+	float nx, ny, nz, nw;
+	float tx, ty, tz, tw;
+	float u, v, w, ww;
+	union {
+		struct {
+			float u1, v1, w1, ww1;
+			float u2, v2, w2, ww2;
+			float u3, v3, w3, ww3;
+			float u4, v4, w4, ww4;
+			float u5, v5, w5, ww5;
+			float u6, v6, w6, ww6;
+			float u7, v7, w7, ww7;
+		};
+		float extraTexCoords[4 * 7];
+	};
+
+	uint32_t color;
+
+	char pad[12];			// pad to 16-byte boundary
+
+	GSVertex() {
+		memset(this, 0, sizeof(GSVertex));
+	}
+};
+
 
 int CheckNodeNames(aiNode* node, int count) {
 	if (!node)
@@ -244,6 +273,37 @@ string AnimBehaviourToString(aiAnimBehaviour b) {
 	return "repeat";
 }
 
+struct VtxToBone {
+	int		bone;	// index into mesh bones list
+	float	weight;
+};
+
+struct Vtx {
+	int						index;
+	std::vector<VtxToBone>	bones;
+	std::vector<int>		tris;	// indices into mesh faces list
+};
+
+struct Tri {
+	bool					touched;
+	std::vector<int>		bones; // indices into mesh bones list
+};
+
+bool AllTrianglesTouched(Tri* tris, int numTris) {
+	for (int j = 0; j < numTris; j++)
+		if (!tris[j].touched)
+			return false;
+	return true;
+}
+
+int GetBoneIndex(const std::vector<int>& bones, int b) {
+	for (unsigned int i = 0; i < bones.size(); i++)
+		if (bones[i] == b)
+			return i;
+	return -1;
+}
+
+
 
 #define GETTEXTURE(_TEXTYPE_) {\
 imgfile = getMaterialTexture(scene->mMaterials[i], _TEXTYPE_);\
@@ -316,26 +376,6 @@ void command_import(Args& args) {
 	json rez;
 
 	// Add all the meshes
-	struct GSVertex {
-		float px, py, pz, pw;	// note: vec3 in obs has 4 values
-		float nx, ny, nz, nw;
-		float tx, ty, tz, tw;
-		float u, v, w, ww;
-		float u1, v1, w1, ww1;
-		float u2, v2, w2, ww2;
-		float u3, v3, w3, ww3;
-		float u4, v4, w4, ww4;
-		float u5, v5, w5, ww5;
-		float u6, v6, w6, ww6;
-		float u7, v7, w7, ww7;
-		uint32_t color;
-
-		char pad[12];			// pad to 16-byte boundary
-
-		GSVertex() {
-			memset(this, 0, sizeof(GSVertex));
-		}
-	};
 	cout << "Importing " << scene->mNumMeshes << " meshes..." << endl;
 	for (unsigned int i = 0; i < scene->mNumMeshes; i++) {
 		// sometimes meshes don't have names
@@ -347,17 +387,219 @@ void command_import(Args& args) {
 		aiMesh* mesh = scene->mMeshes[i];
 
 		if (!mesh->mTangents) {
-			cout << "*** MESH HAS NO TANGENTS! NORMAL MAPPING WILL BE SCREWED! ***" << endl;
+			cout << "*** MESH HAS NO TANGENTS! (NO NORMAL MAPPING) ***" << endl;
 		}
 		if (!mesh->mTextureCoords[0]) {
-			cout << "*** MESH HAS NO TEXTURE COORDINATES! HOPE YOU AREN'T TEXTURE MAPPING! ***" << endl;
+			cout << "*** MESH HAS NO TEXTURE COORDINATES! (NO TEXTURE MAPPING) ***" << endl;
 		}
 
 		// is this a skinned mesh?
 		if (mesh->mNumBones > 0) {
 
+			// We need to build back-references from vertices and triangles to bones
+			// Build those now
+			Vtx* verts = new Vtx[mesh->mNumVertices];
+			Tri* tris = new Tri[mesh->mNumFaces];
+			for (unsigned int j = 0; j < mesh->mNumBones; j++) {
+				aiBone* bone = mesh->mBones[j];
+				// Add vtx -> bone connections
+				for (unsigned int k = 0; k < bone->mNumWeights; k++) {
+					VtxToBone v2b;
+					v2b.bone = j;
+					v2b.weight = bone->mWeights[k].mWeight;
+					verts[bone->mWeights[k].mVertexId].bones.push_back(v2b);
+				}
+			}
+			for (unsigned int j = 0; j < mesh->mNumFaces; j++) {
+				aiFace& face = mesh->mFaces[j];
+				assert(face.mNumIndices == 3);
+				// Triangle not touched
+				tris[j].touched = false;
+				// Add vtx -> tri connections
+				verts[face.mIndices[0]].tris.push_back(j);
+				verts[face.mIndices[1]].tris.push_back(j);
+				verts[face.mIndices[2]].tris.push_back(j);
+				// Add tri -> bone connections from triangle vertex bones
+				for (unsigned int v = 0; v < 3; v++) {
+					for (unsigned int k = 0; k < verts[face.mIndices[v]].bones.size(); k++) {
+						tris[j].bones.push_back(verts[face.mIndices[v]].bones[k].bone);
+					}
+				}
+			}
 
+			// create the skinned mesh json object
+			json o;
+			o["type"] = "skinnedModel";
 
+			// set material
+			char temp[256];
+			snprintf(temp, sizeof(temp), "material%d", mesh->mMaterialIndex);
+			o["material"] = temp;
+
+			// add bones list
+			json bnz;
+			for (unsigned int j = 0; j < mesh->mNumBones; j++) {
+				aiBone* bone = mesh->mBones[j];
+				// for lack of a better idea
+				// TODO: this needs to be converted to obs-space
+				json mm;
+				mm["a1"] = bone->mOffsetMatrix.a1;
+				mm["a2"] = bone->mOffsetMatrix.a2;
+				mm["a3"] = bone->mOffsetMatrix.a3;
+				mm["a4"] = bone->mOffsetMatrix.a4;
+				mm["b1"] = bone->mOffsetMatrix.b1;
+				mm["b2"] = bone->mOffsetMatrix.b2;
+				mm["b3"] = bone->mOffsetMatrix.b3;
+				mm["b4"] = bone->mOffsetMatrix.b4;
+				mm["c1"] = bone->mOffsetMatrix.c1;
+				mm["c2"] = bone->mOffsetMatrix.c2;
+				mm["c3"] = bone->mOffsetMatrix.c3;
+				mm["c4"] = bone->mOffsetMatrix.c4;
+				mm["d1"] = bone->mOffsetMatrix.d1;
+				mm["d2"] = bone->mOffsetMatrix.d2;
+				mm["d3"] = bone->mOffsetMatrix.d3;
+				mm["d4"] = bone->mOffsetMatrix.d4;
+				bnz[bone->mName.C_Str()] = mm;
+			}
+			o["bones"] = bnz;
+
+			// reuse these lists for all the skins
+			int numIndices = 0;
+			int numVertices = 0;
+			unsigned int* indices = new unsigned int[mesh->mNumFaces * 3];
+			GSVertex* vertices = new GSVertex[mesh->mNumVertices];
+
+			// Keep going until we've touched all the triangles
+			int numSkins = 0;
+			json sknz;
+			while (!AllTrianglesTouched(tris, mesh->mNumFaces)) {
+
+				// Clear vtx indices
+				for (unsigned int j = 0; j < mesh->mNumVertices; j++) {
+					verts[j].index = -1;
+				}
+
+				// Reset Skin vars
+				numIndices = 0;
+				numVertices = 0;
+				std::vector<int> bones;
+
+				// Walk triangles
+				for (unsigned int j = 0; j < mesh->mNumFaces; j++) {
+					if (!tris[j].touched) {
+						aiFace& face = mesh->mFaces[j];
+
+						// How many new bones will this triangle introduce?
+						int numNewBones = 0;
+						for (unsigned int k = 0; k < tris[j].bones.size(); k++) {
+							bool found = false;
+							for (unsigned int l = 0; l < bones.size(); l++) {
+								if (bones[l] == tris[j].bones[k]) {
+									found = true;
+									break;
+								}
+							}
+							if (!found)
+								numNewBones++;
+						}
+						
+						// Can we add this triangle?
+						if ((bones.size() + numNewBones) < MAX_BONES_PER_SKIN) {
+
+							// Add the new bones from triangle
+							for (unsigned int k = 0; k < tris[j].bones.size(); k++) {
+								bool found = false;
+								for (unsigned int l = 0; l < bones.size(); l++) {
+									if (bones[l] == tris[j].bones[k]) {
+										found = true;
+										break;
+									}
+								}
+								if (!found) {
+									bones.push_back(tris[j].bones[k]);
+								}
+							}
+
+							// Add each index/vertex
+							for (unsigned int k = 0; k < 3; k++) {
+								int v = mesh->mFaces[k].mIndices[k];
+								// need to add vertex?
+								if (verts[v].index < 0) {
+									// Add the new vertex
+									vertices[numVertices].px = mesh->mVertices[v].x;
+									vertices[numVertices].py = -mesh->mVertices[v].y;
+									vertices[numVertices].pz = mesh->mVertices[v].z;
+									vertices[numVertices].nx = mesh->mNormals[v].x;
+									vertices[numVertices].ny = -mesh->mNormals[v].y;
+									vertices[numVertices].nz = mesh->mNormals[v].z;
+									if (mesh->mTangents) {
+										vertices[numVertices].tx = mesh->mTangents[v].x;
+										vertices[numVertices].ty = mesh->mTangents[v].y;
+										vertices[numVertices].tz = mesh->mTangents[v].z;
+									}
+									if (mesh->mTextureCoords[0]) {
+										vertices[numVertices].u = mesh->mTextureCoords[0][v].x;
+										vertices[numVertices].v = 1.0f - mesh->mTextureCoords[0][v].y;
+									}
+									// use extra tex coords to store bones & weights for shader
+									for (unsigned int b = 0; b < verts[v].bones.size(); b++) {
+										vertices[numVertices].extraTexCoords[b * 2 + 0] = (float)GetBoneIndex(bones, verts[v].bones[b].bone);
+										vertices[numVertices].extraTexCoords[b * 2 + 1] = verts[v].bones[b].weight;
+									}
+									verts[v].index = numVertices;
+									numVertices++;
+								}
+								indices[numIndices++] = verts[v].index;
+							}
+
+							// This triangle is done
+							tris[j].touched = true;
+						}
+					} // end: can we add this triangle?
+				} // end: for each triangle
+
+				// encode 
+				string vertexDataBase64 =
+					base64_encodeZ((uint8_t*)vertices, sizeof(GSVertex) * numVertices);
+				string indexDataBase64 =
+					base64_encodeZ((uint8_t*)indices, sizeof(unsigned int) * numIndices);
+
+				// make mesh name
+				char tt[1024];
+				snprintf(tt, sizeof(tt), "%s_skin%d", mesh->mName.C_Str(), numSkins++);
+
+				// Add mesh resource
+				json mo;
+				mo["type"] = "mesh";
+				mo["vertex-buffer"] = vertexDataBase64;
+				mo["index-buffer"] = indexDataBase64;
+				rez[tt] = mo;
+
+				// Add skin
+				json skn;
+				json sknbnz;
+				for (unsigned int j = 0; j < bones.size(); j++) {
+					char ttt[32];
+					snprintf(ttt, sizeof(ttt), "%d", j);
+					sknbnz[ttt] = bones[j];
+				}
+				skn["bones"] = sknbnz;
+				skn["mesh"] = tt;
+				sknz[tt] = skn;
+
+			} // end: while: until all triangles are touched
+
+			// set our skins
+			o["skins"] = sknz;
+
+			// Add a skinned model to resources list
+			rez[mesh->mName.C_Str()] = o;
+
+			// clean up
+			delete[] verts;
+			delete[] tris;
+			delete[] vertices;
+			delete[] indices;
 		}
 		else {
 			// Create vertex list
@@ -379,10 +621,11 @@ void command_import(Args& args) {
 					vertices[j].v = 1.0f - mesh->mTextureCoords[0][j].y;
 				}
 			}
-
+			// encode vertices
 			string vertexDataBase64 =
 				base64_encodeZ((uint8_t*)vertices, sizeof(GSVertex) * mesh->mNumVertices);
 
+			// Build index list
 			unsigned int* indices = new unsigned int[mesh->mNumFaces * 3];
 			int indIdx = 0;
 			for (unsigned int j = 0; j < mesh->mNumFaces; j++) {
@@ -392,17 +635,18 @@ void command_import(Args& args) {
 				indices[indIdx++] = face.mIndices[1];
 				indices[indIdx++] = face.mIndices[2];
 			}
-
+			// encode indices
 			string indexDataBase64 =
 				base64_encodeZ((uint8_t*)indices, sizeof(unsigned int) * indIdx);
 
+			// Add mesh resource
 			json o;
 			o["type"] = "mesh";
 			o["vertex-buffer"] = vertexDataBase64;
 			o["index-buffer"] = indexDataBase64;
-
 			rez[mesh->mName.C_Str()] = o;
 
+			// clean up
 			delete[] indices;
 			delete[] vertices;
 		}
@@ -567,17 +811,20 @@ void command_import(Args& args) {
 	for (unsigned int i = 0; i < scene->mNumMeshes; i++) {
 		aiMesh* mesh = scene->mMeshes[i];
 
-		char temp[256];
-		snprintf(temp, sizeof(temp), "material%d", mesh->mMaterialIndex);
+		// only non-skinned models
+		if (mesh->mNumBones == 0) {
+			char temp[256];
+			snprintf(temp, sizeof(temp), "material%d", mesh->mMaterialIndex);
 
-		// model
-		json o;
-		o["type"] = "model";
-		o["mesh"] = mesh->mName.C_Str();
-		o["material"] = temp;
+			// model
+			json o;
+			o["type"] = "model";
+			o["mesh"] = mesh->mName.C_Str();
+			o["material"] = temp;
 
-		snprintf(temp, sizeof(temp), "%sModel", mesh->mName.C_Str());
-		rez[temp] = o;
+			snprintf(temp, sizeof(temp), "%sModel", mesh->mName.C_Str());
+			rez[temp] = o;
+		}
 	}
 
 	// Add lights
