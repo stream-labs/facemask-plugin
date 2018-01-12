@@ -20,7 +20,7 @@
 #include "utils.h"
 #include "command_import.h"
 
-#define MAX_BONES_PER_SKIN		(8)
+#define MAX_BONES_PER_SKIN		(16)
 
 struct GSVertex {
 	float px, py, pz, pw;	// note: vec3 in obs has 4 values
@@ -429,7 +429,7 @@ void command_import(Args& args) {
 
 			// create the skinned mesh json object
 			json o;
-			o["type"] = "skinnedModel";
+			o["type"] = "skinned-model";
 
 			// set material
 			char temp[256];
@@ -459,7 +459,10 @@ void command_import(Args& args) {
 				mm["d2"] = bone->mOffsetMatrix.d2;
 				mm["d3"] = bone->mOffsetMatrix.d3;
 				mm["d4"] = bone->mOffsetMatrix.d4;
-				bnz[bone->mName.C_Str()] = mm;
+
+				char ttt[32];
+				snprintf(ttt, sizeof(ttt), "%d", j);
+				bnz[ttt] = mm;
 			}
 			o["bones"] = bnz;
 
@@ -543,6 +546,7 @@ void command_import(Args& args) {
 									}
 									// use extra tex coords to store bones & weights for shader
 									for (unsigned int b = 0; b < verts[v].bones.size(); b++) {
+										assert(b < (4 * 7));
 										vertices[numVertices].extraTexCoords[b * 2 + 0] = (float)GetBoneIndex(bones, verts[v].bones[b].bone);
 										vertices[numVertices].extraTexCoords[b * 2 + 1] = verts[v].bones[b].weight;
 									}
