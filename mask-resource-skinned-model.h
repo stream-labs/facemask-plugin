@@ -50,7 +50,18 @@ namespace Mask {
 			}
 
 		protected:
-			std::shared_ptr<Mesh>		m_mesh;
+
+			struct Bone {
+				std::string		partName;
+				matrix4			offset;
+			};
+			struct Skin {
+				std::shared_ptr<Mesh>	mesh;
+				std::vector<int>		bones;
+			};
+
+			std::vector<Bone>			m_bones;
+			std::vector<Skin>			m_skins;
 			std::shared_ptr<Material>	m_material;
 		};
 	}

@@ -189,6 +189,7 @@ std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::GetResource(std::string n
 			return res;
 		}
 	} catch (...) {
+		PLOG_DEBUG("Resource %s has THROWN AN EXCEPTION. MASK DID NOT LOAD CORRECTLY.", name.c_str());
 		return nullptr;
 	}
 	return nullptr;
@@ -227,9 +228,6 @@ std::shared_ptr<Mask::Part> Mask::MaskData::GetPart(std::string name) {
 
 	auto kv = m_parts.find(name);
 	if (kv != m_parts.end()) {
-		if (name == "world") {
-			blog(LOG_DEBUG, "FOUND WORLD");
-		}
 		return kv->second;
 	}
 
@@ -443,7 +441,6 @@ std::shared_ptr<Mask::Part> Mask::MaskData::LoadPart(std::string name, obs_data_
 		std::string parentName = obs_data_get_string(data, S_PARENT);
 		// root node is deprecated, but might still be kicking around
 		if (parentName != "root") {
-			blog(LOG_DEBUG, "parent: %s", parentName.c_str());
 			current->parent = GetPart(parentName);
 		}
 	}

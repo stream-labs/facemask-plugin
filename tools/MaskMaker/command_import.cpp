@@ -460,9 +460,14 @@ void command_import(Args& args) {
 				mm["d3"] = bone->mOffsetMatrix.d3;
 				mm["d4"] = bone->mOffsetMatrix.d4;
 
+				// add the name
+				json bn;
+				bn["name"] = string(bone->mName.C_Str());
+				bn["offset"] = mm;
+
 				char ttt[32];
 				snprintf(ttt, sizeof(ttt), "%d", j);
-				bnz[ttt] = mm;
+				bnz[ttt] = bn;
 			}
 			o["bones"] = bnz;
 
@@ -597,7 +602,8 @@ void command_import(Args& args) {
 			o["skins"] = sknz;
 
 			// Add a skinned model to resources list
-			rez[mesh->mName.C_Str()] = o;
+			snprintf(temp, sizeof(temp), "%sModel", mesh->mName.C_Str());
+			rez[temp] = o;
 
 			// clean up
 			delete[] verts;
