@@ -102,26 +102,29 @@ Mask::Resource::SkinnedModel::SkinnedModel(Mask::MaskData* parent, std::string n
 			PLOG_ERROR("Skinned Model '%s' bone has no offset.", name.c_str());
 			throw std::logic_error("Skinned Model has a bone with no offset.");
 		}
-		std::string boneName = obs_data_get_string(boneData, S_NAME);
+		Mask::Resource::SkinnedModel::SkinnedModel::Bone bone;
+
+		bone.partName = obs_data_get_string(boneData, S_NAME);
 		obs_data_t* offsetData = obs_data_get_obj(boneData, S_OFFSET);
 
-		matrix4 m;
-		m.x.x = (float)obs_data_get_double(offsetData, S_MAT_A1);
-		m.x.y = (float)obs_data_get_double(offsetData, S_MAT_A2);
-		m.x.z = (float)obs_data_get_double(offsetData, S_MAT_A3);
-		m.x.w = (float)obs_data_get_double(offsetData, S_MAT_A4);
-		m.y.x = (float)obs_data_get_double(offsetData, S_MAT_B1);
-		m.y.y = (float)obs_data_get_double(offsetData, S_MAT_B2);
-		m.y.z = (float)obs_data_get_double(offsetData, S_MAT_B3);
-		m.y.w = (float)obs_data_get_double(offsetData, S_MAT_B4);
-		m.z.x = (float)obs_data_get_double(offsetData, S_MAT_C1);
-		m.z.y = (float)obs_data_get_double(offsetData, S_MAT_C2);
-		m.z.z = (float)obs_data_get_double(offsetData, S_MAT_C3);
-		m.z.w = (float)obs_data_get_double(offsetData, S_MAT_C4);
-		m.t.x = (float)obs_data_get_double(offsetData, S_MAT_D1);
-		m.t.y = (float)obs_data_get_double(offsetData, S_MAT_D2);
-		m.t.z = (float)obs_data_get_double(offsetData, S_MAT_D3);
-		m.t.w = (float)obs_data_get_double(offsetData, S_MAT_D4);
+		bone.offset.x.x = (float)obs_data_get_double(offsetData, S_MAT_A1);
+		bone.offset.x.y = (float)obs_data_get_double(offsetData, S_MAT_A2);
+		bone.offset.x.z = (float)obs_data_get_double(offsetData, S_MAT_A3);
+		bone.offset.x.w = (float)obs_data_get_double(offsetData, S_MAT_A4);
+		bone.offset.y.x = (float)obs_data_get_double(offsetData, S_MAT_B1);
+		bone.offset.y.y = (float)obs_data_get_double(offsetData, S_MAT_B2);
+		bone.offset.y.z = (float)obs_data_get_double(offsetData, S_MAT_B3);
+		bone.offset.y.w = (float)obs_data_get_double(offsetData, S_MAT_B4);
+		bone.offset.z.x = (float)obs_data_get_double(offsetData, S_MAT_C1);
+		bone.offset.z.y = (float)obs_data_get_double(offsetData, S_MAT_C2);
+		bone.offset.z.z = (float)obs_data_get_double(offsetData, S_MAT_C3);
+		bone.offset.z.w = (float)obs_data_get_double(offsetData, S_MAT_C4);
+		bone.offset.t.x = (float)obs_data_get_double(offsetData, S_MAT_D1);
+		bone.offset.t.y = (float)obs_data_get_double(offsetData, S_MAT_D2);
+		bone.offset.t.z = (float)obs_data_get_double(offsetData, S_MAT_D3);
+		bone.offset.t.w = (float)obs_data_get_double(offsetData, S_MAT_D4);
+
+		m_bones.emplace_back(bone);
 	}
 
 	// Skins list
@@ -152,13 +155,32 @@ Mask::Resource::SkinnedModel::SkinnedModel(Mask::MaskData* parent, std::string n
 			PLOG_ERROR("Bad bones section in skin in '%s'.", name.c_str());
 			throw std::logic_error("Skinned Model has bad bones section in skin.");
 		}
+		Mask::Resource::SkinnedModel::SkinnedModel::Skin skin;
+
+		if (!obs_data_has_user_value(skinData, S_MESH)) {
+			PLOG_ERROR("Skinned Model '%s' has skin with no mesh.", name.c_str());
+			throw std::logic_error("Skinned Model has skin with no mesh.");
+		}
 		std::string meshName = obs_data_get_string(skinData, S_MESH);
+		skin.mesh = std::dynamic_pointer_cast<Mesh>(m_parent->GetResource(meshName));
+		if (skin.mesh == nullptr) {
+			PLOG_ERROR("<Skinned Model '%s'> Dependency on mesh '%s' could not be resolved.",
+				m_name.c_str(), meshName.c_str());
+			throw std::logic_error("Model depends on non-existing mesh.");
+		}
+		if (skin.mesh->GetType() != Type::Mesh) {
+			PLOG_ERROR("<Skinned Model '%s'> Resolved mesh dependency on '%s' is not a mesh.",
+				m_name.c_str(), meshName.c_str());
+			throw std::logic_error("Mesh dependency of Skinned Model is not a mesh.");
+		}
+
 		for (obs_data_item_t* itm2 = obs_data_first(skinBonesData); itm2; obs_data_item_next(&itm2)) {
 			int boneIdx = (int)obs_data_item_get_int(itm2);
+			skin.bones.push_back(boneIdx);
 		}
+
+		m_skins.emplace_back(skin);
 	}
-
-
 }
 
 Mask::Resource::SkinnedModel::~SkinnedModel() {}
@@ -170,7 +192,9 @@ Mask::Resource::Type Mask::Resource::SkinnedModel::GetType() {
 void Mask::Resource::SkinnedModel::Update(Mask::Part* part, float time) {
 	part->mask->instanceDatas.Push(m_id);
 	m_material->Update(part, time);
-	m_mesh->Update(part, time);
+	for (auto skin : m_skins) {
+		skin.mesh->Update(part, time);
+	}
 	part->mask->instanceDatas.Pop();
 }
 
@@ -186,11 +210,12 @@ void Mask::Resource::SkinnedModel::Render(Mask::Part* part) {
 }
 
 void Mask::Resource::SkinnedModel::DirectRender(Mask::Part* part) {
-	part->mask->instanceDatas.Push(m_id);
-	while (m_material->Loop(part)) {
-		m_mesh->Render(part);
-	}
-	part->mask->instanceDatas.Pop();
+	UNUSED_PARAMETER(part);
+	//part->mask->instanceDatas.Push(m_id);
+	//while (m_material->Loop(part)) {
+	//	m_mesh->Render(part);
+	//}
+	//part->mask->instanceDatas.Pop();
 }
 
 
@@ -213,7 +238,17 @@ bool Mask::Resource::SkinnedModel::IsOpaque() {
 }
 
 float Mask::Resource::SkinnedModel::SortDepth() {
-	vec4 c = m_mesh->GetCenter();
+	// average all mesh centers to find center
+	// TODO: optimize this. save it or something.
+	vec4 c;
+	vec4_zero(&c);
+	int count = 0;
+	for (auto skin : m_skins) {
+		vec4 cc = skin.mesh->GetCenter();
+		vec4_add(&c, &c, &cc);
+		count++;
+	}
+	vec4_divf(&c, &c, (float)count);
 	matrix4 m;
 	gs_matrix_get(&m);
 	vec4_transform(&c, &c, &m);
@@ -221,10 +256,10 @@ float Mask::Resource::SkinnedModel::SortDepth() {
 }
 	
 void Mask::Resource::SkinnedModel::SortedRender() {
-	sortDrawPart->mask->instanceDatas.Push(m_id);
-	while (m_material->Loop(sortDrawPart)) {
-		m_mesh->Render(sortDrawPart);
-	}
-	sortDrawPart->mask->instanceDatas.Pop();
+	//sortDrawPart->mask->instanceDatas.Push(m_id);
+	//while (m_material->Loop(sortDrawPart)) {
+	//	m_mesh->Render(sortDrawPart);
+	//}
+	//sortDrawPart->mask->instanceDatas.Pop();
 }
 
