@@ -135,6 +135,7 @@ SET(mask_HEADERS
 	"${PROJECT_SOURCE_DIR}/mask-resource-material.h"
 	"${PROJECT_SOURCE_DIR}/mask-resource-mesh.h"
 	"${PROJECT_SOURCE_DIR}/mask-resource-model.h"
+	"${PROJECT_SOURCE_DIR}/mask-resource-skinned-model.h"
 	"${PROJECT_SOURCE_DIR}/mask-resource-sound.h"
 	"${PROJECT_SOURCE_DIR}/mask-resource-emitter.h"
 )
@@ -180,6 +181,7 @@ SET(mask_SOURCES
 	"${PROJECT_SOURCE_DIR}/mask-resource-material.cpp"
 	"${PROJECT_SOURCE_DIR}/mask-resource-mesh.cpp"
 	"${PROJECT_SOURCE_DIR}/mask-resource-model.cpp"
+	"${PROJECT_SOURCE_DIR}/mask-resource-skinned-model.cpp"
 	"${PROJECT_SOURCE_DIR}/mask-resource-sound.cpp"
 	"${PROJECT_SOURCE_DIR}/mask-resource-emitter.cpp"
 )

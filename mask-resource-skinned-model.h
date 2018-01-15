@@ -28,10 +28,10 @@
 namespace Mask {
 	namespace Resource {
 
-		class Model : public IBase, public SortedDrawObject {
+		class SkinnedModel : public IBase, public SortedDrawObject {
 		public:
-			Model(Mask::MaskData* parent, std::string name, obs_data_t* data);
-			virtual ~Model();
+			SkinnedModel(Mask::MaskData* parent, std::string name, obs_data_t* data);
+			virtual ~SkinnedModel();
 
 			virtual Type GetType() override;
 			virtual void Update(Mask::Part* part, float time) override;
@@ -50,8 +50,8 @@ namespace Mask {
 			}
 
 		protected:
-			std::shared_ptr<Mesh> m_mesh;
-			std::shared_ptr<Material> m_material;
+			std::shared_ptr<Mesh>		m_mesh;
+			std::shared_ptr<Material>	m_material;
 		};
 	}
 }

@@ -27,6 +27,7 @@
 #include "mask-resource-material.h"
 #include "mask-resource-mesh.h"
 #include "mask-resource-model.h"
+#include "mask-resource-skinned-model.h"
 #include "mask-resource-sequence.h"
 #include "mask-resource-sound.h"
 #include "mask-resource-light.h"
@@ -96,31 +97,44 @@ std::shared_ptr<Mask::Resource::IBase> Mask::Resource::IBase::Load(Mask::MaskDat
 	if (type == "image") {
 		// Image
 		return std::make_shared<Mask::Resource::Image>(parent, name, data);
-	} else if (type == "sequence") {
+	} 
+	else if (type == "sequence") {
 		// Image Sequence
 		return std::make_shared<Mask::Resource::Sequence>(parent, name, data);
-	} else if (type == "effect") {
+	}
+	else if (type == "effect") {
 		// Effect Shader
 		return std::make_shared<Mask::Resource::Effect>(parent, name, data);
-	} else if (type == "material") {
+	} 
+	else if (type == "material") {
 		// Material (Combines Images, Effects
 		return std::make_shared<Mask::Resource::Material>(parent, name, data);
-	} else if (type == "mesh") {
+	} 
+	else if (type == "mesh") {
 		// Mesh
 		return std::make_shared<Mask::Resource::Mesh>(parent, name, data);
-	} else if (type == "model") {
+	}
+	else if (type == "model") {
 		// Model
 		return std::make_shared<Mask::Resource::Model>(parent, name, data);
-	} else if (type == "emitter") {
+	}
+	else if (type == "skinned-model") {
+		// Skinned Model
+		return std::make_shared<Mask::Resource::SkinnedModel>(parent, name, data);
+	} 
+	else if (type == "emitter") {
 		// Particle Emitter
 		return std::make_shared<Mask::Resource::Emitter>(parent, name, data);
-	} else if (type == "light") {
+	} 
+	else if (type == "light") {
 		// Light
 		return std::make_shared<Mask::Resource::Light>(parent, name, data);
-	} else if (type == "animation") {
+	} 
+	else if (type == "animation") {
 		// Animation
 		return std::make_shared<Mask::Resource::Animation>(parent, name, data);
-	} else if (type == "sound") {
+	} 
+	else if (type == "sound") {
 		// Sound (not supported)
 		//return std::make_shared<Mask::Resource::Effect>(parent, name, data);
 	}

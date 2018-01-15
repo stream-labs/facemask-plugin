@@ -17,7 +17,7 @@
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 
-#include "mask-resource-model.h"
+#include "mask-resource-skinned-model.h"
 #include "exceptions.h"
 #include "plugin.h"
 #include "utils.h"
@@ -30,61 +30,46 @@ extern "C" {
 }
 #include <sstream>
 
-static const char* const S_MESH = "mesh";
 static const char* const S_MATERIAL = "material";
 
 
-Mask::Resource::Model::Model(Mask::MaskData* parent, std::string name, obs_data_t* data)
-	: IBase(parent, name) {
-	if (!obs_data_has_user_value(data, S_MESH)) {
-		PLOG_ERROR("Model '%s' has no mesh.", name.c_str());
-		throw std::logic_error("Model has no mesh.");
-	}
-	std::string meshName = obs_data_get_string(data, S_MESH);
-	m_mesh = std::dynamic_pointer_cast<Mesh>(m_parent->GetResource(meshName));
-	if (m_mesh == nullptr) {
-		PLOG_ERROR("<Model '%s'> Dependency on mesh '%s' could not be resolved.",
-			m_name.c_str(), meshName.c_str());
-		throw std::logic_error("Model depends on non-existing mesh.");
-	}
-	if (m_mesh->GetType() != Type::Mesh) {
-		PLOG_ERROR("<Model '%s'> Resolved mesh dependency on '%s' is not a mesh.",
-			m_name.c_str(), meshName.c_str());
-		throw std::logic_error("Mesh dependency of Model is not a mesh.");
-	}
 
+Mask::Resource::SkinnedModel::SkinnedModel(Mask::MaskData* parent, std::string name, obs_data_t* data)
+	: IBase(parent, name) {
+
+	// Material
 	if (!obs_data_has_user_value(data, S_MATERIAL)) {
-		PLOG_ERROR("Model '%s' has no material.", name.c_str());
-		throw std::logic_error("Model has no material.");
+		PLOG_ERROR("Skinned Model '%s' has no material.", name.c_str());
+		throw std::logic_error("Skinned Model has no material.");
 	}
 	std::string materialName = obs_data_get_string(data, S_MATERIAL);
 	m_material = std::dynamic_pointer_cast<Material>(m_parent->GetResource(materialName));
 	if (m_material == nullptr) {
-		PLOG_ERROR("<Model '%s'> Dependency on material '%s' could not be resolved.",
+		PLOG_ERROR("<Skinned Model '%s'> Dependency on material '%s' could not be resolved.",
 			m_name.c_str(), materialName.c_str());
 		throw std::logic_error("Model depends on non-existing material.");
 	}
 	if (m_material->GetType() != Type::Material) {
-		PLOG_ERROR("<Model '%s'> Resolved material dependency on '%s' is not a material.",
+		PLOG_ERROR("<Skinned Model '%s'> Resolved material dependency on '%s' is not a material.",
 			m_name.c_str(), materialName.c_str());
 		throw std::logic_error("Material dependency of Model is not a material.");
 	}
 }
 
-Mask::Resource::Model::~Model() {}
+Mask::Resource::SkinnedModel::~SkinnedModel() {}
 
-Mask::Resource::Type Mask::Resource::Model::GetType() {
+Mask::Resource::Type Mask::Resource::SkinnedModel::GetType() {
 	return Mask::Resource::Type::Model;
 }
 
-void Mask::Resource::Model::Update(Mask::Part* part, float time) {
+void Mask::Resource::SkinnedModel::Update(Mask::Part* part, float time) {
 	part->mask->instanceDatas.Push(m_id);
 	m_material->Update(part, time);
 	m_mesh->Update(part, time);
 	part->mask->instanceDatas.Pop();
 }
 
-void Mask::Resource::Model::Render(Mask::Part* part) {
+void Mask::Resource::SkinnedModel::Render(Mask::Part* part) {
 	// Add transparent models as sorted draw objects
 	// to draw in a sorted second render pass 
 	if (!IsOpaque()) {
@@ -95,7 +80,7 @@ void Mask::Resource::Model::Render(Mask::Part* part) {
 	DirectRender(part);
 }
 
-void Mask::Resource::Model::DirectRender(Mask::Part* part) {
+void Mask::Resource::SkinnedModel::DirectRender(Mask::Part* part) {
 	part->mask->instanceDatas.Push(m_id);
 	while (m_material->Loop(part)) {
 		m_mesh->Render(part);
@@ -104,14 +89,14 @@ void Mask::Resource::Model::DirectRender(Mask::Part* part) {
 }
 
 
-bool Mask::Resource::Model::IsDepthOnly() {
+bool Mask::Resource::SkinnedModel::IsDepthOnly() {
 	if (m_material != nullptr) {
 		return m_material->IsDepthOnly();
 	}
 	return false;
 }
 
-bool Mask::Resource::Model::IsOpaque() {
+bool Mask::Resource::SkinnedModel::IsOpaque() {
 	// note: depth only objects are considered opaque
 	if (IsDepthOnly()) {
 		return true;
@@ -122,7 +107,7 @@ bool Mask::Resource::Model::IsOpaque() {
 	return true;
 }
 
-float Mask::Resource::Model::SortDepth() {
+float Mask::Resource::SkinnedModel::SortDepth() {
 	vec4 c = m_mesh->GetCenter();
 	matrix4 m;
 	gs_matrix_get(&m);
@@ -130,7 +115,7 @@ float Mask::Resource::Model::SortDepth() {
 	return c.z;
 }
 	
-void Mask::Resource::Model::SortedRender() {
+void Mask::Resource::SkinnedModel::SortedRender() {
 	sortDrawPart->mask->instanceDatas.Push(m_id);
 	while (m_material->Loop(sortDrawPart)) {
 		m_mesh->Render(sortDrawPart);
