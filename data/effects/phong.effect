@@ -1,8 +1,7 @@
 // 
-// Phong Shader
+// Phong Shader (with skinning)
 //
 // Largely taken from https://www.3dgep.com/texturing-lighting-directx-11/, converted to OBS
-//
 //
 
 // TRANSFORMS
@@ -14,6 +13,18 @@ uniform float4x4 TexMat = {
 0.0, 1.0, 0.0, 0.0,
 0.0, 0.0, 1.0, 0.0,
 0.0, 0.0, 0.0, 1.0 };
+
+// BONES
+// if numBones == 0 then render non-skinned
+uniform int      numBones = 0;
+uniform float4x4 bone0 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uniform float4x4 bone1 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uniform float4x4 bone2 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uniform float4x4 bone3 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uniform float4x4 bone4 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uniform float4x4 bone5 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uniform float4x4 bone6 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uniform float4x4 bone7 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 // TEXTURES
 uniform int ambientMap = 0;
@@ -90,14 +101,32 @@ sampler_state textureSampler {
 	AddressV  = Clamp;
 };
 
+
 // VERTEX IN (to vertex shader)
+//
+// Note: we use extra tex coords for bone indices and weights
+// ie) bones1.x == number of bones
+//     bones1.y == 0
+//     bones1.z == bone weight 0
+//     bones1.w == bone weight 0
+//     bones2.x == bone index 1
+//     bones2.y == bone weight 1
+//     bones2.z == bone weight 2
+//     bones2.w == bone weight 2
+// ... and so on ...
+//
 struct VertDataIn {
 	float4 pos : POSITION;
 	float4 norm : NORMAL;
 	float4 tangent : TANGENT;
 	float2 uv  : TEXCOORD0;
-	float4 bones  : TEXCOORD1;
-	float4 weights  : TEXCOORD2;
+	float4 boneinfo1  : TEXCOORD1;
+	float4 boneinfo2  : TEXCOORD2;
+	float4 boneinfo3  : TEXCOORD3;
+	float4 boneinfo4  : TEXCOORD4;
+	float4 boneinfo5  : TEXCOORD5;
+	float4 boneinfo6  : TEXCOORD6;
+	float4 boneinfo7  : TEXCOORD7;
 };
 
 // VERTEX OUT (from vertex shader)
@@ -194,13 +223,106 @@ float  lightAngle) {
 }
 
 
+
+
 // VSPhong : Vertex Shader
 //
 VertDataOut VSPhong(VertDataIn v_in)
 {
 	VertDataOut vert_out;
 	
+	int i, bi, nvb;
+	float w;
+	float4 r = {0, 0, 0, 0};
 	float4 vinpos = float4(v_in.pos.xyz, 1.0);	
+	
+	if (numBones > 0) {
+		nvb = v_in.boneinfo1.x;
+		for(i = 0; i < nvb; i++) {
+			switch(i) {
+				case 0:
+					bi = v_in.boneinfo1.z;
+					w = v_in.boneinfo1.w;
+					break;
+				case 1:
+					bi = v_in.boneinfo2.x;
+					w = v_in.boneinfo2.y;
+					break;
+				case 2:
+					bi = v_in.boneinfo2.z;
+					w = v_in.boneinfo2.w;
+					break;
+				case 3:
+					bi = v_in.boneinfo3.x;
+					w = v_in.boneinfo3.y;
+					break;
+				case 4:
+					bi = v_in.boneinfo3.z;
+					w = v_in.boneinfo3.w;
+					break;
+				case 5:
+					bi = v_in.boneinfo4.x;
+					w = v_in.boneinfo4.y;
+					break;
+				case 6:
+					bi = v_in.boneinfo4.z;
+					w = v_in.boneinfo4.w;
+					break;
+				case 7:
+					bi = v_in.boneinfo5.x;
+					w = v_in.boneinfo5.y;
+					break;
+				case 8:
+					bi = v_in.boneinfo5.z;
+					w = v_in.boneinfo5.w;
+					break;
+				case 9:
+					bi = v_in.boneinfo6.x;
+					w = v_in.boneinfo6.y;
+					break;
+				case 10:
+					bi = v_in.boneinfo6.z;
+					w = v_in.boneinfo6.w;
+					break;
+				case 11:
+					bi = v_in.boneinfo7.x;
+					w = v_in.boneinfo7.y;
+					break;
+				case 12:
+					bi = v_in.boneinfo7.z;
+					w = v_in.boneinfo7.w;
+					break;
+			}
+			switch(bi) {
+				case 0:
+					r += mul(vinpos, bone0) * w;
+					break;
+				case 1:
+					r += mul(vinpos, bone1) * w;
+					break;
+				case 2:
+					r += mul(vinpos, bone2) * w;
+					break;
+				case 3:
+					r += mul(vinpos, bone3) * w;
+					break;
+				case 4:
+					r += mul(vinpos, bone4) * w;
+					break;
+				case 5:
+					r += mul(vinpos, bone5) * w;
+					break;
+				case 6:
+					r += mul(vinpos, bone6) * w;
+					break;
+				case 7:
+					r += mul(vinpos, bone7) * w;
+					break;
+			}
+		}
+		vinpos = r;
+	}
+	
 	vert_out.pos = mul(vinpos, ViewProj);
 	vert_out.vpos = mul(vinpos, World);	
 	

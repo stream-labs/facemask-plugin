@@ -196,6 +196,8 @@ void Mask::Resource::SkinnedModel::Update(Mask::Part* part, float time) {
 	// update bone matrices
 	for (auto bone : m_bones) {
 		matrix4_mul(&bone.global, &bone.part->global, &bone.offset);
+		// need to transpose, since we are passing to shader
+		matrix4_transpose(&bone.global, &bone.global);
 	}
 	part->mask->instanceDatas.Pop();
 }

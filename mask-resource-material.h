@@ -82,6 +82,7 @@ namespace Mask {
 
 			gs_address_mode StringToAddressMode(std::string s);
 			void SetLightingParameters(Mask::Part* part);
+			void SetSkinningParameters(BonesList* bones);
 		};
 	}
 }

@@ -18,6 +18,7 @@
 */
 
 #include "mask-resource-material.h"
+#include "mask-resource-skinned-model.h"
 #include "mask-resource-light.h"
 #include "mask-resource-sequence.h"
 #include "exceptions.h"
@@ -48,6 +49,7 @@ static const char* const S_FILTER = "filter";
 static const char* const PARAM_WORLD = "World";
 static const char* const PARAM_TEXMAT = "TexMat";
 static const char* const PARAM_ALPHA = "alpha";
+static const char* const PARAM_NUMBONES = "numBones";
 static const char* const PARAM_NUMLIGHTS = "numLights";
 
 
@@ -409,6 +411,9 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 		// set params for lighting
 		SetLightingParameters(part);
 
+		// set params for skinning
+		SetSkinningParameters(bones);
+
 		// set global alpha
 		gs_eparam_t* effparm = gs_effect_get_param_by_name(eff, PARAM_ALPHA);
 		if (effparm) {
@@ -552,5 +557,38 @@ void Mask::Resource::Material::SetLightingParameters(Mask::Part* part) {
 		param = gs_effect_get_param_by_name(eff, PARAM_NUMLIGHTS);
 		if (param)
 			gs_effect_set_int(param, numLights);
+	}
+}
+
+
+void Mask::Resource::Material::SetSkinningParameters(
+	Mask::Resource::BonesList* bones) {
+	// get the effect object
+	gs_effect_t* eff = m_effect->GetEffect()->GetObject();
+	gs_eparam_t* param;
+
+	if (bones == nullptr || bones->numBones < 1) {
+		// numBones
+		param = gs_effect_get_param_by_name(eff, PARAM_NUMBONES);
+		if (param)
+			gs_effect_set_int(param, 0);
+		return;
+	}
+
+	char temp[64];
+	register int nb = bones->numBones;
+
+	// numBones
+	param = gs_effect_get_param_by_name(eff, PARAM_NUMBONES);
+	if (param)
+		gs_effect_set_int(param, nb);
+
+	// bone matrices
+	for (int i = 0; i < nb; i++) {
+		snprintf(temp, sizeof(temp), "bone%d", i);
+		param = gs_effect_get_param_by_name(eff, temp);
+		if (param) {
+			gs_effect_set_matrix4(param, bones->bones[i]);
+		}
 	}
 }
