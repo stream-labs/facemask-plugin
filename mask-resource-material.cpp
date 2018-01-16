@@ -576,7 +576,7 @@ void Mask::Resource::Material::SetSkinningParameters(
 	}
 
 	char temp[64];
-	register int nb = bones->numBones;
+	int nb = bones->numBones;
 
 	// numBones
 	param = gs_effect_get_param_by_name(eff, PARAM_NUMBONES);

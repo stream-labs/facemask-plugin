@@ -190,15 +190,20 @@ void Mask::Resource::SkinnedModel::Update(Mask::Part* part, float time) {
 	part->mask->instanceDatas.Push(m_id);
 	// update material & meshes
 	m_material->Update(part, time);
-	for (auto skin : m_skins) {
-		skin.mesh->Update(part, time);
+	for (unsigned int i = 0; i < m_skins.size(); i++) {
+		m_skins[i].mesh->Update(part, time);
 	}
 	// update bone matrices
-	for (auto bone : m_bones) {
+	for (unsigned int i = 0; i < m_bones.size(); i++) {
+		Bone& bone = m_bones[i];
+
 		//matrix4 m;
 		//matrix4_inv(&m, &part->global);
 		matrix4_mul(&bone.global, &bone.offset, &bone.part->global);
+//		matrix4_mul(&bone.global, &bone.part->global, &bone.offset);
 		//matrix4_mul(&bone.global, &bone.global, &m);
+		//matrix4_identity(&(m_bones[i].global));
+
 		// need to transpose, since we are passing to shader
 		//matrix4_transpose(&bone.global, &bone.global);
 	}
@@ -220,16 +225,18 @@ void Mask::Resource::SkinnedModel::DirectRender(Mask::Part* part) {
 	UNUSED_PARAMETER(part);
 
 	// transform comes from bones, get rid of part transform
-	gs_matrix_pop();
-	gs_matrix_push();
+	//gs_matrix_pop();
+	//gs_matrix_push();
 
 	part->mask->instanceDatas.Push(m_id);
 	BonesList bone_list;
-	for (auto skin : m_skins) {
+	for (unsigned int i = 0; i < m_skins.size(); i++) {
+		const Skin& skin = m_skins[i];
+
 		// set up bones list
 		bone_list.numBones = (int)skin.bones.size();
-		for (int i = 0; i < skin.bones.size(); i++) {
-			bone_list.bones[i] = &(m_bones[skin.bones[i]].global);
+		for (int j = 0; j < skin.bones.size(); j++) {
+			bone_list.bones[j] = &(m_bones[skin.bones[j]].global);
 		}
 		// draw
 		while (m_material->Loop(part, &bone_list)) {

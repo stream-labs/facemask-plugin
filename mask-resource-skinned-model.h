@@ -61,8 +61,13 @@ namespace Mask {
 			struct Bone {
 				std::shared_ptr<Part>	part;
 				matrix4					offset;
-				// global = part.global * offset
 				matrix4					global;
+				//Bone& operator=(const Bone& b) {
+				//	part = b.part;
+				//	matrix4_copy(&offset, &(b.offset));
+				//	matrix4_copy(&global, &(b.global));
+				//	return *this;
+				//}
 			};
 			struct Skin {
 				std::shared_ptr<Mesh>	mesh;
