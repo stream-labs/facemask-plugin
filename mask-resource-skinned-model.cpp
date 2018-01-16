@@ -113,13 +113,15 @@ Mask::Resource::SkinnedModel::SkinnedModel(Mask::MaskData* parent, std::string n
 
 		// Calculate offset matrix 
 		matrix4_identity(&bone.offset);
-		matrix4_scale3f(&bone.offset, &bone.offset, 
+		matrix4_scale3f(&bone.offset, &bone.offset,
 			scale.x, scale.y, scale.z);
 		matrix4 qm;
 		matrix4_from_quat(&qm, &qrotation);
 		matrix4_mul(&bone.offset, &bone.offset, &qm);
 		matrix4_translate3f(&bone.offset, &bone.offset,
 			position.x, position.y, position.z);
+
+		matrix4_identity(&bone.global);
 
 		m_bones.emplace_back(bone);
 	}
@@ -199,13 +201,17 @@ void Mask::Resource::SkinnedModel::Update(Mask::Part* part, float time) {
 
 		//matrix4 m;
 		//matrix4_inv(&m, &part->global);
+
 		matrix4_mul(&bone.global, &bone.offset, &bone.part->global);
 //		matrix4_mul(&bone.global, &bone.part->global, &bone.offset);
+//		matrix4_copy(&bone.global, &bone.offset);
+//		matrix4_copy(&bone.global, &bone.part->global);
+
 		//matrix4_mul(&bone.global, &bone.global, &m);
 		//matrix4_identity(&(m_bones[i].global));
 
 		// need to transpose, since we are passing to shader
-		//matrix4_transpose(&bone.global, &bone.global);
+		matrix4_transpose(&bone.global, &bone.global);
 	}
 	part->mask->instanceDatas.Pop();
 }
@@ -225,8 +231,10 @@ void Mask::Resource::SkinnedModel::DirectRender(Mask::Part* part) {
 	UNUSED_PARAMETER(part);
 
 	// transform comes from bones, get rid of part transform
-	//gs_matrix_pop();
-	//gs_matrix_push();
+	// todo: mask could just not set transform if skinned mesh, maybe
+	//       make base virtual method needsTransform?
+	gs_matrix_pop();
+	gs_matrix_push();
 
 	part->mask->instanceDatas.Push(m_id);
 	BonesList bone_list;
