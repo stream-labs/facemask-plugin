@@ -233,7 +233,7 @@ VertDataOut VSPhong(VertDataIn v_in)
 	
 	int i, bi, nvb;
 	float w;
-	float4 r = {0, 0, 0, 0};
+	float3 r = {0.0, 0.0, 0.0};
 	float4 vinpos = float4(v_in.pos.xyz, 1.0);	
 	
 	if (numBones > 0) {
@@ -295,32 +295,32 @@ VertDataOut VSPhong(VertDataIn v_in)
 			}
 			switch(bi) {
 				case 0:
-					r += mul(vinpos, bone0) * w;
+					r += mul(vinpos, bone0).xyz * w;
 					break;
 				case 1:
-					r += mul(vinpos, bone1) * w;
+					r += mul(vinpos, bone1).xyz * w;
 					break;
 				case 2:
-					r += mul(vinpos, bone2) * w;
+					r += mul(vinpos, bone2).xyz * w;
 					break;
 				case 3:
-					r += mul(vinpos, bone3) * w;
+					r += mul(vinpos, bone3).xyz * w;
 					break;
 				case 4:
-					r += mul(vinpos, bone4) * w;
+					r += mul(vinpos, bone4).xyz * w;
 					break;
 				case 5:
-					r += mul(vinpos, bone5) * w;
+					r += mul(vinpos, bone5).xyz * w;
 					break;
 				case 6:
-					r += mul(vinpos, bone6) * w;
+					r += mul(vinpos, bone6).xyz * w;
 					break;
 				case 7:
-					r += mul(vinpos, bone7) * w;
+					r += mul(vinpos, bone7).xyz * w;
 					break;
 			}
 		}
-		vinpos = r;
+		vinpos = float4(r, 1.0);
 	}
 	
 	vert_out.pos = mul(vinpos, ViewProj);

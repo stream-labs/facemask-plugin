@@ -279,7 +279,9 @@ void  Mask::MaskData::AddSortedDrawObject(SortedDrawObject* obj) {
 	m_drawBuckets[idx] = obj;
 }
 
-void  Mask::MaskData::PartCalcMatrix(std::shared_ptr<Mask::Part> part) {
+void  Mask::MaskData::PartCalcMatrix(std::shared_ptr<Mask::Part> _part) {
+	register Mask::Part* part = _part.get();
+
 	// Only if we're dirty
 	if (part->dirty) {
 		if (part->localdirty) {
