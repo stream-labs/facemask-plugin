@@ -18,8 +18,7 @@ uniform float4x4 TexMat = {
 0.0, 0.0, 0.0, 1.0 };
 
 // BONES
-// Support up to 8 bones in a skin
-uniform int    numBones = 0;
+uniform int      numBones = 0;
 uniform float4x4 Bone0;
 uniform float4x4 Bone1;
 uniform float4x4 Bone2;
@@ -108,14 +107,14 @@ sampler_state textureSampler {
 // VERTEX IN (to vertex shader)
 //
 // Note: we use extra tex coords for bone indices and weights
-// ie) bones1.x == bone index 0
-//     bones1.y == bone weight 0
-//     bones1.z == bone weight 1
-//     bones1.w == bone weight 1
-//     bones2.x == bone index 2
-//     bones2.y == bone weight 2
-//     bones2.z == bone weight 3
-//     bones2.w == bone weight 3
+// ie) bones1.x == number of bones
+//     bones1.y == 0
+//     bones1.z == bone weight 0
+//     bones1.w == bone weight 0
+//     bones2.x == bone index 1
+//     bones2.y == bone weight 1
+//     bones2.z == bone weight 2
+//     bones2.w == bone weight 2
 // ... and so on ...
 //
 struct VertDataIn {
@@ -123,10 +122,13 @@ struct VertDataIn {
 	float4 norm : NORMAL;
 	float4 tangent : TANGENT;
 	float2 uv  : TEXCOORD0;
-	float4 bones1  : TEXCOORD1;
-	float4 bones2  : TEXCOORD2;
-	float4 bones3  : TEXCOORD3;
-	float4 bones4  : TEXCOORD4;
+	float4 boneinfo1  : TEXCOORD1;
+	float4 boneinfo2  : TEXCOORD2;
+	float4 boneinfo3  : TEXCOORD3;
+	float4 boneinfo4  : TEXCOORD4;
+	float4 boneinfo5  : TEXCOORD5;
+	float4 boneinfo6  : TEXCOORD6;
+	float4 boneinfo7  : TEXCOORD7;
 };
 
 // VERTEX OUT (from vertex shader)

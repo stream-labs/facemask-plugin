@@ -58,6 +58,14 @@ static const char* const S_MAT_D4 = "d4";
 Mask::Resource::SkinnedModel::SkinnedModel(Mask::MaskData* parent, std::string name, obs_data_t* data)
 	: IBase(parent, name) {
 
+	// cache hash ids for bones 
+	std::hash<std::string> hasher;
+	char temp[64];
+	for (int i = 0; i < 8; i++) {
+		snprintf(temp, sizeof(temp), "bone%d", i);
+		m_boneIds[i] = hasher(temp);
+	}
+
 	// Material
 	if (!obs_data_has_user_value(data, S_MATERIAL)) {
 		PLOG_ERROR("Skinned Model '%s' has no material.", name.c_str());
@@ -104,7 +112,8 @@ Mask::Resource::SkinnedModel::SkinnedModel(Mask::MaskData* parent, std::string n
 		}
 		Mask::Resource::SkinnedModel::SkinnedModel::Bone bone;
 
-		bone.partName = obs_data_get_string(boneData, S_NAME);
+		std::string partName = obs_data_get_string(boneData, S_NAME);
+		bone.part = parent->GetPart(partName);
 		obs_data_t* offsetData = obs_data_get_obj(boneData, S_OFFSET);
 
 		bone.offset.x.x = (float)obs_data_get_double(offsetData, S_MAT_A1);
@@ -191,9 +200,14 @@ Mask::Resource::Type Mask::Resource::SkinnedModel::GetType() {
 
 void Mask::Resource::SkinnedModel::Update(Mask::Part* part, float time) {
 	part->mask->instanceDatas.Push(m_id);
+	// update material & meshes
 	m_material->Update(part, time);
 	for (auto skin : m_skins) {
 		skin.mesh->Update(part, time);
+	}
+	// update bone matrices
+	for (auto bone : m_bones) {
+		matrix4_mul(&bone.global, &bone.part->global, &bone.offset);
 	}
 	part->mask->instanceDatas.Pop();
 }
@@ -212,8 +226,15 @@ void Mask::Resource::SkinnedModel::Render(Mask::Part* part) {
 void Mask::Resource::SkinnedModel::DirectRender(Mask::Part* part) {
 	UNUSED_PARAMETER(part);
 	part->mask->instanceDatas.Push(m_id);
-	while (m_material->Loop(part)) {
-		for (auto skin : m_skins) {
+	BonesList bone_list;
+	for (auto skin : m_skins) {
+		// set up bones list
+		bone_list.numBones = (int)skin.bones.size();
+		for (int i = 0; i < skin.bones.size(); i++) {
+			bone_list.bones[i] = &(m_bones[skin.bones[i]].global);
+		}
+		// draw
+		while (m_material->Loop(part, &bone_list)) {
 			skin.mesh->Render(part);
 		}
 	}

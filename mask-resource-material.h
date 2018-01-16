@@ -27,6 +27,9 @@
 
 namespace Mask {
 	namespace Resource {
+
+		struct BonesList;
+
 		class Material : public IBase {
 		public:
 			Material(Mask::MaskData* parent, std::string name, obs_data_t* data);
@@ -36,7 +39,7 @@ namespace Mask {
 			virtual void Update(Mask::Part* part, float time) override;
 			virtual void Render(Mask::Part* part) override;
 
-			bool Loop(Mask::Part* part);
+			bool Loop(Mask::Part* part, BonesList* bones = nullptr);
 
 			bool IsDepthOnly() override { return m_depthOnly; }
 			bool IsOpaque() { return m_opaque; }

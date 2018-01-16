@@ -49,7 +49,7 @@ namespace Mask {
 		};
 
 		struct AnimationChannel {
-			std::string					name;
+			std::shared_ptr<Part>		part;
 			AnimationChannelType		type;
 			AnimationBehaviour			preState;
 			AnimationBehaviour			postState;

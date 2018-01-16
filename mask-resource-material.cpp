@@ -299,7 +299,7 @@ void Mask::Resource::Material::Render(Mask::Part* part) {
 	return;
 }
 
-bool Mask::Resource::Material::Loop(Mask::Part* part) {
+bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 
 	part->mask->instanceDatas.Push(m_id);
 	if (!m_looping) {
@@ -418,6 +418,7 @@ bool Mask::Resource::Material::Loop(Mask::Part* part) {
 			gs_effect_set_float(effparm, aid->alpha);
 		}
 
+		// get the technique
 		m_currentTechnique = gs_effect_get_technique(m_effect->GetEffect()->GetObject(),
 			m_technique.c_str());
 		if (!m_currentTechnique) {
@@ -425,6 +426,7 @@ bool Mask::Resource::Material::Loop(Mask::Part* part) {
 			return false;
 		}
 
+		// begin
 		m_techniquePasses = gs_technique_begin(m_currentTechnique);
 		m_techniquePass = 0;
 		m_looping = true;

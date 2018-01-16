@@ -28,6 +28,13 @@
 namespace Mask {
 	namespace Resource {
 
+		static const int MAX_BONES_PER_SKIN = 8;
+
+		struct BonesList {
+			int											numBones;
+			std::array<matrix4*, MAX_BONES_PER_SKIN>	bones;
+		};
+
 		class SkinnedModel : public IBase, public SortedDrawObject {
 		public:
 			SkinnedModel(Mask::MaskData* parent, std::string name, obs_data_t* data);
@@ -52,8 +59,10 @@ namespace Mask {
 		protected:
 
 			struct Bone {
-				std::string		partName;
-				matrix4			offset;
+				std::shared_ptr<Part>	part;
+				matrix4					offset;
+				// global = part.global * offset
+				matrix4					global;
 			};
 			struct Skin {
 				std::shared_ptr<Mesh>	mesh;
@@ -63,6 +72,8 @@ namespace Mask {
 			std::vector<Bone>			m_bones;
 			std::vector<Skin>			m_skins;
 			std::shared_ptr<Material>	m_material;
+
+			std::array<size_t, 8>		m_boneIds;
 		};
 	}
 }

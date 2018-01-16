@@ -303,6 +303,21 @@ int GetBoneIndex(const std::vector<int>& bones, int b) {
 	return -1;
 }
 
+bool HasBone(const std::vector<VtxToBone>& v, int b) {
+	for (auto v2b : v) {
+		if (v2b.bone == b)
+			return true;
+	}
+	return false;
+}
+
+bool HasInt(const std::vector<int>& v, int i) {
+	for (auto ii : v) {
+		if (ii == i)
+			return true;
+	}
+	return false;
+}
 
 
 #define GETTEXTURE(_TEXTYPE_) {\
@@ -404,10 +419,13 @@ void command_import(Args& args) {
 				aiBone* bone = mesh->mBones[j];
 				// Add vtx -> bone connections
 				for (unsigned int k = 0; k < bone->mNumWeights; k++) {
-					VtxToBone v2b;
-					v2b.bone = j;
-					v2b.weight = bone->mWeights[k].mWeight;
-					verts[bone->mWeights[k].mVertexId].bones.push_back(v2b);
+					// no dupes
+					if (!HasBone(verts[bone->mWeights[k].mVertexId].bones, j)) {
+						VtxToBone v2b;
+						v2b.bone = j;
+						v2b.weight = bone->mWeights[k].mWeight;
+						verts[bone->mWeights[k].mVertexId].bones.push_back(v2b);
+					}
 				}
 			}
 			for (unsigned int j = 0; j < mesh->mNumFaces; j++) {
@@ -422,7 +440,10 @@ void command_import(Args& args) {
 				// Add tri -> bone connections from triangle vertex bones
 				for (unsigned int v = 0; v < 3; v++) {
 					for (unsigned int k = 0; k < verts[face.mIndices[v]].bones.size(); k++) {
-						tris[j].bones.push_back(verts[face.mIndices[v]].bones[k].bone);
+						int b = verts[face.mIndices[v]].bones[k].bone;
+						if (!HasInt(tris[j].bones, b)) {
+							tris[j].bones.push_back(b);
+						}
 					}
 				}
 			}
@@ -441,24 +462,31 @@ void command_import(Args& args) {
 			for (unsigned int j = 0; j < mesh->mNumBones; j++) {
 				aiBone* bone = mesh->mBones[j];
 				// for lack of a better idea
-				// TODO: this needs to be converted to obs-space
+
+				// decompose matrix 
+				aiVector3D pos, scl;
+				aiQuaterniont<float> rot;
+				bone->mOffsetMatrix.Decompose(scl, rot, pos);
+
 				json mm;
-				mm["a1"] = bone->mOffsetMatrix.a1;
-				mm["a2"] = bone->mOffsetMatrix.a2;
-				mm["a3"] = bone->mOffsetMatrix.a3;
-				mm["a4"] = bone->mOffsetMatrix.a4;
-				mm["b1"] = bone->mOffsetMatrix.b1;
-				mm["b2"] = bone->mOffsetMatrix.b2;
-				mm["b3"] = bone->mOffsetMatrix.b3;
-				mm["b4"] = bone->mOffsetMatrix.b4;
-				mm["c1"] = bone->mOffsetMatrix.c1;
-				mm["c2"] = bone->mOffsetMatrix.c2;
-				mm["c3"] = bone->mOffsetMatrix.c3;
-				mm["c4"] = bone->mOffsetMatrix.c4;
-				mm["d1"] = bone->mOffsetMatrix.d1;
-				mm["d2"] = bone->mOffsetMatrix.d2;
-				mm["d3"] = bone->mOffsetMatrix.d3;
-				mm["d4"] = bone->mOffsetMatrix.d4;
+				json p;
+				p["x"] = pos.x;
+				p["y"] = -pos.y; // flip y
+				p["z"] = pos.z;
+				mm["position"] = p;
+
+				json r;
+				r["x"] = rot.x;
+				r["y"] = -rot.y; // flip y
+				r["z"] = rot.z;
+				r["w"] = -rot.w; // flip rot
+				mm["qrotation"] = r;
+
+				json s;
+				s["x"] = scl.x;
+				s["y"] = scl.y;
+				s["z"] = scl.z;
+				mm["scale"] = s;
 
 				// add the name
 				json bn;
@@ -512,7 +540,7 @@ void command_import(Args& args) {
 						}
 						
 						// Can we add this triangle?
-						if ((bones.size() + numNewBones) < MAX_BONES_PER_SKIN) {
+						if ((bones.size() + numNewBones) <= MAX_BONES_PER_SKIN) {
 
 							// Add the new bones from triangle
 							for (unsigned int k = 0; k < tris[j].bones.size(); k++) {
@@ -550,10 +578,13 @@ void command_import(Args& args) {
 										vertices[numVertices].v = 1.0f - mesh->mTextureCoords[0][v].y;
 									}
 									// use extra tex coords to store bones & weights for shader
+									vertices[numVertices].extraTexCoords[0] = (float)verts[v].bones.size();
+									vertices[numVertices].extraTexCoords[1] = 0;
 									for (unsigned int b = 0; b < verts[v].bones.size(); b++) {
-										assert(b < (4 * 7));
-										vertices[numVertices].extraTexCoords[b * 2 + 0] = (float)GetBoneIndex(bones, verts[v].bones[b].bone);
-										vertices[numVertices].extraTexCoords[b * 2 + 1] = verts[v].bones[b].weight;
+										int bb = (b + 1) * 2; // skip first, 2 for each bone
+										assert(bb < (4 * 7));
+										vertices[numVertices].extraTexCoords[bb + 0] = (float)GetBoneIndex(bones, verts[v].bones[b].bone);
+										vertices[numVertices].extraTexCoords[bb + 1] = verts[v].bones[b].weight;
 									}
 									verts[v].index = numVertices;
 									numVertices++;

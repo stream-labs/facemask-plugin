@@ -65,7 +65,7 @@ void Mask::MaskData::Clear() {
 	}
 }
 
-void Mask::MaskData::Load(std::string file) {
+void Mask::MaskData::Load(const std::string& file) {
 	if (m_data) {
 		obs_data_release(m_data);
 		m_data = nullptr;
@@ -144,7 +144,7 @@ void Mask::MaskData::Load(std::string file) {
 	}
 }
 
-void Mask::MaskData::AddResource(std::string name, std::shared_ptr<Mask::Resource::IBase> resource) {
+void Mask::MaskData::AddResource(const std::string& name, std::shared_ptr<Mask::Resource::IBase> resource) {
 	if (name.length() == 0)
 		throw std::invalid_argument("name must be at least one character long");
 	if (resource == nullptr)
@@ -155,7 +155,7 @@ void Mask::MaskData::AddResource(std::string name, std::shared_ptr<Mask::Resourc
 	m_resources.emplace(name, resource);
 }
 
-std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::GetResource(std::string name) {
+std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::GetResource(const std::string& name) {
 	if (name.length() == 0)
 		throw std::invalid_argument("name must be at least one character long");
 
@@ -195,7 +195,7 @@ std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::GetResource(std::string n
 	return nullptr;
 }
 
-std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::RemoveResource(std::string name) {
+std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::RemoveResource(const std::string& name) {
 	if (name.length() == 0)
 		throw std::invalid_argument("name must be at least one character long");
 
@@ -208,7 +208,7 @@ std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::RemoveResource(std::strin
 	return el;
 }
 
-void Mask::MaskData::AddPart(std::string name, std::shared_ptr<Mask::Part> part) {
+void Mask::MaskData::AddPart(const std::string& name, std::shared_ptr<Mask::Part> part) {
 	if (name.length() == 0)
 		throw std::invalid_argument("name must be at least one character long");
 	if (part == nullptr)
@@ -222,7 +222,7 @@ void Mask::MaskData::AddPart(std::string name, std::shared_ptr<Mask::Part> part)
 	m_parts.emplace(name, part);
 }
 
-std::shared_ptr<Mask::Part> Mask::MaskData::GetPart(std::string name) {
+std::shared_ptr<Mask::Part> Mask::MaskData::GetPart(const std::string& name) {
 	if (name.length() == 0)
 		throw std::invalid_argument("name must be at least one character long");
 
@@ -245,7 +245,7 @@ std::shared_ptr<Mask::Part> Mask::MaskData::GetPart(std::string name) {
 	return LoadPart(name, elmd);
 }
 
-std::shared_ptr<Mask::Part> Mask::MaskData::RemovePart(std::string name) {
+std::shared_ptr<Mask::Part> Mask::MaskData::RemovePart(const std::string& name) {
 	if (name.length() == 0)
 		throw std::invalid_argument("name must be at least one character long");
 
