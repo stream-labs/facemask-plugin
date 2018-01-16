@@ -104,12 +104,12 @@ Mask::Resource::SkinnedModel::SkinnedModel(Mask::MaskData* parent, std::string n
 		vec3_zero(&position);
 		vec3_set(&scale, 1, 1, 1);
 		quat_identity(&qrotation);
-		if (obs_data_has_user_value(data, S_POSITION))
-			obs_data_get_vec3(data, S_POSITION, &position);
-		if (obs_data_has_user_value(data, S_QROTATION))
-			obs_data_get_quat(data, S_QROTATION, &qrotation);
-		if (obs_data_has_user_value(data, S_SCALE))
-			obs_data_get_vec3(data, S_SCALE, &scale);
+		if (obs_data_has_user_value(boneData, S_POSITION))
+			obs_data_get_vec3(boneData, S_POSITION, &position);
+		if (obs_data_has_user_value(boneData, S_QROTATION))
+			obs_data_get_quat(boneData, S_QROTATION, &qrotation);
+		if (obs_data_has_user_value(boneData, S_SCALE))
+			obs_data_get_vec3(boneData, S_SCALE, &scale);
 
 		// Calculate offset matrix 
 		matrix4_identity(&bone.offset);
@@ -195,7 +195,7 @@ void Mask::Resource::SkinnedModel::Update(Mask::Part* part, float time) {
 	}
 	// update bone matrices
 	for (auto bone : m_bones) {
-		matrix4_mul(&bone.global, &bone.part->global, &bone.offset);
+		matrix4_mul(&bone.global, &bone.offset, &bone.part->global);
 		// need to transpose, since we are passing to shader
 		matrix4_transpose(&bone.global, &bone.global);
 	}

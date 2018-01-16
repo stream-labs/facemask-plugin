@@ -468,30 +468,28 @@ void command_import(Args& args) {
 				aiQuaterniont<float> rot;
 				bone->mOffsetMatrix.Decompose(scl, rot, pos);
 
-				json mm;
+				json bn;
 				json p;
 				p["x"] = pos.x;
 				p["y"] = -pos.y; // flip y
 				p["z"] = pos.z;
-				mm["position"] = p;
+				bn["position"] = p;
 
 				json r;
 				r["x"] = rot.x;
 				r["y"] = -rot.y; // flip y
 				r["z"] = rot.z;
 				r["w"] = -rot.w; // flip rot
-				mm["qrotation"] = r;
+				bn["qrotation"] = r;
 
 				json s;
 				s["x"] = scl.x;
 				s["y"] = scl.y;
 				s["z"] = scl.z;
-				mm["scale"] = s;
+				bn["scale"] = s;
 
 				// add the name
-				json bn;
 				bn["name"] = string(bone->mName.C_Str());
-				bn["offset"] = mm;
 
 				char ttt[32];
 				snprintf(ttt, sizeof(ttt), "%d", j);
@@ -558,7 +556,7 @@ void command_import(Args& args) {
 
 							// Add each index/vertex
 							for (unsigned int k = 0; k < 3; k++) {
-								int v = mesh->mFaces[k].mIndices[k];
+								int v = mesh->mFaces[j].mIndices[k];
 								// need to add vertex?
 								if (verts[v].index < 0) {
 									// Add the new vertex
@@ -597,6 +595,8 @@ void command_import(Args& args) {
 						}
 					} // end: can we add this triangle?
 				} // end: for each triangle
+
+				cout << "Creating skin with " << numVertices << " vertices, " << numIndices / 3 << " triangles" << endl;
 
 				// encode 
 				string vertexDataBase64 =
