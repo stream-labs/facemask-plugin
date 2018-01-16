@@ -199,18 +199,10 @@ void Mask::Resource::SkinnedModel::Update(Mask::Part* part, float time) {
 	for (unsigned int i = 0; i < m_bones.size(); i++) {
 		Bone& bone = m_bones[i];
 
-		//matrix4 m;
-		//matrix4_inv(&m, &part->global);
-
+		// concat offset and bone matrices
 		matrix4_mul(&bone.global, &bone.offset, &bone.part->global);
-//		matrix4_mul(&bone.global, &bone.part->global, &bone.offset);
-//		matrix4_copy(&bone.global, &bone.offset);
-//		matrix4_copy(&bone.global, &bone.part->global);
 
-		//matrix4_mul(&bone.global, &bone.global, &m);
-		//matrix4_identity(&(m_bones[i].global));
-
-		// need to transpose, since we are passing to shader
+		// need to transpose, since we are passing to a shader
 		matrix4_transpose(&bone.global, &bone.global);
 	}
 	part->mask->instanceDatas.Pop();
