@@ -35,23 +35,10 @@ static const char* const S_BONES = "bones";
 static const char* const S_SKINS = "skins";
 static const char* const S_NAME = "name";
 static const char* const S_MESH = "mesh";
-static const char* const S_OFFSET = "offset";
-static const char* const S_MAT_A1 = "a1";
-static const char* const S_MAT_A2 = "a2";
-static const char* const S_MAT_A3 = "a3";
-static const char* const S_MAT_A4 = "a4";
-static const char* const S_MAT_B1 = "b1";
-static const char* const S_MAT_B2 = "b2";
-static const char* const S_MAT_B3 = "b3";
-static const char* const S_MAT_B4 = "b4";
-static const char* const S_MAT_C1 = "c1";
-static const char* const S_MAT_C2 = "c2";
-static const char* const S_MAT_C3 = "c3";
-static const char* const S_MAT_C4 = "c4";
-static const char* const S_MAT_D1 = "d1";
-static const char* const S_MAT_D2 = "d2";
-static const char* const S_MAT_D3 = "d3";
-static const char* const S_MAT_D4 = "d4";
+static const char* const S_POSITION = "position";
+static const char* const S_ROTATION = "rotation";
+static const char* const S_QROTATION = "qrotation";
+static const char* const S_SCALE = "scale";
 
 
 
@@ -106,32 +93,33 @@ Mask::Resource::SkinnedModel::SkinnedModel(Mask::MaskData* parent, std::string n
 			PLOG_ERROR("Skinned Model '%s' bone has no name.", name.c_str());
 			throw std::logic_error("Skinned Model has a bone with no name.");
 		}
-		if (!obs_data_has_user_value(boneData, S_OFFSET)) {
-			PLOG_ERROR("Skinned Model '%s' bone has no offset.", name.c_str());
-			throw std::logic_error("Skinned Model has a bone with no offset.");
-		}
 		Mask::Resource::SkinnedModel::SkinnedModel::Bone bone;
 
 		std::string partName = obs_data_get_string(boneData, S_NAME);
 		bone.part = parent->GetPart(partName);
-		obs_data_t* offsetData = obs_data_get_obj(boneData, S_OFFSET);
 
-		bone.offset.x.x = (float)obs_data_get_double(offsetData, S_MAT_A1);
-		bone.offset.x.y = (float)obs_data_get_double(offsetData, S_MAT_A2);
-		bone.offset.x.z = (float)obs_data_get_double(offsetData, S_MAT_A3);
-		bone.offset.x.w = (float)obs_data_get_double(offsetData, S_MAT_A4);
-		bone.offset.y.x = (float)obs_data_get_double(offsetData, S_MAT_B1);
-		bone.offset.y.y = (float)obs_data_get_double(offsetData, S_MAT_B2);
-		bone.offset.y.z = (float)obs_data_get_double(offsetData, S_MAT_B3);
-		bone.offset.y.w = (float)obs_data_get_double(offsetData, S_MAT_B4);
-		bone.offset.z.x = (float)obs_data_get_double(offsetData, S_MAT_C1);
-		bone.offset.z.y = (float)obs_data_get_double(offsetData, S_MAT_C2);
-		bone.offset.z.z = (float)obs_data_get_double(offsetData, S_MAT_C3);
-		bone.offset.z.w = (float)obs_data_get_double(offsetData, S_MAT_C4);
-		bone.offset.t.x = (float)obs_data_get_double(offsetData, S_MAT_D1);
-		bone.offset.t.y = (float)obs_data_get_double(offsetData, S_MAT_D2);
-		bone.offset.t.z = (float)obs_data_get_double(offsetData, S_MAT_D3);
-		bone.offset.t.w = (float)obs_data_get_double(offsetData, S_MAT_D4);
+		// Read offset transform data
+		vec3 position, scale;
+		quat qrotation;
+		vec3_zero(&position);
+		vec3_set(&scale, 1, 1, 1);
+		quat_identity(&qrotation);
+		if (obs_data_has_user_value(data, S_POSITION))
+			obs_data_get_vec3(data, S_POSITION, &position);
+		if (obs_data_has_user_value(data, S_QROTATION))
+			obs_data_get_quat(data, S_QROTATION, &qrotation);
+		if (obs_data_has_user_value(data, S_SCALE))
+			obs_data_get_vec3(data, S_SCALE, &scale);
+
+		// Calculate offset matrix 
+		matrix4_identity(&bone.offset);
+		matrix4_scale3f(&bone.offset, &bone.offset, 
+			scale.x, scale.y, scale.z);
+		matrix4 qm;
+		matrix4_from_quat(&qm, &qrotation);
+		matrix4_mul(&bone.offset, &bone.offset, &qm);
+		matrix4_translate3f(&bone.offset, &bone.offset,
+			position.x, position.y, position.z);
 
 		m_bones.emplace_back(bone);
 	}
@@ -280,8 +268,15 @@ float Mask::Resource::SkinnedModel::SortDepth() {
 	
 void Mask::Resource::SkinnedModel::SortedRender() {
 	sortDrawPart->mask->instanceDatas.Push(m_id);
-	while (m_material->Loop(sortDrawPart)) {
-		for (auto skin : m_skins) {
+	BonesList bone_list;
+	for (auto skin : m_skins) {
+		// set up bones list
+		bone_list.numBones = (int)skin.bones.size();
+		for (int i = 0; i < skin.bones.size(); i++) {
+			bone_list.bones[i] = &(m_bones[skin.bones[i]].global);
+		}
+		// draw
+		while (m_material->Loop(sortDrawPart, &bone_list)) {
 			skin.mesh->Render(sortDrawPart);
 		}
 	}
