@@ -211,11 +211,13 @@ void Mask::Resource::SkinnedModel::Render(Mask::Part* part) {
 
 void Mask::Resource::SkinnedModel::DirectRender(Mask::Part* part) {
 	UNUSED_PARAMETER(part);
-	//part->mask->instanceDatas.Push(m_id);
-	//while (m_material->Loop(part)) {
-	//	m_mesh->Render(part);
-	//}
-	//part->mask->instanceDatas.Pop();
+	part->mask->instanceDatas.Push(m_id);
+	while (m_material->Loop(part)) {
+		for (auto skin : m_skins) {
+			skin.mesh->Render(part);
+		}
+	}
+	part->mask->instanceDatas.Pop();
 }
 
 
@@ -256,10 +258,12 @@ float Mask::Resource::SkinnedModel::SortDepth() {
 }
 	
 void Mask::Resource::SkinnedModel::SortedRender() {
-	//sortDrawPart->mask->instanceDatas.Push(m_id);
-	//while (m_material->Loop(sortDrawPart)) {
-	//	m_mesh->Render(sortDrawPart);
-	//}
-	//sortDrawPart->mask->instanceDatas.Pop();
+	sortDrawPart->mask->instanceDatas.Push(m_id);
+	while (m_material->Loop(sortDrawPart)) {
+		for (auto skin : m_skins) {
+			skin.mesh->Render(sortDrawPart);
+		}
+	}
+	sortDrawPart->mask->instanceDatas.Pop();
 }
 

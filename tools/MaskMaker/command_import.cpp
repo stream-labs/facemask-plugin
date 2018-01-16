@@ -20,7 +20,7 @@
 #include "utils.h"
 #include "command_import.h"
 
-#define MAX_BONES_PER_SKIN		(16)
+#define MAX_BONES_PER_SKIN		(8)
 
 struct GSVertex {
 	float px, py, pz, pw;	// note: vec3 in obs has 4 values
