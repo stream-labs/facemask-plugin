@@ -109,9 +109,9 @@ Mask::Resource::SkinnedModel::SkinnedModel(Mask::MaskData* parent, std::string n
 		bone.part = parent->GetPart(partName);
 
 		// Read offset transform data
-		vec3 position, scale;
+		vec3 position, scale; 
 		quat qrotation;
-		vec3_zero(&position);
+		vec3_zero(&position); 
 		vec3_set(&scale, 1, 1, 1);
 		quat_identity(&qrotation);
 		if (obs_data_has_user_value(boneData, S_POSITION))

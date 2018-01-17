@@ -54,15 +54,15 @@ static std::map<std::string, std::string> g_defaultImages = {
 };
 
 static std::map<std::string, std::string> g_defaultMeshes = {
-	{ "meshTriangle", "resources/triangle.obj" },
-	{ "meshQuad", "resources/quad.obj" },
-	{ "meshCube", "resources/cube.obj" },
-	{ "meshSphere", "resources/sphere.obj" },
-	{ "meshCylinder", "resources/cylinder.obj" },
-	{ "meshPyramid", "resources/pyramid.obj" },
-	{ "meshTorus", "resources/torus.obj" },
-	{ "meshCone", "resources/cone.obj" },
-	{ "meshHead", "resources/head.obj" },
+	{ "meshTriangle", "resources/triangle.notobj" },
+	{ "meshQuad", "resources/quad.notobj" },
+	{ "meshCube", "resources/cube.notobj" },
+	{ "meshSphere", "resources/sphere.notobj" },
+	{ "meshCylinder", "resources/cylinder.notobj" },
+	{ "meshPyramid", "resources/pyramid.notobj" },
+	{ "meshTorus", "resources/torus.notobj" },
+	{ "meshCone", "resources/cone.notobj" },
+	{ "meshHead", "resources/head.notobj" },
 };
 
 static std::map<std::string, std::string> g_defaultEffects = {
