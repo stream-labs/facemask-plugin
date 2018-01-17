@@ -68,7 +68,6 @@ static std::map<std::string, std::string> g_defaultMeshes = {
 static std::map<std::string, std::string> g_defaultEffects = {
 	{ "effectDefault", "effects/default.effect" },
 	{ "effectPhong", "effects/phong.effect" },
-	{ "effectSkinnedPhong", "effects/skinned-phong.effect" },
 };
 
 

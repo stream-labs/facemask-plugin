@@ -56,6 +56,23 @@ void command_merge(Args& args) {
 				if (!Utils::is_default_resource(mat))
 					j["resources"][k]["material"] = n + mat;
 			}
+			// fix skinned model references
+			else if (tp == "skinned-model") {
+				string mat = j["resources"][k]["material"];
+				if (!Utils::is_default_resource(mat))
+					j["resources"][k]["material"] = n + mat;
+				json bones = j["resources"][k]["bones"];
+				for (auto pit = bones.begin(); pit != bones.end(); pit++) {
+					string tt = pit.value()["name"];
+					j["resources"][k]["bones"][pit.key()]["name"] = n + tt;
+				}
+				json skins = j["resources"][k]["skins"];
+				for (auto pit = skins.begin(); pit != skins.end(); pit++) {
+					string msh = pit.value()["mesh"];
+					if (!Utils::is_default_resource(msh))
+						j["resources"][k]["skins"][pit.key()]["mesh"] = n + msh;
+				}
+			}
 			// fix emitter references
 			else if (tp == "emitter") {
 				string mdl = j["resources"][k]["model"];
