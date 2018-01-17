@@ -86,14 +86,24 @@ Mask::Resource::SkinnedModel::SkinnedModel(Mask::MaskData* parent, std::string n
 		PLOG_ERROR("Bad bones section in '%s'.", name.c_str());
 		throw std::logic_error("Skinned Model has bad bones section.");
 	}
+	int numBones = 0;
+	for (obs_data_item_t* itm = obs_data_first(bonesData); itm; obs_data_item_next(&itm)) {
+		numBones++;
+	}
+
+	m_bones.resize(numBones);
 	for (obs_data_item_t* itm = obs_data_first(bonesData); itm; obs_data_item_next(&itm)) {
 		obs_data_t* boneData = obs_data_item_get_obj(itm);
+
+		// use string key as index into array
+		std::string nn = obs_data_item_get_name(itm);
+		int boneIndex = atoi(nn.c_str());
+		Bone& bone = m_bones[boneIndex];
 
 		if (!obs_data_has_user_value(boneData, S_NAME)) {
 			PLOG_ERROR("Skinned Model '%s' bone has no name.", name.c_str());
 			throw std::logic_error("Skinned Model has a bone with no name.");
 		}
-		Mask::Resource::SkinnedModel::SkinnedModel::Bone bone;
 
 		std::string partName = obs_data_get_string(boneData, S_NAME);
 		bone.part = parent->GetPart(partName);
@@ -122,8 +132,6 @@ Mask::Resource::SkinnedModel::SkinnedModel(Mask::MaskData* parent, std::string n
 			position.x, position.y, position.z);
 
 		matrix4_identity(&bone.global);
-
-		m_bones.emplace_back(bone);
 	}
 
 	// Skins list

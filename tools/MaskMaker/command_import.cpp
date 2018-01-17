@@ -281,7 +281,6 @@ struct VtxToBone {
 struct Vtx {
 	int						index;
 	std::vector<VtxToBone>	bones;
-	std::vector<int>		tris;	// indices into mesh faces list
 };
 
 struct Tri {

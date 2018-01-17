@@ -30,12 +30,12 @@ GS::Effect::Effect(std::string file) {
 	obs_enter_graphics();
 	char* errorMessage = nullptr;
 	m_effect = gs_effect_create_from_file(file.c_str(), &errorMessage);
-	if (!m_effect || errorMessage) {
+	if (!m_effect || errorMessage) { 
 		std::string error(errorMessage);
 		bfree((void*)errorMessage);
-		obs_leave_graphics();
-		throw std::runtime_error(error);
-	}
+		obs_leave_graphics(); 
+		throw std::runtime_error(error); 
+	} 
 	obs_leave_graphics();
 }
 

@@ -233,63 +233,63 @@ VertDataOut VSPhong(VertDataIn v_in)
 	
 	int i, bi, nvb;
 	float w;
-	float3 r = {0.0, 0.0, 0.0};
+	float3 r = float3(0.0, 0.0, 0.0);
 	float4 vinpos = float4(v_in.pos.xyz, 1.0);	
 	
 	if (numBones > 0) {
-		nvb = v_in.boneinfo1.x;
+		nvb = int(v_in.boneinfo1.x);
 		for(i = 0; i < nvb; i++) {
 			switch(i) {
 				case 0:
-					bi = v_in.boneinfo1.z;
+					bi = int(v_in.boneinfo1.z);
 					w = v_in.boneinfo1.w;
 					break;
 				case 1:
-					bi = v_in.boneinfo2.x;
+					bi = int(v_in.boneinfo2.x);
 					w = v_in.boneinfo2.y;
 					break;
 				case 2:
-					bi = v_in.boneinfo2.z;
+					bi = int(v_in.boneinfo2.z);
 					w = v_in.boneinfo2.w;
 					break;
 				case 3:
-					bi = v_in.boneinfo3.x;
+					bi = int(v_in.boneinfo3.x);
 					w = v_in.boneinfo3.y;
 					break;
 				case 4:
-					bi = v_in.boneinfo3.z;
+					bi = int(v_in.boneinfo3.z);
 					w = v_in.boneinfo3.w;
 					break;
 				case 5:
-					bi = v_in.boneinfo4.x;
+					bi = int(v_in.boneinfo4.x);
 					w = v_in.boneinfo4.y;
 					break;
 				case 6:
-					bi = v_in.boneinfo4.z;
+					bi = int(v_in.boneinfo4.z);
 					w = v_in.boneinfo4.w;
 					break;
 				case 7:
-					bi = v_in.boneinfo5.x;
+					bi = int(v_in.boneinfo5.x);
 					w = v_in.boneinfo5.y;
 					break;
 				case 8:
-					bi = v_in.boneinfo5.z;
+					bi = int(v_in.boneinfo5.z);
 					w = v_in.boneinfo5.w;
 					break;
 				case 9:
-					bi = v_in.boneinfo6.x;
+					bi = int(v_in.boneinfo6.x);
 					w = v_in.boneinfo6.y;
 					break;
 				case 10:
-					bi = v_in.boneinfo6.z;
+					bi = int(v_in.boneinfo6.z);
 					w = v_in.boneinfo6.w;
 					break;
 				case 11:
-					bi = v_in.boneinfo7.x;
+					bi = int(v_in.boneinfo7.x);
 					w = v_in.boneinfo7.y;
 					break;
 				case 12:
-					bi = v_in.boneinfo7.z;
+					bi = int(v_in.boneinfo7.z);
 					w = v_in.boneinfo7.w;
 					break;
 			}
@@ -350,10 +350,10 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 	
 	// normal
 	float3 normal = normalize(v_in.norm);
-	if (normalMap) {
+	if (normalMap != 0) {
 		float3 tangent = normalize(v_in.tangent);
 		float3 bitangent = normalize(v_in.bitangent);
-		float3x3 TBN = { tangent, bitangent, normal };
+		float3x3 TBN = float3x3( tangent, bitangent, normal );
 
 		normal = normalTex.Sample(textureSampler, v_in.uv).xyz * 2.0 - 1.0;
 		normal = normalize(mul(normal, TBN));
@@ -366,17 +366,17 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 	float4 emmColor = emissiveColor;
 	
 	// texture maps
-	if (ambientMap)
+	if (ambientMap != 0)
 		ambColor = ambientTex.Sample(textureSampler, v_in.uv);
-	if (diffuseMap)
+	if (diffuseMap != 0)
 		dffColor = diffuseTex.Sample(textureSampler, v_in.uv);
-	if (specularMap)
+	if (specularMap != 0)
 		spcColor = specularTex.Sample(textureSampler, v_in.uv);
-	if (emissiveMap)
+	if (emissiveMap != 0)
 		emmColor = emissiveTex.Sample(textureSampler, v_in.uv);
 
 	// reflection map trumps diffuse
-	if (reflectMap) {
+	if (reflectMap != 0) {
 		float3 r = reflect(normalize(-vpos), normal);
 		float m = 2.0 * sqrt( pow( r.x, 2.0 ) + pow( r.y, 2.0 ) + pow( r.z + 1.0, 2.0 ) );
 		float2 vN = r.xy / m + 0.5;

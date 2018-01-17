@@ -20,11 +20,19 @@
 #include "stdafx.h"
 #include "args.h"
 
+// STB : single-file public domain (or MIT licensed) libraries for C/C++ 
+// https://github.com/nothings/stb
 // you must define these for stb calls to work
+// - enable image library and resizing library
 #define STB_IMAGE_IMPLEMENTATION 
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include "stb_image.h"
 #include "stb_image_resize.h"
+
+// AVIR : Advanced image resizer library
+// https://github.com/avaneev/avir
+// (in stdafx.h)
+// - used to generate nice color-corrected super-sampled mipmaps
 
 using namespace std;
 
