@@ -445,6 +445,13 @@ void command_import(Args& args) {
 				}
 			}
 
+			// sanity check
+			for (unsigned int j = 0; j < mesh->mNumVertices; j++) {
+				if (verts[j].bones.size() == 0) {
+					cout << "WARNING! SKINNED MESH HAS ENTIRELY UNWEIGHTED VERTEX!" << endl;
+				}
+			}
+
 			// create the skinned mesh json object
 			json o;
 			o["type"] = "skinned-model";
