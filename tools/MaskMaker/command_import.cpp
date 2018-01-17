@@ -303,18 +303,16 @@ int GetBoneIndex(const std::vector<int>& bones, int b) {
 }
 
 bool HasBone(const std::vector<VtxToBone>& v, int b) {
-	for (auto v2b : v) {
-		if (v2b.bone == b)
+	for (unsigned int i = 0; i < v.size(); i++) 
+		if (v[i].bone == b)
 			return true;
-	}
 	return false;
 }
 
 bool HasInt(const std::vector<int>& v, int i) {
-	for (auto ii : v) {
-		if (ii == i)
+	for (unsigned int i = 0; i < v.size(); i++)
+		if (v[i] == i)
 			return true;
-	}
 	return false;
 }
 
@@ -364,6 +362,8 @@ void command_import(Args& args) {
 		aiProcess_Triangulate |
 		aiProcess_GenNormals |
 		aiProcess_CalcTangentSpace |
+		aiProcess_OptimizeGraph |
+		aiProcess_OptimizeMeshes |
 		aiProcess_SortByPType);
 
 	// If the import failed, report it
@@ -414,6 +414,8 @@ void command_import(Args& args) {
 			// Build those now
 			Vtx* verts = new Vtx[mesh->mNumVertices];
 			Tri* tris = new Tri[mesh->mNumFaces];
+
+			// create connections from vertices -> bones
 			for (unsigned int j = 0; j < mesh->mNumBones; j++) {
 				aiBone* bone = mesh->mBones[j];
 				// Add vtx -> bone connections
@@ -423,7 +425,7 @@ void command_import(Args& args) {
 						VtxToBone v2b;
 						v2b.bone = j;
 						v2b.weight = bone->mWeights[k].mWeight;
-						verts[bone->mWeights[k].mVertexId].bones.push_back(v2b);
+						verts[bone->mWeights[k].mVertexId].bones.emplace_back(v2b);
 					}
 				}
 			}
@@ -432,10 +434,6 @@ void command_import(Args& args) {
 				assert(face.mNumIndices == 3);
 				// Triangle not touched
 				tris[j].touched = false;
-				// Add vtx -> tri connections
-				verts[face.mIndices[0]].tris.push_back(j);
-				verts[face.mIndices[1]].tris.push_back(j);
-				verts[face.mIndices[2]].tris.push_back(j);
 				// Add tri -> bone connections from triangle vertex bones
 				for (unsigned int v = 0; v < 3; v++) {
 					for (unsigned int k = 0; k < verts[face.mIndices[v]].bones.size(); k++) {
