@@ -131,10 +131,6 @@ float Mask::Resource::Model::SortDepth() {
 }
 	
 void Mask::Resource::Model::SortedRender() {
-	sortDrawPart->mask->instanceDatas.Push(m_id);
-	while (m_material->Loop(sortDrawPart)) {
-		m_mesh->Render(sortDrawPart);
-	}
-	sortDrawPart->mask->instanceDatas.Pop();
+	DirectRender(sortDrawPart);
 }
 

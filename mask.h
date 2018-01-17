@@ -84,6 +84,7 @@ namespace Mask {
 
 		Part*				sortDrawPart;
 		SortedDrawObject*	nextDrawObject;
+		size_t				instanceId;
 	};
 
 	namespace Resource {
@@ -96,16 +97,15 @@ namespace Mask {
 		virtual ~MaskData();
 
 		void Clear();
-		void Load(std::string file);
-		//void Save(std::string file);
+		void Load(const std::string& file);
 
-		void AddResource(std::string name, std::shared_ptr<Resource::IBase> resource);
-		std::shared_ptr<Resource::IBase> GetResource(std::string name);
-		std::shared_ptr<Resource::IBase> RemoveResource(std::string name);
+		void AddResource(const std::string& name, std::shared_ptr<Resource::IBase> resource);
+		std::shared_ptr<Resource::IBase> GetResource(const std::string& name);
+		std::shared_ptr<Resource::IBase> RemoveResource(const std::string& name);
 
-		void AddPart(std::string name, std::shared_ptr<Part> part);
-		std::shared_ptr<Part> GetPart(std::string name);
-		std::shared_ptr<Part> RemovePart(std::string name);
+		void AddPart(const std::string& name, std::shared_ptr<Part> part);
+		std::shared_ptr<Part> GetPart(const std::string& name);
+		std::shared_ptr<Part> RemovePart(const std::string& name);
 
 		void Tick(float time);
 		void Render(bool depthOnly = false);

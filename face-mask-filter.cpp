@@ -37,6 +37,11 @@
 
 #define NUM_FRAMES_TO_LOSE_FACE			(30)
 
+// list of masks (public version only)
+std::string					g_maskDataFolder;
+std::vector<std::string>	g_maskFilenameList;
+
+
 
 static float FOVA(float aspect) {
 	// field of view angle matched to focal length for solvePNP
@@ -70,6 +75,12 @@ Plugin::FaceMaskFilter::FaceMaskFilter() {
 	filter.video_render = Instance::video_render;
 
 	obs_register_source(&filter);
+
+	// Populate our list of masks
+	char* maskPath = obs_module_file(kFileDefaultJson);
+	g_maskDataFolder = Utils::dirname(maskPath);
+	bfree(maskPath);
+	g_maskFilenameList = Utils::ListFolder(g_maskDataFolder, "*.json");
 }
 
 Plugin::FaceMaskFilter::~FaceMaskFilter() {
@@ -131,9 +142,6 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	drawTexRender = gs_texrender_create(GS_RGBA, GS_Z32F); // has depth buffer
 	obs_leave_graphics();
 
-	char*  justForkicks = new char[1024];
-	delete[] justForkicks;
-
 	// The following creates a temporary char* path to the data file.
 	char* landmarksName = obs_module_file(kFileShapePredictor);
 	smllFaceDetector = new smll::FaceDetector(landmarksName);
@@ -153,6 +161,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	maskDataThread = std::thread(StaticMaskDataThreadMain, this);
 
 	this->update(data);
+
 
 	PLOG_DEBUG("<%" PRIXPTR "> Initialized.", this);
 }
@@ -258,34 +267,10 @@ obs_properties_t * Plugin::FaceMaskFilter::Instance::get_properties(void *ptr) {
 	// mask drop-down
 	p = obs_properties_add_list(props, P_MASK, P_TRANSLATE(P_MASK),
 		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
-	obs_property_list_add_int(p, kSettingsJsonOption1, 0);
-	obs_property_list_add_int(p, kSettingsJsonOption2, 1);
-	obs_property_list_add_int(p, kSettingsJsonOption3, 2);
-	obs_property_list_add_int(p, kSettingsJsonOption4, 3);
-	obs_property_list_add_int(p, kSettingsJsonOption5, 4);
-	obs_property_list_add_int(p, kSettingsJsonOption6, 5);
-	obs_property_list_add_int(p, kSettingsJsonOption7, 6);
-	obs_property_list_add_int(p, kSettingsJsonOption8, 7);
-	obs_property_list_add_int(p, kSettingsJsonOption9, 8);
-	obs_property_list_add_int(p, kSettingsJsonOption10, 9);
-	obs_property_list_add_int(p, kSettingsJsonOption11, 10);
-	obs_property_list_add_int(p, kSettingsJsonOption12, 11);
-	obs_property_list_add_int(p, kSettingsJsonOption13, 12);
-	obs_property_list_add_int(p, kSettingsJsonOption14, 13);
-	obs_property_list_add_int(p, kSettingsJsonOption15, 14);
-	obs_property_list_add_int(p, kSettingsJsonOption16, 15);
-	obs_property_list_add_int(p, kSettingsJsonOption17, 16);
-	obs_property_list_add_int(p, kSettingsJsonOption18, 17);
-	obs_property_list_add_int(p, kSettingsJsonOption19, 18);
-	obs_property_list_add_int(p, kSettingsJsonOption20, 19);
-	obs_property_list_add_int(p, kSettingsJsonOption21, 20);
-	obs_property_list_add_int(p, kSettingsJsonOption22, 21);
-	obs_property_list_add_int(p, kSettingsJsonOption23, 22);
-	obs_property_list_add_int(p, kSettingsJsonOption24, 23);
-	obs_property_list_add_int(p, kSettingsJsonOption25, 24);
-	obs_property_list_add_int(p, kSettingsJsonOption26, 25);
-	obs_property_list_add_int(p, kSettingsJsonOption27, 26);
-	obs_property_list_add_int(p, kSettingsJsonOption28, 27);
+	for (int i = 0; i < g_maskFilenameList.size(); i++) {
+		std::vector<std::string> ss = Utils::split(g_maskFilenameList[i], '.');
+		obs_property_list_add_int(p, ss[0].c_str(), i);
+	}
 	obs_property_set_modified_callback(p, properties_modified);
 
 #else
@@ -366,69 +351,10 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 		int maskNum = (int)obs_data_get_int(data, P_MASK);
 		std::unique_lock<std::mutex> lock(maskDataMutex, std::try_to_lock);
 		if (lock.owns_lock()) {
-			char* filename;
-			if (maskNum == 0)
-				filename = obs_module_file(kFileJsonOption1);
-			else if (maskNum == 1)
-				filename = obs_module_file(kFileJsonOption2);
-			else if (maskNum == 2)
-				filename = obs_module_file(kFileJsonOption3);
-			else if (maskNum == 3)
-				filename = obs_module_file(kFileJsonOption4);
-			else if (maskNum == 4)
-				filename = obs_module_file(kFileJsonOption5);
-			else if (maskNum == 5)
-				filename = obs_module_file(kFileJsonOption6);
-			else if (maskNum == 6)
-				filename = obs_module_file(kFileJsonOption7);
-			else if (maskNum == 7)
-				filename = obs_module_file(kFileJsonOption8);
-			else if (maskNum == 8)
-				filename = obs_module_file(kFileJsonOption9);
-			else if (maskNum == 9)
-				filename = obs_module_file(kFileJsonOption10);
-			else if (maskNum == 10)
-				filename = obs_module_file(kFileJsonOption11);
-			else if (maskNum == 11)
-				filename = obs_module_file(kFileJsonOption12);
-			else if (maskNum == 12)
-				filename = obs_module_file(kFileJsonOption13);
-			else if (maskNum == 13)
-				filename = obs_module_file(kFileJsonOption14);
-			else if (maskNum == 14)
-				filename = obs_module_file(kFileJsonOption15);
-			else if (maskNum == 15)
-				filename = obs_module_file(kFileJsonOption16);
-			else if (maskNum == 16)
-				filename = obs_module_file(kFileJsonOption17);
-			else if (maskNum == 17)
-				filename = obs_module_file(kFileJsonOption18);
-			else if (maskNum == 18)
-				filename = obs_module_file(kFileJsonOption19);
-			else if (maskNum == 19)
-				filename = obs_module_file(kFileJsonOption20);
-			else if (maskNum == 20)
-				filename = obs_module_file(kFileJsonOption21);
-			else if (maskNum == 21)
-				filename = obs_module_file(kFileJsonOption22);
-			else if (maskNum == 22)
-				filename = obs_module_file(kFileJsonOption23);
-			else if (maskNum == 23)
-				filename = obs_module_file(kFileJsonOption24);
-			else if (maskNum == 24)
-				filename = obs_module_file(kFileJsonOption25);
-			else if (maskNum == 25)
-				filename = obs_module_file(kFileJsonOption26);
-			else if (maskNum == 26)
-				filename = obs_module_file(kFileJsonOption27);
-			else if (maskNum == 27)
-				filename = obs_module_file(kFileJsonOption28);
-			else
-				filename = obs_module_file(kFileJsonOption1);
-
-			if (maskJsonFilename)
-				bfree(maskJsonFilename);
-			maskJsonFilename = filename;
+			if (!maskJsonFilename)
+				maskJsonFilename = new char[1024];
+			snprintf(maskJsonFilename, 1024, "%s/%s", 
+				g_maskDataFolder.c_str(), g_maskFilenameList[maskNum].c_str());
 		}
 	}
 

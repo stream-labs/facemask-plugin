@@ -50,6 +50,7 @@ static const char* const S_SCALE_END = "scale-end";
 static const char* const S_ALPHA_START = "alpha-start";
 static const char* const S_ALPHA_END = "alpha-end";
 static const char* const S_WORLD_SPACE = "world-space";
+static const char* const S_Z_SORT_OFFSET = "z-sort-offset";
 
 
 Mask::Resource::Emitter::Emitter(Mask::MaskData* parent, std::string name, obs_data_t* data)
@@ -196,6 +197,12 @@ Mask::Resource::Emitter::Emitter(Mask::MaskData* parent, std::string name, obs_d
 		throw std::logic_error("Emitter has no num-particles value.");
 	}
 	m_numParticles = (int)obs_data_get_int(data, S_NUM_PARTICLES);
+
+	// Z sort offset
+	m_zSortOffset = 0.0f;
+	if (obs_data_has_user_value(data, S_Z_SORT_OFFSET)) {
+		m_zSortOffset = (float)obs_data_get_double(data, S_Z_SORT_OFFSET);
+	}
 
 	// World Space
 	m_worldSpace = true;
@@ -358,7 +365,9 @@ void Mask::Resource::Emitter::Render(Mask::Part* part) {
 				p->state = Particle::State::ALIVE;
 			}
 			p->sortDrawPart = part;
+			part->mask->instanceDatas.Push(p->id);
 			part->mask->AddSortedDrawObject(p);
+			part->mask->instanceDatas.Pop();
 		}
 	}
 
@@ -382,9 +391,8 @@ float Mask::Resource::Particle::SortDepth() {
 		gs_matrix_get(&m);
 		z += m.t.z;
 	}
-	// hack! shuffle particle depth so they draw
-	// on top
-	z += 1.0f;
+	// Z sorting offset. Useful for forcing particles in front of transparent objects.
+	z += emitter->m_zSortOffset;
 
 	return z;
 }
@@ -416,9 +424,7 @@ void Mask::Resource::Particle::SortedRender() {
 	gs_matrix_scale3f(s, s, s);
 	aid->alpha = lambda * (emitter->m_alphaEnd - emitter->m_alphaStart) + emitter->m_alphaStart;
 
-	sortDrawPart->mask->instanceDatas.Push(id);
 	emitter->m_model->DirectRender(sortDrawPart);
-	sortDrawPart->mask->instanceDatas.Pop();
 
 	gs_matrix_pop();
 	aid->alpha = saved_alpha;

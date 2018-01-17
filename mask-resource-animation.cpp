@@ -124,7 +124,8 @@ Mask::Resource::Animation::Animation(Mask::MaskData* parent, std::string name, o
 			PLOG_ERROR("Animation '%s' channel has no name.", name.c_str());
 			throw std::logic_error("Animation channel has no name.");
 		}
-		channel.name = obs_data_get_string(chand, S_NAME);
+		std::string partName = obs_data_get_string(chand, S_NAME);
+		channel.part = parent->GetPart(partName);
 
 		if (!obs_data_has_user_value(chand, S_TYPE)) {
 			PLOG_ERROR("Animation '%s' channel has no type.", name.c_str());
@@ -184,43 +185,42 @@ void Mask::Resource::Animation::Update(Mask::Part* part, float time) {
 		AnimationChannel& ch = m_channels[i];
 
 		// all channels are parts ATM...this may change
-		std::shared_ptr<Mask::Part> ppp = part->mask->GetPart(ch.name);
-		if (ppp) {
+		if (ch.part) {
 			// set value
 			float v = ch.GetValue(t);
 			switch (ch.type) {
 			case PART_POSITION_X:
-				ppp->position.x = v;
+				ch.part->position.x = v;
 				break;
 			case PART_POSITION_Y:
-				ppp->position.y = v;
+				ch.part->position.y = v;
 				break;
 			case PART_POSITION_Z:
-				ppp->position.z = v;
+				ch.part->position.z = v;
 				break;
 			case PART_QROTATION_X:
-				ppp->qrotation.x = v;
+				ch.part->qrotation.x = v;
 				break;
 			case PART_QROTATION_Y:
-				ppp->qrotation.y = v;
+				ch.part->qrotation.y = v;
 				break;
 			case PART_QROTATION_Z:
-				ppp->qrotation.z = v;
+				ch.part->qrotation.z = v;
 				break;
 			case PART_QROTATION_W:
-				ppp->qrotation.w = v;
+				ch.part->qrotation.w = v;
 				break;
 			case PART_SCALE_X:
-				ppp->scale.x = v;
+				ch.part->scale.x = v;
 				break;
 			case PART_SCALE_Y:
-				ppp->scale.y = v;
+				ch.part->scale.y = v;
 				break;
 			case PART_SCALE_Z:
-				ppp->scale.z = v;
+				ch.part->scale.z = v;
 				break;
 			}
-			ppp->localdirty = true;
+			ch.part->localdirty = true;
 		}
 	}
 

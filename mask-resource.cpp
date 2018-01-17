@@ -27,6 +27,7 @@
 #include "mask-resource-material.h"
 #include "mask-resource-mesh.h"
 #include "mask-resource-model.h"
+#include "mask-resource-skinned-model.h"
 #include "mask-resource-sequence.h"
 #include "mask-resource-sound.h"
 #include "mask-resource-light.h"
@@ -53,20 +54,19 @@ static std::map<std::string, std::string> g_defaultImages = {
 };
 
 static std::map<std::string, std::string> g_defaultMeshes = {
-	{ "meshTriangle", "resources/triangle.obj" },
-	{ "meshQuad", "resources/quad.obj" },
-	{ "meshCube", "resources/cube.obj" },
-	{ "meshSphere", "resources/sphere.obj" },
-	{ "meshCylinder", "resources/cylinder.obj" },
-	{ "meshPyramid", "resources/pyramid.obj" },
-	{ "meshTorus", "resources/torus.obj" },
-	{ "meshCone", "resources/cone.obj" },
-	{ "meshHead", "resources/head.obj" },
+	{ "meshTriangle", "resources/triangle.notobj" },
+	{ "meshQuad", "resources/quad.notobj" },
+	{ "meshCube", "resources/cube.notobj" },
+	{ "meshSphere", "resources/sphere.notobj" },
+	{ "meshCylinder", "resources/cylinder.notobj" },
+	{ "meshPyramid", "resources/pyramid.notobj" },
+	{ "meshTorus", "resources/torus.notobj" },
+	{ "meshCone", "resources/cone.notobj" },
+	{ "meshHead", "resources/head.notobj" },
 };
 
 static std::map<std::string, std::string> g_defaultEffects = {
 	{ "effectDefault", "effects/default.effect" },
-	{ "effectOldPhong", "effects/oldphong.effect" },
 	{ "effectPhong", "effects/phong.effect" },
 };
 
@@ -96,31 +96,44 @@ std::shared_ptr<Mask::Resource::IBase> Mask::Resource::IBase::Load(Mask::MaskDat
 	if (type == "image") {
 		// Image
 		return std::make_shared<Mask::Resource::Image>(parent, name, data);
-	} else if (type == "sequence") {
+	} 
+	else if (type == "sequence") {
 		// Image Sequence
 		return std::make_shared<Mask::Resource::Sequence>(parent, name, data);
-	} else if (type == "effect") {
+	}
+	else if (type == "effect") {
 		// Effect Shader
 		return std::make_shared<Mask::Resource::Effect>(parent, name, data);
-	} else if (type == "material") {
+	} 
+	else if (type == "material") {
 		// Material (Combines Images, Effects
 		return std::make_shared<Mask::Resource::Material>(parent, name, data);
-	} else if (type == "mesh") {
+	} 
+	else if (type == "mesh") {
 		// Mesh
 		return std::make_shared<Mask::Resource::Mesh>(parent, name, data);
-	} else if (type == "model") {
+	}
+	else if (type == "model") {
 		// Model
 		return std::make_shared<Mask::Resource::Model>(parent, name, data);
-	} else if (type == "emitter") {
+	}
+	else if (type == "skinned-model") {
+		// Skinned Model
+		return std::make_shared<Mask::Resource::SkinnedModel>(parent, name, data);
+	} 
+	else if (type == "emitter") {
 		// Particle Emitter
 		return std::make_shared<Mask::Resource::Emitter>(parent, name, data);
-	} else if (type == "light") {
+	} 
+	else if (type == "light") {
 		// Light
 		return std::make_shared<Mask::Resource::Light>(parent, name, data);
-	} else if (type == "animation") {
+	} 
+	else if (type == "animation") {
 		// Animation
 		return std::make_shared<Mask::Resource::Animation>(parent, name, data);
-	} else if (type == "sound") {
+	} 
+	else if (type == "sound") {
 		// Sound (not supported)
 		//return std::make_shared<Mask::Resource::Effect>(parent, name, data);
 	}

@@ -34,19 +34,14 @@ float4 RGBtoYUV(float4 rgba, float3x3 yuv) {
 }
 
 float4 RGBToYUVAPass(VertDataOut v_in) : TARGET {
-	const float3x3 mYUV709n = { // Normalized
+	const float3x3 mYUV709n = float3x3( // Normalized
 		0.2126, 0.7152, 0.0722,
 		-0.1145721060573399, -0.3854278939426601, 0.5,
 		0.5, -0.4541529083058166, -0.0458470916941834
-	};
+	);
 	return RGBtoYUV(image.Sample(primarySampler, v_in.uv), mYUV709n);
 }
-/*
-float4 RGBToYPass(VertDataOut v_in) : TARGET {
-	float ycbcr = YUV709fromRGB(image.Sample(primarySampler, v_in.uv)); // <--- we seem to be missing this
-	return float4(ycbcr.r, 0, 0, 0);
-}
-*/
+
 
 technique RGBToYUV {
 	pass {
@@ -59,6 +54,5 @@ technique RGBToLuma {
 	pass {
 		vertex_shader = VSDefault(v_in);
 		pixel_shader = RGBToYUVAPass(v_in);
-//		pixel_shader = RGBToYPass(v_in);
 	}
 }

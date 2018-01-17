@@ -42,7 +42,7 @@ static const char* const JSON_PARTS = "parts";
 static const char* const JSON_TYPE = "type";
 static const char* const JSON_ANIMATION = "animation";
 
-static const int NUM_DRAW_BUCKETS = 8 * 1024;
+static const int NUM_DRAW_BUCKETS = 1024;
 static const float BUCKETS_MAX_Z = 10.0f;
 static const float BUCKETS_MIN_Z = -100.0f;
 
@@ -65,7 +65,7 @@ void Mask::MaskData::Clear() {
 	}
 }
 
-void Mask::MaskData::Load(std::string file) {
+void Mask::MaskData::Load(const std::string& file) {
 	if (m_data) {
 		obs_data_release(m_data);
 		m_data = nullptr;
@@ -144,7 +144,7 @@ void Mask::MaskData::Load(std::string file) {
 	}
 }
 
-void Mask::MaskData::AddResource(std::string name, std::shared_ptr<Mask::Resource::IBase> resource) {
+void Mask::MaskData::AddResource(const std::string& name, std::shared_ptr<Mask::Resource::IBase> resource) {
 	if (name.length() == 0)
 		throw std::invalid_argument("name must be at least one character long");
 	if (resource == nullptr)
@@ -155,7 +155,7 @@ void Mask::MaskData::AddResource(std::string name, std::shared_ptr<Mask::Resourc
 	m_resources.emplace(name, resource);
 }
 
-std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::GetResource(std::string name) {
+std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::GetResource(const std::string& name) {
 	if (name.length() == 0)
 		throw std::invalid_argument("name must be at least one character long");
 
@@ -189,12 +189,13 @@ std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::GetResource(std::string n
 			return res;
 		}
 	} catch (...) {
+		PLOG_DEBUG("Resource %s has THROWN AN EXCEPTION. MASK DID NOT LOAD CORRECTLY.", name.c_str());
 		return nullptr;
 	}
 	return nullptr;
 }
 
-std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::RemoveResource(std::string name) {
+std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::RemoveResource(const std::string& name) {
 	if (name.length() == 0)
 		throw std::invalid_argument("name must be at least one character long");
 
@@ -207,7 +208,7 @@ std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::RemoveResource(std::strin
 	return el;
 }
 
-void Mask::MaskData::AddPart(std::string name, std::shared_ptr<Mask::Part> part) {
+void Mask::MaskData::AddPart(const std::string& name, std::shared_ptr<Mask::Part> part) {
 	if (name.length() == 0)
 		throw std::invalid_argument("name must be at least one character long");
 	if (part == nullptr)
@@ -221,15 +222,12 @@ void Mask::MaskData::AddPart(std::string name, std::shared_ptr<Mask::Part> part)
 	m_parts.emplace(name, part);
 }
 
-std::shared_ptr<Mask::Part> Mask::MaskData::GetPart(std::string name) {
+std::shared_ptr<Mask::Part> Mask::MaskData::GetPart(const std::string& name) {
 	if (name.length() == 0)
 		throw std::invalid_argument("name must be at least one character long");
 
 	auto kv = m_parts.find(name);
 	if (kv != m_parts.end()) {
-		if (name == "world") {
-			blog(LOG_DEBUG, "FOUND WORLD");
-		}
 		return kv->second;
 	}
 
@@ -247,7 +245,7 @@ std::shared_ptr<Mask::Part> Mask::MaskData::GetPart(std::string name) {
 	return LoadPart(name, elmd);
 }
 
-std::shared_ptr<Mask::Part> Mask::MaskData::RemovePart(std::string name) {
+std::shared_ptr<Mask::Part> Mask::MaskData::RemovePart(const std::string& name) {
 	if (name.length() == 0)
 		throw std::invalid_argument("name must be at least one character long");
 
@@ -277,10 +275,13 @@ void  Mask::MaskData::AddSortedDrawObject(SortedDrawObject* obj) {
 	z = (z - BUCKETS_MIN_Z) / (BUCKETS_MAX_Z - BUCKETS_MIN_Z);
 	int idx = (int)(z * (float)(NUM_DRAW_BUCKETS - 1));
 	obj->nextDrawObject = m_drawBuckets[idx];
+	obj->instanceId = instanceDatas.CurrentId();
 	m_drawBuckets[idx] = obj;
 }
 
-void  Mask::MaskData::PartCalcMatrix(std::shared_ptr<Mask::Part> part) {
+void  Mask::MaskData::PartCalcMatrix(std::shared_ptr<Mask::Part> _part) {
+	register Mask::Part* part = _part.get();
+
 	// Only if we're dirty
 	if (part->dirty) {
 		if (part->localdirty) {
@@ -378,7 +379,7 @@ void Mask::MaskData::Render(bool depthOnly) {
 			SortedDrawObject* sdo = m_drawBuckets[i];
 			while (sdo) {
 				Part* part = sdo->sortDrawPart;
-				instanceDatas.Push(part->hash_id);
+				instanceDatas.PushDirect(sdo->instanceId);
 				gs_matrix_push();
 				gs_matrix_mul(&part->global);
 				sdo->SortedRender();
@@ -442,7 +443,6 @@ std::shared_ptr<Mask::Part> Mask::MaskData::LoadPart(std::string name, obs_data_
 		std::string parentName = obs_data_get_string(data, S_PARENT);
 		// root node is deprecated, but might still be kicking around
 		if (parentName != "root") {
-			blog(LOG_DEBUG, "parent: %s", parentName.c_str());
 			current->parent = GetPart(parentName);
 		}
 	}
