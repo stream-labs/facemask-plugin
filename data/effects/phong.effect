@@ -233,8 +233,12 @@ VertDataOut VSPhong(VertDataIn v_in)
 	
 	int i, bi, nvb;
 	float w;
-	float3 r = float3(0.0, 0.0, 0.0);
-	float4 vinpos = float4(v_in.pos.xyz, 1.0);	
+	float3 respos = float3(0.0, 0.0, 0.0);
+	float3 resnorm = float3(0.0, 0.0, 0.0);
+	float3 restangent = float3(0.0, 0.0, 0.0);
+	float4 vinpos = float4(v_in.pos.xyz, 1.0);
+	float4 vinnorm = float4(v_in.norm.xyz, 0.0);
+	float4 vintangent = float4(v_in.tangent.xyz, 0.0);
 	
 	if (numBones > 0) {
 		nvb = int(v_in.boneinfo1.x);
@@ -295,44 +299,62 @@ VertDataOut VSPhong(VertDataIn v_in)
 			}
 			switch(bi) {
 				case 0:
-					r += mul(vinpos, bone0).xyz * w;
+					respos += mul(vinpos, bone0).xyz * w;
+					resnorm += mul(vinnorm, bone0).xyz * w;
+					restangent += mul(vintangent, bone0).xyz * w;
 					break;
 				case 1:
-					r += mul(vinpos, bone1).xyz * w;
+					respos += mul(vinpos, bone1).xyz * w;
+					resnorm += mul(vinnorm, bone1).xyz * w;
+					restangent += mul(vintangent, bone1).xyz * w;
 					break;
 				case 2:
-					r += mul(vinpos, bone2).xyz * w;
+					respos += mul(vinpos, bone2).xyz * w;
+					resnorm += mul(vinnorm, bone2).xyz * w;
+					restangent += mul(vintangent, bone2).xyz * w;
 					break;
 				case 3:
-					r += mul(vinpos, bone3).xyz * w;
+					respos += mul(vinpos, bone3).xyz * w;
+					resnorm += mul(vinnorm, bone3).xyz * w;
+					restangent += mul(vintangent, bone3).xyz * w;
 					break;
 				case 4:
-					r += mul(vinpos, bone4).xyz * w;
+					respos += mul(vinpos, bone4).xyz * w;
+					resnorm += mul(vinnorm, bone4).xyz * w;
+					restangent += mul(vintangent, bone4).xyz * w;
 					break;
 				case 5:
-					r += mul(vinpos, bone5).xyz * w;
+					respos += mul(vinpos, bone5).xyz * w;
+					resnorm += mul(vinnorm, bone5).xyz * w;
+					restangent += mul(vintangent, bone5).xyz * w;
 					break;
 				case 6:
-					r += mul(vinpos, bone6).xyz * w;
+					respos += mul(vinpos, bone6).xyz * w;
+					resnorm += mul(vinnorm, bone6).xyz * w;
+					restangent += mul(vintangent, bone6).xyz * w;
 					break;
 				case 7:
-					r += mul(vinpos, bone7).xyz * w;
+					respos += mul(vinpos, bone7).xyz * w;
+					resnorm += mul(vinnorm, bone7).xyz * w;
+					restangent += mul(vintangent, bone7).xyz * w;
 					break;
 			}
 		}
-		vinpos = float4(r, 1.0);
+		vinpos = float4(respos, 1.0);
+		vinnorm = float4(normalize(resnorm), 0.0);
+		vintangent = float4(normalize(restangent), 0.0);
 	}
 	
 	vert_out.pos = mul(vinpos, ViewProj);
 	vert_out.vpos = mul(vinpos, World);	
 	
 	if (transformNormals == 1) {
-		vert_out.norm = mul(float4(v_in.norm.xyz, 0.0), World).xyz;
-		vert_out.tangent = mul(float4(v_in.tangent.xyz, 0.0), World).xyz;
+		vert_out.norm = mul(float4(vinnorm.xyz, 0.0), World).xyz;
+		vert_out.tangent = mul(float4(vintangent.xyz, 0.0), World).xyz;
 	}
 	else {
-		vert_out.norm = v_in.norm.xyz;
-		vert_out.tangent = v_in.tangent.xyz;
+		vert_out.norm = vinnorm.xyz;
+		vert_out.tangent = vintangent.xyz;
 	}
 	vert_out.bitangent = cross(vert_out.tangent, vert_out.norm);
 	vert_out.uv = mul(float4(v_in.uv, 0.0, 1.0), TexMat).xy;

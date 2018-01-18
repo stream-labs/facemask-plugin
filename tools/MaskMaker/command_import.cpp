@@ -309,9 +309,9 @@ bool HasBone(const std::vector<VtxToBone>& v, int b) {
 	return false;
 }
 
-bool HasInt(const std::vector<int>& v, int i) {
+bool HasInt(const std::vector<int>& v, int x) {
 	for (unsigned int i = 0; i < v.size(); i++)
-		if (v[i] == i)
+		if (v[i] == x)
 			return true;
 	return false;
 }
@@ -449,6 +449,24 @@ void command_import(Args& args) {
 			for (unsigned int j = 0; j < mesh->mNumVertices; j++) {
 				if (verts[j].bones.size() == 0) {
 					cout << "WARNING! SKINNED MESH HAS ENTIRELY UNWEIGHTED VERTEX!" << endl;
+				}
+				if (verts[j].bones.size() > MAX_BONES_PER_SKIN) {
+					cout << "WARNING! SKINNED MESH VERTEX HAS TOO MANY WEIGHTS!" << endl;
+				}
+				float total = 0.0f;
+				for (unsigned int k = 0; k < verts[j].bones.size(); k++) {
+					total += verts[j].bones[k].weight;
+					if (verts[j].bones[k].weight < 0.001) {
+						cout << "WARNING! SKINNED MESH HAS VERTEX WITH ZERO WEIGHT!" << endl;
+					}
+				}
+				if (total < 0.99f) {
+					cout << "WARNING! SKINNED MESH HAS VERTEX WITH NON-UNITY SUM WEIGHTS!" << endl;
+				}
+			}
+			for (unsigned int j = 0; j < mesh->mNumFaces; j++) {
+				if (tris[j].bones.size() > MAX_BONES_PER_SKIN) {
+					cout << "WARNING! SKINNED MESH TRIANGLE HAS TOO MANY WEIGHTS! " << tris[j].bones.size() << endl;
 				}
 			}
 
@@ -599,6 +617,12 @@ void command_import(Args& args) {
 						}
 					} // end: can we add this triangle?
 				} // end: for each triangle
+
+				// Break endless loop
+				if (numVertices == 0) {
+					cout << "COULD NOT CREATE SKINNED MESH. BAILING." << endl;
+					break;
+				}
 
 				cout << "Creating skin with " << numVertices << " vertices, " << numIndices / 3 << " triangles" << endl;
 
