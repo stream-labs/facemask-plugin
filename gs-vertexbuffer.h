@@ -29,7 +29,7 @@ extern "C" {
 }
 
 namespace GS {
-	class VertexBuffer : public std::vector<Vertex> {
+	__declspec(align(16)) class VertexBuffer : public std::vector<Vertex> {
 		public:
 		/*!
 		* \brief Create a Vertex Buffer with specific size

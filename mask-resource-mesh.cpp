@@ -53,7 +53,7 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 			PLOG_ERROR("Mesh '%s' has empty vertex data.", name.c_str());
 			throw std::logic_error("Mesh has empty vertex data.");
 		}
-		std::vector<uint8_t> decodedVertices = base64_decodeZ(vertex64data);
+		__declspec(align(16)) std::vector<uint8_t> decodedVertices = base64_decodeZ(vertex64data);
 		size_t numVertices = decodedVertices.size() / sizeof(GS::Vertex);
 
 		// Index Buffer
@@ -66,7 +66,7 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 			PLOG_ERROR("Mesh '%s' has empty index buffer data.", name.c_str());
 			throw std::logic_error("Mesh has empty index buffer data.");
 		}
-		std::vector<uint8_t> decodedIndices = base64_decodeZ(index64data);
+		__declspec(align(16)) std::vector<uint8_t> decodedIndices = base64_decodeZ(index64data);
 		size_t numIndices = decodedIndices.size() / sizeof(uint32_t);
 
 		// Make Buffers
