@@ -39,7 +39,7 @@ namespace GS {
 		VertexBuffer(const std::vector<GS::Vertex>& verts);
 		~VertexBuffer();
 
-		gs_vertbuffer_t* get(bool refreshGPU = false);
+		gs_vertbuffer_t* get();
 		gs_vb_data* get_data();
 		size_t size();
 

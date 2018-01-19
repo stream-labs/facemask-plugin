@@ -77,7 +77,9 @@ Plugin::FaceMaskFilter::FaceMaskFilter() {
 	obs_register_source(&filter);
 
 	// Populate our list of masks
-	char* maskPath = obs_module_file(kFileDefaultJson);
+	char* maskPath = obs_module_file(kFileDefaultJson); 
+	if (maskPath == nullptr)
+		return;
 	g_maskDataFolder = Utils::dirname(maskPath);
 	bfree(maskPath);
 	g_maskFilenameList = Utils::ListFolder(g_maskDataFolder, "*.json");

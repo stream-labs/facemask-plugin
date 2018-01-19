@@ -46,23 +46,26 @@ GS::VertexBuffer::VertexBuffer(uint8_t* raw)
 	obs_enter_graphics();
 	m_vertexbuffer = gs_vertexbuffer_create(vbdata, 0);
 	obs_leave_graphics();
-}
+} 
 
 
 GS::VertexBuffer::VertexBuffer(const std::vector<GS::Vertex>& verts)
  : m_vb_data(nullptr), m_vertexbuffer(nullptr), m_raw(nullptr) {
 
 	// Make a libOBS vertex buffer
+	obs_enter_graphics();
 	m_vb_data = gs_vbdata_create();
 	m_vb_data->num = verts.size();
-	m_vb_data->num_tex = 1;
+	m_vb_data->num_tex = 8;
 	m_vb_data->points = (vec3*)bmalloc(sizeof(vec3) * verts.size());
 	m_vb_data->normals = (vec3*)bmalloc(sizeof(vec3) * verts.size());
 	m_vb_data->tangents = (vec3*)bmalloc(sizeof(vec3) * verts.size());
 	m_vb_data->colors = (uint32_t*)bmalloc(sizeof(uint32_t) * verts.size());
-	m_vb_data->tvarray = (gs_tvertarray*)bmalloc(sizeof(gs_tvertarray));
-	m_vb_data->tvarray[0].width = 2;
-	m_vb_data->tvarray[0].array = bmalloc(sizeof(float) * 2 * verts.size());
+	m_vb_data->tvarray = (gs_tvertarray*)bmalloc(sizeof(gs_tvertarray) * 8);
+	for (int i = 0; i < 8; i++) {
+		m_vb_data->tvarray[i].width = 4;
+		m_vb_data->tvarray[i].array = bmalloc(sizeof(float) * 4 * verts.size());
+	}
 
 	// copy in the verts
 	for (size_t i = 0; i < verts.size(); i++) {
@@ -70,12 +73,12 @@ GS::VertexBuffer::VertexBuffer(const std::vector<GS::Vertex>& verts)
 		vec3_copy(&m_vb_data->points[i], &vtx.position);
 		vec3_copy(&m_vb_data->normals[i], &vtx.normal);
 		vec3_copy(&m_vb_data->tangents[i], &vtx.tangent);
-		vec2* uvs = (vec2*)(m_vb_data->tvarray[0].array);
-		vec2_copy(uvs + i, (const vec2*)&vtx.uv[0]);
+		float* uvs = (float*)(m_vb_data->tvarray[0].array);
+		uvs[i * 4 + 0] = vtx.uv[0].x;
+		uvs[i * 4 + 1] = vtx.uv[0].y;
 	}
 
 	// create the gs vertex buffer
-	obs_enter_graphics();
 	m_vertexbuffer = gs_vertexbuffer_create(m_vb_data, 0);
 	obs_leave_graphics();
 }
@@ -93,9 +96,7 @@ GS::VertexBuffer::~VertexBuffer() {
 }
 
 
-gs_vertbuffer_t* GS::VertexBuffer::get(bool refreshGPU) {
-	if (refreshGPU)
-		gs_vertexbuffer_flush(m_vertexbuffer);
+gs_vertbuffer_t* GS::VertexBuffer::get() {
 	return m_vertexbuffer;
 }
 

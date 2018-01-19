@@ -201,6 +201,7 @@ void Mask::Resource::Mesh::LoadObj(std::string file) {
 	// Create Vertex Buffer
 	m_VertexBuffer = std::make_shared<GS::VertexBuffer>(vertices);
 
+	/*
 	// Calculate tangents
 	gs_vb_data* vbdata = m_VertexBuffer->get_data();
 	for (size_t i = 0; i < indices.size() / 3; i += 3) {
@@ -212,6 +213,7 @@ void Mask::Resource::Mesh::LoadObj(std::string file) {
 		vertices[idx1].tangent = CalculateTangent(vbdata, idx1, idx2, idx0);
 		vertices[idx2].tangent = CalculateTangent(vbdata, idx2, idx0, idx1);
 	}
+	*/
 	
 	// Create Index Buffer
 	m_IndexBuffer = std::make_shared<GS::IndexBuffer>((uint32_t)indices.size());
