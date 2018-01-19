@@ -56,7 +56,7 @@ namespace GS {
 		}
 
 		gs_vertbuffer_t* get() {
-			return get(true);
+			return get(false);
 		}
 		gs_vertbuffer_t* get(bool refreshGPU) {
 			if (refreshGPU)

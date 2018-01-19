@@ -54,21 +54,17 @@ struct gs_vb_data {
 // wrapper for gs_vb_data
 class GSVertexBuffer : public gs_vb_data {
 public:
-	GSVertexBuffer(size_t numVerts, bool isSkinned) {
+	GSVertexBuffer(size_t numVerts) {
 		num = numVerts;
 		points = new vec3[num];
 		normals = new vec3[num];
 		tangents = new vec3[num];
 		colors = new uint32_t[num];
-		num_tex = isSkinned ? 8 : 1;
+		num_tex = 8;
 		tvarray = new gs_tvertarray[num_tex];
-		tvarray[0].width = 4;
-		tvarray[0].array = new float[num * 4];
-		if (isSkinned) {
-			for (int i = 1; i < 8; i++) {
-				tvarray[i].width = 4;
-				tvarray[i].array = new float[num * 4];
-			}
+		for (int i = 0; i < 8; i++) {
+			tvarray[i].width = 4;
+			tvarray[i].array = new float[num * 4];
 		}
 	}
 	~GSVertexBuffer() {
@@ -667,7 +663,7 @@ void command_import(Args& args) {
 			int numIndices = 0;
 			int numVertices = 0;
 			unsigned int* indices = new unsigned int[mesh->mNumFaces * 3];
-			GSVertexBuffer vertices(mesh->mNumVertices, true);
+			GSVertexBuffer vertices(mesh->mNumVertices);
 
 			// Keep going until we've touched all the triangles
 			int numSkins = 0;
@@ -820,7 +816,7 @@ void command_import(Args& args) {
 		}
 		else {
 			// Create vertex list
-			GSVertexBuffer vertices(mesh->mNumVertices, false);
+			GSVertexBuffer vertices(mesh->mNumVertices);
 			for (unsigned int j = 0; j < mesh->mNumVertices; j++) {
 
 				// Add the new vertex
