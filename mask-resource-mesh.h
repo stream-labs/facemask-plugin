@@ -44,11 +44,9 @@ namespace Mask {
 			void LoadObj(std::string file);
 
 		protected:
-			uint8_t*							m_VertexBufferMemory;
 			std::shared_ptr<GS::VertexBuffer>	m_VertexBuffer;
 			std::shared_ptr<GS::IndexBuffer>	m_IndexBuffer;
 			vec4								m_center;
-			bool								m_deleteVBData;
 
 			vec3 CalculateTangent(gs_vb_data* vbdata, int i1, int i2, int i3);
 		};

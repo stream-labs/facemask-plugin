@@ -35,16 +35,14 @@ extern "C" {
 	#pragma warning( pop )
 }
 
-#define ALIGNED(XXX) (((size_t)(XXX) & 0xF) ? (((size_t)(XXX) + 0x10) & 0xFFFFFFFFFFFFFFF0ULL) : (size_t)(XXX))
+
 
 static const char* const S_DATA = "data";
 static const char* const S_VERTEX_BUFFER = "vertex-buffer";
 static const char* const S_INDEX_BUFFER = "index-buffer";
 
 Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t* data)
-	: IBase(parent, name)
-	, m_VertexBufferMemory(nullptr)
-	, m_deleteVBData(false) {
+	: IBase(parent, name) {
 
 	// We could be an embedded OBJ file, or raw geometry
 
@@ -60,21 +58,8 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 		base64_decode(vertex64data, decodedVertices);
 		// add extra to buffer size to allow for alignment
 		size_t vertBuffSize = zlib_size(decodedVertices) + 16;
-		m_VertexBufferMemory = new uint8_t[vertBuffSize];
-		uint8_t* aligned = (uint8_t*)ALIGNED(m_VertexBufferMemory);
-		zlib_decode(decodedVertices, aligned);
-		gs_vb_data* vbdata = (gs_vb_data*)aligned;
-		 
-		// set up pointers for memory image
-		size_t top = (size_t)aligned;
-		vbdata->points = (vec3*)((size_t)(vbdata->points) + top);
-		vbdata->normals = (vec3*)((size_t)(vbdata->normals) + top);
-		vbdata->tangents = (vec3*)((size_t)(vbdata->tangents) + top);
-		vbdata->colors = (uint32_t*)((size_t)(vbdata->colors) + top);
-		vbdata->tvarray = (gs_tvertarray*)((size_t)(vbdata->tvarray) + top);
-		for (int i = 0; i < vbdata->num_tex; i++) {
-			vbdata->tvarray[i].array = (void*)((size_t)(vbdata->tvarray[i].array) + top);
-		}
+		uint8_t* buffer = new uint8_t[vertBuffSize];
+		zlib_decode(decodedVertices, (uint8_t*)ALIGNED(buffer));
 
 		// Index Buffer
 		if (!obs_data_has_user_value(data, S_INDEX_BUFFER)) {
@@ -91,7 +76,7 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 		size_t numIndices = decodedIndices.size() / sizeof(uint32_t);
 
 		// Make Buffers
-		m_VertexBuffer = std::make_shared<GS::VertexBuffer>(vbdata);
+		m_VertexBuffer = std::make_shared<GS::VertexBuffer>(buffer);
 		m_IndexBuffer = std::make_shared<GS::IndexBuffer>
 			((uint32_t*)decodedIndices.data(), numIndices);
 	}
@@ -125,19 +110,11 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 } 
 
 Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, std::string file)
-	: IBase(parent, name)
-	, m_VertexBufferMemory(nullptr) {
+	: IBase(parent, name) {
 	LoadObj(file);
 }
 
-Mask::Resource::Mesh::~Mesh() {
-	if (m_VertexBufferMemory) {
-		delete[] m_VertexBufferMemory;
-	}
-	if (m_deleteVBData) {
-		gs_vbdata_destroy(m_VertexBuffer->get_data());
-	}
-}
+Mask::Resource::Mesh::~Mesh() {}
 
 Mask::Resource::Type Mask::Resource::Mesh::GetType() {
 	return Mask::Resource::Type::Mesh;
@@ -176,16 +153,9 @@ void Mask::Resource::Mesh::LoadObj(std::string file) {
 		return;
 	}
 
-	struct Vertex {
-		vec3 position;
-		vec3 normal;
-		vec3 tangent;
-		vec2 uv;
-	};
-
 	// Create GPU mesh from tinyobj format.
 	char keybuff[128];
-	std::vector<Vertex> vertices;
+	std::vector<GS::Vertex> vertices;
 	std::vector<std::string> vertexKeys;
 	std::vector<uint32_t> indices;
 	for (size_t i = 0; i < shapes.size(); i++) {
@@ -203,7 +173,7 @@ void Mask::Resource::Mesh::LoadObj(std::string file) {
 					break;
 		
 			if (idx >= vertexKeys.size()) {
-				Vertex vtx;
+				GS::Vertex vtx;
 				if (index.vertex_index == -1)
 					break; 
 				vtx.position.x = attrib.vertices[3 * index.vertex_index + 0];
@@ -217,8 +187,8 @@ void Mask::Resource::Mesh::LoadObj(std::string file) {
 					vec3_norm(&vtx.normal, &vtx.position); // Normal from Vertex position.
 				}
 				if (index.texcoord_index != -1 && attrib.texcoords.size() > 0) {
-					vtx.uv.x = attrib.texcoords[2 * index.texcoord_index + 0];
-					vtx.uv.y = 1.0f - attrib.texcoords[2 * index.texcoord_index + 1];
+					vtx.uv[0].x = attrib.texcoords[2 * index.texcoord_index + 0];
+					vtx.uv[0].y = 1.0f - attrib.texcoords[2 * index.texcoord_index + 1];
 				}
 				vertices.push_back(vtx);
 				vertexKeys.push_back(key);
@@ -228,28 +198,11 @@ void Mask::Resource::Mesh::LoadObj(std::string file) {
 		}
 	}
 
-	// Make a libOBS vertex buffer
-	m_deleteVBData = true;
-	gs_vb_data* vbdata = gs_vbdata_create();
-	vbdata->num = vertices.size();
-	vbdata->num_tex = 1;
-	vbdata->points = (vec3*)bmalloc(sizeof(vec3) * vertices.size());
-	vbdata->normals = (vec3*)bmalloc(sizeof(vec3) * vertices.size());
-	vbdata->tangents = (vec3*)bmalloc(sizeof(vec3) * vertices.size());
-	vbdata->colors = (uint32_t*)bmalloc(sizeof(uint32_t) * vertices.size());
-	vbdata->tvarray = (gs_tvertarray*)bmalloc(sizeof(gs_tvertarray));
-	vbdata->tvarray[0].width = 2;
-	vbdata->tvarray[0].array = bmalloc(sizeof(float) * 2 * vertices.size());
-	for (size_t i = 0; i < vertices.size(); i++) {
-		const Vertex& vtx = vertices[i];
-		vec3_copy(&vbdata->points[i], &vtx.position);
-		vec3_copy(&vbdata->normals[i], &vtx.normal);
-		vec3_copy(&vbdata->tangents[i], &vtx.tangent);
-		vec2* uvs = (vec2*)(vbdata->tvarray[0].array);
-		vec2_copy(uvs + i, &vtx.uv);
-	}
+	// Create Vertex Buffer
+	m_VertexBuffer = std::make_shared<GS::VertexBuffer>(vertices);
 
 	// Calculate tangents
+	gs_vb_data* vbdata = m_VertexBuffer->get_data();
 	for (size_t i = 0; i < indices.size() / 3; i += 3) {
 		uint32_t idx0 = indices[i + 0];
 		uint32_t idx1 = indices[i + 1];
@@ -259,9 +212,6 @@ void Mask::Resource::Mesh::LoadObj(std::string file) {
 		vertices[idx1].tangent = CalculateTangent(vbdata, idx1, idx2, idx0);
 		vertices[idx2].tangent = CalculateTangent(vbdata, idx2, idx0, idx1);
 	}
-	
-	// Create Vertex Buffer
-	m_VertexBuffer = std::make_shared<GS::VertexBuffer>(vbdata);
 	
 	// Create Index Buffer
 	m_IndexBuffer = std::make_shared<GS::IndexBuffer>((uint32_t)indices.size());

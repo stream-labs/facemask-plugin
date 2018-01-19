@@ -20,6 +20,7 @@
 #pragma once
 #include <inttypes.h>
 #include <vector>
+#include "gs-vertex.h"
 extern "C" {
 	#pragma warning( push )
 	#pragma warning( disable: 4201 )
@@ -28,47 +29,23 @@ extern "C" {
 	#pragma warning( pop )
 }
 
-/* Stripped-down version of GS::VertexBuffer
- *
- * yes, this really is all there is to it. 
- *
- * the meshes load a block of memory from the json data
- * with all the vertex data in it, so all we need to do
- * is wrap it up.
- *
- * it is not our responsibility to delete the gs_vb_data 
- * we were constructed with, either.
- *
- */
+// ALIGNED : macro to align a memory address to 16b boundary
+#define ALIGNED(XXX) (((size_t)(XXX) & 0xF) ? (((size_t)(XXX) + 0x10) & 0xFFFFFFFFFFFFFFF0ULL) : (size_t)(XXX))
+
 namespace GS {
 	class VertexBuffer {
 	public:
-		VertexBuffer(gs_vb_data* d) {
-			m_vertexbufferdata = d;
-			obs_enter_graphics();
-			m_vertexbuffer = gs_vertexbuffer_create(m_vertexbufferdata, 0);
-			obs_leave_graphics();
-		}
-		~VertexBuffer() {
-			obs_enter_graphics();
-			gs_vertexbuffer_destroy(m_vertexbuffer);
-			obs_leave_graphics();
-		}
+		VertexBuffer(uint8_t* raw);
+		VertexBuffer(const std::vector<GS::Vertex>& verts);
+		~VertexBuffer();
 
-		gs_vertbuffer_t* get() {
-			return get(false);
-		}
-		gs_vertbuffer_t* get(bool refreshGPU) {
-			if (refreshGPU)
-				gs_vertexbuffer_flush(m_vertexbuffer);
-			return m_vertexbuffer;
-		}
-		gs_vb_data* get_data() { return m_vertexbufferdata; }
-		size_t size() { return m_vertexbufferdata ? m_vertexbufferdata->num : 0; }
+		gs_vertbuffer_t* get(bool refreshGPU = false);
+		gs_vb_data* get_data();
+		size_t size();
 
 	protected:
-		gs_vb_data* m_vertexbufferdata;
-		gs_vertbuffer_t* m_vertexbuffer;
-
+		gs_vb_data*			m_vb_data;
+		gs_vertbuffer_t*	m_vertexbuffer;
+		uint8_t*			m_raw;
 	};
 }
