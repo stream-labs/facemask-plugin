@@ -22,6 +22,9 @@
 
 #define MAX_BONES_PER_SKIN		(8)
 
+
+#define ALIGNED(XXX) (((size_t)(XXX) & 0xF) ? (((size_t)(XXX) + 0x10) & 0xFFFFFFFFFFFFFFF0ULL) : (size_t)(XXX))
+
 // Vertex Buffer structs from libOBS
 //
 struct vec3 {
@@ -101,26 +104,50 @@ public:
 		float* p = (float*)tvarray[tidx / 4 + 1].array;
 		p[vidx * 4 + (tidx % 4)] = v;
 	}
+
+	// 16 byte alignment
+	size_t align(size_t s) {
+		while (s & 0xFULL)
+			s++;
+		return s;
+	}
+	uint8_t* align(uint8_t* s) {
+		while ((size_t)s & 0xFULL)
+			s++;
+		return s;
+	}
+
 	// raw buffer output
 	size_t	size() {
 		// us
 		size_t s = sizeof(gs_vb_data);
+		s = align(s);
 		// arrays
-		s += sizeof(vec3) * 3 * num;
-		s += sizeof(uint32_t) * num;
-		s += sizeof(gs_tvertarray) * num_tex;
+		s += sizeof(vec3) * num; // points
+		s = align(s);
+		s += sizeof(vec3) * num; // normals
+		s = align(s);
+		s += sizeof(vec3) * num; // tangents
+		s = align(s);
+		s += sizeof(uint32_t) * num; // colors
+		s = align(s);
+		s += sizeof(gs_tvertarray) * num_tex; // tvarray
+		s = align(s);
 		// texture vert arrays
 		for (int i = 0; i < num_tex; i++) {
-			s += sizeof(float) * tvarray[i].width * num;
+			s += sizeof(float) * tvarray[i].width * num; // uvs
+			s = align(s);
 		}
 		return s;
 	}
 	void get_data(uint8_t* buffer) {
 		assert(buffer);
+		assert(((size_t)buffer & 0xFULL) == 0);
 		uint8_t* pbuff = buffer;
 
 		gs_vb_data* tmp = (gs_vb_data*)pbuff;
 		pbuff += sizeof(gs_vb_data);
+		pbuff = align(pbuff);
 
 		tmp->num = num;
 		tmp->num_tex = num_tex;
@@ -128,31 +155,38 @@ public:
 		tmp->points = (vec3*)((size_t)pbuff - (size_t)buffer);
 		memcpy(pbuff, points, sizeof(vec3) * num);
 		pbuff += sizeof(vec3) * num;
+		pbuff = align(pbuff);
 
 		tmp->normals = (vec3*)((size_t)pbuff - (size_t)buffer);
 		memcpy(pbuff, normals, sizeof(vec3) * num);
 		pbuff += sizeof(vec3) * num;
+		pbuff = align(pbuff);
 
 		tmp->tangents = (vec3*)((size_t)pbuff - (size_t)buffer);
 		memcpy(pbuff, tangents, sizeof(vec3) * num);
 		pbuff += sizeof(vec3) * num;
+		pbuff = align(pbuff);
 
 		tmp->colors = (uint32_t*)((size_t)pbuff - (size_t)buffer);
 		memcpy(pbuff, colors, sizeof(uint32_t) * num);
 		pbuff += sizeof(uint32_t) * num;
+		pbuff = align(pbuff);
 
 		tmp->tvarray = (gs_tvertarray*)((size_t)pbuff - (size_t)buffer);
 		gs_tvertarray* tmptv = (gs_tvertarray*)pbuff;
 		pbuff += sizeof(gs_tvertarray) * num_tex;
+		pbuff = align(pbuff);
 
 		for (int i = 0; i < num_tex; i++) {
 			tmptv->width = tvarray[i].width;
 			tmptv->array = (void*)((size_t)pbuff - (size_t)buffer);
 			memcpy(pbuff, tvarray[i].array, sizeof(float) * tvarray[i].width * num);
 			pbuff += sizeof(float) * tvarray[i].width * num;
+			pbuff = align(pbuff);
 			tmptv++;
 		}
 
+		// sanity check 
 		size_t pos = (size_t)pbuff - (size_t)buffer;
 		size_t s = size();
 		assert(pos == s);
@@ -738,10 +772,11 @@ void command_import(Args& args) {
 
 				// encode 
 				size_t vbuffSize = vertices.size();
-				uint8_t* vbuff = new uint8_t[vbuffSize];
-				vertices.get_data(vbuff);
+				uint8_t* vbuff = new uint8_t[vbuffSize + 16];
+				uint8_t* aligned = (uint8_t*)ALIGNED(vbuff);
+				vertices.get_data(aligned);
 				string vertexDataBase64 =
-					base64_encodeZ(vbuff, vbuffSize);
+					base64_encodeZ(aligned, vbuffSize);
 				string indexDataBase64 =
 					base64_encodeZ((uint8_t*)indices, sizeof(unsigned int) * numIndices);
 				delete[] vbuff;
@@ -808,10 +843,11 @@ void command_import(Args& args) {
 			}
 			// encode vertices
 			size_t vbuffSize = vertices.size();
-			uint8_t* vbuff = new uint8_t[vbuffSize];
-			vertices.get_data(vbuff);
+			uint8_t* vbuff = new uint8_t[vbuffSize + 16];
+			uint8_t* aligned = (uint8_t*)ALIGNED(vbuff);
+			vertices.get_data(aligned);
 			string vertexDataBase64 =
-				base64_encodeZ(vbuff, vbuffSize);
+				base64_encodeZ(aligned, vbuffSize);
 			delete[] vbuff;
 
 			// Build index list
