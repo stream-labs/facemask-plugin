@@ -44,12 +44,12 @@ namespace Mask {
 			void LoadObj(std::string file);
 
 		protected:
-			std::shared_ptr<GS::VertexBuffer> m_VertexBuffer;
-			std::shared_ptr<GS::IndexBuffer> m_IndexBuffer;
-			vec4 m_center;
+			std::shared_ptr<GS::VertexBuffer>	m_VertexBuffer;
+			std::shared_ptr<GS::IndexBuffer>	m_IndexBuffer;
+			vec4								m_center;
 
-			vec3 CalculateTangent(const GS::Vertex& v0,
-				const GS::Vertex& v1, const GS::Vertex& v2);
+			vec3 CalculateTangent(const GS::Vertex& v1,
+				const GS::Vertex& v2, const GS::Vertex& v3);
 		};
 	}
 }

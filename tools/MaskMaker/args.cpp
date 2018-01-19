@@ -452,12 +452,17 @@ json Args::createImageResourceFromFile(string resFile, bool wantMips) {
 
 	int width, height, bpp;
 
+	cout << "Loading image " << resFile << endl;
 	string fullPath = getFullResourcePath(resFile);
 	unsigned char* rgba = stbi_load(fullPath.c_str(), &width, &height, &bpp, 4);
+	if (rgba == nullptr) {
+		cout << "FAILED TO LOAD IMAGE!" << endl;
+		cout << " LOOKING FOR: " << fullPath << endl;
+		assert(rgba);
+	}
 
 	lastImageHadAlpha = false;
 	int count = 0;
-	cout << "Loading image " << resFile << endl;
 	for (unsigned char* p = rgba; count < (width*height); p += 4, count++) {
 		if ((int)p[3] < 255) {
 			lastImageHadAlpha = true;

@@ -164,9 +164,8 @@ SET(smll_SOURCES
 )
 SET(gs_SOURCES
 	"${PROJECT_SOURCE_DIR}/gs-effect.cpp"
-	"${PROJECT_SOURCE_DIR}/gs-vertex.cpp"
-	"${PROJECT_SOURCE_DIR}/gs-vertexbuffer.cpp"
 	"${PROJECT_SOURCE_DIR}/gs-indexbuffer.cpp"
+	"${PROJECT_SOURCE_DIR}/gs-vertexbuffer.cpp"
 	"${PROJECT_SOURCE_DIR}/gs-rendertarget.cpp"
 	"${PROJECT_SOURCE_DIR}/gs-texture.cpp"
 )

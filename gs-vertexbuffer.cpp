@@ -26,105 +26,91 @@ extern "C" {
 	#pragma warning( pop )
 }
 
-const uint32_t defaultMaximumVertices = 65535u;
+GS::VertexBuffer::VertexBuffer(uint8_t* raw)
+ : m_vb_data(nullptr), m_vertexbuffer(nullptr), m_raw(nullptr) {
+	m_raw = raw;
+	gs_vb_data* vbdata = (gs_vb_data*)ALIGNED(raw);
 
-GS::VertexBuffer::VertexBuffer(size_t maximumVertices) {
-	m_maximumVertices = maximumVertices;
-	m_uvwLayers = MAXIMUM_UVW_LAYERS;
-
-	// Reserve Space
-	m_vertexbufferdata.num = m_maximumVertices;
-	m_data.positions.resize(m_maximumVertices);
-	m_vertexbufferdata.points = m_data.positions.data();
-	m_data.normals.resize(m_maximumVertices);
-	m_vertexbufferdata.normals = m_data.normals.data();
-	m_data.tangents.resize(m_maximumVertices);
-	m_vertexbufferdata.tangents = m_data.tangents.data();
-	m_data.colors.resize(m_maximumVertices);
-	m_vertexbufferdata.colors = m_data.colors.data();
-	m_vertexbufferdata.num_tex = m_uvwLayers;
-	m_data.uvws.resize(m_uvwLayers);
-	m_data.uvwdata.resize(m_uvwLayers);
-	for (uint32_t n = 0; n < m_uvwLayers; n++) {
-		m_data.uvws[n].resize(m_maximumVertices);
-		m_data.uvwdata[n].width = 4;
-		m_data.uvwdata[n].array = m_data.uvws[n].data();
+	// classic memory image dereferencing
+	size_t top = (size_t)vbdata;
+	vbdata->points = (vec3*)((size_t)(vbdata->points) + top);
+	vbdata->normals = (vec3*)((size_t)(vbdata->normals) + top);
+	vbdata->tangents = (vec3*)((size_t)(vbdata->tangents) + top);
+	vbdata->colors = (uint32_t*)((size_t)(vbdata->colors) + top);
+	vbdata->tvarray = (gs_tvertarray*)((size_t)(vbdata->tvarray) + top);
+	for (int i = 0; i < vbdata->num_tex; i++) {
+		vbdata->tvarray[i].array = (void*)((size_t)(vbdata->tvarray[i].array) + top);
 	}
-	m_vertexbufferdata.tvarray = m_data.uvwdata.data();
 
-	// Allocate GPU
+	// create the gs vertex buffer
 	obs_enter_graphics();
-	m_vertexbuffer = gs_vertexbuffer_create(&m_vertexbufferdata, GS_DYNAMIC);
+	m_vertexbuffer = gs_vertexbuffer_create(vbdata, 0);
 	obs_leave_graphics();
-	if (!m_vertexbuffer) {
-		throw std::runtime_error("Failed to create vertex buffer.");
+} 
+
+
+GS::VertexBuffer::VertexBuffer(const std::vector<GS::Vertex>& verts)
+ : m_vb_data(nullptr), m_vertexbuffer(nullptr), m_raw(nullptr) {
+
+	// Make a libOBS vertex buffer
+	m_vb_data = gs_vbdata_create();
+	m_vb_data->num = verts.size();
+	m_vb_data->num_tex = 8;
+	m_vb_data->points = (vec3*)bmalloc(sizeof(vec3) * verts.size());
+	m_vb_data->normals = (vec3*)bmalloc(sizeof(vec3) * verts.size());
+	m_vb_data->tangents = (vec3*)bmalloc(sizeof(vec3) * verts.size());
+	m_vb_data->colors = (uint32_t*)bmalloc(sizeof(uint32_t) * verts.size());
+	m_vb_data->tvarray = (gs_tvertarray*)bmalloc(sizeof(gs_tvertarray) * 8);
+	for (int i = 0; i < 8; i++) {
+		m_vb_data->tvarray[i].width = 4;
+		m_vb_data->tvarray[i].array = bmalloc(sizeof(float) * 4 * verts.size());
 	}
+
+	// copy in the verts
+	for (size_t i = 0; i < verts.size(); i++) {
+		const GS::Vertex& vtx = verts[i];
+		vec3_copy(&m_vb_data->points[i], &vtx.position);
+		vec3_copy(&m_vb_data->normals[i], &vtx.normal);
+		vec3_copy(&m_vb_data->tangents[i], &vtx.tangent);
+		float* uvs = (float*)(m_vb_data->tvarray[0].array);
+		uvs[i * 4 + 0] = vtx.uv[0].x;
+		uvs[i * 4 + 1] = vtx.uv[0].y;
+	}
+
+	// create the gs vertex buffer
+	obs_enter_graphics();
+	m_vertexbuffer = gs_vertexbuffer_create(m_vb_data, 0);
+	obs_leave_graphics();
 }
 
-GS::VertexBuffer::VertexBuffer(gs_vertbuffer_t* vb) {
-	m_vertexbuffer = vb;
-}
-
-GS::VertexBuffer::VertexBuffer() : VertexBuffer(defaultMaximumVertices) {}
-
-GS::VertexBuffer::VertexBuffer(std::vector<Vertex>& other) : VertexBuffer(other.capacity()) {
-	std::copy(other.begin(), other.end(), this->end());
-}
-
-GS::VertexBuffer::VertexBuffer(VertexBuffer& other) : VertexBuffer(other.m_maximumVertices) {
-	std::copy(other.begin(), other.end(), this->end());
-}
-
-GS::VertexBuffer::VertexBuffer(Vertex* buff, size_t len) : VertexBuffer(len) {
-	this->assign(buff, buff + len);
-}
 
 GS::VertexBuffer::~VertexBuffer() {
-// This crashes out in OBS STUDIO. Just leak memory.
-#ifndef OBS_STUDIO_BUILD	
-	if (m_vertexbuffer) {
-		std::memset(&m_vertexbufferdata, 0, sizeof(m_vertexbufferdata));
-		obs_enter_graphics();
-		gs_vertexbuffer_destroy(m_vertexbuffer);
-		m_vertexbuffer = nullptr;
-		obs_leave_graphics();
-	}
-#endif
+	if (m_raw)
+		delete[] m_raw;
+
+	obs_enter_graphics();
+	if (m_vb_data)
+		gs_vbdata_destroy(m_vb_data);
+	gs_vertexbuffer_destroy(m_vertexbuffer);
+	obs_leave_graphics();
 }
 
-void GS::VertexBuffer::set_uv_layers(uint32_t layers) {
-	m_uvwLayers = layers;
-}
 
-uint32_t GS::VertexBuffer::uv_layers() {
-	return m_uvwLayers;
-}
- 
-gs_vertbuffer_t* GS::VertexBuffer::get(bool refreshGPU) {
-	if (refreshGPU) {
-		if (size() > m_maximumVertices)
-			throw std::runtime_error("Too many vertices in Vertex Buffer.");
-
-		for (size_t vertexIdx = 0; vertexIdx < size(); vertexIdx++) {
-			Vertex& v = this->at(vertexIdx);
-			vec3_copy(&m_data.positions[vertexIdx], &(v.position));
-			vec3_copy(&m_data.normals[vertexIdx], &(v.normal));
-			vec3_copy(&m_data.tangents[vertexIdx], &(v.tangent));
-			for (size_t texcoordIdx = 0; texcoordIdx < m_uvwLayers; texcoordIdx++) {
-				vec4_copy(&m_data.uvws[texcoordIdx][vertexIdx], &(v.uv[texcoordIdx]));
-			}
-			m_data.colors[vertexIdx] = v.color;
-		}
-		m_vertexbufferdata.num = size();
-		m_vertexbufferdata.num_tex = m_uvwLayers;
-
-		obs_enter_graphics();
-		gs_vertexbuffer_flush(m_vertexbuffer);
-		obs_leave_graphics();
-	}
+gs_vertbuffer_t* GS::VertexBuffer::get() {
 	return m_vertexbuffer;
 }
 
-gs_vertbuffer_t* GS::VertexBuffer::get() {
-	return get(true);
+
+gs_vb_data* GS::VertexBuffer::get_data() { 
+	if (m_vb_data)
+		return m_vb_data;
+	if (m_vertexbuffer)
+		return gs_vertexbuffer_get_data(m_vertexbuffer);
+	return nullptr;
+}
+
+
+size_t GS::VertexBuffer::size() 
+{ 
+	return get_data() ? get_data()->num : 0;
 }

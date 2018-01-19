@@ -55,7 +55,7 @@ static const char* const kSettingsDrawFacesDesc = "Draw Face Landmark Data";
 static const char* const kSettingsDrawFDCropRectDesc = 
 	"Draw Face Detect Crop Rectangle";
 static const char* const kSettingsDrawTRCropRectDesc =
-	"Draw Tracking Crop Rectangle";
+	"Draw Tracking Crop Rectangle"; 
 
 static const char* const kSettingsDemoModeDesc = "Demo Mode";
 static const char* const kSettingsDemoFolderDesc = "Demo Mode Folder";
@@ -64,6 +64,6 @@ static const char* const kSettingsDemoDelayDesc = "Demo Mode Delay Between Masks
 
 static const char* const kSettingsEmpty = "";
 
-static const char* const kFileDefaultJson = "masks/Streamlabs Glasses.json";
+static const char* const kFileDefaultJson = "masks/Baseball Cap.json";
 static const char* const kFileShapePredictor =
 	"shape_predictor_68_face_landmarks.dat";

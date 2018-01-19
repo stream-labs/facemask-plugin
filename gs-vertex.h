@@ -28,7 +28,6 @@ extern "C" {
 
 namespace GS {
 	const uint32_t MAXIMUM_UVW_LAYERS = 8u;
-	// ToDo: Optimize for use with GS::VertexBuffer so that it doesn't require in-memory copy.
 	struct Vertex {
 		vec3 position;
 		vec3 normal;

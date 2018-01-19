@@ -18,78 +18,34 @@
  */
 
 #pragma once
-#include "gs-vertex.h"
 #include <inttypes.h>
 #include <vector>
+#include "gs-vertex.h"
 extern "C" {
 	#pragma warning( push )
 	#pragma warning( disable: 4201 )
 	#include <libobs/graphics/graphics.h>
+	#include <libobs/obs.h>
 	#pragma warning( pop )
 }
 
+// ALIGNED : macro to align a memory address to 16b boundary
+#define ALIGNED(XXX) (((size_t)(XXX) & 0xF) ? (((size_t)(XXX) + 0x10) & 0xFFFFFFFFFFFFFFF0ULL) : (size_t)(XXX))
+
 namespace GS {
-	class VertexBuffer : public std::vector<Vertex> {
-		public:
-		/*!
-		* \brief Create a Vertex Buffer with specific size
-		*
-		* \param maximumVertices Maximum amount of vertices to store.
-		*/
-		VertexBuffer(size_t maximumVertices);
-
-		/*!
-		* \brief Create a Vertex Buffer with default size
-		* This will create a new vertex buffer with the default maximum size.
-		*
-		*/
-		VertexBuffer();
-
-		/*!
-		 * \brief Create a copy of a Vertex Buffer
-		 * Full Description below
-		 *
-		 * \param other The Vertex Buffer to copy
-		 */
-		VertexBuffer(VertexBuffer& other);
-
-		/*!
-		* \brief Create a Vertex Buffer from a Vertex array
-		* Full Description below
-		*
-		* \param other The Vertex array to use
-		*/
-		VertexBuffer(std::vector<Vertex>& other);
-
-		VertexBuffer(Vertex* buff, size_t len);
-
-
-		VertexBuffer(gs_vertbuffer_t* vb);
-
-		virtual ~VertexBuffer();
-
-		void set_uv_layers(uint32_t layers);
-
-		uint32_t uv_layers();
+	class VertexBuffer {
+	public:
+		VertexBuffer(uint8_t* raw);
+		VertexBuffer(const std::vector<GS::Vertex>& verts);
+		~VertexBuffer();
 
 		gs_vertbuffer_t* get();
+		gs_vb_data* get_data();
+		size_t size();
 
-		gs_vertbuffer_t* get(bool refreshGPU);
-
-		protected:
-		size_t m_maximumVertices;
-		uint32_t m_uvwLayers;
-		gs_vb_data m_vertexbufferdata;
-		gs_vertbuffer_t* m_vertexbuffer;
-
-		// Data Storage
-		struct {
-			std::vector<vec3> positions;
-			std::vector<vec3> normals;
-			std::vector<vec3> tangents;
-			std::vector<uint32_t> colors;
-			std::vector<std::vector<vec4>> uvws;
-			std::vector<gs_tvertarray> uvwdata;
-		} m_data;
+	protected:
+		gs_vb_data*			m_vb_data;
+		gs_vertbuffer_t*	m_vertexbuffer;
+		uint8_t*			m_raw;
 	};
 }

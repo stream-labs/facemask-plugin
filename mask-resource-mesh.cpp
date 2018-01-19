@@ -36,6 +36,7 @@ extern "C" {
 }
 
 
+
 static const char* const S_DATA = "data";
 static const char* const S_VERTEX_BUFFER = "vertex-buffer";
 static const char* const S_INDEX_BUFFER = "index-buffer";
@@ -53,8 +54,12 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 			PLOG_ERROR("Mesh '%s' has empty vertex data.", name.c_str());
 			throw std::logic_error("Mesh has empty vertex data.");
 		}
-		std::vector<uint8_t> decodedVertices = base64_decodeZ(vertex64data);
-		size_t numVertices = decodedVertices.size() / sizeof(GS::Vertex);
+		std::vector<uint8_t> decodedVertices;
+		base64_decode(vertex64data, decodedVertices);
+		// add extra to buffer size to allow for alignment
+		size_t vertBuffSize = zlib_size(decodedVertices) + 16;
+		uint8_t* buffer = new uint8_t[vertBuffSize];
+		zlib_decode(decodedVertices, (uint8_t*)ALIGNED(buffer));
 
 		// Index Buffer
 		if (!obs_data_has_user_value(data, S_INDEX_BUFFER)) {
@@ -66,12 +71,12 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 			PLOG_ERROR("Mesh '%s' has empty index buffer data.", name.c_str());
 			throw std::logic_error("Mesh has empty index buffer data.");
 		}
-		std::vector<uint8_t> decodedIndices = base64_decodeZ(index64data);
+		std::vector<uint8_t> decodedIndices;
+		base64_decodeZ(index64data, decodedIndices);
 		size_t numIndices = decodedIndices.size() / sizeof(uint32_t);
 
 		// Make Buffers
-		m_VertexBuffer = std::make_shared<GS::VertexBuffer>
-			((GS::Vertex*)decodedVertices.data(), numVertices);
+		m_VertexBuffer = std::make_shared<GS::VertexBuffer>(buffer);
 		m_IndexBuffer = std::make_shared<GS::IndexBuffer>
 			((uint32_t*)decodedIndices.data(), numIndices);
 	}
@@ -95,10 +100,10 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 	// calculate center
 	vec3 center;
 	vec3_zero(&center);
-	GS::Vertex* v = m_VertexBuffer->data();
+	vec3* v = m_VertexBuffer->get_data()->points;
 	size_t numV = m_VertexBuffer->size();
 	for (size_t i = 0; i < numV; i++, v++) {
-		vec3_add(&center, &center, &(v->position));
+		vec3_add(&center, &center, v);
 	}
 	vec3_divf(&center, &center, (float)numV);
 	vec4_set(&m_center, center.x, center.y, center.z, 1.0f);
@@ -153,8 +158,11 @@ void Mask::Resource::Mesh::LoadObj(std::string file) {
 	std::vector<GS::Vertex> vertices;
 	std::vector<std::string> vertexKeys;
 	std::vector<uint32_t> indices;
-	for (auto shape : shapes) {
-		for (auto index : shape.mesh.indices) {
+	for (size_t i = 0; i < shapes.size(); i++) {
+		tinyobj::shape_t& shape = shapes[i];
+		for (size_t j = 0; j < shape.mesh.indices.size(); j++) {
+			tinyobj::index_t& index = shape.mesh.indices[j];
+
 			snprintf(keybuff, sizeof(keybuff), "%d-%d-%d", index.vertex_index, index.normal_index,
 				index.texcoord_index);
 			std::string key = keybuff;
@@ -200,14 +208,10 @@ void Mask::Resource::Mesh::LoadObj(std::string file) {
 		vertices[idx1].tangent = CalculateTangent(vertices[idx1], vertices[idx2], vertices[idx0]);
 		vertices[idx2].tangent = CalculateTangent(vertices[idx2], vertices[idx0], vertices[idx1]);
 	}
-	
+
 	// Create Vertex Buffer
-	m_VertexBuffer = std::make_shared<GS::VertexBuffer>((uint32_t)vertices.size());
-	m_VertexBuffer->resize(vertices.size());
-	for (size_t idx = 0; idx < vertices.size(); idx++) {
-		m_VertexBuffer->at(idx) = vertices[idx];
-	}
-	
+	m_VertexBuffer = std::make_shared<GS::VertexBuffer>(vertices);
+
 	// Create Index Buffer
 	m_IndexBuffer = std::make_shared<GS::IndexBuffer>((uint32_t)indices.size());
 	m_IndexBuffer->resize(indices.size());
@@ -215,6 +219,7 @@ void Mask::Resource::Mesh::LoadObj(std::string file) {
 		m_IndexBuffer->at(idx) = indices[idx];
 	}
 }
+
 
 static void vec2_from_vec4(vec2* v2, const vec4* v4) {
 	v2->x = v4->x;

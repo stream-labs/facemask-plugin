@@ -22,30 +22,170 @@
 
 #define MAX_BONES_PER_SKIN		(8)
 
-struct GSVertex {
-	float px, py, pz, pw;	// note: vec3 in obs has 4 values
-	float nx, ny, nz, nw;
-	float tx, ty, tz, tw;
-	float u, v, w, ww;
+
+#define ALIGNED(XXX) (((size_t)(XXX) & 0xF) ? (((size_t)(XXX) + 0x10) & 0xFFFFFFFFFFFFFFF0ULL) : (size_t)(XXX))
+
+// Vertex Buffer structs from libOBS
+//
+struct vec3 {
 	union {
 		struct {
-			float u1, v1, w1, ww1;
-			float u2, v2, w2, ww2;
-			float u3, v3, w3, ww3;
-			float u4, v4, w4, ww4;
-			float u5, v5, w5, ww5;
-			float u6, v6, w6, ww6;
-			float u7, v7, w7, ww7;
+			float x, y, z, w;
 		};
-		float extraTexCoords[4 * 7];
+		float ptr[4];
+		__m128 m;
 	};
+};
+struct gs_tvertarray {
+	size_t width;
+	void *array;
+};
+struct gs_vb_data {
+	size_t num;
+	struct vec3 *points;
+	struct vec3 *normals;
+	struct vec3 *tangents;
+	uint32_t *colors;
 
-	uint32_t color;
+	size_t num_tex;
+	struct gs_tvertarray *tvarray;
+};
 
-	char pad[12];			// pad to 16-byte boundary
+// wrapper for gs_vb_data
+class GSVertexBuffer : public gs_vb_data {
+public:
+	GSVertexBuffer(size_t numVerts) {
+		num = numVerts;
+		points = new vec3[num];
+		normals = new vec3[num];
+		tangents = new vec3[num];
+		colors = new uint32_t[num];
+		num_tex = 8;
+		tvarray = new gs_tvertarray[num_tex];
+		for (int i = 0; i < 8; i++) {
+			tvarray[i].width = 4;
+			tvarray[i].array = new float[num * 4];
+		}
+	}
+	~GSVertexBuffer() {
+		delete[] points;
+		delete[] normals;
+		delete[] tangents;
+		delete[] colors;
+		for (int i = 0; i < num_tex; i++) {
+			delete[] tvarray[i].array;
+		}
+		delete[] tvarray;
+	}
+	// tex coords
+	//
+	// 0 | u v
+	// 1 | 0 1 2 3
+	// 2 | 4 5 6 7
+	// 3 | 8 9 10 11
+	// 4 | 12 13 14 15
+	// 5 | 16 17 18 19
+	// 6 | 20 21 22 23
+	// 7 | 24 25 26 27
+	//
+	void set_tex_coord(size_t vidx, float u, float v) {
+		float* p = (float*)tvarray[0].array;
+		assert(vidx < num);
+		p[vidx * 4 + 0] = u;
+		p[vidx * 4 + 1] = v;
+	}
+	void set_tex_coord(size_t vidx, int tidx, float v) {
+		assert(vidx < num);
+		assert(tidx < (4 * 7));
+		float* p = (float*)tvarray[tidx / 4 + 1].array;
+		p[vidx * 4 + (tidx % 4)] = v;
+	}
 
-	GSVertex() {
-		memset(this, 0, sizeof(GSVertex));
+	// 16 byte alignment
+	size_t align(size_t s) {
+		while (s & 0xFULL)
+			s++;
+		return s;
+	}
+	uint8_t* align(uint8_t* s) {
+		while ((size_t)s & 0xFULL)
+			s++;
+		return s;
+	}
+
+	// raw buffer output
+	size_t	size() {
+		// us
+		size_t s = sizeof(gs_vb_data);
+		s = align(s);
+		// arrays
+		s += sizeof(vec3) * num; // points
+		s = align(s);
+		s += sizeof(vec3) * num; // normals
+		s = align(s);
+		s += sizeof(vec3) * num; // tangents
+		s = align(s);
+		s += sizeof(uint32_t) * num; // colors
+		s = align(s);
+		s += sizeof(gs_tvertarray) * num_tex; // tvarray
+		s = align(s);
+		// texture vert arrays
+		for (int i = 0; i < num_tex; i++) {
+			s += sizeof(float) * tvarray[i].width * num; // uvs
+			s = align(s);
+		}
+		return s;
+	}
+	void get_data(uint8_t* buffer) {
+		assert(buffer);
+		assert(((size_t)buffer & 0xFULL) == 0);
+		uint8_t* pbuff = buffer;
+
+		gs_vb_data* tmp = (gs_vb_data*)pbuff;
+		pbuff += sizeof(gs_vb_data);
+		pbuff = align(pbuff);
+
+		tmp->num = num;
+		tmp->num_tex = num_tex;
+
+		tmp->points = (vec3*)((size_t)pbuff - (size_t)buffer);
+		memcpy(pbuff, points, sizeof(vec3) * num);
+		pbuff += sizeof(vec3) * num;
+		pbuff = align(pbuff);
+
+		tmp->normals = (vec3*)((size_t)pbuff - (size_t)buffer);
+		memcpy(pbuff, normals, sizeof(vec3) * num);
+		pbuff += sizeof(vec3) * num;
+		pbuff = align(pbuff);
+
+		tmp->tangents = (vec3*)((size_t)pbuff - (size_t)buffer);
+		memcpy(pbuff, tangents, sizeof(vec3) * num);
+		pbuff += sizeof(vec3) * num;
+		pbuff = align(pbuff);
+
+		tmp->colors = (uint32_t*)((size_t)pbuff - (size_t)buffer);
+		memcpy(pbuff, colors, sizeof(uint32_t) * num);
+		pbuff += sizeof(uint32_t) * num;
+		pbuff = align(pbuff);
+
+		tmp->tvarray = (gs_tvertarray*)((size_t)pbuff - (size_t)buffer);
+		gs_tvertarray* tmptv = (gs_tvertarray*)pbuff;
+		pbuff += sizeof(gs_tvertarray) * num_tex;
+		pbuff = align(pbuff);
+
+		for (int i = 0; i < num_tex; i++) {
+			tmptv->width = tvarray[i].width;
+			tmptv->array = (void*)((size_t)pbuff - (size_t)buffer);
+			memcpy(pbuff, tvarray[i].array, sizeof(float) * tvarray[i].width * num);
+			pbuff += sizeof(float) * tvarray[i].width * num;
+			pbuff = align(pbuff);
+			tmptv++;
+		}
+
+		// sanity check 
+		size_t pos = (size_t)pbuff - (size_t)buffer;
+		size_t s = size();
+		assert(pos == s);
 	}
 };
 
@@ -362,8 +502,8 @@ void command_import(Args& args) {
 		aiProcess_Triangulate |
 		aiProcess_GenNormals |
 		aiProcess_CalcTangentSpace |
-		aiProcess_OptimizeGraph |
-		aiProcess_OptimizeMeshes |
+		//aiProcess_OptimizeGraph |   BOO! THIS GETS RID OF LOCATORS todo: mod assimp!
+		//aiProcess_OptimizeMeshes |
 		aiProcess_SortByPType);
 
 	// If the import failed, report it
@@ -523,7 +663,7 @@ void command_import(Args& args) {
 			int numIndices = 0;
 			int numVertices = 0;
 			unsigned int* indices = new unsigned int[mesh->mNumFaces * 3];
-			GSVertex* vertices = new GSVertex[mesh->mNumVertices];
+			GSVertexBuffer vertices(mesh->mNumVertices);
 
 			// Keep going until we've touched all the triangles
 			int numSkins = 0;
@@ -582,29 +722,29 @@ void command_import(Args& args) {
 								// need to add vertex?
 								if (verts[v].index < 0) {
 									// Add the new vertex
-									vertices[numVertices].px = mesh->mVertices[v].x;
-									vertices[numVertices].py = -mesh->mVertices[v].y;
-									vertices[numVertices].pz = mesh->mVertices[v].z;
-									vertices[numVertices].nx = mesh->mNormals[v].x;
-									vertices[numVertices].ny = -mesh->mNormals[v].y;
-									vertices[numVertices].nz = mesh->mNormals[v].z;
+									vertices.points[numVertices].x = mesh->mVertices[v].x;
+									vertices.points[numVertices].y = -mesh->mVertices[v].y;
+									vertices.points[numVertices].z = mesh->mVertices[v].z;
+									vertices.normals[numVertices].x = mesh->mNormals[v].x;
+									vertices.normals[numVertices].y = -mesh->mNormals[v].y;
+									vertices.normals[numVertices].z = mesh->mNormals[v].z;
 									if (mesh->mTangents) {
-										vertices[numVertices].tx = mesh->mTangents[v].x;
-										vertices[numVertices].ty = mesh->mTangents[v].y;
-										vertices[numVertices].tz = mesh->mTangents[v].z;
+										vertices.tangents[numVertices].x = mesh->mTangents[v].x;
+										vertices.tangents[numVertices].y = mesh->mTangents[v].y;
+										vertices.tangents[numVertices].z = mesh->mTangents[v].z;
 									}
 									if (mesh->mTextureCoords[0]) {
-										vertices[numVertices].u = mesh->mTextureCoords[0][v].x;
-										vertices[numVertices].v = 1.0f - mesh->mTextureCoords[0][v].y;
+										vertices.set_tex_coord(numVertices, 
+											mesh->mTextureCoords[0][v].x,
+											1.0f - mesh->mTextureCoords[0][v].y);
 									}
 									// use extra tex coords to store bones & weights for shader
-									vertices[numVertices].extraTexCoords[0] = (float)verts[v].bones.size();
-									vertices[numVertices].extraTexCoords[1] = 0;
+									vertices.set_tex_coord(numVertices, 0, (float)verts[v].bones.size());
 									for (unsigned int b = 0; b < verts[v].bones.size(); b++) {
 										int bb = (b + 1) * 2; // skip first, 2 for each bone
 										assert(bb < (4 * 7));
-										vertices[numVertices].extraTexCoords[bb + 0] = (float)GetBoneIndex(bones, verts[v].bones[b].bone);
-										vertices[numVertices].extraTexCoords[bb + 1] = verts[v].bones[b].weight;
+										vertices.set_tex_coord(numVertices, bb, (float)GetBoneIndex(bones, verts[v].bones[b].bone));
+										vertices.set_tex_coord(numVertices, bb + 1, verts[v].bones[b].weight);
 									}
 									verts[v].index = numVertices;
 									numVertices++;
@@ -627,10 +767,15 @@ void command_import(Args& args) {
 				cout << "Creating skin with " << numVertices << " vertices, " << numIndices / 3 << " triangles" << endl;
 
 				// encode 
+				size_t vbuffSize = vertices.size();
+				uint8_t* vbuff = new uint8_t[vbuffSize + 16];
+				uint8_t* aligned = (uint8_t*)ALIGNED(vbuff);
+				vertices.get_data(aligned);
 				string vertexDataBase64 =
-					base64_encodeZ((uint8_t*)vertices, sizeof(GSVertex) * numVertices);
+					base64_encodeZ(aligned, vbuffSize);
 				string indexDataBase64 =
 					base64_encodeZ((uint8_t*)indices, sizeof(unsigned int) * numIndices);
+				delete[] vbuff;
 
 				// make mesh name
 				char tt[1024];
@@ -667,32 +812,39 @@ void command_import(Args& args) {
 			// clean up
 			delete[] verts;
 			delete[] tris;
-			delete[] vertices;
 			delete[] indices;
 		}
 		else {
 			// Create vertex list
-			GSVertex* vertices = new GSVertex[mesh->mNumVertices];
+			GSVertexBuffer vertices(mesh->mNumVertices);
 			for (unsigned int j = 0; j < mesh->mNumVertices; j++) {
-				vertices[j].px = mesh->mVertices[j].x;
-				vertices[j].py = -mesh->mVertices[j].y;
-				vertices[j].pz = mesh->mVertices[j].z;
-				vertices[j].nx = mesh->mNormals[j].x;
-				vertices[j].ny = -mesh->mNormals[j].y;
-				vertices[j].nz = mesh->mNormals[j].z;
+
+				// Add the new vertex
+				vertices.points[j].x = mesh->mVertices[j].x;
+				vertices.points[j].y = -mesh->mVertices[j].y;
+				vertices.points[j].z = mesh->mVertices[j].z;
+				vertices.normals[j].x = mesh->mNormals[j].x;
+				vertices.normals[j].y = -mesh->mNormals[j].y;
+				vertices.normals[j].z = mesh->mNormals[j].z;
 				if (mesh->mTangents) {
-					vertices[j].tx = mesh->mTangents[j].x;
-					vertices[j].ty = mesh->mTangents[j].y;
-					vertices[j].tz = mesh->mTangents[j].z;
+					vertices.tangents[j].x = mesh->mTangents[j].x;
+					vertices.tangents[j].y = mesh->mTangents[j].y;
+					vertices.tangents[j].z = mesh->mTangents[j].z;
 				}
 				if (mesh->mTextureCoords[0]) {
-					vertices[j].u = mesh->mTextureCoords[0][j].x;
-					vertices[j].v = 1.0f - mesh->mTextureCoords[0][j].y;
+					vertices.set_tex_coord(j,
+						mesh->mTextureCoords[0][j].x,
+						1.0f - mesh->mTextureCoords[0][j].y);
 				}
 			}
 			// encode vertices
+			size_t vbuffSize = vertices.size();
+			uint8_t* vbuff = new uint8_t[vbuffSize + 16];
+			uint8_t* aligned = (uint8_t*)ALIGNED(vbuff);
+			vertices.get_data(aligned);
 			string vertexDataBase64 =
-				base64_encodeZ((uint8_t*)vertices, sizeof(GSVertex) * mesh->mNumVertices);
+				base64_encodeZ(aligned, vbuffSize);
+			delete[] vbuff;
 
 			// Build index list
 			unsigned int* indices = new unsigned int[mesh->mNumFaces * 3];
@@ -717,7 +869,6 @@ void command_import(Args& args) {
 
 			// clean up
 			delete[] indices;
-			delete[] vertices;
 		}
 	}
 

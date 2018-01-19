@@ -121,7 +121,8 @@ Mask::Resource::Image::Image(Mask::MaskData* parent, std::string name, obs_data_
 				PLOG_ERROR("Image '%s' has empty data.", name.c_str());
 				throw std::logic_error("Image has empty data.");
 			}
-			std::vector<uint8_t> decoded = base64_decodeZ(base64data);
+			std::vector<uint8_t> decoded;
+			base64_decodeZ(base64data, decoded);
 			base64mips.emplace_back(decoded);
 			if (decoded.size() != (w * h * bpp)) {
 				size_t ds = decoded.size();
