@@ -154,7 +154,8 @@ Mask::Resource::Animation::Animation(Mask::MaskData* parent, std::string name, o
 			PLOG_ERROR("Animation '%s' channel has empty values data.", name.c_str());
 			throw std::logic_error("Animation channel has empty values data.");
 		}
-		std::vector<uint8_t> decoded = base64_decodeZ(base64data);
+		std::vector<uint8_t> decoded;
+		base64_decodeZ(base64data, decoded);
 		size_t numFloats = decoded.size() / sizeof(float);
 		channel.values.assign((float*)decoded.data(), (float*)decoded.data() + numFloats);
 

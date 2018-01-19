@@ -18,78 +18,57 @@
  */
 
 #pragma once
-#include "gs-vertex.h"
 #include <inttypes.h>
 #include <vector>
 extern "C" {
 	#pragma warning( push )
 	#pragma warning( disable: 4201 )
 	#include <libobs/graphics/graphics.h>
+	#include <libobs/obs.h>
 	#pragma warning( pop )
 }
 
+/* Stripped-down version of GS::VertexBuffer
+ *
+ * yes, this really is all there is to it. 
+ *
+ * the meshes load a block of memory from the json data
+ * with all the vertex data in it, so all we need to do
+ * is wrap it up.
+ *
+ * it is not our responsibility to delete the gs_vb_data 
+ * we were constructed with, either.
+ *
+ */
 namespace GS {
-	class VertexBuffer : public std::vector<Vertex> {
-		public:
-		/*!
-		* \brief Create a Vertex Buffer with specific size
-		*
-		* \param maximumVertices Maximum amount of vertices to store.
-		*/
-		VertexBuffer(size_t maximumVertices);
+	class VertexBuffer {
+	public:
+		VertexBuffer(gs_vb_data* d) {
+			m_vertexbufferdata = d;
+			obs_enter_graphics();
+			m_vertexbuffer = gs_vertexbuffer_create(m_vertexbufferdata, 0);
+			obs_leave_graphics();
+		}
+		~VertexBuffer() {
+			obs_enter_graphics();
+			gs_vertexbuffer_destroy(m_vertexbuffer);
+			obs_leave_graphics();
+		}
 
-		/*!
-		* \brief Create a Vertex Buffer with default size
-		* This will create a new vertex buffer with the default maximum size.
-		*
-		*/
-		VertexBuffer();
+		gs_vertbuffer_t* get() {
+			return get(true);
+		}
+		gs_vertbuffer_t* get(bool refreshGPU) {
+			if (refreshGPU)
+				gs_vertexbuffer_flush(m_vertexbuffer);
+			return m_vertexbuffer;
+		}
+		gs_vb_data* get_data() { return m_vertexbufferdata; }
+		size_t size() { return m_vertexbufferdata ? m_vertexbufferdata->num : 0; }
 
-		/*!
-		 * \brief Create a copy of a Vertex Buffer
-		 * Full Description below
-		 *
-		 * \param other The Vertex Buffer to copy
-		 */
-		VertexBuffer(VertexBuffer& other);
-
-		/*!
-		* \brief Create a Vertex Buffer from a Vertex array
-		* Full Description below
-		*
-		* \param other The Vertex array to use
-		*/
-		VertexBuffer(std::vector<Vertex>& other);
-
-		VertexBuffer(Vertex* buff, size_t len);
-
-
-		VertexBuffer(gs_vertbuffer_t* vb);
-
-		virtual ~VertexBuffer();
-
-		void set_uv_layers(uint32_t layers);
-
-		uint32_t uv_layers();
-
-		gs_vertbuffer_t* get();
-
-		gs_vertbuffer_t* get(bool refreshGPU);
-
-		protected:
-		size_t m_maximumVertices;
-		uint32_t m_uvwLayers;
-		gs_vb_data m_vertexbufferdata;
+	protected:
+		gs_vb_data* m_vertexbufferdata;
 		gs_vertbuffer_t* m_vertexbuffer;
 
-		// Data Storage
-		struct {
-			std::vector<vec3> positions;
-			std::vector<vec3> normals;
-			std::vector<vec3> tangents;
-			std::vector<uint32_t> colors;
-			std::vector<std::vector<vec4>> uvws;
-			std::vector<gs_tvertarray> uvwdata;
-		} m_data;
 	};
 }

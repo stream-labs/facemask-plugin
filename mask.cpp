@@ -184,7 +184,6 @@ std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::GetResource(const std::st
 	try {
 		auto res = Resource::IBase::Load(this, name, elmd);
 		if (res) {
-			PLOG_DEBUG("Loading resource %s...", name.c_str());
 			this->AddResource(name, res);
 			return res;
 		}

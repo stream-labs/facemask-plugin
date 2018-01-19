@@ -35,13 +35,16 @@ extern "C" {
 	#pragma warning( pop )
 }
 
+#define ALIGNED(XXX) (((size_t)(XXX) & 0xF) ? (((size_t)(XXX) + 0x10) & 0xFFFFFFFFFFFFFFF0ULL) : (size_t)(XXX))
 
 static const char* const S_DATA = "data";
 static const char* const S_VERTEX_BUFFER = "vertex-buffer";
 static const char* const S_INDEX_BUFFER = "index-buffer";
 
 Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t* data)
-	: IBase(parent, name) {
+	: IBase(parent, name)
+	, m_VertexBufferMemory(nullptr)
+	, m_deleteVBData(false) {
 
 	// We could be an embedded OBJ file, or raw geometry
 
@@ -53,8 +56,25 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 			PLOG_ERROR("Mesh '%s' has empty vertex data.", name.c_str());
 			throw std::logic_error("Mesh has empty vertex data.");
 		}
-		std::vector<uint8_t> decodedVertices = base64_decodeZ(vertex64data);
-		size_t numVertices = decodedVertices.size() / sizeof(GS::Vertex);
+		std::vector<uint8_t> decodedVertices;
+		base64_decode(vertex64data, decodedVertices);
+		// add extra to buffer size to allow for alignment
+		size_t vertBuffSize = zlib_size(decodedVertices) + 16;
+		m_VertexBufferMemory = new uint8_t[vertBuffSize];
+		uint8_t* aligned = (uint8_t*)ALIGNED(m_VertexBufferMemory);
+		zlib_decode(decodedVertices, aligned);
+		gs_vb_data* vbdata = (gs_vb_data*)aligned;
+
+		// set up pointers for memory image
+		size_t top = (size_t)aligned;
+		vbdata->points = (vec3*)((size_t)(vbdata->points) + top);
+		vbdata->normals = (vec3*)((size_t)(vbdata->normals) + top);
+		vbdata->tangents = (vec3*)((size_t)(vbdata->tangents) + top);
+		vbdata->colors = (uint32_t*)((size_t)(vbdata->colors) + top);
+		vbdata->tvarray = (gs_tvertarray*)((size_t)(vbdata->tvarray) + top);
+		for (int i = 0; i < vbdata->num_tex; i++) {
+			vbdata->tvarray[i].array = (void*)((size_t)(vbdata->tvarray[i].array) + top);
+		}
 
 		// Index Buffer
 		if (!obs_data_has_user_value(data, S_INDEX_BUFFER)) {
@@ -66,12 +86,12 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 			PLOG_ERROR("Mesh '%s' has empty index buffer data.", name.c_str());
 			throw std::logic_error("Mesh has empty index buffer data.");
 		}
-		std::vector<uint8_t> decodedIndices = base64_decodeZ(index64data);
+		std::vector<uint8_t> decodedIndices;
+		base64_decodeZ(index64data, decodedIndices);
 		size_t numIndices = decodedIndices.size() / sizeof(uint32_t);
 
 		// Make Buffers
-		m_VertexBuffer = std::make_shared<GS::VertexBuffer>
-			((GS::Vertex*)decodedVertices.data(), numVertices);
+		m_VertexBuffer = std::make_shared<GS::VertexBuffer>(vbdata);
 		m_IndexBuffer = std::make_shared<GS::IndexBuffer>
 			((uint32_t*)decodedIndices.data(), numIndices);
 	}
@@ -95,10 +115,10 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 	// calculate center
 	vec3 center;
 	vec3_zero(&center);
-	GS::Vertex* v = m_VertexBuffer->data();
+	vec3* v = m_VertexBuffer->get_data()->points;
 	size_t numV = m_VertexBuffer->size();
 	for (size_t i = 0; i < numV; i++, v++) {
-		vec3_add(&center, &center, &(v->position));
+		vec3_add(&center, &center, v);
 	}
 	vec3_divf(&center, &center, (float)numV);
 	vec4_set(&m_center, center.x, center.y, center.z, 1.0f);
@@ -109,7 +129,12 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, std::string
 	LoadObj(file);
 }
 
-Mask::Resource::Mesh::~Mesh() {}
+Mask::Resource::Mesh::~Mesh() {
+	if (m_VertexBufferMemory)
+		delete[] m_VertexBufferMemory;
+	if (m_deleteVBData)
+		gs_vbdata_destroy(m_VertexBuffer->get_data());
+}
 
 Mask::Resource::Type Mask::Resource::Mesh::GetType() {
 	return Mask::Resource::Type::Mesh;
@@ -148,13 +173,23 @@ void Mask::Resource::Mesh::LoadObj(std::string file) {
 		return;
 	}
 
+	struct Vertex {
+		vec3 position;
+		vec3 normal;
+		vec3 tangent;
+		vec2 uv;
+	};
+
 	// Create GPU mesh from tinyobj format.
 	char keybuff[128];
-	std::vector<GS::Vertex> vertices;
+	std::vector<Vertex> vertices;
 	std::vector<std::string> vertexKeys;
 	std::vector<uint32_t> indices;
-	for (auto shape : shapes) {
-		for (auto index : shape.mesh.indices) {
+	for (size_t i = 0; i < shapes.size(); i++) {
+		tinyobj::shape_t& shape = shapes[i];
+		for (size_t j = 0; j < shape.mesh.indices.size(); j++) {
+			tinyobj::index_t& index = shape.mesh.indices[j];
+
 			snprintf(keybuff, sizeof(keybuff), "%d-%d-%d", index.vertex_index, index.normal_index,
 				index.texcoord_index);
 			std::string key = keybuff;
@@ -165,7 +200,7 @@ void Mask::Resource::Mesh::LoadObj(std::string file) {
 					break;
 		
 			if (idx >= vertexKeys.size()) {
-				GS::Vertex vtx;
+				Vertex vtx;
 				if (index.vertex_index == -1)
 					break; 
 				vtx.position.x = attrib.vertices[3 * index.vertex_index + 0];
@@ -179,8 +214,8 @@ void Mask::Resource::Mesh::LoadObj(std::string file) {
 					vec3_norm(&vtx.normal, &vtx.position); // Normal from Vertex position.
 				}
 				if (index.texcoord_index != -1 && attrib.texcoords.size() > 0) {
-					vtx.uv[0].x = attrib.texcoords[2 * index.texcoord_index + 0];
-					vtx.uv[0].y = 1.0f - attrib.texcoords[2 * index.texcoord_index + 1];
+					vtx.uv.x = attrib.texcoords[2 * index.texcoord_index + 0];
+					vtx.uv.y = 1.0f - attrib.texcoords[2 * index.texcoord_index + 1];
 				}
 				vertices.push_back(vtx);
 				vertexKeys.push_back(key);
@@ -190,23 +225,40 @@ void Mask::Resource::Mesh::LoadObj(std::string file) {
 		}
 	}
 
+	// Make a libOBS vertex buffer
+	m_deleteVBData = true;
+	gs_vb_data* vbdata = gs_vbdata_create();
+	vbdata->num = vertices.size();
+	vbdata->num_tex = 1;
+	vbdata->points = (vec3*)bmalloc(sizeof(vec3) * vertices.size());
+	vbdata->normals = (vec3*)bmalloc(sizeof(vec3) * vertices.size());
+	vbdata->tangents = (vec3*)bmalloc(sizeof(vec3) * vertices.size());
+	vbdata->colors = (uint32_t*)bmalloc(sizeof(uint32_t) * vertices.size());
+	vbdata->tvarray = (gs_tvertarray*)bmalloc(sizeof(gs_tvertarray));
+	vbdata->tvarray[0].width = 2;
+	vbdata->tvarray[0].array = bmalloc(sizeof(float) * 2 * vertices.size());
+	for (size_t i = 0; i < vertices.size(); i++) {
+		const Vertex& vtx = vertices[i];
+		vec3_copy(&vbdata->points[i], &vtx.position);
+		vec3_copy(&vbdata->normals[i], &vtx.normal);
+		vec3_copy(&vbdata->tangents[i], &vtx.tangent);
+		vec2* uvs = (vec2*)(vbdata->tvarray[0].array);
+		vec2_copy(uvs + i, &vtx.uv);
+	}
+
 	// Calculate tangents
 	for (size_t i = 0; i < indices.size() / 3; i += 3) {
 		uint32_t idx0 = indices[i + 0];
 		uint32_t idx1 = indices[i + 1];
 		uint32_t idx2 = indices[i + 2];
 
-		vertices[idx0].tangent = CalculateTangent(vertices[idx0], vertices[idx1], vertices[idx2]);
-		vertices[idx1].tangent = CalculateTangent(vertices[idx1], vertices[idx2], vertices[idx0]);
-		vertices[idx2].tangent = CalculateTangent(vertices[idx2], vertices[idx0], vertices[idx1]);
+		vertices[idx0].tangent = CalculateTangent(vbdata, idx0, idx1, idx2);
+		vertices[idx1].tangent = CalculateTangent(vbdata, idx1, idx2, idx0);
+		vertices[idx2].tangent = CalculateTangent(vbdata, idx2, idx0, idx1);
 	}
 	
 	// Create Vertex Buffer
-	m_VertexBuffer = std::make_shared<GS::VertexBuffer>((uint32_t)vertices.size());
-	m_VertexBuffer->resize(vertices.size());
-	for (size_t idx = 0; idx < vertices.size(); idx++) {
-		m_VertexBuffer->at(idx) = vertices[idx];
-	}
+	m_VertexBuffer = std::make_shared<GS::VertexBuffer>(vbdata);
 	
 	// Create Index Buffer
 	m_IndexBuffer = std::make_shared<GS::IndexBuffer>((uint32_t)indices.size());
@@ -216,29 +268,31 @@ void Mask::Resource::Mesh::LoadObj(std::string file) {
 	}
 }
 
-static void vec2_from_vec4(vec2* v2, const vec4* v4) {
-	v2->x = v4->x;
-	v2->y = v4->y;
-}
 
 // CalculateTangent
 //
 // https://learnopengl.com/#!Advanced-Lighting/Normal-Mapping
 //
 //
-vec3 Mask::Resource::Mesh::CalculateTangent(const GS::Vertex& v1,
-	const GS::Vertex& v2, const GS::Vertex& v3) {
+vec3 Mask::Resource::Mesh::CalculateTangent(gs_vb_data* vbdata, 
+	int i1, int i2, int i3) {
+
+	const vec3* v1 = &(vbdata->points[i1]);
+	const vec3* v2 = &(vbdata->points[i2]);
+	const vec3* v3 = &(vbdata->points[i3]);
+
+	float *p = (float*)vbdata->tvarray[0].array;
+	const vec2* uv1 = (vec2*)(p + (i1 * 2));
+	const vec2* uv2 = (vec2*)(p + (i2 * 2));
+	const vec2* uv3 = (vec2*)(p + (i3 * 2));
 
 	vec3 edge1, edge2;
-	vec3_sub(&edge1, &v2.position, &v1.position);
-	vec3_sub(&edge2, &v3.position, &v1.position);
+	vec3_sub(&edge1, v2, v1);
+	vec3_sub(&edge2, v3, v1);
 
-	vec2 deltaUV1, deltaUV2, uv1, uv2, uv3;
-	vec2_from_vec4(&uv1, &v1.uv[0]);
-	vec2_from_vec4(&uv2, &v2.uv[0]);
-	vec2_from_vec4(&uv3, &v3.uv[0]);
-	vec2_sub(&deltaUV1, &uv2, &uv1);
-	vec2_sub(&deltaUV2, &uv3, &uv1);
+	vec2 deltaUV1, deltaUV2;
+	vec2_sub(&deltaUV1, uv2, uv1);
+	vec2_sub(&deltaUV2, uv3, uv1);
 
 	float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
 
