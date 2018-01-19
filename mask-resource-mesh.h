@@ -44,8 +44,8 @@ namespace Mask {
 			void LoadObj(std::string file);
 
 		protected:
-			__declspec(align(16)) std::shared_ptr<GS::VertexBuffer> m_VertexBuffer;
-			__declspec(align(16)) std::shared_ptr<GS::IndexBuffer> m_IndexBuffer;
+			std::shared_ptr<GS::VertexBuffer> m_VertexBuffer;
+			std::shared_ptr<GS::IndexBuffer> m_IndexBuffer;
 			vec4 m_center;
 
 			vec3 CalculateTangent(const GS::Vertex& v0,
