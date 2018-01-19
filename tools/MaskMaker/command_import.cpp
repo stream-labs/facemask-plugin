@@ -502,8 +502,8 @@ void command_import(Args& args) {
 		aiProcess_Triangulate |
 		aiProcess_GenNormals |
 		aiProcess_CalcTangentSpace |
-		aiProcess_OptimizeGraph |
-		aiProcess_OptimizeMeshes |
+		//aiProcess_OptimizeGraph |   BOO! THIS GETS RID OF LOCATORS todo: mod assimp!
+		//aiProcess_OptimizeMeshes |
 		aiProcess_SortByPType);
 
 	// If the import failed, report it

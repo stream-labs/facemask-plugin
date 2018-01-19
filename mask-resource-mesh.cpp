@@ -221,6 +221,11 @@ void Mask::Resource::Mesh::LoadObj(std::string file) {
 }
 
 
+static void vec2_from_vec4(vec2* v2, const vec4* v4) {
+	v2->x = v4->x;
+	v2->y = v4->y;
+}
+
 // CalculateTangent
 //
 // https://learnopengl.com/#!Advanced-Lighting/Normal-Mapping

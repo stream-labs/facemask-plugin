@@ -53,7 +53,6 @@ GS::VertexBuffer::VertexBuffer(const std::vector<GS::Vertex>& verts)
  : m_vb_data(nullptr), m_vertexbuffer(nullptr), m_raw(nullptr) {
 
 	// Make a libOBS vertex buffer
-	obs_enter_graphics();
 	m_vb_data = gs_vbdata_create();
 	m_vb_data->num = verts.size();
 	m_vb_data->num_tex = 8;
@@ -79,6 +78,7 @@ GS::VertexBuffer::VertexBuffer(const std::vector<GS::Vertex>& verts)
 	}
 
 	// create the gs vertex buffer
+	obs_enter_graphics();
 	m_vertexbuffer = gs_vertexbuffer_create(m_vb_data, 0);
 	obs_leave_graphics();
 }
