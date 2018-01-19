@@ -48,7 +48,8 @@ namespace Mask {
 			std::shared_ptr<GS::IndexBuffer>	m_IndexBuffer;
 			vec4								m_center;
 
-			vec3 CalculateTangent(gs_vb_data* vbdata, int i1, int i2, int i3);
+			vec3 CalculateTangent(const GS::Vertex& v1,
+				const GS::Vertex& v2, const GS::Vertex& v3);
 		};
 	}
 }

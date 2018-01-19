@@ -198,23 +198,20 @@ void Mask::Resource::Mesh::LoadObj(std::string file) {
 		}
 	}
 
-	// Create Vertex Buffer
-	m_VertexBuffer = std::make_shared<GS::VertexBuffer>(vertices);
-
-	/*
 	// Calculate tangents
-	gs_vb_data* vbdata = m_VertexBuffer->get_data();
 	for (size_t i = 0; i < indices.size() / 3; i += 3) {
 		uint32_t idx0 = indices[i + 0];
 		uint32_t idx1 = indices[i + 1];
 		uint32_t idx2 = indices[i + 2];
 
-		vertices[idx0].tangent = CalculateTangent(vbdata, idx0, idx1, idx2);
-		vertices[idx1].tangent = CalculateTangent(vbdata, idx1, idx2, idx0);
-		vertices[idx2].tangent = CalculateTangent(vbdata, idx2, idx0, idx1);
+		vertices[idx0].tangent = CalculateTangent(vertices[idx0], vertices[idx1], vertices[idx2]);
+		vertices[idx1].tangent = CalculateTangent(vertices[idx1], vertices[idx2], vertices[idx0]);
+		vertices[idx2].tangent = CalculateTangent(vertices[idx2], vertices[idx0], vertices[idx1]);
 	}
-	*/
-	
+
+	// Create Vertex Buffer
+	m_VertexBuffer = std::make_shared<GS::VertexBuffer>(vertices);
+
 	// Create Index Buffer
 	m_IndexBuffer = std::make_shared<GS::IndexBuffer>((uint32_t)indices.size());
 	m_IndexBuffer->resize(indices.size());
@@ -229,25 +226,19 @@ void Mask::Resource::Mesh::LoadObj(std::string file) {
 // https://learnopengl.com/#!Advanced-Lighting/Normal-Mapping
 //
 //
-vec3 Mask::Resource::Mesh::CalculateTangent(gs_vb_data* vbdata, 
-	int i1, int i2, int i3) {
-
-	const vec3* v1 = &(vbdata->points[i1]);
-	const vec3* v2 = &(vbdata->points[i2]);
-	const vec3* v3 = &(vbdata->points[i3]);
-
-	float *p = (float*)vbdata->tvarray[0].array;
-	const vec2* uv1 = (vec2*)(p + (i1 * 2));
-	const vec2* uv2 = (vec2*)(p + (i2 * 2));
-	const vec2* uv3 = (vec2*)(p + (i3 * 2));
+vec3 Mask::Resource::Mesh::CalculateTangent(const GS::Vertex& v1,
+	const GS::Vertex& v2, const GS::Vertex& v3) {
 
 	vec3 edge1, edge2;
-	vec3_sub(&edge1, v2, v1);
-	vec3_sub(&edge2, v3, v1);
+	vec3_sub(&edge1, &v2.position, &v1.position);
+	vec3_sub(&edge2, &v3.position, &v1.position);
 
-	vec2 deltaUV1, deltaUV2;
-	vec2_sub(&deltaUV1, uv2, uv1);
-	vec2_sub(&deltaUV2, uv3, uv1);
+	vec2 deltaUV1, deltaUV2, uv1, uv2, uv3;
+	vec2_from_vec4(&uv1, &v1.uv[0]);
+	vec2_from_vec4(&uv2, &v2.uv[0]);
+	vec2_from_vec4(&uv3, &v3.uv[0]);
+	vec2_sub(&deltaUV1, &uv2, &uv1);
+	vec2_sub(&deltaUV2, &uv3, &uv1);
 
 	float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
 
