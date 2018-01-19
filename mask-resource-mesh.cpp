@@ -64,7 +64,7 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 		uint8_t* aligned = (uint8_t*)ALIGNED(m_VertexBufferMemory);
 		zlib_decode(decodedVertices, aligned);
 		gs_vb_data* vbdata = (gs_vb_data*)aligned;
-
+		 
 		// set up pointers for memory image
 		size_t top = (size_t)aligned;
 		vbdata->points = (vec3*)((size_t)(vbdata->points) + top);
@@ -125,15 +125,18 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 } 
 
 Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, std::string file)
-	: IBase(parent, name) {
+	: IBase(parent, name)
+	, m_VertexBufferMemory(nullptr) {
 	LoadObj(file);
 }
 
 Mask::Resource::Mesh::~Mesh() {
-	if (m_VertexBufferMemory)
+	if (m_VertexBufferMemory) {
 		delete[] m_VertexBufferMemory;
-	if (m_deleteVBData)
+	}
+	if (m_deleteVBData) {
 		gs_vbdata_destroy(m_VertexBuffer->get_data());
+	}
 }
 
 Mask::Resource::Type Mask::Resource::Mesh::GetType() {

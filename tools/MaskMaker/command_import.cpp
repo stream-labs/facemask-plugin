@@ -62,8 +62,8 @@ public:
 		colors = new uint32_t[num];
 		num_tex = isSkinned ? 8 : 1;
 		tvarray = new gs_tvertarray[num_tex];
-		tvarray[0].width = 2;
-		tvarray[0].array = new float[num * 2];
+		tvarray[0].width = 4;
+		tvarray[0].array = new float[num * 4];
 		if (isSkinned) {
 			for (int i = 1; i < 8; i++) {
 				tvarray[i].width = 4;
@@ -95,8 +95,8 @@ public:
 	void set_tex_coord(size_t vidx, float u, float v) {
 		float* p = (float*)tvarray[0].array;
 		assert(vidx < num);
-		p[vidx * 2 + 0] = u;
-		p[vidx * 2 + 1] = v;
+		p[vidx * 4 + 0] = u;
+		p[vidx * 4 + 1] = v;
 	}
 	void set_tex_coord(size_t vidx, int tidx, float v) {
 		assert(vidx < num);
