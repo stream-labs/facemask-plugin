@@ -18,6 +18,7 @@
  */
 
 #include "gs-indexbuffer.h"
+#include "utils.h"
 extern "C" {
 	#pragma warning( push )
 	#pragma warning( disable: 4201 )
@@ -25,49 +26,32 @@ extern "C" {
 	#pragma warning( pop )
 }
 
-const uint32_t defaultMaximumVertices = 65535u;
+GS::IndexBuffer::IndexBuffer(const uint8_t* raw, size_t len)
+ : IndexBuffer((uint32_t*)ALIGNED(raw), len) {
+	m_raw = raw;
+}
 
-GS::IndexBuffer::IndexBuffer(size_t maximumVertices) {
-	this->reserve(maximumVertices);
-
+GS::IndexBuffer::IndexBuffer(const uint32_t* buff, size_t len) {
+	this->assign(buff, buff + len);
 	obs_enter_graphics();
-	m_indexBuffer = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG, this->data(), maximumVertices, GS_DYNAMIC);
+	m_indexBuffer = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG, this->data(), len, 0);
 	obs_leave_graphics();
 }
 
-GS::IndexBuffer::IndexBuffer() : IndexBuffer(defaultMaximumVertices) {}
-
-GS::IndexBuffer::IndexBuffer(IndexBuffer& other) : IndexBuffer(other.size()) {
-	std::copy(other.begin(), other.end(), this->end());
+GS::IndexBuffer::IndexBuffer(const std::vector<uint32_t>& other)
+ : IndexBuffer(other.data(), other.size()) {
 }
 
-GS::IndexBuffer::IndexBuffer(std::vector<uint32_t>& other) : IndexBuffer(other.size()) {
-	std::copy(other.begin(), other.end(), this->end());
-}
-
-GS::IndexBuffer::IndexBuffer(uint32_t* buff, size_t len) : IndexBuffer(len) {
-	this->assign(buff, buff + len);
-}
 
 
 GS::IndexBuffer::~IndexBuffer() {
-	// This crashes out in OBS STUDIO. Just leak memory.
-#ifndef OBS_STUDIO_BUILD
 	obs_enter_graphics(); 
 	gs_indexbuffer_destroy(m_indexBuffer);
 	obs_leave_graphics();
-#endif
+	if (m_raw)
+		delete[] m_raw;
 }
 
 gs_indexbuffer_t* GS::IndexBuffer::get() {
-	return get(true);
-}
-
-gs_indexbuffer_t* GS::IndexBuffer::get(bool refreshGPU) {
-	if (refreshGPU) {
-		obs_enter_graphics();
-		gs_indexbuffer_flush(m_indexBuffer);
-		obs_leave_graphics();
-	}
 	return m_indexBuffer;
 }

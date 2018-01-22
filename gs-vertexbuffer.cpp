@@ -18,6 +18,7 @@
  */
 
 #include "gs-vertexbuffer.h"
+#include "utils.h"
 #include "exceptions.h"
 extern "C" {
 	#pragma warning( push )

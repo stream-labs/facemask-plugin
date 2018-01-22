@@ -58,8 +58,8 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 		base64_decode(vertex64data, decodedVertices);
 		// add extra to buffer size to allow for alignment
 		size_t vertBuffSize = zlib_size(decodedVertices) + 16;
-		uint8_t* buffer = new uint8_t[vertBuffSize];
-		zlib_decode(decodedVertices, (uint8_t*)ALIGNED(buffer));
+		uint8_t* vtxbuffer = new uint8_t[vertBuffSize];
+		zlib_decode(decodedVertices, (uint8_t*)ALIGNED(vtxbuffer));
 
 		// Index Buffer
 		if (!obs_data_has_user_value(data, S_INDEX_BUFFER)) {
@@ -72,13 +72,15 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 			throw std::logic_error("Mesh has empty index buffer data.");
 		}
 		std::vector<uint8_t> decodedIndices;
-		base64_decodeZ(index64data, decodedIndices);
-		size_t numIndices = decodedIndices.size() / sizeof(uint32_t);
+		base64_decode(index64data, decodedIndices);
+		// add extra to buffer size to allow for alignment
+		size_t idxBuffSize = zlib_size(decodedIndices) + 16;
+		uint8_t* idxbuffer = new uint8_t[idxBuffSize];
+		zlib_decode(decodedIndices, (uint8_t*)ALIGNED(idxbuffer));
 
 		// Make Buffers
-		m_VertexBuffer = std::make_shared<GS::VertexBuffer>(buffer);
-		m_IndexBuffer = std::make_shared<GS::IndexBuffer>
-			((uint32_t*)decodedIndices.data(), numIndices);
+		m_VertexBuffer = std::make_shared<GS::VertexBuffer>(vtxbuffer);
+		m_IndexBuffer = std::make_shared<GS::IndexBuffer>(idxbuffer, (idxBuffSize / sizeof(uint32_t)));
 	}
 	
 	// OBJ data?
@@ -213,11 +215,7 @@ void Mask::Resource::Mesh::LoadObj(std::string file) {
 	m_VertexBuffer = std::make_shared<GS::VertexBuffer>(vertices);
 
 	// Create Index Buffer
-	m_IndexBuffer = std::make_shared<GS::IndexBuffer>((uint32_t)indices.size());
-	m_IndexBuffer->resize(indices.size());
-	for (size_t idx = 0; idx < indices.size(); idx++) {
-		m_IndexBuffer->at(idx) = indices[idx];
-	}
+	m_IndexBuffer = std::make_shared<GS::IndexBuffer>(indices);
 }
 
 
