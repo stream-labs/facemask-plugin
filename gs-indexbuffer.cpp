@@ -31,7 +31,8 @@ GS::IndexBuffer::IndexBuffer(const uint8_t* raw, size_t len)
 	m_raw = raw;
 }
 
-GS::IndexBuffer::IndexBuffer(const uint32_t* buff, size_t len) {
+GS::IndexBuffer::IndexBuffer(const uint32_t* buff, size_t len)
+ : m_raw(nullptr) {
 	this->assign(buff, buff + len);
 	obs_enter_graphics();
 	m_indexBuffer = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG, this->data(), len, 0);
