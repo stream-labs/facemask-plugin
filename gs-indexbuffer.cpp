@@ -31,17 +31,18 @@ GS::IndexBuffer::IndexBuffer(const uint8_t* raw, size_t len)
 	m_raw = raw;
 }
 
+GS::IndexBuffer::IndexBuffer(const std::vector<uint32_t>& other)
+	: IndexBuffer(other.data(), other.size()) {
+}
+
 GS::IndexBuffer::IndexBuffer(const uint32_t* buff, size_t len)
  : m_raw(nullptr) {
-	this->assign(buff, buff + len);
+	m_numIndices = len;
 	obs_enter_graphics();
-	m_indexBuffer = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG, this->data(), len, 0);
+	m_indexBuffer = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG, (void*)buff, len, 0);
 	obs_leave_graphics();
 }
 
-GS::IndexBuffer::IndexBuffer(const std::vector<uint32_t>& other)
- : IndexBuffer(other.data(), other.size()) {
-}
 
 
 

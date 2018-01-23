@@ -73,14 +73,15 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 		}
 		std::vector<uint8_t> decodedIndices;
 		base64_decode(index64data, decodedIndices);
+		size_t idxBuffSize = zlib_size(decodedIndices);
+		size_t numIndices = idxBuffSize / sizeof(uint32_t);
 		// add extra to buffer size to allow for alignment
-		size_t idxBuffSize = zlib_size(decodedIndices) + 16;
-		uint8_t* idxbuffer = new uint8_t[idxBuffSize];
+		uint8_t* idxbuffer = new uint8_t[idxBuffSize + 16];
 		zlib_decode(decodedIndices, (uint8_t*)ALIGNED(idxbuffer));
 
 		// Make Buffers
 		m_VertexBuffer = std::make_shared<GS::VertexBuffer>(vtxbuffer);
-		m_IndexBuffer = std::make_shared<GS::IndexBuffer>(idxbuffer, ((idxBuffSize - 16) / sizeof(uint32_t)));
+		m_IndexBuffer = std::make_shared<GS::IndexBuffer>(idxbuffer, numIndices);
 	}
 	
 	// OBJ data?
