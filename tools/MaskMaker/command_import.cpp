@@ -593,7 +593,7 @@ void command_import(Args& args) {
 				if (verts[j].bones.size() > MAX_BONES_PER_SKIN) {
 					cout << "WARNING! SKINNED MESH VERTEX " << j << " HAS TOO MANY WEIGHTS! " << verts[j].bones.size() << endl;
 					for (unsigned int k = 0; k < verts[j].bones.size(); k++) {
-						cout << " vert bone index: " << verts[j].bones[k].bone << endl;
+						cout << " vert bone index: " << verts[j].bones[k].bone << " : " << verts[j].bones[k].weight << endl;
 					}
 				}
 				float total = 0.0f;

@@ -80,7 +80,7 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 
 		// Make Buffers
 		m_VertexBuffer = std::make_shared<GS::VertexBuffer>(vtxbuffer);
-		m_IndexBuffer = std::make_shared<GS::IndexBuffer>(idxbuffer, (idxBuffSize / sizeof(uint32_t)));
+		m_IndexBuffer = std::make_shared<GS::IndexBuffer>(idxbuffer, ((idxBuffSize - 16) / sizeof(uint32_t)));
 	}
 	
 	// OBJ data?
