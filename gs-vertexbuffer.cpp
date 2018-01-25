@@ -18,6 +18,7 @@
  */
 
 #include "gs-vertexbuffer.h"
+#include "utils.h"
 #include "exceptions.h"
 extern "C" {
 	#pragma warning( push )
@@ -32,6 +33,12 @@ GS::VertexBuffer::VertexBuffer(uint8_t* raw)
 	gs_vb_data* vbdata = (gs_vb_data*)ALIGNED(raw);
 
 	// classic memory image dereferencing
+	//
+	// For more info on how this data was created, see the Maskmaker
+	// code that created it:
+	//
+	// facemask-plugin\tools\MaskMaker\command_import.cpp : GSVertexBuffer::get_data/size
+	//
 	size_t top = (size_t)vbdata;
 	vbdata->points = (vec3*)((size_t)(vbdata->points) + top);
 	vbdata->normals = (vec3*)((size_t)(vbdata->normals) + top);
@@ -41,7 +48,7 @@ GS::VertexBuffer::VertexBuffer(uint8_t* raw)
 	for (int i = 0; i < vbdata->num_tex; i++) {
 		vbdata->tvarray[i].array = (void*)((size_t)(vbdata->tvarray[i].array) + top);
 	}
-
+	
 	// create the gs vertex buffer
 	obs_enter_graphics();
 	m_vertexbuffer = gs_vertexbuffer_create(vbdata, 0);

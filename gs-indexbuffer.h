@@ -27,21 +27,22 @@ extern "C" {
 	#pragma warning( pop )
 }
 
+
+
 namespace GS {
-	class IndexBuffer : public std::vector<uint32_t> {
-		public:
-		IndexBuffer(size_t maximumVertices);
-		IndexBuffer();
-		IndexBuffer(IndexBuffer& other);
-		IndexBuffer(std::vector<uint32_t>& other);
-		IndexBuffer(uint32_t* buff, size_t len);
+	class IndexBuffer {
+	public:
+		IndexBuffer(const uint8_t* raw, size_t len);
+		IndexBuffer(const std::vector<uint32_t>& other);
+		IndexBuffer(const uint32_t* buff, size_t len);
 		virtual ~IndexBuffer();
-		
+
 		gs_indexbuffer_t* get();
+		size_t size() { return m_numIndices; }
 
-		gs_indexbuffer_t* get(bool refreshGPU);
-
-		protected:
-		gs_indexbuffer_t* m_indexBuffer;
+	protected:
+		size_t				m_numIndices;
+		const uint8_t*		m_raw;
+		gs_indexbuffer_t*	m_indexBuffer;
 	};
 }

@@ -24,6 +24,10 @@
 #include <vector>
 #include "base64.h"
 
+// ALIGNED : macro to align a memory address to 16b boundary
+#define ALIGNED(XXX) (((size_t)(XXX) & 0xF) ? (((size_t)(XXX) + 0x10) & 0xFFFFFFFFFFFFFFF0ULL) : (size_t)(XXX))
+
+
 namespace Utils {
 
 	extern const char* GetTempPath();

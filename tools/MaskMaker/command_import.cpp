@@ -569,6 +569,8 @@ void command_import(Args& args) {
 					}
 				}
 			}
+
+			// create connections from triangles -> bones
 			for (unsigned int j = 0; j < mesh->mNumFaces; j++) {
 				aiFace& face = mesh->mFaces[j];
 				assert(face.mNumIndices == 3);
@@ -585,13 +587,16 @@ void command_import(Args& args) {
 				}
 			}
 
-			// sanity check
+			// sanity checks
 			for (unsigned int j = 0; j < mesh->mNumVertices; j++) {
 				if (verts[j].bones.size() == 0) {
 					cout << "WARNING! SKINNED MESH HAS ENTIRELY UNWEIGHTED VERTEX!" << endl;
 				}
 				if (verts[j].bones.size() > MAX_BONES_PER_SKIN) {
-					cout << "WARNING! SKINNED MESH VERTEX HAS TOO MANY WEIGHTS!" << endl;
+					cout << "WARNING! SKINNED MESH VERTEX " << j << " HAS TOO MANY WEIGHTS! " << verts[j].bones.size() << endl;
+					for (unsigned int k = 0; k < verts[j].bones.size(); k++) {
+						cout << " vert bone index: " << verts[j].bones[k].bone << " : " << verts[j].bones[k].weight << endl;
+					}
 				}
 				float total = 0.0f;
 				for (unsigned int k = 0; k < verts[j].bones.size(); k++) {
@@ -606,7 +611,7 @@ void command_import(Args& args) {
 			}
 			for (unsigned int j = 0; j < mesh->mNumFaces; j++) {
 				if (tris[j].bones.size() > MAX_BONES_PER_SKIN) {
-					cout << "WARNING! SKINNED MESH TRIANGLE HAS TOO MANY WEIGHTS! " << tris[j].bones.size() << endl;
+					cout << "WARNING! SKINNED MESH TRIANGLE " << j << " HAS TOO MANY WEIGHTS! " << tris[j].bones.size() << endl;
 				}
 			}
 
