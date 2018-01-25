@@ -349,8 +349,8 @@ VertDataOut VSPhong(VertDataIn v_in)
 	vert_out.vpos = mul(vinpos, World);	
 	
 	if (transformNormals == 1) {
-		vert_out.norm = mul(float4(vinnorm.xyz, 0.0), World).xyz;
-		vert_out.tangent = mul(float4(vintangent.xyz, 0.0), World).xyz;
+		vert_out.norm = mul(vinnorm, World).xyz;
+		vert_out.tangent = mul(vintangent, World).xyz;
 	}
 	else {
 		vert_out.norm = vinnorm.xyz;
