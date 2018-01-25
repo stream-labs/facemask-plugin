@@ -569,6 +569,8 @@ void command_import(Args& args) {
 					}
 				}
 			}
+
+			// create connections from triangles -> bones
 			for (unsigned int j = 0; j < mesh->mNumFaces; j++) {
 				aiFace& face = mesh->mFaces[j];
 				assert(face.mNumIndices == 3);
@@ -585,7 +587,7 @@ void command_import(Args& args) {
 				}
 			}
 
-			// sanity check
+			// sanity checks
 			for (unsigned int j = 0; j < mesh->mNumVertices; j++) {
 				if (verts[j].bones.size() == 0) {
 					cout << "WARNING! SKINNED MESH HAS ENTIRELY UNWEIGHTED VERTEX!" << endl;

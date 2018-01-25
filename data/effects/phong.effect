@@ -341,8 +341,8 @@ VertDataOut VSPhong(VertDataIn v_in)
 			}
 		}
 		vinpos = float4(respos, 1.0);
-		vinnorm = float4(resnorm, 0.0);
-		vintangent = float4(restangent, 0.0);
+		vinnorm = float4(normalize(resnorm), 0.0);
+		vintangent = float4(normalize(restangent), 0.0);
 	}
 	
 	vert_out.pos = mul(vinpos, ViewProj);
