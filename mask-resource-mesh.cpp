@@ -103,12 +103,14 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 	// calculate center
 	vec3 center;
 	vec3_zero(&center);
-	vec3* v = m_VertexBuffer->get_data()->points;
-	size_t numV = m_VertexBuffer->size();
-	for (size_t i = 0; i < numV; i++, v++) {
-		vec3_add(&center, &center, v);
+	if (m_VertexBuffer->get_data()) {
+		vec3* v = m_VertexBuffer->get_data()->points;
+		size_t numV = m_VertexBuffer->size();
+		for (size_t i = 0; i < numV; i++, v++) {
+			vec3_add(&center, &center, v);
+		}
+		vec3_divf(&center, &center, (float)numV);
 	}
-	vec3_divf(&center, &center, (float)numV);
 	vec4_set(&m_center, center.x, center.y, center.z, 1.0f);
 } 
 

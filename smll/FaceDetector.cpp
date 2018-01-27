@@ -226,10 +226,14 @@ namespace smll {
 			throw std::invalid_argument(
 				"passing null pointers to make triangulation");
 		}
-		if (*vbuff)
-			gs_vertexbuffer_destroy(*vbuff);
-		if (*ibuff)
-			gs_indexbuffer_destroy(*ibuff);
+		if (*vbuff || *ibuff) {
+			obs_enter_graphics();
+			if (*vbuff)
+				gs_vertexbuffer_destroy(*vbuff);
+			if (*ibuff)
+				gs_indexbuffer_destroy(*ibuff);
+			obs_leave_graphics();
+		}
 		*vbuff = nullptr;
 		*ibuff = nullptr;
 
@@ -358,8 +362,11 @@ namespace smll {
 
 		// make lines
 		if (linebuff) {
-			if (*linebuff)
+			if (*linebuff) {
+				obs_enter_graphics();
 				gs_indexbuffer_destroy(*linebuff);
+				obs_leave_graphics();
+			}
 			// convert to lines
 			std::vector<uint32_t> linesList;
 			for (auto t : triangleList) {
