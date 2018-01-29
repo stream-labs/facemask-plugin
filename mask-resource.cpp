@@ -27,6 +27,7 @@
 #include "mask-resource-material.h"
 #include "mask-resource-mesh.h"
 #include "mask-resource-model.h"
+#include "mask-resource-morph.h"
 #include "mask-resource-skinned-model.h"
 #include "mask-resource-sequence.h"
 #include "mask-resource-sound.h"
@@ -116,6 +117,10 @@ std::shared_ptr<Mask::Resource::IBase> Mask::Resource::IBase::Load(Mask::MaskDat
 	else if (type == "model") {
 		// Model
 		return std::make_shared<Mask::Resource::Model>(parent, name, data);
+	}
+	else if (type == "morph") {
+		// Morph
+		return std::make_shared<Mask::Resource::Morph>(parent, name, data);
 	}
 	else if (type == "skinned-model") {
 		// Skinned Model
