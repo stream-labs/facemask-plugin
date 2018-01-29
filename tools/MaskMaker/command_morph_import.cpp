@@ -21,6 +21,38 @@
 #include "command_morph_import.h"
 
 
+static string g_locator_name = "locator";
+
+extern void RemovePostRotationNodes(aiNode* node);
+
+
+void GetLandmarkPoints(const aiScene* scene, aiNode* node, aiVector3D* points) {
+	if (!node)
+		return;
+
+	// see if this is one of the landmark point locators
+	string nodeName = node->mName.C_Str();
+	if (nodeName.substr(0, g_locator_name.size()) == g_locator_name) {
+		// decompose to get position
+		aiVector3D pos, scl;
+		aiQuaterniont<float> rot;
+		node->mTransformation.Decompose(scl, rot, pos);
+
+		// get point index
+		int idx = atoi(nodeName.substr(g_locator_name.size()).c_str()) - 1;
+		assert(idx >= 0);
+		assert(idx < 68);
+		points[idx] = pos;
+	}
+
+	for (unsigned int i = 0; i < node->mNumChildren; i++) {
+		GetLandmarkPoints(scene, node->mChildren[i], points);
+	}
+}
+
+
+
+
 void command_morph_import(Args& args) {
 
 	// get rest pose filename
@@ -44,25 +76,76 @@ void command_morph_import(Args& args) {
 	j["description"] = "MaskMaker morph_import of " + Utils::get_filename(poseFile) + "." + Utils::get_extension(poseFile);
 	args.jptr = &j;
 
-	// ASSIMP : Import the rest and pose files
-	Assimp::Importer importer;
-	unsigned int impFlags = 
+	unsigned int impFlags =
 		aiProcess_TransformUVCoords |
 		aiProcess_Triangulate |
 		aiProcess_GenNormals |
 		aiProcess_CalcTangentSpace |
 		aiProcess_SortByPType;
-	const aiScene* rest_scene = importer.ReadFile(restFile, impFlags);
-	const aiScene* pose_scene = importer.ReadFile(poseFile, impFlags);
 
-	// If either import failed, report it
-	if (!rest_scene) {
-		cout << "Assimp is unable to import '" << restFile << "'." << endl;
-		return;
+	aiVector3D rest_points[68];
+	aiVector3D pose_points[68];
+
+	// ASSIMP : Import the rest file
+	{
+		Assimp::Importer importer;
+		const aiScene* rest_scene = importer.ReadFile(restFile, impFlags);
+
+		// If import failed, report it
+		if (!rest_scene) {
+			cout << "Assimp is unable to import '" << restFile << "'." << endl;
+			return;
+		}
+
+		// Fix shitty nodes
+		RemovePostRotationNodes(rest_scene->mRootNode);
+
+		// Get rest pose landmark point positions
+		GetLandmarkPoints(rest_scene, rest_scene->mRootNode, rest_points);
 	}
-	if (!pose_scene) {
-		cout << "Assimp is unable to import '" << poseFile << "'." << endl;
-		return;
+	// ASSIMP : Import the pose file
+	{
+		Assimp::Importer importer;
+		const aiScene* pose_scene = importer.ReadFile(poseFile, impFlags);
+
+		// If import failed, report it
+		if (!pose_scene) {
+			cout << "Assimp is unable to import '" << poseFile << "'." << endl;
+			return;
+		}
+
+		// Fix shitty nodes
+		RemovePostRotationNodes(pose_scene->mRootNode);
+
+		// Get rest pose landmark point positions
+		GetLandmarkPoints(pose_scene, pose_scene->mRootNode, pose_points);
 	}
 
+	// iterate points
+	json delts;
+	char temp[64];
+	for (int i = 0; i < 68; i++) {
+		// delta from rest pose
+		aiVector3D delta = pose_points[i] - rest_points[i];
+
+		json d;
+		d["x"] = delta.x;
+		d["y"] = delta.y;
+		d["z"] = delta.z;
+
+		snprintf(temp, sizeof(temp), "%d", i);
+		delts[temp] = d;
+		cout << "Delta " << i + 1 << "  = " << delta.x << "," << delta.y << "," << delta.z << endl;
+	}
+	json morph;
+	morph["type"] = "morph";
+	morph["deltas"] = delts;
+
+	json rez;
+	rez[Utils::get_filename(poseFile)] = morph;
+	j["resources"] = rez;
+
+	// write it out
+	args.writeJson(j);
+	cout << "Done!" << endl << endl;
 }
