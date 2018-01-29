@@ -64,7 +64,7 @@ Args::Args(int argc, char** argv)
 
 void Args::usage() {
 	cout << endl;
-	cout << "Mask Maker - cheesy tool for making facemask json files" << endl;
+	cout << "Mask Maker - tool for making facemask json files" << endl;
 	cout << endl;
 	cout << "usage:" << endl;
 	cout << endl;
@@ -77,6 +77,7 @@ void Args::usage() {
 	cout << "  addpart -  adds a part" << endl;
 	cout << "  merge   -  merges jsons" << endl;
 	cout << "  import  -  imports an FBX file and creates a json" << endl;
+	cout << "  morphimport,mi  -  imports morph FBX files and creates a json" << endl;
 	cout << "  tweak   -  tweak (set) values in the json." << endl;
 	cout << endl;
 	cout << "example:" << endl;
