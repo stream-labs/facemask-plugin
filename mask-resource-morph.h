@@ -19,8 +19,16 @@
 
 #pragma once
 #include "mask-resource.h"
-#include <map>
+#include "landmarks.hpp"
+#include <array>
 #include <string>
+extern "C" {
+#pragma warning( push )
+#pragma warning( disable: 4201 )
+#include <libobs/graphics/vec3.h>
+#pragma warning( pop )
+}
+
 
 namespace Mask {
 	namespace Resource {
@@ -36,6 +44,8 @@ namespace Mask {
 			virtual bool IsDepthOnly() override;
 
 		protected:
+
+			std::array<vec3, smll::NUM_FACIAL_LANDMARKS>	m_deltas;
 		};
 	}
 }

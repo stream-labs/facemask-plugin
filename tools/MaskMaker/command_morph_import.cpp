@@ -137,13 +137,49 @@ void command_morph_import(Args& args) {
 		delts[temp] = d;
 		cout << "Delta " << i + 1 << "  = " << delta.x << "," << delta.y << "," << delta.z << endl;
 	}
+
+	// make the morph resource
 	json morph;
 	morph["type"] = "morph";
 	morph["deltas"] = delts;
 
+	// add it to the json
 	json rez;
-	rez[Utils::get_filename(poseFile)] = morph;
+	string morphResourceName = Utils::get_filename(poseFile);
+	rez[morphResourceName] = morph;
 	j["resources"] = rez;
+
+	// make a part for the morph
+	json part;
+	part["parent"] = "root";
+
+	json p;
+	p["x"] = 0.0f;
+	p["y"] = 0.0f;
+	p["z"] = 0.0f;
+	part["position"] = p;
+
+	json r;
+	r["x"] = 1.0f;
+	r["y"] = 0.0f;
+	r["z"] = 0.0f;
+	r["w"] = 0.0f;
+	part["qrotation"] = r;
+
+	json s;
+	s["x"] = 1.0f;
+	s["y"] = 1.0f;
+	s["z"] = 1.0f;
+	part["scale"] = s;
+
+	json partrez;
+	partrez["0"] = morphResourceName;
+	part["resources"] = partrez;
+
+	// add the part
+	json parts;
+	parts[morphResourceName] = part;
+	j["parts"] = parts;
 
 	// write it out
 	args.writeJson(j);
