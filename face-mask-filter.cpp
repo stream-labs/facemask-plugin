@@ -453,7 +453,6 @@ void Plugin::FaceMaskFilter::Instance::video_tick(void *ptr, float timeDelta) {
 }
 
 void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
-	UNUSED_PARAMETER(timeDelta);
 
 	// ----- GET FACES FROM OTHER THREAD -----
 	updateFaces();

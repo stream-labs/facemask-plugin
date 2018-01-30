@@ -109,6 +109,7 @@ SET(smll_HEADERS
 	"${SMLLDir}/Kalman.hpp"
 	"${SMLLDir}/ImageWrapper.hpp"
 	"${SMLLDir}/landmarks.hpp"
+	"${SMLLDir}/MorphData.hpp"
 	"${SMLLDir}/OBSRenderer.hpp"
 	"${SMLLDir}/OBSTexture.hpp"
 	"${SMLLDir}/sarray.hpp"
@@ -160,6 +161,7 @@ SET(smll_SOURCES
 	"${SMLLDir}/FaceDetector.cpp"
 	"${SMLLDir}/OBSRenderer.cpp"
 	"${SMLLDir}/landmarks.cpp"
+	"${SMLLDir}/MorphData.cpp"
 	"${SMLLDir}/TestingPipe.cpp"
 	"${SMLLDir}/SingleValueKalman.cpp"
 )

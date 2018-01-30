@@ -170,7 +170,7 @@ namespace Plugin {
 				std::mutex mutex;
 				bool shutdown;
 
-				// frames circular buffer (main thread -> detection thread)
+				// frames circular buffer (video_render()'s thread -> detection thread)
 				struct CachedFrame {
 					smll::OBSTexture	capture;
 					smll::OBSTexture	detect;
@@ -181,7 +181,14 @@ namespace Plugin {
 				int frameIndex;
 				std::array<struct CachedFrame, BUFFER_SIZE> frames;
 
-				// faces circular buffer (detection thread -> main thread)
+				// morph data circular buffer (video_update()'s thread -> detection thread)
+				struct CachedMorph {
+
+				};
+				int morphIndex;
+				std::array<struct CachedMorph, BUFFER_SIZE> morphs;
+
+				// faces circular buffer (detection thread -> video_tick()'s thread)
 				struct CachedResult {
 					smll::DetectionResults	detectionResults;
 					gs_vertbuffer_t*		triangulationVB;

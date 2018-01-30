@@ -1,5 +1,7 @@
 /*
 * Face Masks for SlOBS
+* smll - streamlabs machine learning library
+*
 * Copyright (C) 2017 General Workings Inc
 *
 * This program is free software; you can redistribute it and/or modify
@@ -16,39 +18,25 @@
 * along with this program; if not, write to the Free Software
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-
 #pragma once
-#include "mask-resource.h"
+
 #include "landmarks.hpp"
-#include "MorphData.hpp"
-#include <array>
-#include <string>
+
 extern "C" {
 #pragma warning( push )
 #pragma warning( disable: 4201 )
 #include <libobs/graphics/vec3.h>
 #pragma warning( pop )
 }
+#include <vector>
+#include <array>
 
+namespace smll {
 
-namespace Mask {
-	namespace Resource {
+	struct MorphData
+	{
+		std::array<vec3, NUM_FACIAL_LANDMARKS>	deltas;
+	};
 
-		class Morph : public IBase {
-		public:
-			Morph(Mask::MaskData* parent, std::string name, obs_data_t* data);
-			virtual ~Morph();
-
-			virtual Type GetType() override;
-			virtual void Update(Mask::Part* part, float time) override;
-			virtual void Render(Mask::Part* part) override;
-			virtual bool IsDepthOnly() override;
-
-			const smll::MorphData&	GetMorphData() { return m_morphData; }
-
-		protected:
-
-			smll::MorphData		m_morphData;
-		};
-	}
 }
+

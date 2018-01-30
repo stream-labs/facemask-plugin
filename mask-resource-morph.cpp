@@ -62,7 +62,7 @@ Mask::Resource::Morph::Morph(Mask::MaskData* parent, std::string name, obs_data_
 		// position
 		vec3 position;
 		obs_data_get_vec3(deltasData, nn.c_str(), &position);
-		m_deltas[idx] = position;
+		m_morphData.deltas[idx] = position;
 
 		// sanity check
 		numPoints++;
