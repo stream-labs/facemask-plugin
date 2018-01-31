@@ -40,9 +40,9 @@ void GetLandmarkPoints(const aiScene* scene, aiNode* node, aiVector3D* points) {
 
 		// get point index
 		int idx = atoi(nodeName.substr(g_locator_name.size()).c_str()) - 1;
-		assert(idx >= 0);
-		assert(idx < 68);
-		points[idx] = pos;
+		if (idx >= 0 && idx < 68) {
+			points[idx] = pos;
+		}
 	}
 
 	for (unsigned int i = 0; i < node->mNumChildren; i++) {
@@ -85,6 +85,14 @@ void command_morph_import(Args& args) {
 
 	aiVector3D rest_points[68];
 	aiVector3D pose_points[68];
+	for (int i = 0; i < 68; i++) {
+		rest_points[i].x = 0.0f;
+		rest_points[i].y = 0.0f;
+		rest_points[i].z = 0.0f;
+		pose_points[i].x = 0.0f;
+		pose_points[i].y = 0.0f;
+		pose_points[i].z = 0.0f;
+	}
 
 	// ASSIMP : Import the rest file
 	{
