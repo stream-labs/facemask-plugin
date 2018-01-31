@@ -28,6 +28,8 @@
 #include "smll/FaceDetector.hpp"
 #include "smll/OBSRenderer.hpp"
 #include "smll/DetectionResults.hpp"
+#include "smll/TriangulationResult.hpp"
+#include "smll/MorphData.hpp"
 
 #include "mask.h"
 
@@ -144,9 +146,7 @@ namespace Plugin {
 			smll::DetectionResults	faces;
 
 			// our current triangulation
-			gs_vertbuffer_t*		triangulationVB;
-			gs_indexbuffer_t*		triangulationIB;
-			gs_indexbuffer_t*		linesIB;
+			smll::TriangulationResult	triangulation;
 
 			long long			frameCounter;
 
@@ -183,19 +183,15 @@ namespace Plugin {
 
 				// morph data circular buffer (video_update()'s thread -> detection thread)
 				struct CachedMorph {
-
+					smll::MorphData     morphData;
 				};
 				int morphIndex;
 				std::array<struct CachedMorph, BUFFER_SIZE> morphs;
 
 				// faces circular buffer (detection thread -> video_tick()'s thread)
 				struct CachedResult {
-					smll::DetectionResults	detectionResults;
-					gs_vertbuffer_t*		triangulationVB;
-					gs_indexbuffer_t*		triangulationIB;
-					gs_indexbuffer_t*		linesIB;
-					CachedResult() : triangulationVB(nullptr),
-						triangulationIB(nullptr), linesIB(nullptr) {}
+					smll::DetectionResults		detectionResults;
+					smll::TriangulationResult	triangulationResults;
 				};
 				int facesIndex;
 				std::array<struct CachedResult, BUFFER_SIZE> faces;

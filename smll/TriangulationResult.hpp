@@ -34,11 +34,13 @@ namespace smll {
 		gs_vertbuffer_t*		triangulationVB;
 		gs_indexbuffer_t*		triangulationIB;
 		gs_indexbuffer_t*		linesIB;
+		bool					buildLines;
 
 		TriangulationResult();
 		TriangulationResult(const TriangulationResult& r) { *this = r; }
 		~TriangulationResult();
 
+		void DestroyBuffers();
 		void TakeBuffersFrom(TriangulationResult& other);
 	};
 

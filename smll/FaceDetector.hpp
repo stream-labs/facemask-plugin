@@ -25,6 +25,7 @@
 #include "Config.hpp"
 #include "OBSTexture.hpp"
 #include "ImageWrapper.hpp"
+#include "TriangulationResult.hpp"
 
 #include <stdexcept>
 
@@ -57,9 +58,7 @@ public:
 					 const OBSTexture& detect, 
 					 const OBSTexture& track);
 
-	uint32_t MakeTriangulation(gs_vertbuffer_t** vbuff, 
-		gs_indexbuffer_t** ibuff, gs_indexbuffer_t** linebuff=nullptr);
-
+	void MakeTriangulation(TriangulationResult& result);
 
 	const Face& GetFace(int i) const {
 		if (i < 0 || i >= m_faces.length)

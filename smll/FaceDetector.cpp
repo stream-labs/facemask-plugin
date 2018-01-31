@@ -219,27 +219,13 @@ namespace smll {
 		}
 	}
 
-	uint32_t FaceDetector::MakeTriangulation(gs_vertbuffer_t** vbuff, 
-		gs_indexbuffer_t** ibuff, gs_indexbuffer_t** linebuff) {
-		// sanity
-		if (!vbuff || !ibuff) {
-			throw std::invalid_argument(
-				"passing null pointers to make triangulation");
-		}
-		if (*vbuff || *ibuff) {
-			obs_enter_graphics();
-			if (*vbuff)
-				gs_vertexbuffer_destroy(*vbuff);
-			if (*ibuff)
-				gs_indexbuffer_destroy(*ibuff);
-			obs_leave_graphics();
-		}
-		*vbuff = nullptr;
-		*ibuff = nullptr;
+	void FaceDetector::MakeTriangulation(TriangulationResult& result) {
+		// clear buffers
+		result.DestroyBuffers();
 
 		// only 1 face supported
 		if (m_faces.length == 0)
-			return 0;
+			return;
 		Face& face = m_faces[0];
 
 		// save capture width and height
@@ -353,7 +339,7 @@ namespace smll {
 			gs_texcoord(uv.x / width, uv.y / height, 0);
 			gs_vertex2f(p.x, p.y);
 		}
-		*vbuff = gs_render_save();
+		result.triangulationVB = gs_render_save();
 		obs_leave_graphics();
 
 		// get triangulation
@@ -361,12 +347,7 @@ namespace smll {
 		subdiv.getTriangleIndexList(triangleList);
 
 		// make lines
-		if (linebuff) {
-			if (*linebuff) {
-				obs_enter_graphics();
-				gs_indexbuffer_destroy(*linebuff);
-				obs_leave_graphics();
-			}
+		if (result.buildLines) {
 			// convert to lines
 			std::vector<uint32_t> linesList;
 			for (auto t : triangleList) {
@@ -384,18 +365,16 @@ namespace smll {
 
 			// make index buffer
 			obs_enter_graphics();
-			*linebuff = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
+			result.linesIB = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
 				linesList.data(), linesList.size(), GS_DYNAMIC);
 			obs_leave_graphics();
 		}
 
 		// make index buffer
 		obs_enter_graphics();
-		*ibuff = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
+		result.triangulationIB = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
 			triangleList.data(), triangleList.size() * 3, GS_DYNAMIC);
 		obs_leave_graphics();
-
-		return (uint32_t)triangleList.size() * 3;
 	}
 
 	void FaceDetector::Subdivide(std::vector<cv::Point2f>& points) {

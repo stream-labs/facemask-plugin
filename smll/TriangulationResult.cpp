@@ -30,10 +30,14 @@ extern "C" {
 namespace smll {
 
 	TriangulationResult::TriangulationResult() : triangulationVB(nullptr),
-		triangulationIB(nullptr), linesIB(nullptr) {
+		triangulationIB(nullptr), linesIB(nullptr), buildLines(false) {
 	}
 
 	TriangulationResult::~TriangulationResult() {
+		DestroyBuffers();
+	}
+
+	void TriangulationResult::DestroyBuffers() {
 		obs_enter_graphics();
 		if (triangulationVB)
 			gs_vertexbuffer_destroy(triangulationVB);
@@ -42,6 +46,9 @@ namespace smll {
 		if (linesIB)
 			gs_indexbuffer_destroy(linesIB);
 		obs_leave_graphics();
+		triangulationVB = nullptr;
+		triangulationIB = nullptr;
+		linesIB = nullptr;
 	}
 
 	void TriangulationResult::TakeBuffersFrom(TriangulationResult& other) {
