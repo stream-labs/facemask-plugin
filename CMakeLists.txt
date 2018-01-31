@@ -114,6 +114,7 @@ SET(smll_HEADERS
 	"${SMLLDir}/OBSTexture.hpp"
 	"${SMLLDir}/sarray.hpp"
 	"${SMLLDir}/TestingPipe.hpp"
+	"${SMLLDir}/TriangulationResult.hpp"
 	"${SMLLDir}/SingleValueKalman.hpp"
 )
 SET(gs_HEADERS
@@ -163,6 +164,7 @@ SET(smll_SOURCES
 	"${SMLLDir}/landmarks.cpp"
 	"${SMLLDir}/MorphData.cpp"
 	"${SMLLDir}/TestingPipe.cpp"
+	"${SMLLDir}/TriangulationResult.cpp"
 	"${SMLLDir}/SingleValueKalman.cpp"
 )
 SET(gs_SOURCES
