@@ -493,6 +493,7 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 			mdat->Tick(timeDelta);
 
 			// ask mask for a morph resource
+			// todo: this could get slow
 			std::shared_ptr<Mask::Resource::Morph> morph =
 				std::dynamic_pointer_cast<Mask::Resource::Morph>(
 					mdat->GetResource(Mask::Resource::Type::Morph));
@@ -510,7 +511,7 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 				}
 				else {
 					// Make sure current is invalid
-					if (detection.morphs[midx].morphData.IsValid()) {
+					if (detection.morphs[lastmidx].morphData.IsValid()) {
 						detection.morphs[midx].morphData.Invalidate();
 						morphUpdated = true;
 					}
@@ -735,26 +736,25 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			vec4_zero(&black);
 			gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
 
-			if (drawMask) {
-				// Draw depth-only stuff
-				for (int i = 0; i < faces.length; i++) {
-					std::unique_lock<std::mutex> lock(maskDataMutex, std::try_to_lock);
-					if (lock.owns_lock()) {
-						if (maskData) {
-							drawMaskData(faces[i], mdat, true);
-						}
+			if (drawMask && mdat) {
+				std::unique_lock<std::mutex> lock(maskDataMutex, std::try_to_lock);
+				if (lock.owns_lock()) {
+					// Check here for no morph
+					// todo: this could get slow
+					if (mdat && !mdat->GetResource(Mask::Resource::Type::Morph)) {
+						triangulation.DestroyBuffers();
 					}
-				}
-				// clear the color buffer (leaving depth info there)
-				gs_clear(GS_CLEAR_COLOR, &black, 1.0f, 0);
 
-				// Draw regular stuff
-				for (int i = 0; i < faces.length; i++) {
-					std::unique_lock<std::mutex> lock(maskDataMutex, std::try_to_lock);
-					if (lock.owns_lock()) {
-						if (maskData) {
-							drawMaskData(faces[i], mdat, false);
-						}
+					// Draw depth-only stuff
+					for (int i = 0; i < faces.length; i++) {
+						drawMaskData(faces[i], mdat, true);
+					}
+					// clear the color buffer (leaving depth info there)
+					gs_clear(GS_CLEAR_COLOR, &black, 1.0f, 0);
+
+					// Draw regular stuff
+					for (int i = 0; i < faces.length; i++) {
+						drawMaskData(faces[i], mdat, false);
 					}
 				}
 			}

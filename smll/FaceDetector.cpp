@@ -254,6 +254,7 @@ namespace smll {
 		extrapoints.push_back(cv::Point2f(width, 0));
 		extrapoints.push_back(cv::Point2f(width, height));
 		extrapoints.push_back(cv::Point2f(0, height));
+		// no need to add extra border points...
 		//Subdivide(extrapoints);
 		//Subdivide(extrapoints);
 		//Subdivide(extrapoints);
@@ -308,7 +309,7 @@ namespace smll {
 
 
 
-		// create subdiv object
+		// create the openCV Subdiv2D object
 		cv::Rect rect(0, 0, CaptureWidth() + 1, CaptureHeight() + 1);
 		cv::Subdiv2D subdiv(rect);
 
@@ -332,6 +333,9 @@ namespace smll {
 		for (int i = 0; i < nv; i++) {
 			cv::Point2f p, uv;
 			if (i < 4) {
+				// first 4 points (the corners) get sent out to
+				// bloody nowheresville (3*max dimension beyond borders)
+				// odd, but hey
 				p = subdiv.getVertex(i);
 				if (p.x < 0) p.x = 0;
 				if (p.y < 0) p.y = 0;
@@ -701,20 +705,14 @@ namespace smll {
 		// build set of model points to use for solving 3D pose
 		std::vector<int> model_indices;
 		model_indices.push_back(EYE_CENTER);
-		model_indices.push_back(LEFT_OUTER_EYE_CORNER);
-		model_indices.push_back(RIGHT_OUTER_EYE_CORNER);
+		model_indices.push_back(LEFT_INNER_EYE_CORNER);
+		model_indices.push_back(RIGHT_INNER_EYE_CORNER);
 		model_indices.push_back(NOSE_TIP);
 		if (pnpMethod != cv::SOLVEPNP_P3P &&
 			pnpMethod != cv::SOLVEPNP_AP3P)
 		{
 			model_indices.push_back(NOSE_2);
 			model_indices.push_back(NOSE_3);
-
-			// these tend to be higher noise
-			//
-			// model_indices.push_back(CHIN);
-			// model_indices.push_back(LEFT_TEMPLE);
-			// model_indices.push_back(RIGHT_TEMPLE);
 		}
 		std::vector<cv::Point3d> model_points = GetLandmarkPoints(model_indices);
 

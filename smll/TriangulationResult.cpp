@@ -52,6 +52,22 @@ namespace smll {
 	}
 
 	void TriangulationResult::TakeBuffersFrom(TriangulationResult& other) {
+
+		/*
+		DestroyBuffers();
+		if (other.triangulationVB) {
+			triangulationVB = other.triangulationVB;
+			other.triangulationVB = nullptr;
+		}
+		if (other.triangulationIB) {
+			triangulationIB = other.triangulationIB;
+			other.triangulationIB = nullptr;
+		}
+		if (other.linesIB) {
+			linesIB = other.linesIB;
+			other.linesIB = nullptr;
+		}*/
+		
 		if (other.triangulationVB) {
 			if (triangulationVB) {
 				obs_enter_graphics();
