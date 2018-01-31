@@ -194,6 +194,15 @@ std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::GetResource(const std::st
 	return nullptr;
 }
 
+std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::GetResource(Mask::Resource::Type type) {
+	for (auto kv = m_resources.begin(); kv != m_resources.end(); kv++) {
+		if (kv->second->GetType() == type) {
+			return kv->second;
+		}
+	}
+	return nullptr;
+}
+
 std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::RemoveResource(const std::string& name) {
 	if (name.length() == 0)
 		throw std::invalid_argument("name must be at least one character long");

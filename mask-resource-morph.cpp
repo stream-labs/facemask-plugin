@@ -54,6 +54,7 @@ Mask::Resource::Morph::Morph(Mask::MaskData* parent, std::string name, obs_data_
 	}
 	 
 	int numPoints = 0;
+	smll::DeltaList& deltas = m_morphData.GetDeltasAndStamp();
 	for (obs_data_item_t* itm = obs_data_first(deltasData); itm; obs_data_item_next(&itm)) {
 		// use string key as index into array
 		std::string nn = obs_data_item_get_name(itm);
@@ -62,7 +63,7 @@ Mask::Resource::Morph::Morph(Mask::MaskData* parent, std::string name, obs_data_
 		// position
 		vec3 position;
 		obs_data_get_vec3(deltasData, nn.c_str(), &position);
-		m_morphData.deltas[idx] = position;
+		deltas[idx] = position;
 
 		// sanity check
 		numPoints++;
@@ -77,7 +78,7 @@ Mask::Resource::Morph::Morph(Mask::MaskData* parent, std::string name, obs_data_
 Mask::Resource::Morph::~Morph() {}
 
 Mask::Resource::Type Mask::Resource::Morph::GetType() {
-	return Mask::Resource::Type::Model;
+	return Mask::Resource::Type::Morph;
 }
 
 void Mask::Resource::Morph::Update(Mask::Part* part, float time) {

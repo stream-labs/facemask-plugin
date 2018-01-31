@@ -219,9 +219,15 @@ namespace smll {
 		}
 	}
 
-	void FaceDetector::MakeTriangulation(TriangulationResult& result) {
+	void FaceDetector::MakeTriangulation(const MorphData& morphData, 
+		TriangulationResult& result) {
+
 		// clear buffers
 		result.DestroyBuffers();
+
+		// need valid morph data
+		if (!morphData.IsValid())
+			return;
 
 		// only 1 face supported
 		if (m_faces.length == 0)
@@ -238,7 +244,8 @@ namespace smll {
 		// add facial landmark points
 		dlib::point* facePoints = face.m_points;
 		for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
-			points.push_back(cv::Point2f((float)facePoints[i].x(), (float)facePoints[i].y()));
+			points.push_back(cv::Point2f((float)facePoints[i].x(), 
+				(float)facePoints[i].y()));
 		}
 		
 		// add extra points
@@ -419,6 +426,10 @@ namespace smll {
 
 			}
 
+			// TODO: we have more than a couple of SSE-enabled math libraries on tap
+			//       we should be using one here
+			//       ie) dlib/openCV/libOBS
+			//
 			for (float t = 0.0f; t <= 1.0f; t += dt) {
 				float t2 = t * t;
 				float t3 = t2 * t;

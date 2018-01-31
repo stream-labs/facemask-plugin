@@ -184,6 +184,7 @@ namespace Plugin {
 				// morph data circular buffer (video_update()'s thread -> detection thread)
 				struct CachedMorph {
 					smll::MorphData     morphData;
+					std::mutex			mutex;
 				};
 				int morphIndex;
 				std::array<struct CachedMorph, BUFFER_SIZE> morphs;
@@ -192,6 +193,7 @@ namespace Plugin {
 				struct CachedResult {
 					smll::DetectionResults		detectionResults;
 					smll::TriangulationResult	triangulationResults;
+					std::mutex					mutex;
 				};
 				int facesIndex;
 				std::array<struct CachedResult, BUFFER_SIZE> faces;

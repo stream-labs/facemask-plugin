@@ -23,5 +23,32 @@
 
 namespace smll {
 
+	MorphData::MorphData() : m_timestamp(TimeStamp::min()) {
+	}
+
+	const DeltaList& MorphData::GetDeltas() {
+		return m_deltas;
+	}
+
+	DeltaList& MorphData::GetDeltasAndStamp() {
+		Stamp();
+		return m_deltas;
+	}
+
+	void MorphData::Stamp() {
+		m_timestamp = std::chrono::steady_clock::now();
+	}
+
+	void MorphData::Invalidate() {
+		m_timestamp = TimeStamp::min();
+	}
+
+	bool MorphData::IsValid() const {
+		return (m_timestamp > TimeStamp::min());
+	}
+
+	bool MorphData::IsNewerThan(const MorphData&other) const {
+		return (m_timestamp > other.m_timestamp);
+	}
 
 }

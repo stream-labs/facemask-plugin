@@ -193,7 +193,7 @@ Mask::Resource::SkinnedModel::SkinnedModel(Mask::MaskData* parent, std::string n
 Mask::Resource::SkinnedModel::~SkinnedModel() {}
 
 Mask::Resource::Type Mask::Resource::SkinnedModel::GetType() {
-	return Mask::Resource::Type::Model;
+	return Mask::Resource::Type::SkinnedModel;
 }
 
 void Mask::Resource::SkinnedModel::Update(Mask::Part* part, float time) {

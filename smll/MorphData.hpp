@@ -28,14 +28,32 @@ extern "C" {
 #include <libobs/graphics/vec3.h>
 #pragma warning( pop )
 }
-#include <vector>
+#include <chrono>
 #include <array>
 
 namespace smll {
 
-	struct MorphData
+	typedef std::array<vec3, NUM_FACIAL_LANDMARKS>				DeltaList;
+	typedef std::chrono::time_point<std::chrono::steady_clock>	TimeStamp;
+
+	class MorphData
 	{
-		std::array<vec3, NUM_FACIAL_LANDMARKS>	deltas;
+	public:
+
+		MorphData();
+
+		const DeltaList&	GetDeltas();
+		DeltaList&			GetDeltasAndStamp();
+
+		void				Stamp();
+
+		void				Invalidate();
+		bool				IsValid() const;
+		bool				IsNewerThan(const MorphData & other) const;
+
+	private:
+		DeltaList	m_deltas;
+		TimeStamp	m_timestamp;
 	};
 
 }
