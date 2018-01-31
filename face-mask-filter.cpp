@@ -740,7 +740,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				std::unique_lock<std::mutex> lock(maskDataMutex, std::try_to_lock);
 				if (lock.owns_lock()) {
 					// Check here for no morph
-					// todo: this could get slow
+					// todo: this could get slow (make getmorph())
 					if (mdat && !mdat->GetResource(Mask::Resource::Type::Morph)) {
 						triangulation.DestroyBuffers();
 					}

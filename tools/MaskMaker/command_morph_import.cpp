@@ -21,7 +21,7 @@
 #include "command_morph_import.h"
 
 
-static string g_locator_name = "locator";
+static string g_locator_name = "landmark";
 
 extern void RemovePostRotationNodes(aiNode* node);
 
