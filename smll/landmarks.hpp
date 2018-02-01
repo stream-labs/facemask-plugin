@@ -117,6 +117,7 @@ namespace smll {
 		NUM_FACIAL_LANDMARKS = 68
 	};
 
+	// for convenience
 	static const int NOSE_TIP = NOSE_4;
 	static const int EYE_CENTER = NOSE_1;
 	static const int CHIN = JAW_9;
@@ -129,8 +130,55 @@ namespace smll {
 	static const int LEFT_MOUTH_CORNER = MOUTH_OUTER_1;
 	static const int RIGHT_MOUTH_CORNER = MOUTH_OUTER_7;
 
+	// access to 3D landmark points
 	std::vector<cv::Point3d>&	GetLandmarkPoints();
 	std::vector<cv::Point3d>	GetLandmarkPoints(const std::vector<int>& indices);
 	cv::Point3d					GetLandmarkPoint(int which);
 
+	// FaceContour: contour definitions
+	// - this is used to define segments of landmark points
+	//   for smoothing
+	// - most are sequential with a start/end index
+	// - some (like the eyes and mouth) include an extra index
+	//   at the end, so I added last index 
+	//
+	struct FaceContour {
+		int begin, end, last;
+	};
+
+	enum FaceContourID {
+		FACE_CONTOUR_CHIN,
+		FACE_CONTOUR_EYEBROW_LEFT,
+		FACE_CONTOUR_EYEBROW_RIGHT,
+		FACE_CONTOUR_NOSE_BRIDGE,
+		FACE_CONTOUR_NOSE_BOTTOM,
+		FACE_CONTOUR_EYE_LEFT_TOP,
+		FACE_CONTOUR_EYE_LEFT_BOTTOM,
+		FACE_CONTOUR_EYE_RIGHT_TOP,
+		FACE_CONTOUR_EYE_RIGHT_BOTTOM,
+		FACE_CONTOUR_MOUTH_OUTER_TOP_LEFT,
+		FACE_CONTOUR_MOUTH_OUTER_TOP_RIGHT,
+		FACE_CONTOUR_MOUTH_OUTER_BOTTOM,
+		FACE_CONTOUR_MOUTH_INNER_TOP,
+		FACE_CONTOUR_MOUTH_INNER_BOTTOM,
+
+		NUM_FACE_CONTOURS
+	};
+
+	FaceContour		FacialLandmarkContours[NUM_FACE_CONTOURS] ={ 
+		{ JAW_1, JAW_17, -1 },
+		{ EYEBROW_LEFT_1, EYEBROW_LEFT_5, -1 },
+		{ EYEBROW_RIGHT_1, EYEBROW_RIGHT_5, -1 },
+		{ NOSE_1, NOSE_4, -1 },
+		{ NOSE_5, NOSE_9, -1 },
+		{ EYE_LEFT_1, EYE_LEFT_4, -1 },
+		{ EYE_LEFT_4, EYE_LEFT_6, EYE_LEFT_1 },
+		{ EYE_RIGHT_1, EYE_RIGHT_4, -1 },
+		{ EYE_RIGHT_4, EYE_RIGHT_6, EYE_RIGHT_1 },
+		{ MOUTH_OUTER_1, MOUTH_OUTER_3, -1 },
+		{ MOUTH_OUTER_5, MOUTH_OUTER_7, -1 },
+		{ MOUTH_OUTER_7, MOUTH_OUTER_12, MOUTH_OUTER_1 },
+		{ MOUTH_INNER_1, MOUTH_INNER_5, -1 },
+		{ MOUTH_INNER_5, MOUTH_INNER_8, MOUTH_INNER_1 },
+	};
 }

@@ -290,50 +290,6 @@ namespace smll {
 			warpedpoints[i] += projectedDeltas[i] - c;
 		}
 
-		/*
-		// HARD-CODED MORPH
-		//
-		//
-		cv::Point2f centerL = points[EYE_LEFT_1] +
-			points[EYE_LEFT_2] +
-			points[EYE_LEFT_3] +
-			points[EYE_LEFT_4] +
-			points[EYE_LEFT_5] +
-			points[EYE_LEFT_6];
-		centerL = centerL / 6.0f;
-		cv::Point2f centerR = points[EYE_RIGHT_1] +
-			points[EYE_RIGHT_2] +
-			points[EYE_RIGHT_3] +
-			points[EYE_RIGHT_4] +
-			points[EYE_RIGHT_5] +
-			points[EYE_RIGHT_6];
-		centerR = centerR / 6.0f;
-		cv::Point2f centerM = points[MOUTH_INNER_1] +
-			points[MOUTH_INNER_2] +
-			points[MOUTH_INNER_3] +
-			points[MOUTH_INNER_4] +
-			points[MOUTH_INNER_5] +
-			points[MOUTH_INNER_6] +
-			points[MOUTH_INNER_7] +
-			points[MOUTH_INNER_8];
-		centerM = centerM / 8.0f;
-		cv::Point2f scale(2.3f, 2.8f);
-		cv::Point2f scaleM(1.5f, 1.5f);
-
-		ScaleMorph(warpedpoints,
-		{ EYE_LEFT_1, EYE_LEFT_2, EYE_LEFT_3, EYE_LEFT_4, EYE_LEFT_5, EYE_LEFT_6 },
-			centerL, scale);
-		ScaleMorph(warpedpoints,
-		{ EYE_RIGHT_1, EYE_RIGHT_2, EYE_RIGHT_3, EYE_RIGHT_4, EYE_RIGHT_5, EYE_RIGHT_6 },
-			centerR, scale);
-		ScaleMorph(warpedpoints,
-		{ MOUTH_INNER_1, MOUTH_INNER_2, MOUTH_INNER_3, MOUTH_INNER_4, MOUTH_INNER_5, MOUTH_INNER_6, MOUTH_INNER_7, MOUTH_INNER_8,
-			MOUTH_OUTER_1, MOUTH_OUTER_2, MOUTH_OUTER_3, MOUTH_OUTER_4, MOUTH_OUTER_5, MOUTH_OUTER_6, MOUTH_OUTER_7, 
-			MOUTH_OUTER_8, MOUTH_OUTER_9, MOUTH_OUTER_10, MOUTH_OUTER_11, MOUTH_OUTER_12 },
-			centerM, scaleM);
-			*/
-
-
 		// create the openCV Subdiv2D object
 		cv::Rect rect(0, 0, CaptureWidth() + 1, CaptureHeight() + 1);
 		cv::Subdiv2D subdiv(rect);
@@ -369,9 +325,12 @@ namespace smll {
 				uv = p;
 			}
 			else {
+				// position from warped points
+				// uv from original points
 				p = warpedpoints[vtxMap[i]];
 				uv = points[vtxMap[i]];
 			}
+			// add point and uv
 			gs_texcoord(uv.x / width, uv.y / height, 0);
 			gs_vertex2f(p.x, p.y);
 		}
@@ -430,30 +389,32 @@ namespace smll {
 		float dt = 1.0f / (float)steps;
 
 		std::vector<cv::Point2f> spline;
-		cv::Point2f p0, p1, p2, p3;
 		float x, y;
-
+		size_t i0, i1, i2, i3;
 		size_t count = points.size() - 1;
 		for (unsigned int i = 0; i <= count; i++) {
 			if (i == 0) {
-				p0 = points[i];
-				p1 = points[i];
-				p2 = points[i + 1];
-				p2 = points[i + 2];
+				i0 = i;
+				i1 = i;
+				i2 = i + 1;
+				i3 = i + 2;
 			}
 			else if (i == count) {
-				p0 = points[count - 2];
-				p1 = points[count - 1];
-				p2 = points[count];
-				p3 = points[count];
+				i0 = count - 2;
+				i1 = count - 1;
+				i2 = count;
+				i3 = count;
 			}
 			else {
-				p0 = points[i - 1];
-				p1 = points[i];
-				p2 = points[i + 1];
-				p3 = points[i + 2];
-
+				i0 = i - 1;
+				i1 = i;
+				i2 = i + 1;
+				i3 = i + 2;
 			}
+			const cv::Point2f& p0 = points[i0];
+			const cv::Point2f& p1 = points[i1];
+			const cv::Point2f& p2 = points[i2];
+			const cv::Point2f& p3 = points[i3];
 
 			// TODO: we have more than a couple of SSE-enabled math libraries on tap
 			//       we should be using one here
