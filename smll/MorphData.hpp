@@ -42,7 +42,8 @@ namespace smll {
 
 		MorphData();
 
-		const DeltaList&	GetDeltas();
+		const DeltaList&	GetDeltas() const;
+		std::vector<cv::Point3f> GetCVDeltas() const;
 		DeltaList&			GetDeltasAndStamp();
 
 		void				Stamp();

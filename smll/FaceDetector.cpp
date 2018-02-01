@@ -254,18 +254,43 @@ namespace smll {
 		extrapoints.push_back(cv::Point2f(width, 0));
 		extrapoints.push_back(cv::Point2f(width, height));
 		extrapoints.push_back(cv::Point2f(0, height));
-		// no need to add extra border points...
+		// no need to add extra border points...in case we do
 		//Subdivide(extrapoints);
 		//Subdivide(extrapoints);
 		//Subdivide(extrapoints);
 		//Subdivide(extrapoints);
 		points.insert(points.end(), extrapoints.begin(), extrapoints.end());
 		
-
-		// WARP POINTS
+		// copy points into warped points
 		std::vector<cv::Point2f> warpedpoints = points;
 		
+		// Camera internals
+		// Approximate focal length.
+		double focal_length = (double)width * FOCAL_LENGTH_FACTOR;
+		cv::Point2d center = cv::Point2d(width / 2, height / 2);
+		cv::Mat camera_matrix =
+			(cv::Mat_<double>(3, 3) <<
+				focal_length, 0, center.x, 0, focal_length, center.y, 0, 0, 1);
+		// We assume no lens distortion
+		cv::Mat dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<double>::type);
 
+		// project the deltas
+		const cv::Mat& rot = face.GetCVRotation();
+		cv::Mat trx = face.GetCVTranslation();
+		trx.at<double>(0, 0) = 0.0; // clear x & y
+		trx.at<double>(1, 0) = 0.0;
+		std::vector<cv::Point3f> deltas = morphData.GetCVDeltas();
+		std::vector<cv::Point2f> projectedDeltas;
+		cv::projectPoints(deltas, rot, trx, camera_matrix, dist_coeffs, projectedDeltas);
+
+		// apply the morph deltas
+		cv::Point2f c(width / 2, height / 2);
+		for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
+			// offset from center			
+			warpedpoints[i] += projectedDeltas[i] - c;
+		}
+
+		/*
 		// HARD-CODED MORPH
 		//
 		//
@@ -306,7 +331,7 @@ namespace smll {
 			MOUTH_OUTER_1, MOUTH_OUTER_2, MOUTH_OUTER_3, MOUTH_OUTER_4, MOUTH_OUTER_5, MOUTH_OUTER_6, MOUTH_OUTER_7, 
 			MOUTH_OUTER_8, MOUTH_OUTER_9, MOUTH_OUTER_10, MOUTH_OUTER_11, MOUTH_OUTER_12 },
 			centerM, scaleM);
-
+			*/
 
 
 		// create the openCV Subdiv2D object
@@ -703,6 +728,7 @@ namespace smll {
 			CONFIG_BOOL_MAKE_CAPTURE_COPY);
 
 		// build set of model points to use for solving 3D pose
+		// note: we use these points because they move the least
 		std::vector<int> model_indices;
 		model_indices.push_back(EYE_CENTER);
 		model_indices.push_back(LEFT_INNER_EYE_CORNER);

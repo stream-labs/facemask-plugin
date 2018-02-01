@@ -24,10 +24,22 @@
 namespace smll {
 
 	MorphData::MorphData() : m_timestamp(TimeStamp::min()) {
+		for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
+			vec3_zero(m_deltas.data() + i);
+		}
 	}
 
-	const DeltaList& MorphData::GetDeltas() {
+	const DeltaList& MorphData::GetDeltas() const {
 		return m_deltas;
+	}
+
+	std::vector<cv::Point3f> MorphData::GetCVDeltas() const {
+		std::vector<cv::Point3f> r;
+		for (unsigned int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
+			const vec3& v = m_deltas[i];
+			r.emplace_back(cv::Point3f(v.x, v.y, v.z));
+		}
+		return r;
 	}
 
 	DeltaList& MorphData::GetDeltasAndStamp() {

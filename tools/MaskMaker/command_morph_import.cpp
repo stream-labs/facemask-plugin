@@ -138,8 +138,8 @@ void command_morph_import(Args& args) {
 
 		json d;
 		d["x"] = delta.x;
-		d["y"] = delta.y;
-		d["z"] = delta.z;
+		d["y"] = -delta.y;
+		d["z"] = -delta.z;
 
 		snprintf(temp, sizeof(temp), "%d", i);
 		delts[temp] = d;

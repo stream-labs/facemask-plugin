@@ -27,7 +27,7 @@ namespace smll {
 
 	std::vector<cv::Point3d>&	GetLandmarkPoints() {
 		if (g_landmark_points.size() == 0) {
-			/* This code was generated using the landmarks.mb file (in the otherdata dir), and the
+			/* This code was generated using the landmarks.mb file (in the tools folder), and the
 			   following MEL code:
 
 			   string $landmarks[] = `ls -transforms "landmark*"`;
