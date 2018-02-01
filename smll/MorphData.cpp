@@ -51,6 +51,23 @@ namespace smll {
 		m_timestamp = std::chrono::steady_clock::now();
 	}
 
+	static inline bool vec3_is_nonzero(const vec3& v) {
+		if (((int)(v.x * 1000.0f) == 0) &&
+			((int)(v.y * 1000.0f) == 0) &&
+			((int)(v.z * 1000.0f) == 0))
+			return false;
+		return true;
+	}
+
+	void MorphData::UpdateBitmask() {
+		m_bitmask.reset();
+		for (unsigned int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
+			if (vec3_is_nonzero(m_deltas[i])) {
+				m_bitmask.set(i);
+			}
+		}
+	}
+
 	void MorphData::Invalidate() {
 		m_timestamp = TimeStamp::min();
 	}

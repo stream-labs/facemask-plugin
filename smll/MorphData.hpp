@@ -43,11 +43,14 @@ namespace smll {
 
 		MorphData();
 
-		const DeltaList&	GetDeltas() const;
-		std::vector<cv::Point3f> GetCVDeltas() const;
+		const DeltaList&			GetDeltas() const;
+		std::vector<cv::Point3f>	GetCVDeltas() const;
 		DeltaList&			GetDeltasAndStamp();
 
 		void				Stamp();
+		
+		// be sure to call after changing deltas
+		void				UpdateBitmask();
 
 		void				Invalidate();
 		bool				IsValid() const;
@@ -56,7 +59,7 @@ namespace smll {
 	private:
 		DeltaList			m_deltas;
 		TimeStamp			m_timestamp;
-		std::bitset<NUM_FACIAL_LANDMARKS>	m_mask;
+		std::bitset<NUM_FACIAL_LANDMARKS>	m_bitmask;
 	};
 
 }
