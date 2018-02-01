@@ -59,7 +59,7 @@ public:
 					 const OBSTexture& detect, 
 					 const OBSTexture& track);
 
-	void MakeTriangulation(const MorphData& morphData, TriangulationResult& result);
+	void MakeTriangulation(MorphData& morphData, TriangulationResult& result);
 
 	const Face& GetFace(int i) const {
 		if (i < 0 || i >= m_faces.length)
@@ -130,7 +130,8 @@ private:
 	void 	UnstageTexture(SourceFrameType sft);
 
 	void	Subdivide(std::vector<cv::Point2f>& points);
-	void	CatmullRomSmooth(std::vector<cv::Point2f>& points, int steps);
+	void	CatmullRomSmooth(std::vector<cv::Point2f>& points, 
+		const std::vector<int>& indices, int steps);
 	void	ScaleMorph(std::vector<cv::Point2f>& points,
 		std::vector<int> indices, cv::Point2f& center, cv::Point2f& scale);
 };

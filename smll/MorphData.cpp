@@ -23,7 +23,9 @@
 
 namespace smll {
 
-	MorphData::MorphData() : m_timestamp(TimeStamp::min()) {
+	MorphData::MorphData() 
+		: m_timestamp(TimeStamp::min())
+		, m_dirty(true) {
 		for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
 			vec3_zero(m_deltas.data() + i);
 		}
@@ -49,6 +51,7 @@ namespace smll {
 
 	void MorphData::Stamp() {
 		m_timestamp = std::chrono::steady_clock::now();
+		m_dirty = true;
 	}
 
 	static inline bool vec3_is_nonzero(const vec3& v) {
@@ -66,6 +69,13 @@ namespace smll {
 				m_bitmask.set(i);
 			}
 		}
+		m_dirty = false;
+	}
+
+	const LandmarkBitmask& MorphData::GetBitmask() {
+		if (m_dirty)
+			UpdateBitmask();
+		return m_bitmask;
 	}
 
 	void MorphData::Invalidate() {

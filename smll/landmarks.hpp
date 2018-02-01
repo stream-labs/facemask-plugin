@@ -145,15 +145,18 @@ namespace smll {
 	// - some (like the eyes and mouth) include an extra index
 	//   at the end, so I added last index 
 	//
+	typedef std::bitset<NUM_FACIAL_LANDMARKS>	LandmarkBitmask;
 	struct FaceContour {
-		std::vector<int>					indices;
-		std::bitset<NUM_FACIAL_LANDMARKS>	bitmask;
+		std::vector<int>	indices;
+		LandmarkBitmask		bitmask;
 
 		FaceContour(const std::vector<int>& indices);
 	};
 
 	enum FaceContourID {
-		FACE_CONTOUR_CHIN,
+		FACE_CONTOUR_FIRST = 0,
+
+		FACE_CONTOUR_CHIN = FACE_CONTOUR_FIRST,
 		FACE_CONTOUR_EYEBROW_LEFT,
 		FACE_CONTOUR_EYEBROW_RIGHT,
 		FACE_CONTOUR_NOSE_BRIDGE,

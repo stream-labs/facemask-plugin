@@ -45,7 +45,8 @@ namespace smll {
 
 		const DeltaList&			GetDeltas() const;
 		std::vector<cv::Point3f>	GetCVDeltas() const;
-		DeltaList&			GetDeltasAndStamp();
+		DeltaList&					GetDeltasAndStamp();
+		const LandmarkBitmask&		GetBitmask();
 
 		void				Stamp();
 		
@@ -59,7 +60,8 @@ namespace smll {
 	private:
 		DeltaList			m_deltas;
 		TimeStamp			m_timestamp;
-		std::bitset<NUM_FACIAL_LANDMARKS>	m_bitmask;
+		LandmarkBitmask		m_bitmask;
+		bool				m_dirty;
 	};
 
 }

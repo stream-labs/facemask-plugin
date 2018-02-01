@@ -45,7 +45,7 @@
 
 #define FOCAL_LENGTH_FACTOR		(1.0f)
 #define POSE_RESET_INTERVAL		(30)
-
+#define CATMULL_ROM_STEPS		(5)
 
 using namespace dlib;
 using namespace std;
@@ -219,7 +219,7 @@ namespace smll {
 		}
 	}
 
-	void FaceDetector::MakeTriangulation(const MorphData& morphData, 
+	void FaceDetector::MakeTriangulation(MorphData& morphData, 
 		TriangulationResult& result) {
 
 		// clear buffers
@@ -288,6 +288,16 @@ namespace smll {
 		for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
 			// offset from center			
 			warpedpoints[i] += projectedDeltas[i] - c;
+		}
+
+		// smooth out any face contours that got morphed
+		for (int i = 0; i < NUM_FACE_CONTOURS; i++) {
+			const FaceContour& fc = GetFaceContour((FaceContourID)i);
+			LandmarkBitmask m = fc.bitmask & morphData.GetBitmask();
+			if (m.any()) {
+				CatmullRomSmooth(points, fc.indices, CATMULL_ROM_STEPS);
+				CatmullRomSmooth(warpedpoints, fc.indices, CATMULL_ROM_STEPS);
+			}
 		}
 
 		// create the openCV Subdiv2D object
@@ -382,34 +392,44 @@ namespace smll {
 		}
 	}
 
-	void FaceDetector::CatmullRomSmooth(std::vector<cv::Point2f>& points, int steps) {
-		if (points.size() < 3)
+	// Curve Fitting - Catmull-Rom spline 
+	// https://gist.github.com/pr0digy/1383576
+	// 
+	// Note: fixed bug in code
+	//
+	void FaceDetector::CatmullRomSmooth(std::vector<cv::Point2f>& points, 
+		const std::vector<int>& indices, int steps) {
+
+		if (indices.size() < 3)
 			return;
 
 		float dt = 1.0f / (float)steps;
 
-		std::vector<cv::Point2f> spline;
 		float x, y;
 		size_t i0, i1, i2, i3;
-		size_t count = points.size() - 1;
-		for (unsigned int i = 0; i <= count; i++) {
+		size_t count = indices.size() - 1;
+		size_t count_m1 = count - 1;
+		for (size_t i = 0; i < count; i++) {
 			if (i == 0) {
-				i0 = i;
-				i1 = i;
-				i2 = i + 1;
-				i3 = i + 2;
+				// 0 0 1 2
+				i0 = indices[i];
+				i1 = indices[i];
+				i2 = indices[i + 1];
+				i3 = indices[i + 2];
 			}
-			else if (i == count) {
-				i0 = count - 2;
-				i1 = count - 1;
-				i2 = count;
-				i3 = count;
+			else if (i == count_m1) {
+				// 6 7 8 8 
+				i0 = indices[i - 1];
+				i1 = indices[i];
+				i2 = indices[i + 1];
+				i3 = indices[i + 1];
 			}
 			else {
-				i0 = i - 1;
-				i1 = i;
-				i2 = i + 1;
-				i3 = i + 2;
+				// 2 3 4 5
+				i0 = indices[i - 1];
+				i1 = indices[i];
+				i2 = indices[i + 1];
+				i3 = indices[i + 2];
 			}
 			const cv::Point2f& p0 = points[i0];
 			const cv::Point2f& p1 = points[i1];
@@ -420,7 +440,9 @@ namespace smll {
 			//       we should be using one here
 			//       ie) dlib/openCV/libOBS
 			//
-			for (float t = 0.0f; t <= 1.0f; t += dt) {
+			// Note: skip points at t=0 and t=1, they are already in our set
+			//
+			for (float t = dt; t < 1.0f; t += dt) {
 				float t2 = t * t;
 				float t3 = t2 * t;
 
@@ -436,9 +458,7 @@ namespace smll {
 					 (2.0f * p0.y - 5.0f * p1.y + 4.0f * p2.y - p3.y) * t2 +
 					 (3.0f * p1.y - p0.y - 3.0f * p2.y + p3.y) * t3);
 
-				if (!(spline.size() && spline[spline.size() - 1].x == x && spline[spline.size() - 1].y == y)) {
-					spline.push_back(cv::Point2f(x, y));
-				}
+				points.emplace_back(cv::Point2f(x, y));
 			}
 		}
 	}
