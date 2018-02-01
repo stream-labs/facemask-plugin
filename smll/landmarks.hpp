@@ -165,20 +165,5 @@ namespace smll {
 		NUM_FACE_CONTOURS
 	};
 
-	FaceContour		FacialLandmarkContours[NUM_FACE_CONTOURS] ={ 
-		{ JAW_1, JAW_17, -1 },
-		{ EYEBROW_LEFT_1, EYEBROW_LEFT_5, -1 },
-		{ EYEBROW_RIGHT_1, EYEBROW_RIGHT_5, -1 },
-		{ NOSE_1, NOSE_4, -1 },
-		{ NOSE_5, NOSE_9, -1 },
-		{ EYE_LEFT_1, EYE_LEFT_4, -1 },
-		{ EYE_LEFT_4, EYE_LEFT_6, EYE_LEFT_1 },
-		{ EYE_RIGHT_1, EYE_RIGHT_4, -1 },
-		{ EYE_RIGHT_4, EYE_RIGHT_6, EYE_RIGHT_1 },
-		{ MOUTH_OUTER_1, MOUTH_OUTER_3, -1 },
-		{ MOUTH_OUTER_5, MOUTH_OUTER_7, -1 },
-		{ MOUTH_OUTER_7, MOUTH_OUTER_12, MOUTH_OUTER_1 },
-		{ MOUTH_INNER_1, MOUTH_INNER_5, -1 },
-		{ MOUTH_INNER_5, MOUTH_INNER_8, MOUTH_INNER_1 },
-	};
+	extern FaceContour	FacialLandmarkContours[NUM_FACE_CONTOURS];
 }
