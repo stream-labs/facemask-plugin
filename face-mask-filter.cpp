@@ -722,6 +722,11 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		}
 	}
 
+	// some reasons triangulation should be destroyed
+	if (!mdat || faces.length == 0) {
+		triangulation.DestroyBuffers();
+	}
+
 	// ready?
 	gs_texture* tex2 = nullptr;
 	if (faces.length > 0 && !demoModeInDelay) {
@@ -741,7 +746,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				if (lock.owns_lock()) {
 					// Check here for no morph
 					// todo: this could get slow (make getmorph())
-					if (mdat && !mdat->GetResource(Mask::Resource::Type::Morph)) {
+					if (!mdat->GetResource(Mask::Resource::Type::Morph)) {
 						triangulation.DestroyBuffers();
 					}
 

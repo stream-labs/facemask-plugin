@@ -20,10 +20,10 @@
 */
 #include "landmarks.hpp"
 
-std::vector<cv::Point3d>	g_landmark_points;
-
-
 namespace smll {
+
+	static std::vector<cv::Point3d>	g_landmark_points;
+	static std::vector<FaceContour>	g_face_contours;
 
 	std::vector<cv::Point3d>&	GetLandmarkPoints() {
 		if (g_landmark_points.size() == 0) {
@@ -138,22 +138,60 @@ namespace smll {
 		return g_landmark_points[which];
 	}
 
-	FaceContour	FacialLandmarkContours[NUM_FACE_CONTOURS] = {
-		{ JAW_1, JAW_17, -1 },
-		{ EYEBROW_LEFT_1, EYEBROW_LEFT_5, -1 },
-		{ EYEBROW_RIGHT_1, EYEBROW_RIGHT_5, -1 },
-		{ NOSE_1, NOSE_4, -1 },
-		{ NOSE_5, NOSE_9, -1 },
-		{ EYE_LEFT_1, EYE_LEFT_4, -1 },
-		{ EYE_LEFT_4, EYE_LEFT_6, EYE_LEFT_1 },
-		{ EYE_RIGHT_1, EYE_RIGHT_4, -1 },
-		{ EYE_RIGHT_4, EYE_RIGHT_6, EYE_RIGHT_1 },
-		{ MOUTH_OUTER_1, MOUTH_OUTER_3, -1 },
-		{ MOUTH_OUTER_5, MOUTH_OUTER_7, -1 },
-		{ MOUTH_OUTER_7, MOUTH_OUTER_12, MOUTH_OUTER_1 },
-		{ MOUTH_INNER_1, MOUTH_INNER_5, -1 },
-		{ MOUTH_INNER_5, MOUTH_INNER_8, MOUTH_INNER_1 },
-	};
+	FaceContour::FaceContour(const std::vector<int>& indz) {
+		indices = indz;
+		bitmask.reset();
+		for (auto i : indices) {
+			bitmask.set(i);
+		}
+	}
+
+	std::vector<FaceContour>&	GetFaceContours() {
+		if (g_face_contours.size() == 0) {
+
+			// FACE_CONTOUR_CHIN
+			g_face_contours.emplace_back(FaceContour({ JAW_1, JAW_2, JAW_3,
+				JAW_4, JAW_5, JAW_6, JAW_7, JAW_8, JAW_9, JAW_10,
+				JAW_11, JAW_12, JAW_13, JAW_14, JAW_15, JAW_16, JAW_17 }));
+			// FACE_CONTOUR_EYEBROW_LEFT
+			g_face_contours.emplace_back(FaceContour({ EYEBROW_LEFT_1,
+				EYEBROW_LEFT_2, EYEBROW_LEFT_3, EYEBROW_LEFT_4, EYEBROW_LEFT_5 }));
+			// FACE_CONTOUR_EYEBROW_RIGHT
+			g_face_contours.emplace_back(FaceContour({ EYEBROW_RIGHT_1,
+				EYEBROW_RIGHT_2, EYEBROW_RIGHT_3, EYEBROW_RIGHT_4, EYEBROW_RIGHT_5 }));
+			// FACE_CONTOUR_NOSE_BRIDGE
+			g_face_contours.emplace_back(FaceContour({ NOSE_1, NOSE_2, NOSE_3, NOSE_4 }));
+			// FACE_CONTOUR_NOSE_BOTTOM
+			g_face_contours.emplace_back(FaceContour({ NOSE_5, NOSE_6, NOSE_7, NOSE_8, NOSE_9 }));
+			// FACE_CONTOUR_EYE_LEFT_TOP
+			g_face_contours.emplace_back(FaceContour({ EYE_LEFT_1, EYE_LEFT_2, EYE_LEFT_3, EYE_LEFT_4 }));
+			// FACE_CONTOUR_EYE_LEFT_BOTTOM
+			g_face_contours.emplace_back(FaceContour({ EYE_LEFT_4, EYE_LEFT_5, EYE_LEFT_6, EYE_LEFT_1 }));
+			// FACE_CONTOUR_EYE_RIGHT_TOP
+			g_face_contours.emplace_back(FaceContour({ EYE_RIGHT_1, EYE_RIGHT_2, EYE_RIGHT_3, EYE_RIGHT_4 }));
+			// FACE_CONTOUR_EYE_RIGHT_BOTTOM
+			g_face_contours.emplace_back(FaceContour({ EYE_RIGHT_4, EYE_RIGHT_5, EYE_RIGHT_6, EYE_RIGHT_1 }));
+			// FACE_CONTOUR_MOUTH_OUTER_TOP_LEFT
+			g_face_contours.emplace_back(FaceContour({ MOUTH_OUTER_1, MOUTH_OUTER_2, MOUTH_OUTER_3 }));
+			// FACE_CONTOUR_MOUTH_OUTER_TOP_RIGHT
+			g_face_contours.emplace_back(FaceContour({ MOUTH_OUTER_5, MOUTH_OUTER_6, MOUTH_OUTER_7 }));
+			// FACE_CONTOUR_MOUTH_OUTER_BOTTOM
+			g_face_contours.emplace_back(FaceContour({ MOUTH_OUTER_7, MOUTH_OUTER_8, MOUTH_OUTER_9,
+				MOUTH_OUTER_10, MOUTH_OUTER_11, MOUTH_OUTER_12, MOUTH_OUTER_1}));
+			// FACE_CONTOUR_MOUTH_INNER_TOP
+			g_face_contours.emplace_back(FaceContour({ MOUTH_INNER_1, MOUTH_INNER_2, MOUTH_INNER_3,
+				MOUTH_INNER_4, MOUTH_INNER_5}));
+			// FACE_CONTOUR_MOUTH_INNER_BOTTOM
+			g_face_contours.emplace_back(FaceContour({ MOUTH_INNER_5, MOUTH_INNER_6, MOUTH_INNER_7,
+				MOUTH_INNER_8, MOUTH_INNER_1 }));
+		}
+		return g_face_contours;
+	}
+
+	const FaceContour&	GetFaceContour(FaceContourID which) {
+		GetFaceContours();
+		return g_face_contours[which];
+	}
 
 
 }

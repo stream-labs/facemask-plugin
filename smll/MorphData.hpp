@@ -30,6 +30,7 @@ extern "C" {
 }
 #include <chrono>
 #include <array>
+#include <bitset>
 
 namespace smll {
 
@@ -53,8 +54,9 @@ namespace smll {
 		bool				IsNewerThan(const MorphData & other) const;
 
 	private:
-		DeltaList	m_deltas;
-		TimeStamp	m_timestamp;
+		DeltaList			m_deltas;
+		TimeStamp			m_timestamp;
+		std::bitset<NUM_FACIAL_LANDMARKS>	m_mask;
 	};
 
 }

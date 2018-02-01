@@ -20,7 +20,6 @@
 */
 #pragma once
 
-#include <vector>
 #pragma warning( push )
 #pragma warning( disable: 4127 )
 #pragma warning( disable: 4201 )
@@ -31,6 +30,10 @@
 #pragma warning( disable: 4267 )
 #include <opencv2/opencv.hpp>
 #pragma warning( pop )
+
+#include <vector>
+#include <bitset>
+
 
 namespace smll {
 
@@ -143,7 +146,10 @@ namespace smll {
 	//   at the end, so I added last index 
 	//
 	struct FaceContour {
-		int begin, end, last;
+		std::vector<int>					indices;
+		std::bitset<NUM_FACIAL_LANDMARKS>	bitmask;
+
+		FaceContour(const std::vector<int>& indices);
 	};
 
 	enum FaceContourID {
@@ -165,5 +171,7 @@ namespace smll {
 		NUM_FACE_CONTOURS
 	};
 
-	extern FaceContour	FacialLandmarkContours[NUM_FACE_CONTOURS];
+	// Access to contours
+	std::vector<FaceContour>&	GetFaceContours();
+	const FaceContour&			GetFaceContour(FaceContourID which);
 }
