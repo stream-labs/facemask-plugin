@@ -550,12 +550,41 @@ namespace smll {
 			}
 		}
 
+		// Build Triangle Index Lists for areas
+		std::vector<cv::Vec3i> areaIndices[FACE_AREA_EVERYTHING];
+		for (int i = 0; i < FACE_AREA_EVERYTHING; i++) {
+			FaceAreaID faid = (FaceAreaID)i;
+			std::vector<cv::Vec3i>& indices = areaIndices[i];
+
+			// special case : MOUTH = LIPS + HOLE
+			if (faid == FACE_AREA_MOUTH) {
+				indices.insert(indices.end(),
+					areaIndices[FACE_AREA_MOUTH_LIPS].begin(),
+					areaIndices[FACE_AREA_MOUTH_LIPS].end());
+				indices.insert(indices.end(),
+					areaIndices[FACE_AREA_MOUTH_HOLE].begin(),
+					areaIndices[FACE_AREA_MOUTH_HOLE].end());
+			}
+			else {
+				// add the triangles for this area
+				for (int t = 0; t < triangleList.size(); t++) {
+					if (triangleAreas[t] == faid) {
+						indices.emplace_back(triangleList[t]);
+					}
+				}
+			}
+
+			obs_enter_graphics();
+			result.areaIndices[i] = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
+				(void*)indices.data(), indices.size() * 3, 0);
+			obs_leave_graphics();
+		}
+
 		// Create triangle list for everything
 		obs_enter_graphics();
 		result.areaIndices[FACE_AREA_EVERYTHING] = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
 			(void*)triangleList.data(), triangleList.size() * 3, 0);
 		obs_leave_graphics();
-
 	}
 
 	// Subdivide : insert points half-way between all the points
