@@ -300,15 +300,16 @@ namespace smll {
 			const FaceContour& fc = GetFaceContour(fcid);
 			LandmarkBitmask m = fc.bitmask & morphData.GetBitmask();
 			if (m.any()) {
-				// this causes SERIOUS ISSUES
-				//size_t howMany = points.size();
+				// count how many we add
+				size_t howMany = points.size();
 				CatmullRomSmooth(points, fc.indices, CATMULL_ROM_STEPS);
 				CatmullRomSmooth(warpedpoints, fc.indices, CATMULL_ROM_STEPS);
-				// this causes SERIOUS ISSUES
-				//howMany = points.size() - howMany;
-				//while (howMany > 0) {
-				//	smoothedIndices.push_back(fc.indices[0]);
-				//}
+				// set an index for new points
+				howMany = points.size() - howMany;
+				while (howMany > 0) {
+					smoothedIndices.push_back(fc.indices[0]);
+					howMany--;
+				}
 			}
 		}
 
@@ -327,6 +328,7 @@ namespace smll {
 		// add hull points
 		std::vector<cv::Point2f> hullpoints;
 		MakeHullPoints(points, warpedpoints, hullpoints);
+		Subdivide(hullpoints);
 		for (int i = 0; i < hullpoints.size(); i++) {
 			points.emplace_back(hullpoints[i]);
 			warpedpoints.emplace_back(hullpoints[i]);
@@ -473,7 +475,7 @@ namespace smll {
 				linesList.data(), linesList.size(), 0);
 			obs_leave_graphics();
 		}
-		/*
+		
 		// init a list of areas for triangles
 		std::vector<FaceAreaID> triangleAreas;
 		for (int i = 0; i < triangleList.size(); i++) {
@@ -547,8 +549,7 @@ namespace smll {
 				}				
 			}
 		}
-		*/
-		
+
 		// Create triangle list for everything
 		obs_enter_graphics();
 		result.areaIndices[FACE_AREA_EVERYTHING] = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,

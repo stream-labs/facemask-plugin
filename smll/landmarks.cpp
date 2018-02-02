@@ -234,7 +234,7 @@ namespace smll {
 			// ALL LANDMARK POINTS
 			std::vector<int> allpoints;
 			for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
-				allpoints[i] = i;
+				allpoints.push_back(i);
 			}
 
 			// FACE_AREA_BACKGROUND
