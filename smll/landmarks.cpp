@@ -24,6 +24,7 @@ namespace smll {
 
 	static std::vector<cv::Point3d>	g_landmark_points;
 	static std::vector<FaceContour>	g_face_contours;
+	static std::vector<FaceArea>	g_face_areas;
 
 	std::vector<cv::Point3d>&	GetLandmarkPoints() {
 		if (g_landmark_points.size() == 0) {
@@ -177,10 +178,10 @@ namespace smll {
 			g_face_contours.emplace_back(FaceContour({ MOUTH_OUTER_5, MOUTH_OUTER_6, MOUTH_OUTER_7 }));
 			// FACE_CONTOUR_MOUTH_OUTER_BOTTOM
 			g_face_contours.emplace_back(FaceContour({ MOUTH_OUTER_7, MOUTH_OUTER_8, MOUTH_OUTER_9,
-				MOUTH_OUTER_10, MOUTH_OUTER_11, MOUTH_OUTER_12, MOUTH_OUTER_1}));
+				MOUTH_OUTER_10, MOUTH_OUTER_11, MOUTH_OUTER_12, MOUTH_OUTER_1 }));
 			// FACE_CONTOUR_MOUTH_INNER_TOP
 			g_face_contours.emplace_back(FaceContour({ MOUTH_INNER_1, MOUTH_INNER_2, MOUTH_INNER_3,
-				MOUTH_INNER_4, MOUTH_INNER_5}));
+				MOUTH_INNER_4, MOUTH_INNER_5 }));
 			// FACE_CONTOUR_MOUTH_INNER_BOTTOM
 			g_face_contours.emplace_back(FaceContour({ MOUTH_INNER_5, MOUTH_INNER_6, MOUTH_INNER_7,
 				MOUTH_INNER_8, MOUTH_INNER_1 }));
@@ -191,6 +192,62 @@ namespace smll {
 	const FaceContour&	GetFaceContour(FaceContourID which) {
 		GetFaceContours();
 		return g_face_contours[which];
+	}
+
+
+
+	FaceArea::FaceArea(const std::vector<int>& indz, BoolOp opp) {
+		indices = indz;
+		operation = opp;
+		bitmask.reset();
+		for (auto i : indices) {
+			bitmask.set(i);
+		}
+	}
+
+	std::vector<FaceArea>&	GetFaceAreas() {
+		if (g_face_areas.size() == 0) {
+			
+			// FACE_AREA_EYE_LEFT
+			g_face_areas.emplace_back(FaceArea({ EYE_LEFT_1, EYE_LEFT_2, EYE_LEFT_3,
+				EYE_LEFT_4, EYE_LEFT_5, EYE_LEFT_6}, FaceArea::BoolOp::BOOLOP_ALL));
+			// FACE_AREA_EYE_RIGHT
+			g_face_areas.emplace_back(FaceArea({ EYE_RIGHT_1, EYE_RIGHT_2, EYE_RIGHT_3,
+				EYE_RIGHT_4, EYE_RIGHT_5, EYE_RIGHT_6 }, FaceArea::BoolOp::BOOLOP_ALL));
+			// FACE_AREA_MOUTH_HOLE
+			g_face_areas.emplace_back(FaceArea({ MOUTH_INNER_1, MOUTH_INNER_2, MOUTH_INNER_3,
+				MOUTH_INNER_4, MOUTH_INNER_5, MOUTH_INNER_6, MOUTH_INNER_7, MOUTH_INNER_8 }, 
+				FaceArea::BoolOp::BOOLOP_ALL));
+			// FACE_AREA_MOUTH_LIPS
+			g_face_areas.emplace_back(FaceArea({ MOUTH_OUTER_1, MOUTH_OUTER_2, MOUTH_OUTER_3,
+				MOUTH_OUTER_4, MOUTH_OUTER_5, MOUTH_OUTER_6, MOUTH_OUTER_7, MOUTH_OUTER_8,
+				MOUTH_OUTER_9, MOUTH_OUTER_10, MOUTH_OUTER_11, MOUTH_OUTER_12 },
+				FaceArea::BoolOp::BOOLOP_ANY));
+			// FACE_AREA_MOUTH
+			g_face_areas.emplace_back(FaceArea({ MOUTH_INNER_1, MOUTH_INNER_2, MOUTH_INNER_3,
+				MOUTH_INNER_4, MOUTH_INNER_5, MOUTH_INNER_6, MOUTH_INNER_7, MOUTH_INNER_8,
+				MOUTH_OUTER_1, MOUTH_OUTER_2, MOUTH_OUTER_3, MOUTH_OUTER_4, MOUTH_OUTER_5, 
+				MOUTH_OUTER_6, MOUTH_OUTER_7, MOUTH_OUTER_8, MOUTH_OUTER_9, MOUTH_OUTER_10, 
+				MOUTH_OUTER_11, MOUTH_OUTER_12 },
+				FaceArea::BoolOp::BOOLOP_ALL));
+
+			// ALL LANDMARK POINTS
+			std::vector<int> allpoints;
+			for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
+				allpoints[i] = i;
+			}
+
+			// FACE_AREA_BACKGROUND
+			g_face_areas.emplace_back(FaceArea(allpoints, FaceArea::BoolOp::BOOLOP_NONE));
+			// FACE_AREA_FACE
+			g_face_areas.emplace_back(FaceArea(allpoints, FaceArea::BoolOp::BOOLOP_ANY));
+		}
+		return g_face_areas;
+	}
+
+	const FaceArea&	GetFaceArea(FaceAreaID which) {
+		GetFaceAreas();
+		return g_face_areas[which];
 	}
 
 

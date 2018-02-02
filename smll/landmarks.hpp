@@ -177,4 +177,43 @@ namespace smll {
 	// Access to contours
 	std::vector<FaceContour>&	GetFaceContours();
 	const FaceContour&			GetFaceContour(FaceContourID which);
+
+	// FaceArea : triangle area definitions
+	// - some of the areas, like the background, do not have any 
+	//   landmark points that define them.
+	struct FaceArea {
+		std::vector<int>	indices;
+		LandmarkBitmask		bitmask;
+
+		enum BoolOp {
+			BOOLOP_ANY,
+			BOOLOP_ALL,
+			BOOLOP_NONE,
+		};
+		BoolOp				operation;
+
+		FaceArea(const std::vector<int>& indices, BoolOp op);
+	};
+
+	// Face Area ids
+	// note: these are calculated, in order, using the
+	//       bool operations defined for the area.
+	enum FaceAreaID {
+		FACE_AREA_FIRST = 0,
+
+		FACE_AREA_EYE_LEFT = FACE_AREA_FIRST,
+		FACE_AREA_EYE_RIGHT,
+		FACE_AREA_MOUTH_HOLE,
+		FACE_AREA_MOUTH_LIPS,
+		FACE_AREA_MOUTH, // special case: both lips and mouth hole
+		FACE_AREA_BACKGROUND,
+		FACE_AREA_FACE,
+
+		NUM_FACE_AREAS
+	};
+
+	// Access to areas
+	std::vector<FaceArea>&	GetFaceAreas();
+	const FaceArea&			GetFaceArea(FaceAreaID which);
+
 }
