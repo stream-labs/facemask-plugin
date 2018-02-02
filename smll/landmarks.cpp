@@ -238,8 +238,10 @@ namespace smll {
 			}
 
 			// FACE_AREA_BACKGROUND
-			g_face_areas.emplace_back(FaceArea(allpoints, FaceArea::BoolOp::BOOLOP_NONE));
+			g_face_areas.emplace_back(FaceArea(allpoints, FaceArea::BoolOp::BOOLOP_NOT_ALL));
 			// FACE_AREA_FACE
+			g_face_areas.emplace_back(FaceArea(allpoints, FaceArea::BoolOp::BOOLOP_ALL));
+			// FACE_AREA_EVERYTHING
 			g_face_areas.emplace_back(FaceArea(allpoints, FaceArea::BoolOp::BOOLOP_ANY));
 		}
 		return g_face_areas;

@@ -20,6 +20,8 @@
 */
 #pragma once
 
+#include "landmarks.hpp"
+
 extern "C" {
 #pragma warning( push )
 #pragma warning( disable: 4201 )
@@ -31,9 +33,10 @@ namespace smll {
 
 	struct TriangulationResult
 	{
-		gs_vertbuffer_t*		triangulationVB;
-		gs_indexbuffer_t*		triangulationIB;
-		gs_indexbuffer_t*		linesIB;
+		gs_vertbuffer_t*		vertexBuffer;
+		gs_indexbuffer_t*		areaIndices[NUM_FACE_AREAS];
+
+		gs_indexbuffer_t*		lineIndices;
 		bool					buildLines;
 
 		TriangulationResult();

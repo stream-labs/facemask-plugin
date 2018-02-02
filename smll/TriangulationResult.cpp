@@ -29,8 +29,11 @@ extern "C" {
 
 namespace smll {
 
-	TriangulationResult::TriangulationResult() : triangulationVB(nullptr),
-		triangulationIB(nullptr), linesIB(nullptr), buildLines(false) {
+	TriangulationResult::TriangulationResult() : vertexBuffer(nullptr),
+		lineIndices(nullptr), buildLines(false) {
+		for (int i = 0; i < NUM_FACE_AREAS; i++) {
+			areaIndices[i] = nullptr;
+		}
 	}
 
 	TriangulationResult::~TriangulationResult() {
@@ -39,62 +42,47 @@ namespace smll {
 
 	void TriangulationResult::DestroyBuffers() {
 		obs_enter_graphics();
-		if (triangulationVB)
-			gs_vertexbuffer_destroy(triangulationVB);
-		if (triangulationIB)
-			gs_indexbuffer_destroy(triangulationIB);
-		if (linesIB)
-			gs_indexbuffer_destroy(linesIB);
+		if (vertexBuffer)
+			gs_vertexbuffer_destroy(vertexBuffer);
+		for (int i = 0; i < NUM_FACE_AREAS; i++) {
+			if (areaIndices[i])
+				gs_indexbuffer_destroy(areaIndices[i]);
+			areaIndices[i] = nullptr;
+		}
+		if (lineIndices)
+			gs_indexbuffer_destroy(lineIndices);
 		obs_leave_graphics();
-		triangulationVB = nullptr;
-		triangulationIB = nullptr;
-		linesIB = nullptr;
+		vertexBuffer = nullptr;
+		lineIndices = nullptr;
 	}
 
 	void TriangulationResult::TakeBuffersFrom(TriangulationResult& other) {
 
-		/*
-		DestroyBuffers();
-		if (other.triangulationVB) {
-			triangulationVB = other.triangulationVB;
-			other.triangulationVB = nullptr;
-		}
-		if (other.triangulationIB) {
-			triangulationIB = other.triangulationIB;
-			other.triangulationIB = nullptr;
-		}
-		if (other.linesIB) {
-			linesIB = other.linesIB;
-			other.linesIB = nullptr;
-		}*/
-		
-		if (other.triangulationVB) {
-			if (triangulationVB) {
-				obs_enter_graphics();
-				gs_vertexbuffer_destroy(triangulationVB);
-				obs_leave_graphics();
+		obs_enter_graphics();
+		if (other.vertexBuffer) {
+			if (vertexBuffer) {
+				gs_vertexbuffer_destroy(vertexBuffer);
 			}
-			triangulationVB = other.triangulationVB;
-			other.triangulationVB = nullptr;
+			vertexBuffer = other.vertexBuffer;
+			other.vertexBuffer = nullptr;
 		}
-		if (other.triangulationIB) {
-			if (triangulationIB) {
-				obs_enter_graphics();
-				gs_indexbuffer_destroy(triangulationIB);
-				obs_leave_graphics();
+		for (int i = 0; i < NUM_FACE_AREAS; i++) {
+			if (other.areaIndices[i]) {
+				if (areaIndices[i]) {
+					gs_indexbuffer_destroy(areaIndices[i]);
+				}
+				areaIndices[i] = other.areaIndices[i];
+				other.areaIndices[i] = nullptr;
 			}
-			triangulationIB = other.triangulationIB;
-			other.triangulationIB = nullptr;
 		}
-		if (other.linesIB) {
-			if (linesIB) {
-				obs_enter_graphics();
-				gs_indexbuffer_destroy(linesIB);
-				obs_leave_graphics();
+		if (other.lineIndices) {
+			if (lineIndices) {
+				gs_indexbuffer_destroy(lineIndices);
 			}
-			linesIB = other.linesIB;
-			other.linesIB = nullptr;
+			lineIndices = other.lineIndices;
+			other.lineIndices = nullptr;
 		}
+		obs_leave_graphics();
 	}
 
 }

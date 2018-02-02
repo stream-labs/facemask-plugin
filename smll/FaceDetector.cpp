@@ -238,28 +238,8 @@ namespace smll {
 		float width = (float)CaptureWidth();
 		float height = (float)CaptureHeight();
 
-		// list of points for triangulation
-		std::vector<cv::Point2f> points;
+		// Project morph deltas to image space
 
-		// add facial landmark points
-		dlib::point* facePoints = face.m_points;
-		for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
-			points.push_back(cv::Point2f((float)facePoints[i].x(), 
-				(float)facePoints[i].y()));
-		}
-		
-		// add extra points
-		std::vector<cv::Point2f> extrapoints;
-		extrapoints.push_back(cv::Point2f(0, 0));
-		extrapoints.push_back(cv::Point2f(width, 0));
-		extrapoints.push_back(cv::Point2f(width, height));
-		extrapoints.push_back(cv::Point2f(0, height));
-		Subdivide(extrapoints);
-		Subdivide(extrapoints);
-		Subdivide(extrapoints);
-		//Subdivide(extrapoints);
-		points.insert(points.end(), extrapoints.begin(), extrapoints.end());
-		
 		// Camera internals
 		// Approximate focal length.
 		double focal_length = (double)width * FOCAL_LENGTH_FACTOR;
@@ -271,16 +251,28 @@ namespace smll {
 		cv::Mat dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<double>::type);
 
 		// project the deltas
-		// TODO: only project non-zero deltas
+		// TODO: only project non-zero deltas 
+		//       (although, to be honest, with compiler opts and such, it
+		//        would likely take longer to separate them out)
 		const cv::Mat& rot = face.GetCVRotation();
 		cv::Mat trx = face.GetCVTranslation();
-		trx.at<double>(0, 0) = 0.0; // clear x & y
+		trx.at<double>(0, 0) = 0.0; // clear x & y, we'll center it
 		trx.at<double>(1, 0) = 0.0;
 		std::vector<cv::Point3f> deltas = morphData.GetCVDeltas();
 		std::vector<cv::Point2f> projectedDeltas;
 		cv::projectPoints(deltas, rot, trx, camera_matrix, dist_coeffs, projectedDeltas);
 
-		// apply the deltas to the points
+		// make a list of points for triangulation
+		std::vector<cv::Point2f> points;
+
+		// add facial landmark points
+		dlib::point* facePoints = face.m_points;
+		for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
+			points.push_back(cv::Point2f((float)facePoints[i].x(),
+				(float)facePoints[i].y()));
+		}
+
+		// Apply the morph deltas to points to create warpedpoints
 		std::vector<cv::Point2f> warpedpoints = points;
 		cv::Point2f c(width / 2, height / 2);
 		for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
@@ -291,26 +283,56 @@ namespace smll {
 			}
 		}
 
-		// get hull points
+		// add smoothing points
+		// - we smooth out any face contours that got morphed
+		// - we'll need to mark these new points so we know which
+		//   area they're in when we sort out our facial areas
+		//   later on
+		// - what we save is an index from the contour so that 
+		//   we can use that to find the area that point is in.
+		// - it doesn't matter which one we choose, since whole 
+		//   contours are always contained in areas
+		//
+		std::vector<int> smoothedIndices;
+		for (int i = 0; i < NUM_FACE_CONTOURS; i++) {
+			FaceContourID fcid = (FaceContourID)i;
+			// bitmask check if it's being morphed
+			const FaceContour& fc = GetFaceContour(fcid);
+			LandmarkBitmask m = fc.bitmask & morphData.GetBitmask();
+			if (m.any()) {
+				// this causes SERIOUS ISSUES
+				//size_t howMany = points.size();
+				CatmullRomSmooth(points, fc.indices, CATMULL_ROM_STEPS);
+				CatmullRomSmooth(warpedpoints, fc.indices, CATMULL_ROM_STEPS);
+				// this causes SERIOUS ISSUES
+				//howMany = points.size() - howMany;
+				//while (howMany > 0) {
+				//	smoothedIndices.push_back(fc.indices[0]);
+				//}
+			}
+		}
+
+		// add border points
+		std::vector<cv::Point2f> borderpoints;
+		borderpoints.push_back(cv::Point2f(0, 0));
+		borderpoints.push_back(cv::Point2f(width, 0));
+		borderpoints.push_back(cv::Point2f(width, height));
+		borderpoints.push_back(cv::Point2f(0, height));
+		Subdivide(borderpoints);
+		Subdivide(borderpoints);
+		Subdivide(borderpoints);
+		points.insert(points.end(), borderpoints.begin(), borderpoints.end());
+		warpedpoints.insert(warpedpoints.end(), borderpoints.begin(), borderpoints.end());
+
+		// add hull points
 		std::vector<cv::Point2f> hullpoints;
 		MakeHullPoints(points, warpedpoints, hullpoints);
-
-		// add hull points to both lists
 		for (int i = 0; i < hullpoints.size(); i++) {
 			points.emplace_back(hullpoints[i]);
 			warpedpoints.emplace_back(hullpoints[i]);
 		}
 
-		// smooth out any face contours that got morphed
-		for (int i = 0; i < NUM_FACE_CONTOURS; i++) {
-			// bitmask check if it's being morphed
-			const FaceContour& fc = GetFaceContour((FaceContourID)i);
-			LandmarkBitmask m = fc.bitmask & morphData.GetBitmask();
-			if (m.any()) {
-				CatmullRomSmooth(points, fc.indices, CATMULL_ROM_STEPS);
-				CatmullRomSmooth(warpedpoints, fc.indices, CATMULL_ROM_STEPS);
-			}
-		}
+		// Create Triangulation
 
 		// create the openCV Subdiv2D object
 		cv::Rect rect(0, 0, CaptureWidth() + 1, CaptureHeight() + 1);
@@ -355,44 +377,21 @@ namespace smll {
 			gs_texcoord(uv.x / width, uv.y / height, 0);
 			gs_vertex2f(p.x, p.y);
 		}
-		result.triangulationVB = gs_render_save();
+		result.vertexBuffer = gs_render_save();
 		obs_leave_graphics();
 
 		// get triangulation
 		std::vector<cv::Vec3i>	triangleList;
 		subdiv.getTriangleIndexList(triangleList);
 
-		// make lines
-		if (result.buildLines) {
-			// convert to lines
-			std::vector<uint32_t> linesList;
-			for (auto t : triangleList) {
-				int i0 = t[0];
-				int i1 = t[1];
-				int i2 = t[2];
-
-				linesList.push_back(i0);
-				linesList.push_back(i1);
-				linesList.push_back(i1);
-				linesList.push_back(i2);
-				linesList.push_back(i2);
-				linesList.push_back(i0);
-			}
-
-			// make index buffer
-			obs_enter_graphics();
-			result.linesIB = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
-				linesList.data(), linesList.size(), 0);
-			obs_leave_graphics();
-		}
-
-		// make index buffer
-		obs_enter_graphics();
-		result.triangulationIB = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
-			triangleList.data(), triangleList.size() * 3, 0);
-		obs_leave_graphics();
+		// Make Index Buffers
+		MakeAreaIndices(result, triangleList, smoothedIndices, borderpoints.size());
 	}
 
+	// MakeHullPoints
+	// - these are extra points added to the morph to smooth out the appearance,
+	//   and keep the rest of the video frame from morphing with it
+	//
 	void FaceDetector::MakeHullPoints(const std::vector<cv::Point2f>& points,
 		const std::vector<cv::Point2f>& warpedpoints, std::vector<cv::Point2f>& hullpoints) {
 		// consider outside contours only
@@ -437,10 +436,129 @@ namespace smll {
 
 		// scale up hull points from center
 		for (int i = 0; i < hullpoints.size(); i++) {
-			hullpoints[i] = ((hullpoints[i] - center) * 1.1f) + center;
+			hullpoints[i] = ((hullpoints[i] - center) * 1.25f) + center;
 		}
 	}
 
+	// MakeAreaIndices : make index buffers for different areas of the face
+	//
+	void FaceDetector::MakeAreaIndices(TriangulationResult& result,
+		const std::vector<cv::Vec3i>& triangleList,
+		const std::vector<int>& smoothIndices,
+		size_t numBorderPoints) {
+		UNUSED_PARAMETER(numBorderPoints);
+
+		// make lines index buffer
+		if (result.buildLines) {
+			// convert to lines
+			std::vector<uint32_t> linesList;
+			for (int t = 0; t < triangleList.size(); t++) {
+				const cv::Vec3i& tri = triangleList[t];
+
+				int i0 = tri[0];
+				int i1 = tri[1];
+				int i2 = tri[2];
+
+				linesList.push_back(i0);
+				linesList.push_back(i1);
+				linesList.push_back(i1);
+				linesList.push_back(i2);
+				linesList.push_back(i2);
+				linesList.push_back(i0);
+			}
+
+			// make index buffer
+			obs_enter_graphics();
+			result.lineIndices = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
+				linesList.data(), linesList.size(), 0);
+			obs_leave_graphics();
+		}
+		/*
+		// init a list of areas for triangles
+		std::vector<FaceAreaID> triangleAreas;
+		for (int i = 0; i < triangleList.size(); i++) {
+			triangleAreas.emplace_back(FACE_AREA_INVALID);
+		}
+
+		// NOTE: We know the order of the points in our vtx list
+		//       - first is the 68 landmark points
+		//       - next is the smooth points
+		//       - border points
+		//       - hull points
+		size_t numLandmarksAndSmooth = NUM_FACIAL_LANDMARKS + smoothIndices.size();
+
+		// define the area list for triangles
+		for (int i = 0; i < FACE_AREA_EVERYTHING; i++) {
+			FaceAreaID faid = (FaceAreaID)i;
+			const FaceArea& fa = GetFaceArea(faid);
+
+			// special case : MOUTH = LIPS + HOLE
+			if (faid == FACE_AREA_MOUTH)
+				continue;
+
+			// find the triangles for this area
+			for (int t = 0; t < triangleList.size(); t++) {
+
+				// only consider triangles not already in an area
+				if (triangleAreas[t] == FACE_AREA_INVALID) {
+					const cv::Vec3i& tri = triangleList[t];
+					int i0 = tri[0];
+					int i1 = tri[1];
+					int i2 = tri[2];
+
+					// make a bitmask for each point
+					LandmarkBitmask b0;
+					if (i0 < NUM_FACIAL_LANDMARKS)
+						b0.set(i0);
+					else if (i0 < numLandmarksAndSmooth)
+						b0.set(smoothIndices[i0 - NUM_FACIAL_LANDMARKS]);
+					LandmarkBitmask b1;
+					if (i1 < NUM_FACIAL_LANDMARKS)
+						b1.set(i1);
+					else if (i1 < numLandmarksAndSmooth)
+						b1.set(smoothIndices[i1 - NUM_FACIAL_LANDMARKS]);
+					LandmarkBitmask b2;
+					if (i2 < NUM_FACIAL_LANDMARKS)
+						b2.set(i2);
+					else if (i2 < numLandmarksAndSmooth)
+						b2.set(smoothIndices[i2 - NUM_FACIAL_LANDMARKS]);
+
+					// do boolean logic to determine membership
+					bool inArea = false;
+					switch (fa.operation) {
+					case FaceArea::BoolOp::BOOLOP_ALL:
+						inArea = (fa.bitmask & b0).any() &&
+							(fa.bitmask & b1).any() &&
+							(fa.bitmask & b2).any();
+						break;
+					case FaceArea::BoolOp::BOOLOP_ANY:
+						inArea = (fa.bitmask & b0).any() ||
+							(fa.bitmask & b1).any() ||
+							(fa.bitmask & b2).any();
+						break;
+					case FaceArea::BoolOp::BOOLOP_NOT_ALL:
+						inArea = (!b0.any() || !b1.any() || !b2.any());
+						break;
+					}
+					// we in?
+					if (inArea) {
+						triangleAreas[t] = faid;
+					}
+				}				
+			}
+		}
+		*/
+		
+		// Create triangle list for everything
+		obs_enter_graphics();
+		result.areaIndices[FACE_AREA_EVERYTHING] = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
+			(void*)triangleList.data(), triangleList.size() * 3, 0);
+		obs_leave_graphics();
+
+	}
+
+	// Subdivide : insert points half-way between all the points
+	//
 	void FaceDetector::Subdivide(std::vector<cv::Point2f>& points) {
 		for (unsigned int i = 0; i < points.size(); i++) {
 			int i2 = (i + 1) % points.size();

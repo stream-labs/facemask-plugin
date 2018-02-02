@@ -697,9 +697,9 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	while (gs_effect_loop(defaultEffect, "Draw")) {
 		gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
 			"image"), sourceTexture);
-		if (triangulation.triangulationVB) {
-			gs_load_vertexbuffer(triangulation.triangulationVB);
-			gs_load_indexbuffer(triangulation.triangulationIB);
+		if (triangulation.vertexBuffer) {
+			gs_load_vertexbuffer(triangulation.vertexBuffer);
+			gs_load_indexbuffer(triangulation.areaIndices[smll::FACE_AREA_EVERYTHING]);
 			gs_draw(GS_TRIS, 0, 0);
 		}
 		else {
@@ -769,16 +769,16 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				smllRenderer->DrawFaces(faces);
 			
 			// draw triangulation as lines
-			if (triangulation.triangulationVB && 
-				triangulation.linesIB) {
+			if (triangulation.vertexBuffer && 
+				triangulation.lineIndices) {
 				gs_effect_t    *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
 				gs_eparam_t    *color = gs_effect_get_param_by_name(solid, "color");
 				struct vec4 veccol;
 				vec4_from_rgba(&veccol, smll::OBSRenderer::MakeColor(0, 255, 0, 200));
 				gs_effect_set_vec4(color, &veccol);
 				while (gs_effect_loop(solid, "Solid")) {
-					gs_load_indexbuffer(triangulation.linesIB);
-					gs_load_vertexbuffer(triangulation.triangulationVB);
+					gs_load_indexbuffer(triangulation.lineIndices);
+					gs_load_vertexbuffer(triangulation.vertexBuffer);
 					gs_draw(GS_LINES, 0, 0);
 				}
 			}

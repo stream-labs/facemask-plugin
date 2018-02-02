@@ -154,9 +154,8 @@ namespace smll {
 	};
 
 	enum FaceContourID {
-		FACE_CONTOUR_FIRST = 0,
-
-		FACE_CONTOUR_CHIN = FACE_CONTOUR_FIRST,
+		FACE_CONTOUR_INVALID = -1,
+		FACE_CONTOUR_CHIN = 0,
 		FACE_CONTOUR_EYEBROW_LEFT,
 		FACE_CONTOUR_EYEBROW_RIGHT,
 		FACE_CONTOUR_NOSE_BRIDGE,
@@ -188,7 +187,7 @@ namespace smll {
 		enum BoolOp {
 			BOOLOP_ANY,
 			BOOLOP_ALL,
-			BOOLOP_NONE,
+			BOOLOP_NOT_ALL,
 		};
 		BoolOp				operation;
 
@@ -199,15 +198,15 @@ namespace smll {
 	// note: these are calculated, in order, using the
 	//       bool operations defined for the area.
 	enum FaceAreaID {
-		FACE_AREA_FIRST = 0,
-
-		FACE_AREA_EYE_LEFT = FACE_AREA_FIRST,
+		FACE_AREA_INVALID = -1,
+		FACE_AREA_EYE_LEFT = 0,
 		FACE_AREA_EYE_RIGHT,
 		FACE_AREA_MOUTH_HOLE,
 		FACE_AREA_MOUTH_LIPS,
-		FACE_AREA_MOUTH, // special case: both lips and mouth hole
+		FACE_AREA_MOUTH,		// HOLE + LIPS
 		FACE_AREA_BACKGROUND,
 		FACE_AREA_FACE,
+		FACE_AREA_EVERYTHING,
 
 		NUM_FACE_AREAS
 	};
