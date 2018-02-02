@@ -134,6 +134,8 @@ private:
 		const std::vector<int>& indices, int steps);
 	void	ScaleMorph(std::vector<cv::Point2f>& points,
 		std::vector<int> indices, cv::Point2f& center, cv::Point2f& scale);
+	void	MakeHullPoints(const std::vector<cv::Point2f>& points,
+		const std::vector<cv::Point2f>& warpedpoints, std::vector<cv::Point2f>& hullpoints);
 };
 
 

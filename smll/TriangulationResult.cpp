@@ -30,7 +30,7 @@ extern "C" {
 namespace smll {
 
 	TriangulationResult::TriangulationResult() : triangulationVB(nullptr),
-		triangulationIB(nullptr), linesIB(nullptr), buildLines(false) {
+		triangulationIB(nullptr), linesIB(nullptr), buildLines(true) {
 	}
 
 	TriangulationResult::~TriangulationResult() {

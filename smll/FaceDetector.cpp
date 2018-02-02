@@ -254,15 +254,11 @@ namespace smll {
 		extrapoints.push_back(cv::Point2f(width, 0));
 		extrapoints.push_back(cv::Point2f(width, height));
 		extrapoints.push_back(cv::Point2f(0, height));
-		// no need to add extra border points...in case we do
-		//Subdivide(extrapoints);
-		//Subdivide(extrapoints);
-		//Subdivide(extrapoints);
+		Subdivide(extrapoints);
+		Subdivide(extrapoints);
+		Subdivide(extrapoints);
 		//Subdivide(extrapoints);
 		points.insert(points.end(), extrapoints.begin(), extrapoints.end());
-		
-		// copy points into warped points
-		std::vector<cv::Point2f> warpedpoints = points;
 		
 		// Camera internals
 		// Approximate focal length.
@@ -275,6 +271,7 @@ namespace smll {
 		cv::Mat dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<double>::type);
 
 		// project the deltas
+		// TODO: only project non-zero deltas
 		const cv::Mat& rot = face.GetCVRotation();
 		cv::Mat trx = face.GetCVTranslation();
 		trx.at<double>(0, 0) = 0.0; // clear x & y
@@ -283,15 +280,30 @@ namespace smll {
 		std::vector<cv::Point2f> projectedDeltas;
 		cv::projectPoints(deltas, rot, trx, camera_matrix, dist_coeffs, projectedDeltas);
 
-		// apply the morph deltas
+		// apply the deltas to the points
+		std::vector<cv::Point2f> warpedpoints = points;
 		cv::Point2f c(width / 2, height / 2);
 		for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
-			// offset from center			
-			warpedpoints[i] += projectedDeltas[i] - c;
+			// bitmask tells us which deltas are non-zero
+			if (morphData.GetBitmask()[i]) {
+				// offset from center
+				warpedpoints[i] += projectedDeltas[i] - c;
+			}
+		}
+
+		// get hull points
+		std::vector<cv::Point2f> hullpoints;
+		MakeHullPoints(points, warpedpoints, hullpoints);
+
+		// add hull points to both lists
+		for (int i = 0; i < hullpoints.size(); i++) {
+			points.emplace_back(hullpoints[i]);
+			warpedpoints.emplace_back(hullpoints[i]);
 		}
 
 		// smooth out any face contours that got morphed
 		for (int i = 0; i < NUM_FACE_CONTOURS; i++) {
+			// bitmask check if it's being morphed
 			const FaceContour& fc = GetFaceContour((FaceContourID)i);
 			LandmarkBitmask m = fc.bitmask & morphData.GetBitmask();
 			if (m.any()) {
@@ -312,7 +324,6 @@ namespace smll {
 			if (rect.contains(p)) {
 				// note: this crashes if you insert a point outside the rect.
 				int vid = subdiv.insert(p);
-				cv::Point2f k = subdiv.getVertex(vid);
 				vtxMap[vid] = i;
 			}
 		}
@@ -356,10 +367,10 @@ namespace smll {
 			// convert to lines
 			std::vector<uint32_t> linesList;
 			for (auto t : triangleList) {
-
 				int i0 = t[0];
 				int i1 = t[1];
 				int i2 = t[2];
+
 				linesList.push_back(i0);
 				linesList.push_back(i1);
 				linesList.push_back(i1);
@@ -371,15 +382,63 @@ namespace smll {
 			// make index buffer
 			obs_enter_graphics();
 			result.linesIB = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
-				linesList.data(), linesList.size(), GS_DYNAMIC);
+				linesList.data(), linesList.size(), 0);
 			obs_leave_graphics();
 		}
 
 		// make index buffer
 		obs_enter_graphics();
 		result.triangulationIB = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
-			triangleList.data(), triangleList.size() * 3, GS_DYNAMIC);
+			triangleList.data(), triangleList.size() * 3, 0);
 		obs_leave_graphics();
+	}
+
+	void FaceDetector::MakeHullPoints(const std::vector<cv::Point2f>& points,
+		const std::vector<cv::Point2f>& warpedpoints, std::vector<cv::Point2f>& hullpoints) {
+		// consider outside contours only
+		const FaceContourID contours[3] = { FACE_CONTOUR_CHIN, FACE_CONTOUR_EYEBROW_LEFT, FACE_CONTOUR_EYEBROW_RIGHT };
+
+		// find the center of the original points
+		int numPoints = 0;
+		cv::Point2f center(0.0f, 0.0f);
+		for (int i = 0; i < 3; i++) {
+			const FaceContour& fc = GetFaceContour(contours[i]);
+			for (int j = 0; j < fc.indices.size(); j++, numPoints++) {
+				center += points[fc.indices[j]];
+			}
+		}
+		center /= (float)numPoints;
+
+		// go through the warped points, see if they expand the hull
+		// - we do this by checking the dot product of the delta to the
+		//   warped point with the vector to the original point from
+		//   the center
+		for (int i = 0; i < 3; i++) {
+			const FaceContour& fc = GetFaceContour(contours[i]);
+			for (int j = 0; j < fc.indices.size(); j++) {
+				// get points
+				const cv::Point2f&	p = points[fc.indices[j]];
+				const cv::Point2f&	wp = warpedpoints[fc.indices[j]];
+
+				// get vectors
+				cv::Point2f d = wp - p;
+				cv::Point2f v = p - center;
+				// if dot product is positive
+				if (d.dot(v) > 0) {
+					// warped point expands hull
+					hullpoints.emplace_back(wp);
+				}
+				else {
+					// warped point shrinks hull, use original
+					hullpoints.emplace_back(p);
+				}
+			}
+		}
+
+		// scale up hull points from center
+		for (int i = 0; i < hullpoints.size(); i++) {
+			hullpoints[i] = ((hullpoints[i] - center) * 1.1f) + center;
+		}
 	}
 
 	void FaceDetector::Subdivide(std::vector<cv::Point2f>& points) {
@@ -394,9 +453,8 @@ namespace smll {
 
 	// Curve Fitting - Catmull-Rom spline 
 	// https://gist.github.com/pr0digy/1383576
-	// 
-	// Note: fixed bug in code
-	//
+	// - converted to C++
+	// - modified for my uses
 	void FaceDetector::CatmullRomSmooth(std::vector<cv::Point2f>& points, 
 		const std::vector<int>& indices, int steps) {
 
