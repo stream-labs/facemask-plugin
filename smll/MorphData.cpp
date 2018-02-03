@@ -50,7 +50,7 @@ namespace smll {
 	}
 
 	void MorphData::Stamp() {
-		m_timestamp = std::chrono::steady_clock::now();
+		m_timestamp = NEW_TIMESTAMP;
 		m_dirty = true;
 	}
 

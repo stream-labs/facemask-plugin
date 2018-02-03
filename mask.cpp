@@ -484,11 +484,7 @@ bool Mask::MaskData::RenderMorphVideo(gs_texture* vidtex, uint32_t width, uint32
 			"image"), vidtex);
 		if (trires.vertexBuffer) {
 			gs_load_vertexbuffer(trires.vertexBuffer);
-			gs_load_indexbuffer(trires.areaIndices[smll::FACE_AREA_EYE_LEFT]);
-			gs_draw(GS_TRIS, 0, 0);
-			gs_load_indexbuffer(trires.areaIndices[smll::FACE_AREA_EYE_RIGHT]);
-			gs_draw(GS_TRIS, 0, 0);
-			gs_load_indexbuffer(trires.areaIndices[smll::FACE_AREA_MOUTH]);
+			gs_load_indexbuffer(trires.areaIndices[smll::FACE_AREA_EVERYTHING]);
 			gs_draw(GS_TRIS, 0, 0);
 			didMorph = true;
 		}

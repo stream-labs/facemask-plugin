@@ -101,6 +101,7 @@ configure_file(
 
 # Code
 SET(smll_HEADERS
+	"${SMLLDir}/Common.hpp"
 	"${SMLLDir}/Config.hpp"
 	"${SMLLDir}/DetectionResults.hpp"
 	"${SMLLDir}/DLibImageWrapper.hpp"

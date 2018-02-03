@@ -133,7 +133,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	: m_source(source), m_baseWidth(640), m_baseHeight(480), m_isActive(true), m_isVisible(true),
 	m_isDisabled(false), maskDataShutdown(false), maskJsonFilename(nullptr), maskData(nullptr),
 	demoModeOn(false), demoCurrentMask(0), demoModeInterval(0.0f), demoModeDelay(0.0f),
-	demoModeElapsed(0.0f), demoModeInDelay(false), frameCounter(0), drawMask(true), 
+	demoModeElapsed(0.0f), demoModeInDelay(false), drawMask(true), 
 	drawFaces(false), drawFDRect(false), drawTRRect(false), filterPreviewMode(false), 
 	performanceSetting(-1), testingStage(nullptr) {
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
@@ -625,7 +625,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			smll::OBSTexture& detect = detection.frames[fidx].detect;
 			smll::OBSTexture& track = detection.frames[fidx].track;
 
-			detection.frames[fidx].frame = frameCounter++;
+			detection.frames[fidx].timestamp = NEW_TIMESTAMP;
 
 			// (re) allocate frame if necessary
 			if (capture.width != m_baseWidth ||
@@ -858,7 +858,7 @@ int32_t Plugin::FaceMaskFilter::Instance::StaticThreadMain(Instance *ptr) {
 int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 
 	// run until we're shut down
-	long long lastFrame = -1;
+	TimeStamp lastTimestamp;
 	while (true) {
 
 		auto frameStart = std::chrono::system_clock::now();
@@ -885,7 +885,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			std::unique_lock<std::mutex> lock(detection.frames[fidx].mutex);
 
 			// check to see if we are detecting the same frame as last time
-			if (lastFrame == detection.frames[fidx].frame) {
+			if (lastTimestamp == detection.frames[fidx].timestamp) {
 				// we are
 				skip = true;
 			}
@@ -894,7 +894,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 				smllFaceDetector->DetectFaces(detection.frames[fidx].capture,
 					detection.frames[fidx].detect,
 					detection.frames[fidx].track);
-				lastFrame = detection.frames[fidx].frame;
+				lastTimestamp = detection.frames[fidx].timestamp;
 			}
 		}
 
@@ -918,6 +918,9 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 
 		{
 			std::unique_lock<std::mutex> facelock(detection.faces[fidx].mutex);
+
+			// pass on timestamp to results
+			detection.faces[fidx].timestamp = lastTimestamp;
 
 			// Copy faces into our detection results
 			const smll::Faces& smllFaces = smllFaceDetector->GetFaces();
@@ -1133,6 +1136,9 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 
 			// new triangulation
 			triangulation.TakeBuffersFrom(detection.faces[fidx].triangulationResults);
+
+			// new timestamp
+			timestamp = detection.faces[fidx].timestamp;
 
 			// TEST MODE ONLY : output for testing
 			if (smll::Config::singleton().get_bool(smll::CONFIG_BOOL_IN_TEST_MODE)) {

@@ -20,48 +20,9 @@
 */
 #pragma once
 
-#include "Common.hpp"
-#include "landmarks.hpp"
+#include <chrono>
 
-extern "C" {
-#pragma warning( push )
-#pragma warning( disable: 4201 )
-#include <libobs/graphics/vec3.h>
-#pragma warning( pop )
-}
-#include <array>
-#include <bitset>
+typedef std::chrono::time_point<std::chrono::steady_clock>	TimeStamp;
+#define NEW_TIMESTAMP   std::chrono::steady_clock::now()
 
-namespace smll {
-
-	typedef std::array<vec3, NUM_FACIAL_LANDMARKS>				DeltaList;
-
-	class MorphData
-	{
-	public:
-
-		MorphData();
-
-		const DeltaList&			GetDeltas() const;
-		std::vector<cv::Point3f>	GetCVDeltas() const;
-		DeltaList&					GetDeltasAndStamp();
-		const LandmarkBitmask&		GetBitmask();
-
-		void				Stamp();
-		
-		// be sure to call after changing deltas
-		void				UpdateBitmask();
-
-		void				Invalidate();
-		bool				IsValid() const;
-		bool				IsNewerThan(const MorphData & other) const;
-
-	private:
-		DeltaList			m_deltas;
-		TimeStamp			m_timestamp;
-		LandmarkBitmask		m_bitmask;
-		bool				m_dirty;
-	};
-
-}
 
