@@ -33,6 +33,10 @@ namespace smll {
 
 	struct TriangulationResult
 	{
+		// TODO: We should be using GS::IndexBuffer and GS::VertexBuffer
+		//       classes here. Building of the vertex buffers, in particular,
+		//       is much more robust than what we are doing here.
+		//
 		gs_vertbuffer_t*		vertexBuffer;
 		gs_indexbuffer_t*		areaIndices[NUM_FACE_AREAS];
 

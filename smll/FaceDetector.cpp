@@ -352,29 +352,16 @@ namespace smll {
 			}
 		}
 
-		// make the vertex buffer using order from subdiv2d
+		// make the vertex buffer using our point lists
 		obs_enter_graphics();
 		gs_render_start(true);
-		int nv = subdiv.getNumVertices();
+		size_t nv = points.size();
 		for (int i = 0; i < nv; i++) {
-			cv::Point2f p, uv;
-			if (i < 4) {
-				// first 4 points (the corners) get sent out to
-				// bloody nowheresville (3*max dimension beyond borders)
-				// odd, but hey
-				p = subdiv.getVertex(i);
-				if (p.x < 0) p.x = 0;
-				if (p.y < 0) p.y = 0;
-				if (p.x > width) p.x = width;
-				if (p.y > height) p.y = height;
-				uv = p;
-			}
-			else {
-				// position from warped points
-				// uv from original points
-				p = warpedpoints[vtxMap[i]];
-				uv = points[vtxMap[i]];
-			}
+			// position from warped points
+			// uv from original points
+			const cv::Point2f& p = warpedpoints[i];
+			const cv::Point2f& uv = points[i];
+
 			// add point and uv
 			gs_texcoord(uv.x / width, uv.y / height, 0);
 			gs_vertex2f(p.x, p.y);
@@ -385,6 +372,43 @@ namespace smll {
 		// get triangulation
 		std::vector<cv::Vec3i>	triangleList;
 		subdiv.getTriangleIndexList(triangleList);
+
+		// NOTE: openCV's subdiv2D class adds 4 points on initialization:
+		//
+		//       p0 = 0,0
+		//       p1 = M,0
+		//       p2 = 0,M
+		//       p3 = -M,-M
+		//
+		// where M = max(W,H) * 3
+		//
+		// I assume this is to ensure the entire triangulation is contained 
+		// in a triangle. Or something. I dunno.
+		// Either way, since I add my own border points myself, these first
+		// 4 vertices are crap to us, and all resulting triangles are also
+		// crap.
+		// We remove these triangles, and re-index them to solve this issue.
+
+		// re-index triangles and remove bad ones
+		std::vector<cv::Vec3i>::iterator it = triangleList.begin();
+		while (it != triangleList.end()) {
+			int i0 = (*it)[0];
+			int i1 = (*it)[1];
+			int i2 = (*it)[2];
+
+			// crap triangle?
+			if (i0 < 4 || i1 < 4 || i2 < 4) {
+				// duh-leeted
+				it = triangleList.erase(it);
+			}
+			else {
+				// re-index
+				(*it)[0] = vtxMap[i0];
+				(*it)[1] = vtxMap[i1];
+				(*it)[2] = vtxMap[i2];
+				it++;
+			}
+		}
 
 		// Make Index Buffers
 		MakeAreaIndices(result, triangleList, smoothedIndices, borderpoints.size());

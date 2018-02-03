@@ -459,3 +459,61 @@ std::shared_ptr<Mask::Part> Mask::MaskData::LoadPart(std::string name, obs_data_
 	return current;
 }
 
+std::shared_ptr<Mask::Resource::Morph> Mask::MaskData::GetMorph() {
+	// cache the morph pointer so we dont constantly search for it
+	if (m_morph == nullptr) {
+		m_morph = std::dynamic_pointer_cast<Mask::Resource::Morph>
+			(GetResource(Mask::Resource::Type::Morph));
+	}
+	return m_morph;
+}
+
+bool Mask::MaskData::RenderMorphVideo(gs_texture* vidtex, uint32_t width, uint32_t height,
+	const smll::TriangulationResult& trires) {
+
+	bool didMorph = false;
+
+	// Effects
+	gs_effect_t* defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
+
+	// Draw the source video
+	gs_enable_depth_test(false);
+	gs_set_cull_mode(GS_NEITHER);
+	while (gs_effect_loop(defaultEffect, "Draw")) {
+		gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+			"image"), vidtex);
+		if (trires.vertexBuffer) {
+			gs_load_vertexbuffer(trires.vertexBuffer);
+			gs_load_indexbuffer(trires.areaIndices[smll::FACE_AREA_EYE_LEFT]);
+			gs_draw(GS_TRIS, 0, 0);
+			gs_load_indexbuffer(trires.areaIndices[smll::FACE_AREA_EYE_RIGHT]);
+			gs_draw(GS_TRIS, 0, 0);
+			gs_load_indexbuffer(trires.areaIndices[smll::FACE_AREA_MOUTH]);
+			gs_draw(GS_TRIS, 0, 0);
+			didMorph = true;
+		}
+		else {
+			gs_draw_sprite(vidtex, 0, width, height);
+		}
+	}
+
+	/*
+				// draw triangulation as lines
+			if (triangulation.vertexBuffer && 
+				triangulation.lineIndices) {
+				gs_effect_t    *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
+				gs_eparam_t    *color = gs_effect_get_param_by_name(solid, "color");
+				struct vec4 veccol;
+				vec4_from_rgba(&veccol, smll::OBSRenderer::MakeColor(0, 255, 0, 200));
+				gs_effect_set_vec4(color, &veccol);
+				while (gs_effect_loop(solid, "Solid")) {
+					gs_load_indexbuffer(triangulation.lineIndices);
+					gs_load_vertexbuffer(triangulation.vertexBuffer);
+					gs_draw(GS_LINES, 0, 0);
+				}
+			}
+	*/
+
+	return didMorph;
+}
+

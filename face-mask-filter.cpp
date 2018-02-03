@@ -493,10 +493,7 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 			mdat->Tick(timeDelta);
 
 			// ask mask for a morph resource
-			// todo: this could get slow
-			std::shared_ptr<Mask::Resource::Morph> morph =
-				std::dynamic_pointer_cast<Mask::Resource::Morph>(
-					mdat->GetResource(Mask::Resource::Type::Morph));
+			std::shared_ptr<Mask::Resource::Morph> morph = mdat->GetMorph();
 
 			// (possibly) update morph buffer
 			std::unique_lock<std::mutex> morphlock(detection.morphs[midx].mutex, std::try_to_lock);
@@ -679,7 +676,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// start
 	smllRenderer->DrawBegin();
 
-	// Need to wrap for warping
+	// Set up sampler state
+	// Note: We need to wrap for morphing
 	gs_sampler_info sinfo;
 	sinfo.address_u = GS_ADDRESS_WRAP;
 	sinfo.address_v = GS_ADDRESS_WRAP;
@@ -691,36 +689,23 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	gs_load_samplerstate(ss, 0);
 	gs_samplerstate_destroy(ss);
 
-	// Draw the source video
-	gs_enable_depth_test(false);
-	gs_set_cull_mode(GS_NEITHER);
-	while (gs_effect_loop(defaultEffect, "Draw")) {
-		gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
-			"image"), sourceTexture);
-		if (triangulation.vertexBuffer) {
-			gs_load_vertexbuffer(triangulation.vertexBuffer);
-			gs_load_indexbuffer(triangulation.areaIndices[smll::FACE_AREA_EVERYTHING]);
-			gs_draw(GS_TRIS, 0, 0);
-		}
-		else {
-			gs_draw_sprite(sourceTexture, 0, m_baseWidth, m_baseHeight);
+	// mask to draw
+	Mask::MaskData* mdat = maskData.get();
+	if (demoModeOn && demoMaskDatas.size() > 0) {
+		if (demoCurrentMask >= 0 &&
+			demoCurrentMask < demoMaskDatas.size()) {
+			mdat = demoMaskDatas[demoCurrentMask].get();
 		}
 	}
+
+	// Draw the source video
+	mdat->RenderMorphVideo(sourceTexture, m_baseWidth, m_baseHeight, triangulation);
 
 	gs_enable_depth_test(true);
 	gs_depth_function(GS_LESS);
 
 	// draw crop rectangles
 	drawCropRects(m_baseWidth, m_baseHeight);
-
-	// mask to draw
-	Mask::MaskData* mdat = maskData.get();
-	if (demoModeOn && demoMaskDatas.size() > 0) {
-		if (demoCurrentMask >= 0 && 
-			demoCurrentMask < demoMaskDatas.size()) {
-			mdat = demoMaskDatas[demoCurrentMask].get();
-		}
-	}
 
 	// some reasons triangulation should be destroyed
 	if (!mdat || faces.length == 0) {
@@ -745,8 +730,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				std::unique_lock<std::mutex> lock(maskDataMutex, std::try_to_lock);
 				if (lock.owns_lock()) {
 					// Check here for no morph
-					// todo: this could get slow (make getmorph())
-					if (!mdat->GetResource(Mask::Resource::Type::Morph)) {
+					if (!mdat->GetMorph()) {
 						triangulation.DestroyBuffers();
 					}
 
