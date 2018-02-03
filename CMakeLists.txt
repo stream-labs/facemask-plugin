@@ -101,6 +101,7 @@ configure_file(
 
 # Code
 SET(smll_HEADERS
+	"${SMLLDir}/Common.hpp"
 	"${SMLLDir}/Config.hpp"
 	"${SMLLDir}/DetectionResults.hpp"
 	"${SMLLDir}/DLibImageWrapper.hpp"
@@ -109,10 +110,12 @@ SET(smll_HEADERS
 	"${SMLLDir}/Kalman.hpp"
 	"${SMLLDir}/ImageWrapper.hpp"
 	"${SMLLDir}/landmarks.hpp"
+	"${SMLLDir}/MorphData.hpp"
 	"${SMLLDir}/OBSRenderer.hpp"
 	"${SMLLDir}/OBSTexture.hpp"
 	"${SMLLDir}/sarray.hpp"
 	"${SMLLDir}/TestingPipe.hpp"
+	"${SMLLDir}/TriangulationResult.hpp"
 	"${SMLLDir}/SingleValueKalman.hpp"
 )
 SET(gs_HEADERS
@@ -135,6 +138,7 @@ SET(mask_HEADERS
 	"${PROJECT_SOURCE_DIR}/mask-resource-material.h"
 	"${PROJECT_SOURCE_DIR}/mask-resource-mesh.h"
 	"${PROJECT_SOURCE_DIR}/mask-resource-model.h"
+	"${PROJECT_SOURCE_DIR}/mask-resource-morph.h"
 	"${PROJECT_SOURCE_DIR}/mask-resource-skinned-model.h"
 	"${PROJECT_SOURCE_DIR}/mask-resource-sound.h"
 	"${PROJECT_SOURCE_DIR}/mask-resource-emitter.h"
@@ -159,7 +163,9 @@ SET(smll_SOURCES
 	"${SMLLDir}/FaceDetector.cpp"
 	"${SMLLDir}/OBSRenderer.cpp"
 	"${SMLLDir}/landmarks.cpp"
+	"${SMLLDir}/MorphData.cpp"
 	"${SMLLDir}/TestingPipe.cpp"
+	"${SMLLDir}/TriangulationResult.cpp"
 	"${SMLLDir}/SingleValueKalman.cpp"
 )
 SET(gs_SOURCES
@@ -180,6 +186,7 @@ SET(mask_SOURCES
 	"${PROJECT_SOURCE_DIR}/mask-resource-material.cpp"
 	"${PROJECT_SOURCE_DIR}/mask-resource-mesh.cpp"
 	"${PROJECT_SOURCE_DIR}/mask-resource-model.cpp"
+	"${PROJECT_SOURCE_DIR}/mask-resource-morph.cpp"
 	"${PROJECT_SOURCE_DIR}/mask-resource-skinned-model.cpp"
 	"${PROJECT_SOURCE_DIR}/mask-resource-sound.cpp"
 	"${PROJECT_SOURCE_DIR}/mask-resource-emitter.cpp"

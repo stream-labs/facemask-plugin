@@ -1055,6 +1055,14 @@ public:
      */
     CV_WRAP void getTriangleList(CV_OUT std::vector<Vec6f>& triangleList) const;
 
+	/** @brief Returns a list of all triangles as indices into vertex list.
+
+	@param triangleIndexList Output vector.
+
+	The function gives each triangle as 3 indices stored in a 3 number vector.
+	*/
+	CV_WRAP void getTriangleIndexList(CV_OUT std::vector<Vec3i>& triangleIndexList) const;
+
     /** @brief Returns a list of all Voroni facets.
 
     @param idx Vector of vertices IDs to consider. For all vertices you can pass empty vector.
@@ -1065,16 +1073,23 @@ public:
     CV_WRAP void getVoronoiFacetList(const std::vector<int>& idx, CV_OUT std::vector<std::vector<Point2f> >& facetList,
                                      CV_OUT std::vector<Point2f>& facetCenters);
 
-    /** @brief Returns vertex location from vertex ID.
+	/** @brief Returns vertex location from vertex ID.
 
-    @param vertex vertex ID.
-    @param firstEdge Optional. The first edge ID which is connected to the vertex.
-    @returns vertex (x,y)
+	@param vertex vertex ID.
+	@param firstEdge Optional. The first edge ID which is connected to the vertex.
+	@returns vertex (x,y)
 
-     */
-    CV_WRAP Point2f getVertex(int vertex, CV_OUT int* firstEdge = 0) const;
+	*/
+	CV_WRAP Point2f getVertex(int vertex, CV_OUT int* firstEdge = 0) const;
 
-    /** @brief Returns one of the edges related to the given edge.
+	/** @brief Returns number of vertices 
+
+	@returns number of vertices
+
+	*/
+	CV_WRAP int getNumVertices() const { return (int)vtx.size(); }
+
+	/** @brief Returns one of the edges related to the given edge.
 
     @param edge Subdivision edge ID.
     @param nextEdgeType Parameter specifying which of the related edges to return.

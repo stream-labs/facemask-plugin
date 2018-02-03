@@ -1,21 +1,21 @@
 /*
- * Face Masks for SlOBS
- * Copyright (C) 2017 General Workings Inc
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
- */
+* Face Masks for SlOBS
+* Copyright (C) 2017 General Workings Inc
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation; either version 2 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+*/
 
 #pragma once
 #include <chrono>
@@ -28,22 +28,24 @@
 #include "smll/FaceDetector.hpp"
 #include "smll/OBSRenderer.hpp"
 #include "smll/DetectionResults.hpp"
+#include "smll/TriangulationResult.hpp"
+#include "smll/MorphData.hpp"
 
 #include "mask.h"
 
 extern "C" {
-	#pragma warning( push )
-	#pragma warning( disable: 4201 )
-	#include <libobs/obs-source.h>
-	#include <libobs/graphics/matrix4.h>
-	#pragma warning( pop )
+#pragma warning( push )
+#pragma warning( disable: 4201 )
+#include <libobs/obs-source.h>
+#include <libobs/graphics/matrix4.h>
+#pragma warning( pop )
 }
 
 using namespace std;
 
 namespace Plugin {
 	class FaceMaskFilter {
-		public:
+	public:
 		FaceMaskFilter();
 		~FaceMaskFilter();
 
@@ -51,11 +53,11 @@ namespace Plugin {
 		static void *create(obs_data_t *, obs_source_t *);
 		static void destroy(void *);
 
-		private:
+	private:
 		obs_source_info filter;
 
 		class Instance {
-			public:
+		public:
 			Instance(obs_data_t *, obs_source_t *);
 			~Instance();
 
@@ -83,7 +85,7 @@ namespace Plugin {
 			static void video_render(void *, gs_effect_t *);
 			void video_render(gs_effect_t *);
 
-			protected:
+		protected:
 			static int32_t StaticThreadMain(Instance*);
 			int32_t LocalThreadMain();
 
@@ -103,7 +105,7 @@ namespace Plugin {
 			void drawMaskData(const smll::DetectionResult& face,
 				Mask::MaskData*	maskData, bool depthOnly);
 
-			private:
+		private:
 			// Filter State
 			obs_source_t *m_source;
 			int32_t m_baseWidth, m_baseHeight;
@@ -140,11 +142,12 @@ namespace Plugin {
 			bool				demoModeInDelay;
 			std::vector<std::unique_ptr<Mask::MaskData>>	demoMaskDatas;
 
-			// our current version of detected faces
-			smll::DetectionResults	faces;
+			// our current face detection results
+			smll::DetectionResults		faces;
+			smll::TriangulationResult	triangulation;
+			TimeStamp					timestamp;
 
-			long long			frameCounter;
-
+			// flags
 			bool				drawMask;
 			bool				drawFaces;
 			bool				drawFDRect;
@@ -165,20 +168,34 @@ namespace Plugin {
 				std::mutex mutex;
 				bool shutdown;
 
-				// frames circular buffer (main thread -> detection thread)
+				// frames circular buffer (video_render()'s thread -> detection thread)
 				struct CachedFrame {
 					smll::OBSTexture	capture;
 					smll::OBSTexture	detect;
 					smll::OBSTexture	track;
 					std::mutex			mutex;
-					long long			frame;
+					TimeStamp			timestamp;
 				};
 				int frameIndex;
-				struct CachedFrame	frames[BUFFER_SIZE];
+				std::array<struct CachedFrame, BUFFER_SIZE> frames;
 
-				// faces circular buffer (detection thred -> main thread)
+				// morph data circular buffer (video_update()'s thread -> detection thread)
+				struct CachedMorph {
+					smll::MorphData     morphData;
+					std::mutex			mutex;
+				};
+				int morphIndex;
+				std::array<struct CachedMorph, BUFFER_SIZE> morphs;
+
+				// faces circular buffer (detection thread -> video_tick()'s thread)
+				struct CachedResult {
+					smll::DetectionResults		detectionResults;
+					smll::TriangulationResult	triangulationResults;
+					std::mutex					mutex;
+					TimeStamp					timestamp;
+				};
 				int facesIndex;
-				std::array<smll::DetectionResults, BUFFER_SIZE> faces;
+				std::array<struct CachedResult, BUFFER_SIZE> faces;
 
 			} detection;
 

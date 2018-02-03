@@ -20,6 +20,8 @@
 #pragma once
 #include "mask-resource.h"
 #include "mask-instance-data.h"
+#include "mask-resource-morph.h"
+#include "smll/TriangulationResult.hpp"
 #include <string>
 #include <vector>
 #include <memory>
@@ -101,6 +103,7 @@ namespace Mask {
 
 		void AddResource(const std::string& name, std::shared_ptr<Resource::IBase> resource);
 		std::shared_ptr<Resource::IBase> GetResource(const std::string& name);
+		std::shared_ptr<Resource::IBase> GetResource(Resource::Type type);
 		std::shared_ptr<Resource::IBase> RemoveResource(const std::string& name);
 
 		void AddPart(const std::string& name, std::shared_ptr<Part> part);
@@ -112,6 +115,10 @@ namespace Mask {
 
 		void ClearSortedDrawObjects();
 		void AddSortedDrawObject(SortedDrawObject* obj);
+
+		std::shared_ptr<Resource::Morph> GetMorph();
+		bool RenderMorphVideo(gs_texture* vidtex, uint32_t width, uint32_t height,
+			const smll::TriangulationResult& trires);
 
 		// global instance datas
 		MaskInstanceDatas	instanceDatas;
@@ -132,5 +139,6 @@ namespace Mask {
 		obs_data_t* m_data;
 		std::shared_ptr<Mask::Part> m_partWorld;
 		SortedDrawObject**	m_drawBuckets;
+		std::shared_ptr<Resource::Morph>	m_morph;
 	};
 }

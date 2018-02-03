@@ -33,6 +33,7 @@
 
 #include "mask-resource-image.h"
 #include "mask-resource-mesh.h"
+#include "mask-resource-morph.h"
 #include "mask-resource-effect.h"
 
 #define NUM_FRAMES_TO_LOSE_FACE			(30)
@@ -132,9 +133,9 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	: m_source(source), m_baseWidth(640), m_baseHeight(480), m_isActive(true), m_isVisible(true),
 	m_isDisabled(false), maskDataShutdown(false), maskJsonFilename(nullptr), maskData(nullptr),
 	demoModeOn(false), demoCurrentMask(0), demoModeInterval(0.0f), demoModeDelay(0.0f),
-	demoModeElapsed(0.0f), demoModeInDelay(false), frameCounter(0), drawMask(true),
-	drawFaces(false), drawFDRect(false), drawTRRect(false),
-	filterPreviewMode(false), performanceSetting(-1), testingStage(nullptr) {
+	demoModeElapsed(0.0f), demoModeInDelay(false), drawMask(true), 
+	drawFaces(false), drawFDRect(false), drawTRRect(false), filterPreviewMode(false), 
+	performanceSetting(-1), testingStage(nullptr) {
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
 
 	obs_enter_graphics();
@@ -156,6 +157,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 		detection.shutdown = false;
 		detection.frameIndex = -1;
 		detection.facesIndex = -1;
+		detection.morphIndex = -1;
 		detection.thread = std::thread(StaticThreadMain, this);
 	}
 	
@@ -453,7 +455,6 @@ void Plugin::FaceMaskFilter::Instance::video_tick(void *ptr, float timeDelta) {
 }
 
 void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
-	UNUSED_PARAMETER(timeDelta);
 
 	// ----- GET FACES FROM OTHER THREAD -----
 	updateFaces();
@@ -472,14 +473,54 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 		}
 	}
 
-	std::unique_lock<std::mutex> lock(maskDataMutex, std::try_to_lock);
-	if (lock.owns_lock()) {
+	// current morph buffer indices
+	int midx = detection.morphIndex;
+	if (midx < 0)
+		midx = 0;
+	int lastmidx = (midx + ThreadData::BUFFER_SIZE - 1) % ThreadData::BUFFER_SIZE;
+
+	// Tick the mask data
+	bool morphUpdated = false;
+	std::unique_lock<std::mutex> masklock(maskDataMutex, std::try_to_lock);
+	if (masklock.owns_lock()) {
+		// get the right mask data
+		Mask::MaskData* mdat = maskData.get();
 		if (demoModeOn && !demoModeInDelay) {
 			if (demoCurrentMask >= 0 && demoCurrentMask < demoMaskDatas.size())
-				demoMaskDatas[demoCurrentMask]->Tick(timeDelta);
+				mdat = demoMaskDatas[demoCurrentMask].get();
 		}
-		else if (maskData)
-			maskData->Tick(timeDelta);
+		if (mdat) {
+			mdat->Tick(timeDelta);
+
+			// ask mask for a morph resource
+			std::shared_ptr<Mask::Resource::Morph> morph = mdat->GetMorph();
+
+			// (possibly) update morph buffer
+			std::unique_lock<std::mutex> morphlock(detection.morphs[midx].mutex, std::try_to_lock);
+			if (morphlock.owns_lock()) {
+				if (morph) {
+					// Only add new morph data if it is newer than the last one
+					// note: any valid morph data is newer than invalid morph data
+					if (morph->GetMorphData().IsNewerThan(detection.morphs[lastmidx].morphData)) {
+						detection.morphs[midx].morphData = morph->GetMorphData();
+						morphUpdated = true;
+					}
+				}
+				else {
+					// Make sure current is invalid
+					if (detection.morphs[lastmidx].morphData.IsValid()) {
+						detection.morphs[midx].morphData.Invalidate();
+						morphUpdated = true;
+					}
+				}
+			}
+		}
+	}
+
+	if (morphUpdated) {
+		// advance morph buffer index
+		std::unique_lock<std::mutex> lock(detection.mutex);
+		detection.morphIndex = (midx + 1) % ThreadData::BUFFER_SIZE;
 	}
 }
 
@@ -561,6 +602,9 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		obs_source_skip_video_filter(m_source);
 		return;
 	}
+	// timestamp for this frame
+	TimeStamp sourceTimestamp = NEW_TIMESTAMP;
+
 #pragma endregion Source To Texture
 
 	// smll needs a "viewport" to draw
@@ -584,7 +628,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			smll::OBSTexture& detect = detection.frames[fidx].detect;
 			smll::OBSTexture& track = detection.frames[fidx].track;
 
-			detection.frames[fidx].frame = frameCounter++;
+			detection.frames[fidx].timestamp = sourceTimestamp;
 
 			// (re) allocate frame if necessary
 			if (capture.width != m_baseWidth ||
@@ -635,14 +679,46 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// start
 	smllRenderer->DrawBegin();
 
-	// Draw the source video
-	gs_enable_depth_test(false);
-	gs_set_cull_mode(GS_NEITHER);
-	while (gs_effect_loop(defaultEffect, "Draw")) {
-		gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
-			"image"), sourceTexture);
-		gs_draw_sprite(sourceTexture, 0, m_baseWidth, m_baseHeight);
+	// Set up sampler state
+	// Note: We need to wrap for morphing
+	gs_sampler_info sinfo;
+	sinfo.address_u = GS_ADDRESS_WRAP;
+	sinfo.address_v = GS_ADDRESS_WRAP;
+	sinfo.address_w = GS_ADDRESS_CLAMP;
+	sinfo.filter = GS_FILTER_LINEAR;
+	sinfo.border_color = 0;
+	sinfo.max_anisotropy = 0;
+	gs_samplerstate_t* ss = gs_samplerstate_create(&sinfo);
+	gs_load_samplerstate(ss, 0);
+	gs_samplerstate_destroy(ss);
+
+	// mask to draw
+	Mask::MaskData* mdat = maskData.get();
+	if (demoModeOn && demoMaskDatas.size() > 0) {
+		if (demoCurrentMask >= 0 &&
+			demoCurrentMask < demoMaskDatas.size()) {
+			mdat = demoMaskDatas[demoCurrentMask].get();
+		}
 	}
+	
+	// Select the video frame to draw
+	// - since we are already caching frames of video for the
+	//   face detection thread to consume, we can likely find
+	//   the frame of video that matches the timestamp of the
+	//   current detection data.
+	gs_texture_t* vidTex = sourceTexture;
+	for (int i = 0; i < ThreadData::BUFFER_SIZE; i++) {
+		if (detection.frames[i].timestamp == timestamp &&
+			detection.frames[i].capture.texture != nullptr &&
+			detection.frames[i].capture.width == m_baseWidth &&
+			detection.frames[i].capture.height == m_baseHeight) {
+			vidTex = detection.frames[i].capture.texture;
+			break;
+		}
+	}
+
+	// Draw the source video
+	mdat->RenderMorphVideo(vidTex, m_baseWidth, m_baseHeight, triangulation);
 
 	gs_enable_depth_test(true);
 	gs_depth_function(GS_LESS);
@@ -650,13 +726,9 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// draw crop rectangles
 	drawCropRects(m_baseWidth, m_baseHeight);
 
-	// mask to draw
-	Mask::MaskData* mdat = maskData.get();
-	if (demoModeOn && demoMaskDatas.size() > 0) {
-		if (demoCurrentMask >= 0 && 
-			demoCurrentMask < demoMaskDatas.size()) {
-			mdat = demoMaskDatas[demoCurrentMask].get();
-		}
+	// some reasons triangulation should be destroyed
+	if (!mdat || faces.length == 0) {
+		triangulation.DestroyBuffers();
 	}
 
 	// ready?
@@ -673,26 +745,24 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			vec4_zero(&black);
 			gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
 
-			if (drawMask) {
-				// Draw depth-only stuff
-				for (int i = 0; i < faces.length; i++) {
-					std::unique_lock<std::mutex> lock(maskDataMutex, std::try_to_lock);
-					if (lock.owns_lock()) {
-						if (maskData) {
-							drawMaskData(faces[i], mdat, true);
-						}
+			if (drawMask && mdat) {
+				std::unique_lock<std::mutex> lock(maskDataMutex, std::try_to_lock);
+				if (lock.owns_lock()) {
+					// Check here for no morph
+					if (!mdat->GetMorph()) {
+						triangulation.DestroyBuffers();
 					}
-				}
-				// clear the color buffer (leaving depth info there)
-				gs_clear(GS_CLEAR_COLOR, &black, 1.0f, 0);
 
-				// Draw regular stuff
-				for (int i = 0; i < faces.length; i++) {
-					std::unique_lock<std::mutex> lock(maskDataMutex, std::try_to_lock);
-					if (lock.owns_lock()) {
-						if (maskData) {
-							drawMaskData(faces[i], mdat, false);
-						}
+					// Draw depth-only stuff
+					for (int i = 0; i < faces.length; i++) {
+						drawMaskData(faces[i], mdat, true);
+					}
+					// clear the color buffer (leaving depth info there)
+					gs_clear(GS_CLEAR_COLOR, &black, 1.0f, 0);
+
+					// Draw regular stuff
+					for (int i = 0; i < faces.length; i++) {
+						drawMaskData(faces[i], mdat, false);
 					}
 				}
 			}
@@ -700,6 +770,21 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			// draw face detection data
 			if (drawFaces)
 				smllRenderer->DrawFaces(faces);
+			
+			// draw triangulation as lines
+			if (triangulation.vertexBuffer && 
+				triangulation.lineIndices) {
+				gs_effect_t    *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
+				gs_eparam_t    *color = gs_effect_get_param_by_name(solid, "color");
+				struct vec4 veccol;
+				vec4_from_rgba(&veccol, smll::OBSRenderer::MakeColor(0, 255, 0, 200));
+				gs_effect_set_vec4(color, &veccol);
+				while (gs_effect_loop(solid, "Solid")) {
+					gs_load_indexbuffer(triangulation.lineIndices);
+					gs_load_vertexbuffer(triangulation.vertexBuffer);
+					gs_draw(GS_LINES, 0, 0);
+				}
+			}
 
 			gs_texrender_end(drawTexRender);
 		}
@@ -792,8 +877,7 @@ int32_t Plugin::FaceMaskFilter::Instance::StaticThreadMain(Instance *ptr) {
 int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 
 	// run until we're shut down
-	ThreadData* own = &detection;
-	long long lastFrame = -1;
+	TimeStamp lastTimestamp;
 	while (true) {
 
 		auto frameStart = std::chrono::system_clock::now();
@@ -803,8 +887,8 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 		int fidx;
 		{
 			std::unique_lock<std::mutex> lock(detection.mutex);
-			fidx = own->frameIndex;
-			shutdown = own->shutdown;
+			fidx = detection.frameIndex;
+			shutdown = detection.shutdown;
 		}
 		if (shutdown) break;
 		if (fidx < 0) {
@@ -820,7 +904,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			std::unique_lock<std::mutex> lock(detection.frames[fidx].mutex);
 
 			// check to see if we are detecting the same frame as last time
-			if (lastFrame == detection.frames[fidx].frame) {
+			if (lastTimestamp == detection.frames[fidx].timestamp) {
 				// we are
 				skip = true;
 			}
@@ -829,7 +913,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 				smllFaceDetector->DetectFaces(detection.frames[fidx].capture,
 					detection.frames[fidx].detect,
 					detection.frames[fidx].track);
-				lastFrame = detection.frames[fidx].frame;
+				lastTimestamp = detection.frames[fidx].timestamp;
 			}
 		}
 
@@ -840,25 +924,42 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			continue;
 		}
 
-		// copy the face detection results
+		// get the index into the faces/morphs buffers
+		int midx;
 		{
 			std::unique_lock<std::mutex> lock(detection.mutex);
-			fidx = own->facesIndex;
+			fidx = detection.facesIndex;
+			midx = detection.morphIndex;
 		}
-
 		if (fidx < 0)
 			fidx = 0;
-		const smll::Faces& smllFaces = smllFaceDetector->GetFaces();
-
-		// todo: this should be an overloaded operator or something
-		for (int i = 0; i < smllFaces.length; i++) {
-			own->faces[fidx][i] = smllFaces[i];
-		}
-		own->faces[fidx].length = smllFaces.length;
+		midx = (midx + ThreadData::BUFFER_SIZE - 1) % ThreadData::BUFFER_SIZE;
 
 		{
+			std::unique_lock<std::mutex> facelock(detection.faces[fidx].mutex);
+
+			// pass on timestamp to results
+			detection.faces[fidx].timestamp = lastTimestamp;
+
+			// Copy faces into our detection results
+			const smll::Faces& smllFaces = smllFaceDetector->GetFaces();
+			for (int i = 0; i < smllFaces.length; i++) {
+				detection.faces[fidx].detectionResults[i] = smllFaces[i];
+			}
+			detection.faces[fidx].detectionResults.length = smllFaces.length;
+
+			// Make triangulation for face morphing
+			{
+				std::unique_lock<std::mutex> morphlock(detection.morphs[midx].mutex);
+				smllFaceDetector->MakeTriangulation(detection.morphs[midx].morphData,
+					detection.faces[fidx].triangulationResults);
+			}
+		}
+
+		// increment face buffer index
+		{
 			std::unique_lock<std::mutex> lock(detection.mutex);
-			own->facesIndex = (fidx + 1) % ThreadData::BUFFER_SIZE;
+			detection.facesIndex = (fidx + 1) % ThreadData::BUFFER_SIZE;
 		}
 
 		// don't go too fast and eat up all the cpu
@@ -1047,81 +1148,90 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 		// read index is right behind the write index
 		fidx = (fidx + ThreadData::BUFFER_SIZE - 1) % ThreadData::BUFFER_SIZE;
 
-		// new detected faces
-		smll::DetectionResults& newFaces = detection.faces[fidx];
+		std::unique_lock<std::mutex> lock(detection.faces[fidx].mutex, std::try_to_lock);
+		if (lock.owns_lock()) {
+			// new detected faces
+			smll::DetectionResults& newFaces = detection.faces[fidx].detectionResults;
 
-		// TEST MODE ONLY : output for testing
-		if (smll::Config::singleton().get_bool(smll::CONFIG_BOOL_IN_TEST_MODE)) {
-			char b[128];
-			snprintf(b, sizeof(b), "%d faces detected", newFaces.length);
-			smll::TestingPipe::singleton().SendString(b);
-			for (int i = 0; i < newFaces.length; i++) {
+			// new triangulation
+			triangulation.TakeBuffersFrom(detection.faces[fidx].triangulationResults);
 
-				dlib::point pos = newFaces[i].GetPosition();
-				snprintf(b, sizeof(b), "face detected at %ld,%ld", pos.x(), pos.y());
+			// new timestamp
+			timestamp = detection.faces[fidx].timestamp;
+
+			// TEST MODE ONLY : output for testing
+			if (smll::Config::singleton().get_bool(smll::CONFIG_BOOL_IN_TEST_MODE)) {
+				char b[128];
+				snprintf(b, sizeof(b), "%d faces detected", newFaces.length);
 				smll::TestingPipe::singleton().SendString(b);
-			}
-		}
+				for (int i = 0; i < newFaces.length; i++) {
 
-		// no faces lost, maybe some gained
-		if (faces.length <= newFaces.length) {
-			// clear matched flags
-			for (int i = 0; i < newFaces.length; i++) {
-				newFaces[i].matched = false;
-			}
-
-			// match our faces to the new ones
-			for (int i = 0; i < faces.length; i++) {
-				// find closest
-				int closest = findClosest(faces[i], newFaces);
-
-				// smooth new face into ours
-				faces[i].UpdateResults(newFaces[closest]);
-				faces[i].numFramesLost = 0;
-				newFaces[closest].matched = true;
-			}
-
-			// now check for new faces
-			for (int i = 0; i < newFaces.length; i++) {
-				if (!newFaces[i].matched) {
-					faces[faces.length] = newFaces[i];
-					faces[faces.length].numFramesLost = 0;
-					newFaces[i].matched = true;
-					faces.length++;
+					dlib::point pos = newFaces[i].GetPosition();
+					snprintf(b, sizeof(b), "face detected at %ld,%ld", pos.x(), pos.y());
+					smll::TestingPipe::singleton().SendString(b);
 				}
 			}
-		}
 
-		// faces were lost
-		else {
+			// no faces lost, maybe some gained
+			if (faces.length <= newFaces.length) {
+				// clear matched flags
+				for (int i = 0; i < newFaces.length; i++) {
+					newFaces[i].matched = false;
+				}
 
-			// clear matched flags
-			for (int i = 0; i < faces.length; i++) {
-				faces[i].matched = false;
+				// match our faces to the new ones
+				for (int i = 0; i < faces.length; i++) {
+					// find closest
+					int closest = findClosest(faces[i], newFaces);
+
+					// smooth new face into ours
+					faces[i].UpdateResults(newFaces[closest]);
+					faces[i].numFramesLost = 0;
+					newFaces[closest].matched = true;
+				}
+
+				// now check for new faces
+				for (int i = 0; i < newFaces.length; i++) {
+					if (!newFaces[i].matched) {
+						faces[faces.length] = newFaces[i];
+						faces[faces.length].numFramesLost = 0;
+						newFaces[i].matched = true;
+						faces.length++;
+					}
+				}
 			}
 
-			// match new faces to ours
-			for (int i = 0; i < newFaces.length; i++) {
+			// faces were lost
+			else {
 
-				// find closest
-				int closest = findClosest(newFaces[i], faces);
+				// clear matched flags
+				for (int i = 0; i < faces.length; i++) {
+					faces[i].matched = false;
+				}
 
-				// smooth new face into ours
-				faces[closest].UpdateResults(newFaces[i]);
-				faces[closest].numFramesLost = 0;
-				faces[closest].matched = true;
-			}
+				// match new faces to ours
+				for (int i = 0; i < newFaces.length; i++) {
 
-			// now we need check lost faces
-			for (int i = 0; i < faces.length; i++) {
-				if (!faces[i].matched) {
-					faces[i].numFramesLost++;
-					if (faces[i].numFramesLost > NUM_FRAMES_TO_LOSE_FACE) {
-						// remove face
-						for (int j = i; j < (faces.length - 1); j++) {
-							faces[j] = faces[j + 1];
+					// find closest
+					int closest = findClosest(newFaces[i], faces);
+
+					// smooth new face into ours
+					faces[closest].UpdateResults(newFaces[i]);
+					faces[closest].numFramesLost = 0;
+					faces[closest].matched = true;
+				}
+
+				// now we need check lost faces
+				for (int i = 0; i < faces.length; i++) {
+					if (!faces[i].matched) {
+						faces[i].numFramesLost++;
+						if (faces[i].numFramesLost > NUM_FRAMES_TO_LOSE_FACE) {
+							// remove face
+							for (int j = i; j < (faces.length - 1); j++) {
+								faces[j] = faces[j + 1];
+							}
+							faces.length--;
 						}
-						faces.length--;
 					}
 				}
 			}

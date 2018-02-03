@@ -45,7 +45,7 @@
 
 #define FOCAL_LENGTH_FACTOR		(1.0f)
 #define POSE_RESET_INTERVAL		(30)
-
+#define CATMULL_ROM_STEPS		(5)
 
 using namespace dlib;
 using namespace std;
@@ -216,6 +216,488 @@ namespace smll {
             m_timeout = Config::singleton().get_int(
 				CONFIG_INT_FACE_DETECT_FREQUENCY);
             m_detectionTimeout = 0;
+		}
+	}
+
+	void FaceDetector::MakeTriangulation(MorphData& morphData, 
+		TriangulationResult& result) {
+
+		// clear buffers
+		result.DestroyBuffers();
+
+		// need valid morph data
+		if (!morphData.IsValid())
+			return;
+
+		// only 1 face supported
+		if (m_faces.length == 0)
+			return;
+		Face& face = m_faces[0];
+
+		// save capture width and height
+		float width = (float)CaptureWidth();
+		float height = (float)CaptureHeight();
+
+		// Project morph deltas to image space
+
+		// Camera internals
+		// Approximate focal length.
+		double focal_length = (double)width * FOCAL_LENGTH_FACTOR;
+		cv::Point2d center = cv::Point2d(width / 2, height / 2);
+		cv::Mat camera_matrix =
+			(cv::Mat_<double>(3, 3) <<
+				focal_length, 0, center.x, 0, focal_length, center.y, 0, 0, 1);
+		// We assume no lens distortion
+		cv::Mat dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<double>::type);
+
+		// project the deltas
+		// TODO: only project non-zero deltas 
+		//       (although, to be honest, with compiler opts and such, it
+		//        would likely take longer to separate them out)
+		const cv::Mat& rot = face.GetCVRotation();
+		cv::Mat trx = face.GetCVTranslation();
+		trx.at<double>(0, 0) = 0.0; // clear x & y, we'll center it
+		trx.at<double>(1, 0) = 0.0;
+		std::vector<cv::Point3f> deltas = morphData.GetCVDeltas();
+		std::vector<cv::Point2f> projectedDeltas;
+		cv::projectPoints(deltas, rot, trx, camera_matrix, dist_coeffs, projectedDeltas);
+
+		// make a list of points for triangulation
+		std::vector<cv::Point2f> points;
+
+		// add facial landmark points
+		dlib::point* facePoints = face.m_points;
+		for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
+			points.push_back(cv::Point2f((float)facePoints[i].x(),
+				(float)facePoints[i].y()));
+		}
+
+		// Apply the morph deltas to points to create warpedpoints
+		std::vector<cv::Point2f> warpedpoints = points;
+		cv::Point2f c(width / 2, height / 2);
+		for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
+			// bitmask tells us which deltas are non-zero
+			if (morphData.GetBitmask()[i]) {
+				// offset from center
+				warpedpoints[i] += projectedDeltas[i] - c;
+			}
+		}
+
+		// add smoothing points
+		// - we smooth out any face contours that got morphed
+		// - we'll need to mark these new points so we know which
+		//   area they're in when we sort out our facial areas
+		//   later on
+		// - what we save is an index from the contour so that 
+		//   we can use that to find the area that point is in.
+		// - it doesn't matter which one we choose, since whole 
+		//   contours are always contained in areas
+		//
+		std::vector<int> smoothedIndices;
+		for (int i = 0; i < NUM_FACE_CONTOURS; i++) {
+			FaceContourID fcid = (FaceContourID)i;
+			// bitmask check if it's being morphed
+			const FaceContour& fc = GetFaceContour(fcid);
+			LandmarkBitmask m = fc.bitmask & morphData.GetBitmask();
+			if (m.any()) {
+				// count how many we add
+				size_t howMany = points.size();
+				CatmullRomSmooth(points, fc.indices, CATMULL_ROM_STEPS);
+				CatmullRomSmooth(warpedpoints, fc.indices, CATMULL_ROM_STEPS);
+				// set an index for new points
+				howMany = points.size() - howMany;
+				while (howMany > 0) {
+					smoothedIndices.push_back(fc.indices[0]);
+					howMany--;
+				}
+			}
+		}
+
+		// add border points
+		std::vector<cv::Point2f> borderpoints;
+		borderpoints.push_back(cv::Point2f(0, 0));
+		borderpoints.push_back(cv::Point2f(width, 0));
+		borderpoints.push_back(cv::Point2f(width, height));
+		borderpoints.push_back(cv::Point2f(0, height));
+		Subdivide(borderpoints);
+		Subdivide(borderpoints);
+		Subdivide(borderpoints);
+		points.insert(points.end(), borderpoints.begin(), borderpoints.end());
+		warpedpoints.insert(warpedpoints.end(), borderpoints.begin(), borderpoints.end());
+
+		// add hull points
+		std::vector<cv::Point2f> hullpoints;
+		MakeHullPoints(points, warpedpoints, hullpoints);
+		Subdivide(hullpoints);
+		for (int i = 0; i < hullpoints.size(); i++) {
+			points.emplace_back(hullpoints[i]);
+			warpedpoints.emplace_back(hullpoints[i]);
+		}
+
+		// Create Triangulation
+
+		// create the openCV Subdiv2D object
+		cv::Rect rect(0, 0, CaptureWidth() + 1, CaptureHeight() + 1);
+		cv::Subdiv2D subdiv(rect);
+
+		// add our points to subdiv2d
+		// save a map: subdiv2d vtx id -> index into our points
+		std::map<int,int> vtxMap;
+		for (int i = 0; i < points.size(); i++) {
+			cv::Point2f& p = points[i];
+			if (rect.contains(p)) {
+				// note: this crashes if you insert a point outside the rect.
+				int vid = subdiv.insert(p);
+				vtxMap[vid] = i;
+			}
+		}
+
+		// make the vertex buffer using our point lists
+		obs_enter_graphics();
+		gs_render_start(true);
+		size_t nv = points.size();
+		for (int i = 0; i < nv; i++) {
+			// position from warped points
+			// uv from original points
+			const cv::Point2f& p = warpedpoints[i];
+			const cv::Point2f& uv = points[i];
+
+			// add point and uv
+			gs_texcoord(uv.x / width, uv.y / height, 0);
+			gs_vertex2f(p.x, p.y);
+		}
+		result.vertexBuffer = gs_render_save();
+		obs_leave_graphics();
+
+		// get triangulation
+		std::vector<cv::Vec3i>	triangleList;
+		subdiv.getTriangleIndexList(triangleList);
+
+		// NOTE: openCV's subdiv2D class adds 4 points on initialization:
+		//
+		//       p0 = 0,0
+		//       p1 = M,0
+		//       p2 = 0,M
+		//       p3 = -M,-M
+		//
+		// where M = max(W,H) * 3
+		//
+		// I assume this is to ensure the entire triangulation is contained 
+		// in a triangle. Or something. I dunno.
+		// Either way, since I add my own border points myself, these first
+		// 4 vertices are crap to us, and all resulting triangles are also
+		// crap.
+		// We remove these triangles, and re-index them to solve this issue.
+
+		// re-index triangles and remove bad ones
+		std::vector<cv::Vec3i>::iterator it = triangleList.begin();
+		while (it != triangleList.end()) {
+			int i0 = (*it)[0];
+			int i1 = (*it)[1];
+			int i2 = (*it)[2];
+
+			// crap triangle?
+			if (i0 < 4 || i1 < 4 || i2 < 4) {
+				// duh-leeted
+				it = triangleList.erase(it);
+			}
+			else {
+				// re-index
+				(*it)[0] = vtxMap[i0];
+				(*it)[1] = vtxMap[i1];
+				(*it)[2] = vtxMap[i2];
+				it++;
+			}
+		}
+
+		// Make Index Buffers
+		MakeAreaIndices(result, triangleList, smoothedIndices, borderpoints.size());
+	}
+
+	// MakeHullPoints
+	// - these are extra points added to the morph to smooth out the appearance,
+	//   and keep the rest of the video frame from morphing with it
+	//
+	void FaceDetector::MakeHullPoints(const std::vector<cv::Point2f>& points,
+		const std::vector<cv::Point2f>& warpedpoints, std::vector<cv::Point2f>& hullpoints) {
+		// consider outside contours only
+		const FaceContourID contours[3] = { FACE_CONTOUR_CHIN, FACE_CONTOUR_EYEBROW_LEFT, FACE_CONTOUR_EYEBROW_RIGHT };
+
+		// find the center of the original points
+		int numPoints = 0;
+		cv::Point2f center(0.0f, 0.0f);
+		for (int i = 0; i < 3; i++) {
+			const FaceContour& fc = GetFaceContour(contours[i]);
+			for (int j = 0; j < fc.indices.size(); j++, numPoints++) {
+				center += points[fc.indices[j]];
+			}
+		}
+		center /= (float)numPoints;
+
+		// go through the warped points, see if they expand the hull
+		// - we do this by checking the dot product of the delta to the
+		//   warped point with the vector to the original point from
+		//   the center
+		for (int i = 0; i < 3; i++) {
+			const FaceContour& fc = GetFaceContour(contours[i]);
+			for (int j = 0; j < fc.indices.size(); j++) {
+				// get points
+				const cv::Point2f&	p = points[fc.indices[j]];
+				const cv::Point2f&	wp = warpedpoints[fc.indices[j]];
+
+				// get vectors
+				cv::Point2f d = wp - p;
+				cv::Point2f v = p - center;
+				// if dot product is positive
+				if (d.dot(v) > 0) {
+					// warped point expands hull
+					hullpoints.emplace_back(wp);
+				}
+				else {
+					// warped point shrinks hull, use original
+					hullpoints.emplace_back(p);
+				}
+			}
+		}
+
+		// scale up hull points from center
+		for (int i = 0; i < hullpoints.size(); i++) {
+			hullpoints[i] = ((hullpoints[i] - center) * 1.25f) + center;
+		}
+	}
+
+	// MakeAreaIndices : make index buffers for different areas of the face
+	//
+	void FaceDetector::MakeAreaIndices(TriangulationResult& result,
+		const std::vector<cv::Vec3i>& triangleList,
+		const std::vector<int>& smoothIndices,
+		size_t numBorderPoints) {
+		UNUSED_PARAMETER(numBorderPoints);
+
+		// make lines index buffer
+		if (result.buildLines) {
+			// convert to lines
+			std::vector<uint32_t> linesList;
+			for (int t = 0; t < triangleList.size(); t++) {
+				const cv::Vec3i& tri = triangleList[t];
+
+				int i0 = tri[0];
+				int i1 = tri[1];
+				int i2 = tri[2];
+
+				linesList.push_back(i0);
+				linesList.push_back(i1);
+				linesList.push_back(i1);
+				linesList.push_back(i2);
+				linesList.push_back(i2);
+				linesList.push_back(i0);
+			}
+
+			// make index buffer
+			obs_enter_graphics();
+			result.lineIndices = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
+				linesList.data(), linesList.size(), 0);
+			obs_leave_graphics();
+		}
+		
+		// init a list of areas for triangles
+		std::vector<FaceAreaID> triangleAreas;
+		for (int i = 0; i < triangleList.size(); i++) {
+			triangleAreas.emplace_back(FACE_AREA_INVALID);
+		}
+
+		// NOTE: We know the order of the points in our vtx list
+		//       - first is the 68 landmark points
+		//       - next is the smooth points
+		//       - border points
+		//       - hull points
+		size_t numLandmarksAndSmooth = NUM_FACIAL_LANDMARKS + smoothIndices.size();
+
+		// define the area list for triangles
+		for (int i = 0; i < FACE_AREA_EVERYTHING; i++) {
+			FaceAreaID faid = (FaceAreaID)i;
+			const FaceArea& fa = GetFaceArea(faid);
+
+			// special case : MOUTH = LIPS + HOLE
+			if (faid == FACE_AREA_MOUTH)
+				continue;
+
+			// find the triangles for this area
+			for (int t = 0; t < triangleList.size(); t++) {
+
+				// only consider triangles not already in an area
+				if (triangleAreas[t] == FACE_AREA_INVALID) {
+					const cv::Vec3i& tri = triangleList[t];
+					int i0 = tri[0];
+					int i1 = tri[1];
+					int i2 = tri[2];
+
+					// make a bitmask for each point
+					LandmarkBitmask b0;
+					if (i0 < NUM_FACIAL_LANDMARKS)
+						b0.set(i0);
+					else if (i0 < numLandmarksAndSmooth)
+						b0.set(smoothIndices[i0 - NUM_FACIAL_LANDMARKS]);
+					LandmarkBitmask b1;
+					if (i1 < NUM_FACIAL_LANDMARKS)
+						b1.set(i1);
+					else if (i1 < numLandmarksAndSmooth)
+						b1.set(smoothIndices[i1 - NUM_FACIAL_LANDMARKS]);
+					LandmarkBitmask b2;
+					if (i2 < NUM_FACIAL_LANDMARKS)
+						b2.set(i2);
+					else if (i2 < numLandmarksAndSmooth)
+						b2.set(smoothIndices[i2 - NUM_FACIAL_LANDMARKS]);
+
+					// do boolean logic to determine membership
+					bool inArea = false;
+					switch (fa.operation) {
+					case FaceArea::BoolOp::BOOLOP_ALL:
+						inArea = (fa.bitmask & b0).any() &&
+							(fa.bitmask & b1).any() &&
+							(fa.bitmask & b2).any();
+						break;
+					case FaceArea::BoolOp::BOOLOP_ANY:
+						inArea = (fa.bitmask & b0).any() ||
+							(fa.bitmask & b1).any() ||
+							(fa.bitmask & b2).any();
+						break;
+					case FaceArea::BoolOp::BOOLOP_NOT_ALL:
+						inArea = (!b0.any() || !b1.any() || !b2.any());
+						break;
+					}
+					// we in?
+					if (inArea) {
+						triangleAreas[t] = faid;
+					}
+				}				
+			}
+		}
+
+		// Build Triangle Index Lists for areas
+		std::vector<cv::Vec3i> areaIndices[FACE_AREA_EVERYTHING];
+		for (int i = 0; i < FACE_AREA_EVERYTHING; i++) {
+			FaceAreaID faid = (FaceAreaID)i;
+			std::vector<cv::Vec3i>& indices = areaIndices[i];
+
+			// special case : MOUTH = LIPS + HOLE
+			if (faid == FACE_AREA_MOUTH) {
+				indices.insert(indices.end(),
+					areaIndices[FACE_AREA_MOUTH_LIPS].begin(),
+					areaIndices[FACE_AREA_MOUTH_LIPS].end());
+				indices.insert(indices.end(),
+					areaIndices[FACE_AREA_MOUTH_HOLE].begin(),
+					areaIndices[FACE_AREA_MOUTH_HOLE].end());
+			}
+			else {
+				// add the triangles for this area
+				for (int t = 0; t < triangleList.size(); t++) {
+					if (triangleAreas[t] == faid) {
+						indices.emplace_back(triangleList[t]);
+					}
+				}
+			}
+
+			obs_enter_graphics();
+			result.areaIndices[i] = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
+				(void*)indices.data(), indices.size() * 3, 0);
+			obs_leave_graphics();
+		}
+
+		// Create triangle list for everything
+		obs_enter_graphics();
+		result.areaIndices[FACE_AREA_EVERYTHING] = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
+			(void*)triangleList.data(), triangleList.size() * 3, 0);
+		obs_leave_graphics();
+	}
+
+	// Subdivide : insert points half-way between all the points
+	//
+	void FaceDetector::Subdivide(std::vector<cv::Point2f>& points) {
+		for (unsigned int i = 0; i < points.size(); i++) {
+			int i2 = (i + 1) % points.size();
+			points.insert(points.begin()+i2, cv::Point2f(
+				(points[i].x + points[i2].x) / 2.0f,
+				(points[i].y + points[i2].y) / 2.0f));
+			i++;
+		}
+	}
+
+	// Curve Fitting - Catmull-Rom spline 
+	// https://gist.github.com/pr0digy/1383576
+	// - converted to C++
+	// - modified for my uses
+	void FaceDetector::CatmullRomSmooth(std::vector<cv::Point2f>& points, 
+		const std::vector<int>& indices, int steps) {
+
+		if (indices.size() < 3)
+			return;
+
+		float dt = 1.0f / (float)steps;
+
+		float x, y;
+		size_t i0, i1, i2, i3;
+		size_t count = indices.size() - 1;
+		size_t count_m1 = count - 1;
+		for (size_t i = 0; i < count; i++) {
+			if (i == 0) {
+				// 0 0 1 2
+				i0 = indices[i];
+				i1 = indices[i];
+				i2 = indices[i + 1];
+				i3 = indices[i + 2];
+			}
+			else if (i == count_m1) {
+				// 6 7 8 8 
+				i0 = indices[i - 1];
+				i1 = indices[i];
+				i2 = indices[i + 1];
+				i3 = indices[i + 1];
+			}
+			else {
+				// 2 3 4 5
+				i0 = indices[i - 1];
+				i1 = indices[i];
+				i2 = indices[i + 1];
+				i3 = indices[i + 2];
+			}
+			const cv::Point2f& p0 = points[i0];
+			const cv::Point2f& p1 = points[i1];
+			const cv::Point2f& p2 = points[i2];
+			const cv::Point2f& p3 = points[i3];
+
+			// TODO: we have more than a couple of SSE-enabled math libraries on tap
+			//       we should be using one here
+			//       ie) dlib/openCV/libOBS
+			//
+			// Note: skip points at t=0 and t=1, they are already in our set
+			//
+			for (float t = dt; t < 1.0f; t += dt) {
+				float t2 = t * t;
+				float t3 = t2 * t;
+
+				x = 0.5f * 
+					((2.0f * p1.x) +
+					 (p2.x - p0.x) * t +
+					 (2.0f * p0.x - 5.0f * p1.x + 4.0f * p2.x - p3.x) * t2 +
+					 (3.0f * p1.x - p0.x - 3.0f * p2.x + p3.x) * t3);
+					
+				y = 0.5f *
+					((2.0f * p1.y) +
+					 (p2.y - p0.y) * t +
+					 (2.0f * p0.y - 5.0f * p1.y + 4.0f * p2.y - p3.y) * t2 +
+					 (3.0f * p1.y - p0.y - 3.0f * p2.y + p3.y) * t3);
+
+				points.emplace_back(cv::Point2f(x, y));
+			}
+		}
+	}
+
+	void FaceDetector::ScaleMorph(std::vector<cv::Point2f>& points,
+		std::vector<int> indices, cv::Point2f& center, cv::Point2f& scale) {
+		for (auto i : indices) {
+			points[i].x = (points[i].x - center.x) * scale.x + center.x;
+			points[i].y = (points[i].y - center.y) * scale.y + center.y;
 		}
 	}
     
@@ -457,22 +939,17 @@ namespace smll {
 			CONFIG_BOOL_MAKE_CAPTURE_COPY);
 
 		// build set of model points to use for solving 3D pose
+		// note: we use these points because they move the least
 		std::vector<int> model_indices;
 		model_indices.push_back(EYE_CENTER);
-		model_indices.push_back(LEFT_OUTER_EYE_CORNER);
-		model_indices.push_back(RIGHT_OUTER_EYE_CORNER);
+		model_indices.push_back(LEFT_INNER_EYE_CORNER);
+		model_indices.push_back(RIGHT_INNER_EYE_CORNER);
 		model_indices.push_back(NOSE_TIP);
 		if (pnpMethod != cv::SOLVEPNP_P3P &&
 			pnpMethod != cv::SOLVEPNP_AP3P)
 		{
 			model_indices.push_back(NOSE_2);
 			model_indices.push_back(NOSE_3);
-
-			// these tend to be higher noise
-			//
-			// model_indices.push_back(CHIN);
-			// model_indices.push_back(LEFT_TEMPLE);
-			// model_indices.push_back(RIGHT_TEMPLE);
 		}
 		std::vector<cv::Point3d> model_points = GetLandmarkPoints(model_indices);
 

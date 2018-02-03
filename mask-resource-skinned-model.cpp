@@ -97,7 +97,7 @@ Mask::Resource::SkinnedModel::SkinnedModel(Mask::MaskData* parent, std::string n
 
 		// use string key as index into array
 		std::string nn = obs_data_item_get_name(itm);
-		int boneIndex = atoi(nn.c_str());
+		int boneIndex = atoi(nn.c_str()); 
 		Bone& bone = m_bones[boneIndex];
 
 		if (!obs_data_has_user_value(boneData, S_NAME)) {
@@ -193,7 +193,7 @@ Mask::Resource::SkinnedModel::SkinnedModel(Mask::MaskData* parent, std::string n
 Mask::Resource::SkinnedModel::~SkinnedModel() {}
 
 Mask::Resource::Type Mask::Resource::SkinnedModel::GetType() {
-	return Mask::Resource::Type::Model;
+	return Mask::Resource::Type::SkinnedModel;
 }
 
 void Mask::Resource::SkinnedModel::Update(Mask::Part* part, float time) {

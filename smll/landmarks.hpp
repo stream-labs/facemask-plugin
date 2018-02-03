@@ -20,7 +20,6 @@
 */
 #pragma once
 
-#include <vector>
 #pragma warning( push )
 #pragma warning( disable: 4127 )
 #pragma warning( disable: 4201 )
@@ -31,6 +30,10 @@
 #pragma warning( disable: 4267 )
 #include <opencv2/opencv.hpp>
 #pragma warning( pop )
+
+#include <vector>
+#include <bitset>
+
 
 namespace smll {
 
@@ -117,6 +120,7 @@ namespace smll {
 		NUM_FACIAL_LANDMARKS = 68
 	};
 
+	// for convenience
 	static const int NOSE_TIP = NOSE_4;
 	static const int EYE_CENTER = NOSE_1;
 	static const int CHIN = JAW_9;
@@ -129,8 +133,86 @@ namespace smll {
 	static const int LEFT_MOUTH_CORNER = MOUTH_OUTER_1;
 	static const int RIGHT_MOUTH_CORNER = MOUTH_OUTER_7;
 
+	// access to 3D landmark points
 	std::vector<cv::Point3d>&	GetLandmarkPoints();
 	std::vector<cv::Point3d>	GetLandmarkPoints(const std::vector<int>& indices);
 	cv::Point3d					GetLandmarkPoint(int which);
+
+	// FaceContour: contour definitions
+	// - this is used to define segments of landmark points
+	//   for smoothing
+	// - most are sequential with a start/end index
+	// - some (like the eyes and mouth) include an extra index
+	//   at the end, so I added last index 
+	//
+	typedef std::bitset<NUM_FACIAL_LANDMARKS>	LandmarkBitmask;
+	struct FaceContour {
+		std::vector<int>	indices;
+		LandmarkBitmask		bitmask;
+
+		FaceContour(const std::vector<int>& indices);
+	};
+
+	enum FaceContourID {
+		FACE_CONTOUR_INVALID = -1,
+		FACE_CONTOUR_CHIN = 0,
+		FACE_CONTOUR_EYEBROW_LEFT,
+		FACE_CONTOUR_EYEBROW_RIGHT,
+		FACE_CONTOUR_NOSE_BRIDGE,
+		FACE_CONTOUR_NOSE_BOTTOM,
+		FACE_CONTOUR_EYE_LEFT_TOP,
+		FACE_CONTOUR_EYE_LEFT_BOTTOM,
+		FACE_CONTOUR_EYE_RIGHT_TOP,
+		FACE_CONTOUR_EYE_RIGHT_BOTTOM,
+		FACE_CONTOUR_MOUTH_OUTER_TOP_LEFT,
+		FACE_CONTOUR_MOUTH_OUTER_TOP_RIGHT,
+		FACE_CONTOUR_MOUTH_OUTER_BOTTOM,
+		FACE_CONTOUR_MOUTH_INNER_TOP,
+		FACE_CONTOUR_MOUTH_INNER_BOTTOM,
+
+		NUM_FACE_CONTOURS
+	};
+
+	// Access to contours
+	std::vector<FaceContour>&	GetFaceContours();
+	const FaceContour&			GetFaceContour(FaceContourID which);
+
+	// FaceArea : triangle area definitions
+	// - some of the areas, like the background, do not have any 
+	//   landmark points that define them.
+	struct FaceArea {
+		std::vector<int>	indices;
+		LandmarkBitmask		bitmask;
+
+		enum BoolOp {
+			BOOLOP_ANY,
+			BOOLOP_ALL,
+			BOOLOP_NOT_ALL,
+		};
+		BoolOp				operation;
+
+		FaceArea(const std::vector<int>& indices, BoolOp op);
+	};
+
+	// Face Area ids
+	// note: these are calculated, in order, using the
+	//       bool operations defined for the area.
+	enum FaceAreaID {
+		FACE_AREA_INVALID = -1,
+		FACE_AREA_EYE_LEFT = 0,
+		FACE_AREA_EYE_RIGHT,
+		FACE_AREA_MOUTH_HOLE,
+		FACE_AREA_MOUTH_LIPS,
+		FACE_AREA_MOUTH,		// HOLE + LIPS
+		FACE_AREA_BACKGROUND,
+		FACE_AREA_FACE,
+		FACE_AREA_EVERYTHING,
+
+		NUM_FACE_AREAS
+	};
+
+	// Access to areas
+	std::vector<FaceArea>&	GetFaceAreas();
+	const FaceArea&			GetFaceArea(FaceAreaID which);
 
 }

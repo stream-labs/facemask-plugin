@@ -32,6 +32,13 @@ GS::VertexBuffer::VertexBuffer(uint8_t* raw)
 	m_raw = raw;
 	gs_vb_data* vbdata = (gs_vb_data*)ALIGNED(raw);
 
+	// sanity check
+	if (vbdata->num_tex < 0 || vbdata->num_tex > 8) {
+		// Bail...bad data
+		blog(LOG_ERROR, "[Face Mask] Vertex Buffer is old format. Skipping. Mask will not render correctly, if at all.");
+		return;
+	}
+
 	// classic memory image dereferencing
 	//
 	// For more info on how this data was created, see the Maskmaker
@@ -98,7 +105,8 @@ GS::VertexBuffer::~VertexBuffer() {
 	obs_enter_graphics();
 	if (m_vb_data)
 		gs_vbdata_destroy(m_vb_data);
-	gs_vertexbuffer_destroy(m_vertexbuffer);
+	if (m_vertexbuffer)
+		gs_vertexbuffer_destroy(m_vertexbuffer);
 	obs_leave_graphics();
 }
 

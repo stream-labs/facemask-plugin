@@ -41,6 +41,8 @@ namespace Mask {
 			Material,
 			Mesh,
 			Model,
+			SkinnedModel,
+			Morph,
 			Sound,
 			Emitter,
 			Light,
