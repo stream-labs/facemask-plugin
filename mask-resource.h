@@ -31,7 +31,7 @@ extern "C" {
 
 namespace Mask {
 	class MaskData;
-	struct Part;
+	class Part;
 
 	namespace Resource {
 		enum class Type : uint32_t {
@@ -63,6 +63,7 @@ namespace Mask {
 			virtual Type GetType() = 0;
 			std::string GetName() {	return m_name; }
 			size_t GetId() { return m_id; }
+			Mask::MaskData* GetParent() { return m_parent; }
 			virtual void Update(Mask::Part* part, float time) = 0;
 			virtual void Render(Mask::Part* part) = 0;
 			virtual bool IsDepthOnly() { return false; }

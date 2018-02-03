@@ -197,7 +197,7 @@ Mask::Resource::Type Mask::Resource::SkinnedModel::GetType() {
 }
 
 void Mask::Resource::SkinnedModel::Update(Mask::Part* part, float time) {
-	part->mask->instanceDatas.Push(m_id);
+	m_parent->instanceDatas.Push(m_id);
 	// update material & meshes
 	m_material->Update(part, time);
 	for (unsigned int i = 0; i < m_skins.size(); i++) {
@@ -213,7 +213,7 @@ void Mask::Resource::SkinnedModel::Update(Mask::Part* part, float time) {
 		// need to transpose, since we are passing to a shader
 		matrix4_transpose(&bone.global, &bone.global);
 	}
-	part->mask->instanceDatas.Pop();
+	m_parent->instanceDatas.Pop();
 }
 
 void Mask::Resource::SkinnedModel::Render(Mask::Part* part) {
@@ -221,7 +221,7 @@ void Mask::Resource::SkinnedModel::Render(Mask::Part* part) {
 	// to draw in a sorted second render pass 
 	if (!IsOpaque()) {
 		this->sortDrawPart = part;
-		part->mask->AddSortedDrawObject(this);
+		m_parent->AddSortedDrawObject(this);
 		return;
 	}
 	DirectRender(part);
@@ -236,7 +236,7 @@ void Mask::Resource::SkinnedModel::DirectRender(Mask::Part* part) {
 	gs_matrix_pop();
 	gs_matrix_push();
 
-	part->mask->instanceDatas.Push(m_id);
+	m_parent->instanceDatas.Push(m_id);
 	BonesList bone_list;
 	for (unsigned int i = 0; i < m_skins.size(); i++) {
 		const Skin& skin = m_skins[i];
@@ -251,7 +251,7 @@ void Mask::Resource::SkinnedModel::DirectRender(Mask::Part* part) {
 			skin.mesh->Render(part);
 		}
 	}
-	part->mask->instanceDatas.Pop();
+	m_parent->instanceDatas.Pop();
 }
 
 

@@ -82,19 +82,23 @@ Mask::Resource::Type Mask::Resource::Morph::GetType() {
 }
 
 void Mask::Resource::Morph::Update(Mask::Part* part, float time) {
+	UNUSED_PARAMETER(part);
 	UNUSED_PARAMETER(time);
-
-	part->mask->instanceDatas.Push(m_id);
-	// update
-	part->mask->instanceDatas.Pop();
 }
 
 void Mask::Resource::Morph::Render(Mask::Part* part) {
-	part->mask->instanceDatas.Push(m_id);
-	// update
-	part->mask->instanceDatas.Pop();
+	UNUSED_PARAMETER(part);
+
+	// TODO: move rendering in here
 }
 
 bool Mask::Resource::Morph::IsDepthOnly() {
 	return false;
+}
+
+void Mask::Resource::Morph::SetAnimatableValue(float v,
+	Mask::Resource::AnimationChannelType act) {
+	UNUSED_PARAMETER(act);
+	UNUSED_PARAMETER(v);
+	// TODO: SET VALUES
 }

@@ -43,28 +43,21 @@ namespace Mask {
 	// Part : scene graph node
 	// - keeps a local & global transform
 	// - can be euler or quaternion rotations
-	struct Part {
+	class Part : public Resource::IAnimatable {
+	public:
 		Part(std::shared_ptr<Part> p_parent,
-			std::shared_ptr<Resource::IBase> p_resource) :
-			parent(p_parent), mask(nullptr),
-			localdirty(true), dirty(true), isquat(false) {
-			vec3_zero(&position);
-			vec3_zero(&rotation);
-			vec3_set(&scale, 1, 1, 1);
-			quat_identity(&qrotation);
-			if (p_resource)
-				resources.push_back(p_resource);
-			matrix4_identity(&local);
-			matrix4_identity(&global);
-		}
+			std::shared_ptr<Resource::IBase> p_resource);
 		Part(std::shared_ptr<Resource::IBase> p_resource) :
 			Part(nullptr, p_resource) {}
 		Part(std::shared_ptr<Part> p_parent) : Part(p_parent, nullptr) {}
 		Part() : Part(nullptr, nullptr) {}
 
+		// IAnimatable
+		void SetAnimatableValue(float v, 
+			Resource::AnimationChannelType act) override;
+
 		std::vector<std::shared_ptr<Resource::IBase>> resources;
 		std::shared_ptr<Part> parent;
-		MaskData* mask;
 		std::size_t hash_id;
 		vec3 position, scale, rotation;
 		quat qrotation;

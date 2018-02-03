@@ -166,7 +166,7 @@ void Mask::Resource::Light::Update(Mask::Part* part, float time) {
 	// get our instance data
 	// NOTE: lights are global; not instanced
 	std::shared_ptr<LightInstanceData> instData =
-		part->mask->instanceDatas.GetData<LightInstanceData>(m_id);
+		m_parent->instanceDatas.GetData<LightInstanceData>(m_id);
 	if (instData->lightType == UNDEFINED) {
 		// initialize light data
 		*instData = m_idat;

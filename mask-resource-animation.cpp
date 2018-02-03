@@ -124,14 +124,24 @@ Mask::Resource::Animation::Animation(Mask::MaskData* parent, std::string name, o
 			PLOG_ERROR("Animation '%s' channel has no name.", name.c_str());
 			throw std::logic_error("Animation channel has no name.");
 		}
-		std::string partName = obs_data_get_string(chand, S_NAME);
-		channel.part = parent->GetPart(partName);
+		std::string itemName = obs_data_get_string(chand, S_NAME);
 
 		if (!obs_data_has_user_value(chand, S_TYPE)) {
 			PLOG_ERROR("Animation '%s' channel has no type.", name.c_str());
 			throw std::logic_error("Animation channel has no type.");
 		}
 		channel.type = AnimationTypeFromString(obs_data_get_string(chand, S_TYPE));
+
+		// Set item based on channel type
+		if (channel.type < PART_CHANNEL_LAST)
+			// Item is a part
+			channel.item = parent->GetPart(itemName);
+		else {
+			// Item is a morph
+			std::shared_ptr<Resource::Morph> morph = 
+				std::dynamic_pointer_cast<Resource::Morph>(parent->GetResource(itemName));
+			channel.item = morph;
+		}
 
 		if (!obs_data_has_user_value(chand, S_PRESTATE)) {
 			PLOG_ERROR("Animation '%s' channel has no pre state.", name.c_str());
@@ -170,12 +180,12 @@ Mask::Resource::Type Mask::Resource::Animation::GetType() {
 }
 
 void Mask::Resource::Animation::Update(Mask::Part* part, float time) {
-
-	part->mask->instanceDatas.Push(m_id);
+	UNUSED_PARAMETER(part);
+	m_parent->instanceDatas.Push(m_id);
 
 	// get our instance data
 	std::shared_ptr<AnimationInstanceData> instData =
-		part->mask->instanceDatas.GetData<AnimationInstanceData>();
+		m_parent->instanceDatas.GetData<AnimationInstanceData>();
 
 	// time has elapsed
 	instData->elapsed += time;
@@ -184,48 +194,12 @@ void Mask::Resource::Animation::Update(Mask::Part* part, float time) {
 	float t = instData->elapsed * m_fps;
 	for (int i = 0; i < m_channels.size(); i++) {
 		AnimationChannel& ch = m_channels[i];
-
-		// all channels are parts ATM...this may change
-		if (ch.part) {
-			// set value
-			float v = ch.GetValue(t);
-			switch (ch.type) {
-			case PART_POSITION_X:
-				ch.part->position.x = v;
-				break;
-			case PART_POSITION_Y:
-				ch.part->position.y = v;
-				break;
-			case PART_POSITION_Z:
-				ch.part->position.z = v;
-				break;
-			case PART_QROTATION_X:
-				ch.part->qrotation.x = v;
-				break;
-			case PART_QROTATION_Y:
-				ch.part->qrotation.y = v;
-				break;
-			case PART_QROTATION_Z:
-				ch.part->qrotation.z = v;
-				break;
-			case PART_QROTATION_W:
-				ch.part->qrotation.w = v;
-				break;
-			case PART_SCALE_X:
-				ch.part->scale.x = v;
-				break;
-			case PART_SCALE_Y:
-				ch.part->scale.y = v;
-				break;
-			case PART_SCALE_Z:
-				ch.part->scale.z = v;
-				break;
-			}
-			ch.part->localdirty = true;
+		if (ch.item != nullptr) {
+			ch.item->SetAnimatableValue(ch.GetValue(t), ch.type);
 		}
 	}
 
-	part->mask->instanceDatas.Pop();
+	m_parent->instanceDatas.Pop();
 }
 
 void Mask::Resource::Animation::Render(Mask::Part* part) {
@@ -235,6 +209,8 @@ void Mask::Resource::Animation::Render(Mask::Part* part) {
 
 Mask::Resource::AnimationChannelType 
 Mask::Resource::Animation::AnimationTypeFromString(const std::string& s) {
+
+	// Part channels
 	if (s == "part-pos-x")
 		return PART_POSITION_X;
 	if (s == "part-pos-y")
@@ -256,6 +232,22 @@ Mask::Resource::Animation::AnimationTypeFromString(const std::string& s) {
 	if (s == "part-scl-z")
 		return PART_SCALE_Z;
 
+	// Morph channels (of form morph-32-x morph-33-y etc)
+	if (s.substr(0, 5) == "morph") {
+		int id = 0;
+		std::vector<std::string> bits = Utils::split(s, '-');
+		if (bits.size() == 3) {
+			int idx = atoi(bits[1].c_str());
+			if (bits[2] == "x")
+				id = MORPH_LANDMARK_0_X + (3 * idx);
+			else if (bits[2] == "y")
+				id = MORPH_LANDMARK_0_Y + (3 * idx);
+			else 
+				id = MORPH_LANDMARK_0_Z + (3 * idx);
+			return (Mask::Resource::AnimationChannelType)id;
+		}
+	}
+
 	return INVALID_TYPE;
 }
 
@@ -269,3 +261,5 @@ Mask::Resource::Animation::AnimationBehaviourFromString(const std::string& s) {
 		return REPEAT;
 	return CONSTANT;
 }
+
+

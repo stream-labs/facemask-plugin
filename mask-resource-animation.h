@@ -18,9 +18,11 @@
 */
 #pragma once
 #include "mask-resource.h"
+#include "mask-instance-data.h"
 #include <vector>
 
 namespace Mask {
+
 	namespace Resource {
 
 		enum AnimationBehaviour : uint32_t {
@@ -31,7 +33,10 @@ namespace Mask {
 
 		enum AnimationChannelType : uint32_t {
 			INVALID_TYPE,
-			PART_POSITION_X,
+
+			// part channels
+			PART_CHANNEL_FIRST,
+			PART_POSITION_X = PART_CHANNEL_FIRST,
 			PART_POSITION_Y,
 			PART_POSITION_Z,
 			PART_QROTATION_X,
@@ -41,6 +46,22 @@ namespace Mask {
 			PART_SCALE_X,
 			PART_SCALE_Y,
 			PART_SCALE_Z,
+			PART_CHANNEL_LAST,
+
+			// morph channels (there are 68 xyz channels)
+			MORPH_CHANNEL_FIRST,
+			MORPH_LANDMARK_0_X = MORPH_CHANNEL_FIRST,
+			MORPH_LANDMARK_0_Y,
+			MORPH_LANDMARK_0_Z,
+			MORPH_LANDMARK_67_X = MORPH_LANDMARK_0_X + (67 * 3),
+			MORPH_LANDMARK_67_Y = MORPH_LANDMARK_0_Y + (67 * 3),
+			MORPH_LANDMARK_67_Z = MORPH_LANDMARK_0_Z + (67 * 3),
+			MORPH_CHANNEL_LAST,
+		};
+
+		class IAnimatable {
+		public:
+			virtual void SetAnimatableValue(float v, AnimationChannelType act) = 0;
 		};
 
 		struct AnimationInstanceData : public InstanceData {
@@ -49,7 +70,7 @@ namespace Mask {
 		};
 
 		struct AnimationChannel {
-			std::shared_ptr<Part>		part;
+			std::shared_ptr<IAnimatable>	item;
 			AnimationChannelType		type;
 			AnimationBehaviour			preState;
 			AnimationBehaviour			postState;

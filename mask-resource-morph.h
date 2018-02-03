@@ -19,6 +19,7 @@
 
 #pragma once
 #include "mask-resource.h"
+#include "mask-resource-animation.h"
 #include "landmarks.hpp"
 #include "MorphData.hpp"
 #include <array>
@@ -34,7 +35,7 @@ extern "C" {
 namespace Mask {
 	namespace Resource {
 
-		class Morph : public IBase {
+		class Morph : public IBase, public IAnimatable {
 		public:
 			Morph(Mask::MaskData* parent, std::string name, obs_data_t* data);
 			virtual ~Morph();
@@ -45,6 +46,10 @@ namespace Mask {
 			virtual bool IsDepthOnly() override;
 
 			const smll::MorphData&	GetMorphData() { return m_morphData; }
+
+			// IAnimatable
+			void SetAnimatableValue(float v,
+				Resource::AnimationChannelType act) override;
 
 		protected:
 

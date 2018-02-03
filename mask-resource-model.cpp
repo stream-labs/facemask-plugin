@@ -78,10 +78,10 @@ Mask::Resource::Type Mask::Resource::Model::GetType() {
 }
 
 void Mask::Resource::Model::Update(Mask::Part* part, float time) {
-	part->mask->instanceDatas.Push(m_id);
+	m_parent->instanceDatas.Push(m_id);
 	m_material->Update(part, time);
 	m_mesh->Update(part, time);
-	part->mask->instanceDatas.Pop();
+	m_parent->instanceDatas.Pop();
 }
 
 void Mask::Resource::Model::Render(Mask::Part* part) {
@@ -89,18 +89,18 @@ void Mask::Resource::Model::Render(Mask::Part* part) {
 	// to draw in a sorted second render pass 
 	if (!IsOpaque()) {
 		this->sortDrawPart = part;
-		part->mask->AddSortedDrawObject(this);
+		m_parent->AddSortedDrawObject(this);
 		return;
 	}
 	DirectRender(part);
 }
 
 void Mask::Resource::Model::DirectRender(Mask::Part* part) {
-	part->mask->instanceDatas.Push(m_id);
+	m_parent->instanceDatas.Push(m_id);
 	while (m_material->Loop(part)) {
 		m_mesh->Render(part);
 	}
-	part->mask->instanceDatas.Pop();
+	m_parent->instanceDatas.Pop();
 }
 
 

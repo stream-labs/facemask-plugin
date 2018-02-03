@@ -114,12 +114,12 @@ Mask::Resource::Type Mask::Resource::Sequence::GetType() {
 }
 
 void Mask::Resource::Sequence::Update(Mask::Part* part, float time) {
-
-	part->mask->instanceDatas.Push(m_id);
+	UNUSED_PARAMETER(part);
+	m_parent->instanceDatas.Push(m_id);
 
 	// get our instance data
 	std::shared_ptr<SequenceInstanceData> instData =
-		part->mask->instanceDatas.GetData<SequenceInstanceData>();
+		m_parent->instanceDatas.GetData<SequenceInstanceData>();
 	if (instData->current < 0) {
 		instData->current = 0;
 		if (m_randomStart) {
@@ -145,7 +145,7 @@ void Mask::Resource::Sequence::Update(Mask::Part* part, float time) {
 			if (instData->delay > 0.0f) {
 				// DELAYING PLAYBACK, BAIL
 				instData->elapsed = 0.0f;
-				part->mask->instanceDatas.Pop();
+				m_parent->instanceDatas.Pop();
 				return;
 			}
 			instData->delay = 0.0f;
@@ -201,7 +201,7 @@ void Mask::Resource::Sequence::Update(Mask::Part* part, float time) {
 		// do nothing! everything is derived from elapsed time
 	}
 
-	part->mask->instanceDatas.Pop();
+	m_parent->instanceDatas.Pop();
 }
 
 void Mask::Resource::Sequence::Render(Mask::Part* part) {
@@ -209,13 +209,14 @@ void Mask::Resource::Sequence::Render(Mask::Part* part) {
 }
 
 void Mask::Resource::Sequence::SetTextureMatrix(Mask::Part* part, matrix4* texmat) {
+	UNUSED_PARAMETER(part);
 	matrix4_identity(texmat);
 
-	part->mask->instanceDatas.Push(m_id);
+	m_parent->instanceDatas.Push(m_id);
 
 	// get our instance data
 	std::shared_ptr<SequenceInstanceData> instData =
-		part->mask->instanceDatas.GetData<SequenceInstanceData>();
+		m_parent->instanceDatas.GetData<SequenceInstanceData>();
 
 	int curr = instData->current;
 	if (curr < 0)
@@ -262,7 +263,7 @@ void Mask::Resource::Sequence::SetTextureMatrix(Mask::Part* part, matrix4* texma
 		texmat->y.y = rd;
 	}
 
-	part->mask->instanceDatas.Pop();
+	m_parent->instanceDatas.Pop();
 }
 
 Mask::Resource::Sequence::Mode Mask::Resource::Sequence::StringToMode(std::string modeName) {

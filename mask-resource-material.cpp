@@ -289,11 +289,11 @@ Mask::Resource::Type Mask::Resource::Material::GetType() {
 
 void Mask::Resource::Material::Update(Mask::Part* part, float time) {
 	// update our image params
-	part->mask->instanceDatas.Push(m_id);
+	m_parent->instanceDatas.Push(m_id);
 	for (auto kv : m_imageParameters) {
 		kv.second->Update(part, time);
 	}
-	part->mask->instanceDatas.Pop();
+	m_parent->instanceDatas.Pop();
 }
 
 void Mask::Resource::Material::Render(Mask::Part* part) {
@@ -303,7 +303,7 @@ void Mask::Resource::Material::Render(Mask::Part* part) {
 
 bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 
-	part->mask->instanceDatas.Push(m_id);
+	m_parent->instanceDatas.Push(m_id);
 	if (!m_looping) {
 		// Apply Parameters
 		for (auto kv : m_parameters) {
@@ -418,7 +418,7 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 		gs_eparam_t* effparm = gs_effect_get_param_by_name(eff, PARAM_ALPHA);
 		if (effparm) {
 			std::shared_ptr<AlphaInstanceData> aid =
-				part->mask->instanceDatas.GetData<AlphaInstanceData>
+				m_parent->instanceDatas.GetData<AlphaInstanceData>
 				(AlphaInstanceDataId);
 			gs_effect_set_float(effparm, aid->alpha);
 		}
@@ -427,7 +427,7 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 		m_currentTechnique = gs_effect_get_technique(m_effect->GetEffect()->GetObject(),
 			m_technique.c_str());
 		if (!m_currentTechnique) {
-			part->mask->instanceDatas.Pop();
+			m_parent->instanceDatas.Pop();
 			return false;
 		}
 
@@ -443,11 +443,11 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 		|| (m_techniquePass > m_techniquePasses)) {
 		gs_technique_end(m_currentTechnique);
 		m_looping = false;
-		part->mask->instanceDatas.Pop();
+		m_parent->instanceDatas.Pop();
 		return false;
 	}
 
-	part->mask->instanceDatas.Pop();
+	m_parent->instanceDatas.Pop();
 	return true;
 }
 
@@ -467,6 +467,7 @@ gs_address_mode Mask::Resource::Material::StringToAddressMode(std::string s) {
 }
 
 void Mask::Resource::Material::SetLightingParameters(Mask::Part* part) {
+	UNUSED_PARAMETER(part);
 	// get the effect object
 	gs_effect_t* eff = m_effect->GetEffect()->GetObject();
 	
@@ -494,7 +495,7 @@ void Mask::Resource::Material::SetLightingParameters(Mask::Part* part) {
 	for (int i = 0; i < 8; i++) {
 
 		std::shared_ptr<LightInstanceData> lightData =
-			part->mask->instanceDatas.FindDataDontCreate<LightInstanceData>(m_lightIds[i]);
+			m_parent->instanceDatas.FindDataDontCreate<LightInstanceData>(m_lightIds[i]);
 		if (!lightData)
 			break;
 

@@ -33,6 +33,60 @@ extern "C" {
 	#pragma warning( pop )
 }
 
+
+Mask::Part::Part(std::shared_ptr<Part> p_parent,
+	std::shared_ptr<Resource::IBase> p_resource) :
+	parent(p_parent), 
+	localdirty(true), dirty(true), isquat(false) {
+	vec3_zero(&position);
+	vec3_zero(&rotation);
+	vec3_set(&scale, 1, 1, 1);
+	quat_identity(&qrotation);
+	if (p_resource)
+		resources.push_back(p_resource);
+	matrix4_identity(&local);
+	matrix4_identity(&global);
+}
+
+
+void Mask::Part::SetAnimatableValue(float v, 
+	Mask::Resource::AnimationChannelType act) {
+	// set value
+	switch (act) {
+	case Mask::Resource::PART_POSITION_X:
+		position.x = v;
+		break;
+	case Mask::Resource::PART_POSITION_Y:
+		position.y = v;
+		break;
+	case Mask::Resource::PART_POSITION_Z:
+		position.z = v;
+		break;
+	case Mask::Resource::PART_QROTATION_X:
+		qrotation.x = v;
+		break;
+	case Mask::Resource::PART_QROTATION_Y:
+		qrotation.y = v;
+		break;
+	case Mask::Resource::PART_QROTATION_Z:
+		qrotation.z = v;
+		break;
+	case Mask::Resource::PART_QROTATION_W:
+		qrotation.w = v;
+		break;
+	case Mask::Resource::PART_SCALE_X:
+		scale.x = v;
+		break;
+	case Mask::Resource::PART_SCALE_Y:
+		scale.y = v;
+		break;
+	case Mask::Resource::PART_SCALE_Z:
+		scale.z = v;
+		break;
+	}
+	localdirty = true;
+}
+
 static const char* const JSON_METADATA_NAME = "name";
 static const char* const JSON_METADATA_DESCRIPTION = "description";
 static const char* const JSON_METADATA_AUTHOR = "author";
@@ -224,7 +278,6 @@ void Mask::MaskData::AddPart(const std::string& name, std::shared_ptr<Mask::Part
 	if (m_parts.count(name) > 0)
 		throw std::invalid_argument("part is already present");
 
-	part->mask = this;
 	std::hash<std::string> hasher;
 	part->hash_id = hasher(name);
 	m_parts.emplace(name, part);

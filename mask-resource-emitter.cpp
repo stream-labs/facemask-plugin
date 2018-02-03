@@ -237,20 +237,20 @@ float Mask::Resource::Emitter::RandFloat(float min, float max) {
 
 void Mask::Resource::Emitter::Update(Mask::Part* part, float time) {
 
-	part->mask->instanceDatas.Push(m_id);
+	m_parent->instanceDatas.Push(m_id);
 
 	// get our instance data
 	std::shared_ptr<EmitterInstanceData> instData =
-		part->mask->instanceDatas.GetData<EmitterInstanceData>();
+		m_parent->instanceDatas.GetData<EmitterInstanceData>();
 	instData->Init(m_numParticles, this);
 
 	// update our model
 	Particle* p = instData->particles;
 	for (int i = 0; i < m_numParticles; i++, p++) {
 		if (p->state == Particle::State::ALIVE) {
-			part->mask->instanceDatas.Push(p->id);
+			m_parent->instanceDatas.Push(p->id);
 			m_model->Update(part, time);
-			part->mask->instanceDatas.Pop();
+			m_parent->instanceDatas.Pop();
 		}
 	}
 
@@ -331,12 +331,12 @@ void Mask::Resource::Emitter::Update(Mask::Part* part, float time) {
 		}
 	}
 
-	part->mask->instanceDatas.Pop();
+	m_parent->instanceDatas.Pop();
 }
 
 void Mask::Resource::Emitter::Render(Mask::Part* part) {
 
-	part->mask->instanceDatas.Push(m_id);
+	m_parent->instanceDatas.Push(m_id);
 
 	// get our global matrix
 	matrix4 global;
@@ -344,9 +344,9 @@ void Mask::Resource::Emitter::Render(Mask::Part* part) {
 
 	// get our instance data
 	std::shared_ptr<EmitterInstanceData> instData =
-		part->mask->instanceDatas.GetData<EmitterInstanceData>();
+		m_parent->instanceDatas.GetData<EmitterInstanceData>();
 	if (instData->particles == nullptr) {
-		part->mask->instanceDatas.Pop();
+		m_parent->instanceDatas.Pop();
 		return;
 	}
 
@@ -365,13 +365,13 @@ void Mask::Resource::Emitter::Render(Mask::Part* part) {
 				p->state = Particle::State::ALIVE;
 			}
 			p->sortDrawPart = part;
-			part->mask->instanceDatas.Push(p->id);
-			part->mask->AddSortedDrawObject(p);
-			part->mask->instanceDatas.Pop();
+			m_parent->instanceDatas.Push(p->id);
+			m_parent->AddSortedDrawObject(p);
+			m_parent->instanceDatas.Pop();
 		}
 	}
 
-	part->mask->instanceDatas.Pop();
+	m_parent->instanceDatas.Pop();
 }
 
 bool Mask::Resource::Emitter::IsDepthOnly() {
@@ -401,7 +401,7 @@ void Mask::Resource::Particle::SortedRender() {
 
 	// global alpha
 	std::shared_ptr<AlphaInstanceData> aid =
-		sortDrawPart->mask->instanceDatas.GetData<AlphaInstanceData>
+		emitter->GetParent()->instanceDatas.GetData<AlphaInstanceData>
 		(AlphaInstanceDataId);
 
 	float saved_alpha = aid->alpha;

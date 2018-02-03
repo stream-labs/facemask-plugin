@@ -18,7 +18,6 @@
 */
 
 #pragma once
-#include "mask.h"
 #include <string>
 #include <vector>
 #include <stack>
