@@ -23,6 +23,5 @@
 #include <chrono>
 
 typedef std::chrono::time_point<std::chrono::steady_clock>	TimeStamp;
-#define NEW_TIMESTAMP   std::chrono::steady_clock::now()
-
-
+#define NEW_TIMESTAMP			(std::chrono::steady_clock::now())
+#define TIMESTAMP_AS_SIZE_T(TS)	(std::chrono::duration_cast<std::chrono::milliseconds>((TS).time_since_epoch()).count())

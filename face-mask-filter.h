@@ -147,6 +147,7 @@ namespace Plugin {
 			smll::TriangulationResult	triangulation;
 			TimeStamp					timestamp;
 
+			// flags
 			bool				drawMask;
 			bool				drawFaces;
 			bool				drawFDRect;

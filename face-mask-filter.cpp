@@ -602,6 +602,9 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		obs_source_skip_video_filter(m_source);
 		return;
 	}
+	// timestamp for this frame
+	TimeStamp sourceTimestamp = NEW_TIMESTAMP;
+
 #pragma endregion Source To Texture
 
 	// smll needs a "viewport" to draw
@@ -625,7 +628,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			smll::OBSTexture& detect = detection.frames[fidx].detect;
 			smll::OBSTexture& track = detection.frames[fidx].track;
 
-			detection.frames[fidx].timestamp = NEW_TIMESTAMP;
+			detection.frames[fidx].timestamp = sourceTimestamp;
 
 			// (re) allocate frame if necessary
 			if (capture.width != m_baseWidth ||
@@ -697,9 +700,25 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			mdat = demoMaskDatas[demoCurrentMask].get();
 		}
 	}
+	
+	// Select the video frame to draw
+	// - since we are already caching frames of video for the
+	//   face detection thread to consume, we can likely find
+	//   the frame of video that matches the timestamp of the
+	//   current detection data.
+	gs_texture_t* vidTex = sourceTexture;
+	for (int i = 0; i < ThreadData::BUFFER_SIZE; i++) {
+		if (detection.frames[i].timestamp == timestamp &&
+			detection.frames[i].capture.texture != nullptr &&
+			detection.frames[i].capture.width == m_baseWidth &&
+			detection.frames[i].capture.height == m_baseHeight) {
+			vidTex = detection.frames[i].capture.texture;
+			break;
+		}
+	}
 
 	// Draw the source video
-	mdat->RenderMorphVideo(sourceTexture, m_baseWidth, m_baseHeight, triangulation);
+	mdat->RenderMorphVideo(vidTex, m_baseWidth, m_baseHeight, triangulation);
 
 	gs_enable_depth_test(true);
 	gs_depth_function(GS_LESS);
