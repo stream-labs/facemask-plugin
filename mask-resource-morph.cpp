@@ -84,6 +84,8 @@ Mask::Resource::Type Mask::Resource::Morph::GetType() {
 void Mask::Resource::Morph::Update(Mask::Part* part, float time) {
 	UNUSED_PARAMETER(part);
 	UNUSED_PARAMETER(time);
+
+	// TODO: update non-frame data here
 }
 
 void Mask::Resource::Morph::Render(Mask::Part* part) {
@@ -98,7 +100,28 @@ bool Mask::Resource::Morph::IsDepthOnly() {
 
 void Mask::Resource::Morph::SetAnimatableValue(float v,
 	Mask::Resource::AnimationChannelType act) {
-	UNUSED_PARAMETER(act);
-	UNUSED_PARAMETER(v);
-	// TODO: SET VALUES
+	// sanity
+	if (act < MORPH_CHANNEL_FIRST || act >= MORPH_CHANNEL_LAST) {
+		PLOG_ERROR("Bad channel sent to Morph::SetAnimatableValue");
+		throw std::logic_error("Bad channel sent to Morph::SetAnimatableValue.");
+	}
+
+	// get indices into deltas
+	int deltaIdx = (int)act - (int)MORPH_LANDMARK_0_X;
+	int deltaMod = deltaIdx % 3;
+	deltaIdx /= 3;
+
+	// set new value
+	smll::DeltaList& deltas = m_morphData.GetDeltasAndStamp();
+	switch (deltaMod) {
+	case 0:
+		deltas[deltaIdx].x = v;
+		break;
+	case 1:
+		deltas[deltaIdx].y = v;
+		break;
+	case 2:
+		deltas[deltaIdx].z = v;
+		break;
+	}
 }
