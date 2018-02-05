@@ -19,6 +19,7 @@
 #include "stdafx.h"
 #include "utils.h"
 #include "command_morph_import.h"
+#include "command_import.h"
 
 
 static string g_locator_name = "landmark";
@@ -112,22 +113,20 @@ void command_morph_import(Args& args) {
 		GetLandmarkPoints(rest_scene, rest_scene->mRootNode, rest_points);
 	}
 	// ASSIMP : Import the pose file
-	{
-		Assimp::Importer importer;
-		const aiScene* pose_scene = importer.ReadFile(poseFile, impFlags);
+	Assimp::Importer importer;
+	const aiScene* pose_scene = importer.ReadFile(poseFile, impFlags);
 
-		// If import failed, report it
-		if (!pose_scene) {
-			cout << "Assimp is unable to import '" << poseFile << "'." << endl;
-			return;
-		}
-
-		// Fix shitty nodes
-		RemovePostRotationNodes(pose_scene->mRootNode);
-
-		// Get rest pose landmark point positions
-		GetLandmarkPoints(pose_scene, pose_scene->mRootNode, pose_points);
+	// If import failed, report it
+	if (!pose_scene) {
+		cout << "Assimp is unable to import '" << poseFile << "'." << endl;
+		return;
 	}
+
+	// Fix shitty nodes
+	RemovePostRotationNodes(pose_scene->mRootNode);
+
+	// Get rest pose landmark point positions
+	GetLandmarkPoints(pose_scene, pose_scene->mRootNode, pose_points);
 
 	// iterate points
 	json delts;
@@ -151,10 +150,15 @@ void command_morph_import(Args& args) {
 	morph["type"] = "morph";
 	morph["deltas"] = delts;
 
-	// add it to the json
+	// add it to the resources
 	json rez;
 	string morphResourceName = Utils::get_filename(poseFile);
 	rez[morphResourceName] = morph;
+
+	// add animations
+	ImportAnimations(args, pose_scene, rez, true, rest_points);
+
+	// add resources to json
 	j["resources"] = rez;
 
 	// make a part for the morph

@@ -22,3 +22,6 @@
 
 extern void command_import(Args& args);
 
+extern void ImportAnimations(Args& args, const aiScene* scene, 
+	json& rez, bool forMorph=false, aiVector3D* rest_points=nullptr);
+

@@ -1145,6 +1145,60 @@ void command_import(Args& args) {
 
 	// Add animations
 	cout << "Adding animations..." << endl;
+	ImportAnimations(args, scene, rez);
+
+	// Set resources
+	j["resources"] = rez;
+
+	// Make sure the nodes have names
+	count = 0;
+	CheckNodeNames(scene->mRootNode, count);
+
+	// Make their root the facemask root
+	scene->mRootNode->mName = "root";
+
+	// hrm
+	RemovePostRotationNodes(scene->mRootNode);
+
+	// Add parts
+	json parts;
+	AddNodes(scene, scene->mRootNode, &parts);
+	j["parts"] = parts;
+
+	// write it out
+	args.writeJson(j);
+	cout << "Done!" << endl << endl;
+}
+
+
+static string g_locator_name = "landmark";
+static string g_morph_channel_name = "morph";
+
+string GetChannelName(string nodeName, string varName) {
+	if (nodeName.substr(0, g_locator_name.size()) == g_locator_name) {
+		// get point index
+		int idx = atoi(nodeName.substr(g_locator_name.size()).c_str()) - 1;
+		if (idx >= 0 && idx < 68) {
+			char temp[256];
+			snprintf(temp, sizeof(temp), "%s-%d-%s", g_morph_channel_name.c_str(), idx, varName.c_str());
+			return temp;
+		}
+	}
+	return "";
+}
+
+int GetDeltaIndex(string nodeName) {
+	if (nodeName.substr(0, g_locator_name.size()) == g_locator_name) {
+		// get point index
+		int idx = atoi(nodeName.substr(g_locator_name.size()).c_str()) - 1;
+		return idx;
+	}
+	return -1;
+}
+
+void ImportAnimations(Args& args, const aiScene* scene, json& rez, 
+	bool forMorph, aiVector3D* rest_points) {
+
 	for (unsigned int i = 0; i < scene->mNumAnimations; i++) {
 		aiAnimation* anim = scene->mAnimations[i];
 
@@ -1153,6 +1207,13 @@ void command_import(Args& args) {
 		if (anim->mName.length == 0) {
 			snprintf(temp, sizeof(temp), "animation%d", i);
 			anim->mName = temp;
+		}
+
+		string morphName;
+		if (forMorph) {
+			assert(rest_points);
+			string poseFile = args.value("posefile");
+			morphName = Utils::get_filename(poseFile);
 		}
 
 		json janim;
@@ -1184,21 +1245,37 @@ void command_import(Args& args) {
 				xch = ych = zch = false;
 				for (unsigned int k = 0; k < chan->mNumPositionKeys; k++) {
 					const aiVectorKey& key = chan->mPositionKeys[k];
-					xkeys.emplace_back((float)key.mValue.x);
-					ykeys.emplace_back(-(float)key.mValue.y); // flip y
-					zkeys.emplace_back((float)key.mValue.z);
-					if (FLT_NEQ((float)key.mValue.x, pos.x))
+					aiVector3D v = key.mValue;
+					if (FLT_NEQ((float)v.x, pos.x))
 						xch = true;
-					if (FLT_NEQ((float)key.mValue.y, pos.y))
+					if (FLT_NEQ((float)v.y, pos.y))
 						ych = true;
-					if (FLT_NEQ((float)key.mValue.z, pos.z))
+					if (FLT_NEQ((float)v.z, pos.z))
 						zch = true;
+					if (forMorph) {
+						int idx = GetDeltaIndex(chan->mNodeName.C_Str());
+						v = v - rest_points[idx];
+						v.y = -v.y;
+						v.z = -v.z;
+					}
+					else {
+						v.y = -v.y;
+					}
+					xkeys.emplace_back((float)v.x);
+					ykeys.emplace_back((float)v.y);
+					zkeys.emplace_back((float)v.z);
 				}
 				// only add non-static channels
 				if (xch) {
 					json jchan;
-					jchan["name"] = chan->mNodeName.C_Str();
-					jchan["type"] = "part-pos-x";
+					if (forMorph) {
+						jchan["name"] = morphName;
+						jchan["type"] = GetChannelName(chan->mNodeName.C_Str(), "x");
+					}
+					else {
+						jchan["name"] = chan->mNodeName.C_Str();
+						jchan["type"] = "part-pos-x";
+					}
 					jchan["pre-state"] = AnimBehaviourToString(chan->mPreState);
 					jchan["post-state"] = AnimBehaviourToString(chan->mPostState);
 					jchan["values"] = base64_encodeZ((uint8_t*)xkeys.data(),
@@ -1208,8 +1285,14 @@ void command_import(Args& args) {
 				}
 				if (ych) {
 					json jchan;
-					jchan["name"] = chan->mNodeName.C_Str();
-					jchan["type"] = "part-pos-y";
+					if (forMorph) {
+						jchan["name"] = morphName;
+						jchan["type"] = GetChannelName(chan->mNodeName.C_Str(), "y");
+					}
+					else {
+						jchan["name"] = chan->mNodeName.C_Str();
+						jchan["type"] = "part-pos-y";
+					}
 					jchan["pre-state"] = AnimBehaviourToString(chan->mPreState);
 					jchan["post-state"] = AnimBehaviourToString(chan->mPostState);
 					jchan["values"] = base64_encodeZ((uint8_t*)ykeys.data(),
@@ -1219,8 +1302,14 @@ void command_import(Args& args) {
 				}
 				if (zch) {
 					json jchan;
-					jchan["name"] = chan->mNodeName.C_Str();
-					jchan["type"] = "part-pos-z";
+					if (forMorph) {
+						jchan["name"] = morphName;
+						jchan["type"] = GetChannelName(chan->mNodeName.C_Str(), "z");
+					}
+					else {
+						jchan["name"] = chan->mNodeName.C_Str();
+						jchan["type"] = "part-pos-z";
+					}
 					jchan["pre-state"] = AnimBehaviourToString(chan->mPreState);
 					jchan["post-state"] = AnimBehaviourToString(chan->mPostState);
 					jchan["values"] = base64_encodeZ((uint8_t*)zkeys.data(),
@@ -1230,7 +1319,7 @@ void command_import(Args& args) {
 				}
 			}
 			// Rotation
-			if (chan->mNumRotationKeys > 0) {
+			if (chan->mNumRotationKeys > 0 && !forMorph) {
 				// get the key values
 				std::vector<float> xkeys;
 				std::vector<float> ykeys;
@@ -1299,7 +1388,7 @@ void command_import(Args& args) {
 					jchannels[temp] = jchan;
 				}
 			}
-			if (chan->mNumScalingKeys > 0) {
+			if (chan->mNumScalingKeys > 0 && !forMorph) {
 				// get the key values
 				std::vector<float> xkeys;
 				std::vector<float> ykeys;
@@ -1359,25 +1448,6 @@ void command_import(Args& args) {
 		janim["channels"] = jchannels;
 		rez[anim->mName.C_Str()] = janim;
 	}
-
-	j["resources"] = rez;
-
-	// Make sure the nodes have names
-	count = 0;
-	CheckNodeNames(scene->mRootNode, count);
-
-	// Make their root the facemask root
-	scene->mRootNode->mName = "root";
-
-	// hrm
-	RemovePostRotationNodes(scene->mRootNode);
-
-	// Add parts
-	json parts;
-	AddNodes(scene, scene->mRootNode, &parts);
-	j["parts"] = parts;
-
-	// write it out
-	args.writeJson(j);
-	cout << "Done!" << endl << endl;
 }
+
+
