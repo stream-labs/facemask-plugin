@@ -140,6 +140,7 @@ private:
 	void	MakeAreaIndices(TriangulationResult& result,
 		const std::vector<cv::Vec3i>& triangles,
 		const std::vector<int>& smoothIndices,
+		const std::map<int,int>& revVtxMap,
 		size_t numBorderPoints);
 };
 

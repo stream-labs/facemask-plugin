@@ -134,8 +134,8 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	m_isDisabled(false), maskDataShutdown(false), maskJsonFilename(nullptr), maskData(nullptr),
 	demoModeOn(false), demoCurrentMask(0), demoModeInterval(0.0f), demoModeDelay(0.0f),
 	demoModeElapsed(0.0f), demoModeInDelay(false), drawMask(true), 
-	drawFaces(false), drawFDRect(false), drawTRRect(false), filterPreviewMode(false), 
-	performanceSetting(-1), testingStage(nullptr) {
+	drawFaces(false), drawMorphTris(false), drawFDRect(false), drawTRRect(false), 
+	filterPreviewMode(false), performanceSetting(-1), testingStage(nullptr) {
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
 
 	obs_enter_graphics();
@@ -249,6 +249,7 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 
 	obs_data_set_default_bool(data, kSettingsDrawMask, true);
 	obs_data_set_default_bool(data, kSettingsDrawFaces, false);
+	obs_data_set_default_bool(data, kSettingsDrawMorphTris, false);
 	obs_data_set_default_bool(data, kSettingsDrawFDCropRect, false);
 	obs_data_set_default_bool(data, kSettingsDrawTRCropRect, false);
 
@@ -305,6 +306,8 @@ obs_properties_t * Plugin::FaceMaskFilter::Instance::get_properties(void *ptr) {
 		kSettingsDrawMaskDesc);
 	obs_properties_add_bool(props, kSettingsDrawFaces,
 		kSettingsDrawFacesDesc);
+	obs_properties_add_bool(props, kSettingsDrawMorphTris,
+		kSettingsDrawMorphTrisDesc);
 	obs_properties_add_bool(props, kSettingsDrawFDCropRect,
 		kSettingsDrawFDCropRectDesc);
 	obs_properties_add_bool(props, kSettingsDrawTRCropRect,
@@ -394,6 +397,7 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	// update our param values
 	drawMask = obs_data_get_bool(data, kSettingsDrawMask);
 	drawFaces = obs_data_get_bool(data, kSettingsDrawFaces);
+	drawMorphTris = obs_data_get_bool(data, kSettingsDrawMorphTris);
 	drawFDRect = obs_data_get_bool(data, kSettingsDrawFDCropRect);
 	drawTRRect = obs_data_get_bool(data, kSettingsDrawTRCropRect);
 }
@@ -771,21 +775,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			if (drawFaces)
 				smllRenderer->DrawFaces(faces);
 			
-			// draw triangulation as lines
-			if (triangulation.vertexBuffer && 
-				triangulation.lineIndices) {
-				gs_effect_t    *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
-				gs_eparam_t    *color = gs_effect_get_param_by_name(solid, "color");
-				struct vec4 veccol;
-				vec4_from_rgba(&veccol, smll::OBSRenderer::MakeColor(0, 255, 0, 200));
-				gs_effect_set_vec4(color, &veccol);
-				while (gs_effect_loop(solid, "Solid")) {
-					gs_load_indexbuffer(triangulation.lineIndices);
-					gs_load_vertexbuffer(triangulation.vertexBuffer);
-					gs_draw(GS_LINES, 0, 0);
-				}
-			}
-
 			gs_texrender_end(drawTexRender);
 		}
 		texRenderEnd();
@@ -951,6 +940,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			// Make triangulation for face morphing
 			{
 				std::unique_lock<std::mutex> morphlock(detection.morphs[midx].mutex);
+				detection.faces[fidx].triangulationResults.buildLines = drawMorphTris;
 				smllFaceDetector->MakeTriangulation(detection.morphs[midx].morphData,
 					detection.faces[fidx].triangulationResults);
 			}
@@ -1155,6 +1145,9 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 
 			// new triangulation
 			triangulation.TakeBuffersFrom(detection.faces[fidx].triangulationResults);
+			if (!drawMorphTris) {
+				triangulation.DestroyLineBuffer();
+			}
 
 			// new timestamp
 			timestamp = detection.faces[fidx].timestamp;

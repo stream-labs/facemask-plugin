@@ -56,6 +56,15 @@ namespace smll {
 		lineIndices = nullptr;
 	}
 
+	void TriangulationResult::DestroyLineBuffer() {
+		obs_enter_graphics();
+		if (lineIndices)
+			gs_indexbuffer_destroy(lineIndices);
+		obs_leave_graphics();
+		lineIndices = nullptr;
+	}
+
+
 	void TriangulationResult::TakeBuffersFrom(TriangulationResult& other) {
 
 		obs_enter_graphics();

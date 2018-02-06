@@ -48,6 +48,7 @@ namespace smll {
 		~TriangulationResult();
 
 		void DestroyBuffers();
+		void DestroyLineBuffer();
 		void TakeBuffersFrom(TriangulationResult& other);
 	};
 

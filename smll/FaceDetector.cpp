@@ -342,13 +342,16 @@ namespace smll {
 
 		// add our points to subdiv2d
 		// save a map: subdiv2d vtx id -> index into our points
-		std::map<int,int> vtxMap;
+		std::map<int, int> vtxMap;
+		// save another map: our idx -> our idx
+		std::map<int, int> revVtxMap;
 		for (int i = 0; i < points.size(); i++) {
 			cv::Point2f& p = points[i];
 			if (rect.contains(p)) {
 				// note: this crashes if you insert a point outside the rect.
 				int vid = subdiv.insert(p);
 				vtxMap[vid] = i;
+				revVtxMap[i] = vid - 4;
 			}
 		}
 
@@ -387,7 +390,12 @@ namespace smll {
 		// Either way, since I add my own border points myself, these first
 		// 4 vertices are crap to us, and all resulting triangles are also
 		// crap.
-		// We remove these triangles, and re-index them to solve this issue.
+		// We remove these triangles, and use a vtxMap we created above
+		// to re-index the triangle indices to our vtx list.
+		//
+		// Also, the subdiv2D object will merge vertices that are close enough
+		// to each other. The vtxMap also fixes this, and we use the 
+		// revVtxMap for area sorting later on.
 
 		// re-index triangles and remove bad ones
 		std::vector<cv::Vec3i>::iterator it = triangleList.begin();
@@ -411,7 +419,8 @@ namespace smll {
 		}
 
 		// Make Index Buffers
-		MakeAreaIndices(result, triangleList, smoothedIndices, borderpoints.size());
+		MakeAreaIndices(result, triangleList, smoothedIndices, 
+			revVtxMap, borderpoints.size());
 	}
 
 	// MakeHullPoints
@@ -471,6 +480,7 @@ namespace smll {
 	void FaceDetector::MakeAreaIndices(TriangulationResult& result,
 		const std::vector<cv::Vec3i>& triangleList,
 		const std::vector<int>& smoothIndices,
+		const std::map<int, int>& revVtxMap,
 		size_t numBorderPoints) {
 		UNUSED_PARAMETER(numBorderPoints);
 
@@ -534,20 +544,32 @@ namespace smll {
 
 					// make a bitmask for each point
 					LandmarkBitmask b0;
-					if (i0 < NUM_FACIAL_LANDMARKS)
+					if (i0 < NUM_FACIAL_LANDMARKS) {
 						b0.set(i0);
-					else if (i0 < numLandmarksAndSmooth)
+						b0.set(revVtxMap.at(i0));
+					}
+					else if (i0 < numLandmarksAndSmooth) {
 						b0.set(smoothIndices[i0 - NUM_FACIAL_LANDMARKS]);
+						b0.set(revVtxMap.at(smoothIndices[i0 - NUM_FACIAL_LANDMARKS]));
+					}
 					LandmarkBitmask b1;
-					if (i1 < NUM_FACIAL_LANDMARKS)
+					if (i1 < NUM_FACIAL_LANDMARKS) {
 						b1.set(i1);
-					else if (i1 < numLandmarksAndSmooth)
+						b1.set(revVtxMap.at(i1));
+					}
+					else if (i1 < numLandmarksAndSmooth) {
 						b1.set(smoothIndices[i1 - NUM_FACIAL_LANDMARKS]);
+						b1.set(revVtxMap.at(smoothIndices[i1 - NUM_FACIAL_LANDMARKS]));
+					}
 					LandmarkBitmask b2;
-					if (i2 < NUM_FACIAL_LANDMARKS)
+					if (i2 < NUM_FACIAL_LANDMARKS) {
 						b2.set(i2);
-					else if (i2 < numLandmarksAndSmooth)
+						b2.set(revVtxMap.at(i2));
+					}
+					else if (i2 < numLandmarksAndSmooth) {
 						b2.set(smoothIndices[i2 - NUM_FACIAL_LANDMARKS]);
+						b2.set(revVtxMap.at(smoothIndices[i2 - NUM_FACIAL_LANDMARKS]));
+					}
 
 					// do boolean logic to determine membership
 					bool inArea = false;

@@ -150,6 +150,7 @@ namespace Plugin {
 			// flags
 			bool				drawMask;
 			bool				drawFaces;
+			bool				drawMorphTris;
 			bool				drawFDRect;
 			bool				drawTRRect;
 			bool				filterPreviewMode;

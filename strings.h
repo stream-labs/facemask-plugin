@@ -37,6 +37,7 @@ static const char* const kSettingsDeactivated = "deactivated";
 static const char* const kSettingsDrawMask = "drawmask";
 
 static const char* const kSettingsDrawFaces = "drawfaces";
+static const char* const kSettingsDrawMorphTris = "drawmorphtris";
 static const char* const kSettingsDrawFDCropRect = "drawFDCropRect";
 static const char* const kSettingsDrawTRCropRect = "drawTRCropRect";
 
@@ -52,7 +53,8 @@ static const char* const kSettingsDeactivatedDesc = "Deactivate the filter";
 static const char* const kSettingsDrawMaskDesc = "Draw the face mask";
 
 static const char* const kSettingsDrawFacesDesc = "Draw Face Landmark Data";
-static const char* const kSettingsDrawFDCropRectDesc = 
+static const char* const kSettingsDrawMorphTrisDesc = "Draw Morph Wireframe";
+static const char* const kSettingsDrawFDCropRectDesc =
 	"Draw Face Detect Crop Rectangle";
 static const char* const kSettingsDrawTRCropRectDesc =
 	"Draw Tracking Crop Rectangle"; 

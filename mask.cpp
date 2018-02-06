@@ -24,6 +24,7 @@
 #include "exceptions.h"
 #include "strings.h"
 #include "plugin.h"
+#include "utils.h"
 #include <queue>
 extern "C" {
 	#pragma warning( push )
@@ -546,22 +547,20 @@ bool Mask::MaskData::RenderMorphVideo(gs_texture* vidtex, uint32_t width, uint32
 		}
 	}
 
-	/*
-				// draw triangulation as lines
-			if (triangulation.vertexBuffer && 
-				triangulation.lineIndices) {
-				gs_effect_t    *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
-				gs_eparam_t    *color = gs_effect_get_param_by_name(solid, "color");
-				struct vec4 veccol;
-				vec4_from_rgba(&veccol, smll::OBSRenderer::MakeColor(0, 255, 0, 200));
-				gs_effect_set_vec4(color, &veccol);
-				while (gs_effect_loop(solid, "Solid")) {
-					gs_load_indexbuffer(triangulation.lineIndices);
-					gs_load_vertexbuffer(triangulation.vertexBuffer);
-					gs_draw(GS_LINES, 0, 0);
-				}
-			}
-	*/
+	// draw triangulation as lines
+	if (trires.vertexBuffer &&
+		trires.lineIndices) {
+		gs_effect_t    *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
+		gs_eparam_t    *color = gs_effect_get_param_by_name(solid, "color");
+		struct vec4 veccol;
+		vec4_from_rgba(&veccol, MAKE32COLOR(0, 255, 0, 200));
+		gs_effect_set_vec4(color, &veccol);
+		while (gs_effect_loop(solid, "Solid")) {
+			gs_load_indexbuffer(trires.lineIndices);
+			gs_load_vertexbuffer(trires.vertexBuffer);
+			gs_draw(GS_LINES, 0, 0);
+		}
+	}
 
 	return didMorph;
 }
