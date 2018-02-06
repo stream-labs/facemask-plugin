@@ -724,6 +724,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// Draw the source video
 	mdat->RenderMorphVideo(vidTex, m_baseWidth, m_baseHeight, triangulation);
 
+	// draw face detection data
+	if (drawFaces)
+		smllRenderer->DrawFaces(faces);
+
 	gs_enable_depth_test(true);
 	gs_depth_function(GS_LESS);
 
@@ -770,10 +774,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					}
 				}
 			}
-
-			// draw face detection data
-			if (drawFaces)
-				smllRenderer->DrawFaces(faces);
 			
 			gs_texrender_end(drawTexRender);
 		}

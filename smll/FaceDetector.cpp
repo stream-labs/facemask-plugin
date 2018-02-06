@@ -313,6 +313,62 @@ namespace smll {
 			}
 		}
 
+		// make up some head points
+		cv::Point2f v,p;
+		int headStart = (int)points.size();
+		std::vector<int> indices;
+		v = (points[JAW_1] - points[JAW_2]);
+		p = (points[JAW_1] + p);
+		points.emplace_back(p);
+		warpedpoints.emplace_back(p);
+		indices.push_back(headStart++);
+
+		p += v;
+		points.emplace_back(p);
+		warpedpoints.emplace_back(p);
+		indices.push_back(headStart++);
+
+		p += v;
+		points.emplace_back(p);
+		warpedpoints.emplace_back(p);
+		indices.push_back(headStart++);
+
+		p += v;
+		points.emplace_back(p);
+		warpedpoints.emplace_back(p);
+		indices.push_back(headStart++);
+
+		p = ((points[NOSE_1] - points[NOSE_7]) * 2.3f) + points[NOSE_1];
+		points.emplace_back(p);
+		warpedpoints.emplace_back(p);
+		indices.push_back(headStart++);
+
+		v = (points[JAW_17] - points[JAW_16]);
+		cv::Point2f p1, p2, p3, p4;
+		p1 = points[JAW_17] + v;
+		p2 = p1 + v;
+		p3 = p2 + v;
+		p4 = p3 + v;
+
+		points.emplace_back(p4);
+		warpedpoints.emplace_back(p4);
+		indices.push_back(headStart++);
+
+		points.emplace_back(p3);
+		warpedpoints.emplace_back(p3);
+		indices.push_back(headStart++);
+
+		points.emplace_back(p2);
+		warpedpoints.emplace_back(p2);
+		indices.push_back(headStart++);
+
+		points.emplace_back(p1);
+		warpedpoints.emplace_back(p1);
+		indices.push_back(headStart++);
+
+		CatmullRomSmooth(points, indices, CATMULL_ROM_STEPS * 3);
+		CatmullRomSmooth(warpedpoints, indices, CATMULL_ROM_STEPS * 3);
+
 		// add border points
 		std::vector<cv::Point2f> borderpoints;
 		borderpoints.push_back(cv::Point2f(0, 0));
@@ -328,7 +384,7 @@ namespace smll {
 		// add hull points
 		std::vector<cv::Point2f> hullpoints;
 		MakeHullPoints(points, warpedpoints, hullpoints);
-		Subdivide(hullpoints);
+		//Subdivide(hullpoints);
 		for (int i = 0; i < hullpoints.size(); i++) {
 			points.emplace_back(hullpoints[i]);
 			warpedpoints.emplace_back(hullpoints[i]);
