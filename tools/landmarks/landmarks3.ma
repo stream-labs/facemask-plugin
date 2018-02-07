@@ -1,6 +1,6 @@
 //Maya ASCII 2015 scene
 //Name: landmarks3.ma
-//Last modified: Tue, Feb 06, 2018 03:53:01 PM
+//Last modified: Tue, Feb 06, 2018 05:05:24 PM
 //Codeset: 1252
 requires maya "2015";
 currentUnit -l centimeter -a degree -t ntsc;
@@ -11,8 +11,8 @@ fileInfo "cutIdentifier" "201402282131-909040";
 fileInfo "osv" "Microsoft Windows 8 Business Edition, 64-bit  (Build 9200)\n";
 createNode transform -s -n "persp";
 	setAttr ".v" no;
-	setAttr ".t" -type "double3" 13.940521394922229 2.43329193040368 15.489874316316342 ;
-	setAttr ".r" -type "double3" -1.5383527293681429 757.39999999983968 0 ;
+	setAttr ".t" -type "double3" 8.9661843520221485 3.2220853415784578 18.41632899410779 ;
+	setAttr ".r" -type "double3" -3.3383527291336561 384.20000000004308 0 ;
 createNode camera -s -n "perspShape" -p "persp";
 	setAttr -k off ".v" no;
 	setAttr ".fl" 34.999999999999986;
@@ -91,34 +91,34 @@ createNode transform -n "landmark27" -p "morph_loactors_group";
 createNode locator -n "landmarkShape27" -p "landmark27";
 	setAttr -k off ".v";
 	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
-createNode transform -n "landmark91" -p "morph_loactors_group";
+createNode transform -n "landmark80" -p "morph_loactors_group";
 	setAttr ".t" -type "double3" 0 3.4506915636198463 -1.237835258601331 ;
-createNode locator -n "landmarkShape91" -p "landmark91";
+createNode locator -n "landmarkShape80" -p "landmark80";
+	setAttr -k off ".v";
+	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
+createNode transform -n "landmark83" -p "morph_loactors_group";
+	setAttr ".t" -type "double3" 0 4.5998077310932519 -1.5117023168495036 ;
+createNode locator -n "landmarkShape83" -p "landmark83";
 	setAttr -k off ".v";
 	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
 createNode transform -n "landmark86" -p "morph_loactors_group";
-	setAttr ".t" -type "double3" 0 4.5998077310932519 -1.5117023168495036 ;
+	setAttr ".t" -type "double3" 0 5.670252200640916 -2.2984495537153 ;
 createNode locator -n "landmarkShape86" -p "landmark86";
 	setAttr -k off ".v";
 	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
-createNode transform -n "landmark81" -p "morph_loactors_group";
-	setAttr ".t" -type "double3" 0 5.670252200640916 -2.2984495537153 ;
-createNode locator -n "landmarkShape81" -p "landmark81";
-	setAttr -k off ".v";
-	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
-createNode transform -n "landmark76" -p "morph_loactors_group";
+createNode transform -n "landmark89" -p "morph_loactors_group";
 	setAttr ".t" -type "double3" 0 6.5122428967243167 -3.4229376097181157 ;
-createNode locator -n "landmarkShape76" -p "landmark76";
+createNode locator -n "landmarkShape89" -p "landmark89";
 	setAttr -k off ".v";
 	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
-createNode transform -n "landmark71" -p "morph_loactors_group";
+createNode transform -n "landmark92" -p "morph_loactors_group";
 	setAttr ".t" -type "double3" -8.8817841970012523e-016 7.1519916751348962 -4.7967277715476122 ;
-createNode locator -n "landmarkShape71" -p "landmark71";
+createNode locator -n "landmarkShape92" -p "landmark92";
 	setAttr -k off ".v";
 	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
-createNode transform -n "landmark68" -p "morph_loactors_group";
+createNode transform -n "landmark73" -p "morph_loactors_group";
 	setAttr ".t" -type "double3" 0 7.3983340787174274 -6.2392573580863235 ;
-createNode locator -n "landmarkShape68" -p "landmark68";
+createNode locator -n "landmarkShape73" -p "landmark73";
 	setAttr -k off ".v";
 	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
 createNode transform -n "landmark33" -p "morph_loactors_group";
@@ -191,34 +191,34 @@ createNode transform -n "landmark16" -p "morph_loactors_group";
 createNode locator -n "landmarkShape16" -p "landmark16";
 	setAttr -k off ".v";
 	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
-createNode transform -n "landmark93" -p "morph_loactors_group";
+createNode transform -n "landmark78" -p "morph_loactors_group";
 	setAttr ".t" -type "double3" 3.4917176948680897 2.9619920514166025 -6.153366279358532 ;
 	setAttr ".s" -type "double3" 0.99999999999999978 1 1 ;
-createNode locator -n "landmarkShape93" -p "landmark93";
-	setAttr -k off ".v";
-	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
-createNode transform -n "landmark88" -p "morph_loactors_group";
-	setAttr ".t" -type "double3" 3.425201826699753 4.1111082188900081 -6.1564969816023103 ;
-	setAttr ".s" -type "double3" 0.99999999999999978 1 1 ;
-createNode locator -n "landmarkShape88" -p "landmark88";
-	setAttr -k off ".v";
-	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
-createNode transform -n "landmark83" -p "morph_loactors_group";
-	setAttr ".t" -type "double3" 3.073340494402939 5.3724144722968905 -6.1730580382772828 ;
-	setAttr ".s" -type "double3" 0.99999999999999956 1 1 ;
-createNode locator -n "landmarkShape83" -p "landmark83";
-	setAttr -k off ".v";
-	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
-createNode transform -n "landmark78" -p "morph_loactors_group";
-	setAttr ".t" -type "double3" 2.3577624115777844 6.5162800200580238 -6.206738150575152 ;
-	setAttr ".s" -type "double3" 0.99999999999999933 1.0000000000000002 1 ;
 createNode locator -n "landmarkShape78" -p "landmark78";
 	setAttr -k off ".v";
 	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
-createNode transform -n "landmark73" -p "morph_loactors_group";
+createNode transform -n "landmark77" -p "morph_loactors_group";
+	setAttr ".t" -type "double3" 3.425201826699753 4.1111082188900081 -6.1564969816023103 ;
+	setAttr ".s" -type "double3" 0.99999999999999978 1 1 ;
+createNode locator -n "landmarkShape77" -p "landmark77";
+	setAttr -k off ".v";
+	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
+createNode transform -n "landmark76" -p "morph_loactors_group";
+	setAttr ".t" -type "double3" 3.073340494402939 5.3724144722968905 -6.1730580382772828 ;
+	setAttr ".s" -type "double3" 0.99999999999999956 1 1 ;
+createNode locator -n "landmarkShape76" -p "landmark76";
+	setAttr -k off ".v";
+	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
+createNode transform -n "landmark75" -p "morph_loactors_group";
+	setAttr ".t" -type "double3" 2.3577624115777844 6.5162800200580238 -6.206738150575152 ;
+	setAttr ".s" -type "double3" 0.99999999999999933 1.0000000000000002 1 ;
+createNode locator -n "landmarkShape75" -p "landmark75";
+	setAttr -k off ".v";
+	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
+createNode transform -n "landmark74" -p "morph_loactors_group";
 	setAttr ".t" -type "double3" 1.2674054581119125 7.183477499230249 -6.258057979282742 ;
 	setAttr ".s" -type "double3" 0.99999999999999933 1.0000000000000004 1 ;
-createNode locator -n "landmarkShape73" -p "landmark73";
+createNode locator -n "landmarkShape74" -p "landmark74";
 	setAttr -k off ".v";
 	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
 createNode transform -n "landmark56" -p "morph_loactors_group";
@@ -347,34 +347,34 @@ createNode transform -n "landmark26" -p "morph_loactors_group";
 createNode locator -n "landmarkShape26" -p "landmark26";
 	setAttr -k off ".v";
 	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
-createNode transform -n "landmark92" -p "morph_loactors_group";
+createNode transform -n "landmark81" -p "morph_loactors_group";
 	setAttr ".t" -type "double3" 2.7003951427841129 3.3840528682823678 -2.2596119702865085 ;
 	setAttr ".s" -type "double3" 1.000000000000002 0.99999999999999856 1 ;
-createNode locator -n "landmarkShape92" -p "landmark92";
+createNode locator -n "landmarkShape81" -p "landmark81";
+	setAttr -k off ".v";
+	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
+createNode transform -n "landmark84" -p "morph_loactors_group";
+	setAttr ".t" -type "double3" 2.6088386826426753 4.3920221683864842 -2.7338529699862271 ;
+	setAttr ".s" -type "double3" 1.0000000000000024 0.99999999999999856 1 ;
+createNode locator -n "landmarkShape84" -p "landmark84";
 	setAttr -k off ".v";
 	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
 createNode transform -n "landmark87" -p "morph_loactors_group";
-	setAttr ".t" -type "double3" 2.6088386826426753 4.3920221683864842 -2.7338529699862271 ;
-	setAttr ".s" -type "double3" 1.0000000000000024 0.99999999999999856 1 ;
+	setAttr ".t" -type "double3" 2.1037209420600043 5.6143638063271446 -3.2289755356834853 ;
+	setAttr ".s" -type "double3" 1.0000000000000029 0.99999999999999845 1 ;
 createNode locator -n "landmarkShape87" -p "landmark87";
 	setAttr -k off ".v";
 	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
-createNode transform -n "landmark82" -p "morph_loactors_group";
-	setAttr ".t" -type "double3" 2.1037209420600043 5.6143638063271446 -3.2289755356834853 ;
-	setAttr ".s" -type "double3" 1.0000000000000029 0.99999999999999845 1 ;
-createNode locator -n "landmarkShape82" -p "landmark82";
-	setAttr -k off ".v";
-	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
-createNode transform -n "landmark77" -p "morph_loactors_group";
+createNode transform -n "landmark90" -p "morph_loactors_group";
 	setAttr ".t" -type "double3" 1.6855087387461118 6.5162800200580264 -4.3425862395692398 ;
 	setAttr ".s" -type "double3" 1.0000000000000033 0.99999999999999845 1 ;
-createNode locator -n "landmarkShape77" -p "landmark77";
+createNode locator -n "landmarkShape90" -p "landmark90";
 	setAttr -k off ".v";
 	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
-createNode transform -n "landmark72" -p "morph_loactors_group";
+createNode transform -n "landmark93" -p "morph_loactors_group";
 	setAttr ".t" -type "double3" 0.94543205712361678 7.183477499230249 -5.2512489704626786 ;
 	setAttr ".s" -type "double3" 1.0000000000000033 0.99999999999999845 1 ;
-createNode locator -n "landmarkShape72" -p "landmark72";
+createNode locator -n "landmarkShape93" -p "landmark93";
 	setAttr -k off ".v";
 	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
 createNode transform -n "landmark7" -p "morph_loactors_group";
@@ -425,34 +425,34 @@ createNode transform -n "landmark0" -p "morph_loactors_group";
 createNode locator -n "landmarkShape0" -p "landmark0";
 	setAttr -k off ".v";
 	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
-createNode transform -n "landmark89" -p "morph_loactors_group";
+createNode transform -n "landmark68" -p "morph_loactors_group";
 	setAttr ".t" -type "double3" -3.4917176948680897 2.9619920514166025 -6.153366279358532 ;
 	setAttr ".s" -type "double3" 1.0000000000000036 0.99999999999999867 1 ;
-createNode locator -n "landmarkShape89" -p "landmark89";
-	setAttr -k off ".v";
-	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
-createNode transform -n "landmark84" -p "morph_loactors_group";
-	setAttr ".t" -type "double3" -3.425201826699753 4.1111082188900081 -6.1564969816023103 ;
-	setAttr ".s" -type "double3" 1.0000000000000038 0.99999999999999867 1 ;
-createNode locator -n "landmarkShape84" -p "landmark84";
-	setAttr -k off ".v";
-	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
-createNode transform -n "landmark79" -p "morph_loactors_group";
-	setAttr ".t" -type "double3" -3.073340494402939 5.3724144722968905 -6.1730580382772828 ;
-	setAttr ".s" -type "double3" 1.0000000000000038 0.99999999999999867 1 ;
-createNode locator -n "landmarkShape79" -p "landmark79";
-	setAttr -k off ".v";
-	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
-createNode transform -n "landmark74" -p "morph_loactors_group";
-	setAttr ".t" -type "double3" -2.3577624115777844 6.5162800200580238 -6.206738150575152 ;
-	setAttr ".s" -type "double3" 1.0000000000000036 0.99999999999999867 1 ;
-createNode locator -n "landmarkShape74" -p "landmark74";
+createNode locator -n "landmarkShape68" -p "landmark68";
 	setAttr -k off ".v";
 	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
 createNode transform -n "landmark69" -p "morph_loactors_group";
+	setAttr ".t" -type "double3" -3.425201826699753 4.1111082188900081 -6.1564969816023103 ;
+	setAttr ".s" -type "double3" 1.0000000000000038 0.99999999999999867 1 ;
+createNode locator -n "landmarkShape69" -p "landmark69";
+	setAttr -k off ".v";
+	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
+createNode transform -n "landmark70" -p "morph_loactors_group";
+	setAttr ".t" -type "double3" -3.073340494402939 5.3724144722968905 -6.1730580382772828 ;
+	setAttr ".s" -type "double3" 1.0000000000000038 0.99999999999999867 1 ;
+createNode locator -n "landmarkShape70" -p "landmark70";
+	setAttr -k off ".v";
+	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
+createNode transform -n "landmark71" -p "morph_loactors_group";
+	setAttr ".t" -type "double3" -2.3577624115777844 6.5162800200580238 -6.206738150575152 ;
+	setAttr ".s" -type "double3" 1.0000000000000036 0.99999999999999867 1 ;
+createNode locator -n "landmarkShape71" -p "landmark71";
+	setAttr -k off ".v";
+	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
+createNode transform -n "landmark72" -p "morph_loactors_group";
 	setAttr ".t" -type "double3" -1.2674054581119125 7.183477499230249 -6.258057979282742 ;
 	setAttr ".s" -type "double3" 1.0000000000000033 0.99999999999999867 1 ;
-createNode locator -n "landmarkShape69" -p "landmark69";
+createNode locator -n "landmarkShape72" -p "landmark72";
 	setAttr -k off ".v";
 	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
 createNode transform -n "landmark58" -p "morph_loactors_group";
@@ -465,12 +465,6 @@ createNode transform -n "landmark59" -p "morph_loactors_group";
 	setAttr ".t" -type "double3" -0.95685433828013866 -2.1333601083690881 -1.6184401079327073 ;
 	setAttr ".s" -type "double3" 1.0000000000000031 0.99999999999999867 1 ;
 createNode locator -n "landmarkShape59" -p "landmark59";
-	setAttr -k off ".v";
-	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
-createNode transform -n "morph_locator71" -p "morph_loactors_group";
-	setAttr ".t" -type "double3" -1.4133984236124371 -1.7594022583236453 -1.8178689599375093 ;
-	setAttr ".s" -type "double3" 1.0000000000000031 0.99999999999999856 1 ;
-createNode locator -n "morph_locatorShape71" -p "morph_locator71";
 	setAttr -k off ".v";
 	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
 createNode transform -n "landmark60" -p "morph_loactors_group";
@@ -587,34 +581,34 @@ createNode transform -n "landmark17" -p "morph_loactors_group";
 createNode locator -n "landmarkShape17" -p "landmark17";
 	setAttr -k off ".v";
 	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
-createNode transform -n "landmark90" -p "morph_loactors_group";
+createNode transform -n "landmark79" -p "morph_loactors_group";
 	setAttr ".t" -type "double3" -2.7003951427841129 3.3840528682823678 -2.2596119702865085 ;
 	setAttr ".s" -type "double3" 0.99999999999999978 1.0000000000000002 1 ;
-createNode locator -n "landmarkShape90" -p "landmark90";
+createNode locator -n "landmark79Shape" -p "landmark79";
+	setAttr -k off ".v";
+	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
+createNode transform -n "landmark82" -p "morph_loactors_group";
+	setAttr ".t" -type "double3" -2.6088386826426753 4.3920221683864842 -2.7338529699862271 ;
+	setAttr ".s" -type "double3" 1 1.0000000000000004 1 ;
+createNode locator -n "landmark82Shape" -p "landmark82";
 	setAttr -k off ".v";
 	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
 createNode transform -n "landmark85" -p "morph_loactors_group";
-	setAttr ".t" -type "double3" -2.6088386826426753 4.3920221683864842 -2.7338529699862271 ;
-	setAttr ".s" -type "double3" 1 1.0000000000000004 1 ;
+	setAttr ".t" -type "double3" -2.1037209420600043 5.6143638063271446 -3.2289755356834853 ;
+	setAttr ".s" -type "double3" 1.0000000000000002 1.0000000000000007 1 ;
 createNode locator -n "landmarkShape85" -p "landmark85";
 	setAttr -k off ".v";
 	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
-createNode transform -n "landmark80" -p "morph_loactors_group";
-	setAttr ".t" -type "double3" -2.1037209420600043 5.6143638063271446 -3.2289755356834853 ;
-	setAttr ".s" -type "double3" 1.0000000000000002 1.0000000000000007 1 ;
-createNode locator -n "landmarkShape80" -p "landmark80";
-	setAttr -k off ".v";
-	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
-createNode transform -n "landmark75" -p "morph_loactors_group";
+createNode transform -n "landmark88" -p "morph_loactors_group";
 	setAttr ".t" -type "double3" -1.6855087387461118 6.5162800200580264 -4.3425862395692398 ;
 	setAttr ".s" -type "double3" 1.0000000000000004 1.0000000000000009 1 ;
-createNode locator -n "landmarkShape75" -p "landmark75";
+createNode locator -n "landmarkShape88" -p "landmark88";
 	setAttr -k off ".v";
 	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
-createNode transform -n "landmark70" -p "morph_loactors_group";
+createNode transform -n "landmark91" -p "morph_loactors_group";
 	setAttr ".t" -type "double3" -0.94543205712361678 7.183477499230249 -5.2512489704626786 ;
 	setAttr ".s" -type "double3" 1.0000000000000007 1.0000000000000011 1 ;
-createNode locator -n "landmarkShape70" -p "landmark70";
+createNode locator -n "landmarkShape91" -p "landmark91";
 	setAttr -k off ".v";
 	setAttr ".los" -type "double3" 0.125 0.125 0.125 ;
 createNode lightLinker -s -n "lightLinker1";
@@ -662,21 +656,21 @@ createNode script -n "uiConfigurationScriptNode";
 		+ "                -showReferenceNodes 1\n                -showReferenceMembers 1\n                -showAttributes 0\n                -showConnected 0\n                -showAnimCurvesOnly 0\n                -showMuteInfo 0\n                -organizeByLayer 1\n                -showAnimLayerWeight 1\n                -autoExpandLayers 1\n                -autoExpand 0\n                -showDagOnly 1\n                -showAssets 1\n                -showContainedOnly 1\n                -showPublishedAsConnected 0\n                -showContainerContents 1\n                -ignoreDagHierarchy 0\n                -expandConnections 0\n                -showUpstreamCurves 1\n                -showUnitlessCurves 1\n                -showCompounds 1\n                -showLeafs 1\n                -showNumericAttrsOnly 0\n                -highlightActive 1\n                -autoSelectNewObjects 0\n                -doNotSelectNewObjects 0\n                -dropIsParent 1\n                -transmitFilters 0\n                -setFilter \"defaultSetFilter\" \n                -showSetMembers 1\n"
 		+ "                -allowMultiSelection 1\n                -alwaysToggleSelect 0\n                -directSelect 0\n                -displayMode \"DAG\" \n                -expandObjects 0\n                -setsIgnoreFilters 1\n                -containersIgnoreFilters 0\n                -editAttrName 0\n                -showAttrValues 0\n                -highlightSecondary 0\n                -showUVAttrsOnly 0\n                -showTextureNodesOnly 0\n                -attrAlphaOrder \"default\" \n                -animLayerFilterOptions \"allAffecting\" \n                -sortOrder \"none\" \n                -longNames 0\n                -niceNames 1\n                -showNamespace 1\n                -showPinIcons 0\n                -mapMotionTrails 0\n                -ignoreHiddenAttribute 0\n                $editorName;\n\t\t}\n\t} else {\n\t\t$label = `panel -q -label $panelName`;\n\t\toutlinerPanel -edit -l (localizedPanelLabel(\"Outliner\")) -mbv $menusOkayInPanels  $panelName;\n\t\t$editorName = $panelName;\n        outlinerEditor -e \n            -docTag \"isolOutln_fromSeln\" \n"
 		+ "            -showShapes 0\n            -showReferenceNodes 1\n            -showReferenceMembers 1\n            -showAttributes 0\n            -showConnected 0\n            -showAnimCurvesOnly 0\n            -showMuteInfo 0\n            -organizeByLayer 1\n            -showAnimLayerWeight 1\n            -autoExpandLayers 1\n            -autoExpand 0\n            -showDagOnly 1\n            -showAssets 1\n            -showContainedOnly 1\n            -showPublishedAsConnected 0\n            -showContainerContents 1\n            -ignoreDagHierarchy 0\n            -expandConnections 0\n            -showUpstreamCurves 1\n            -showUnitlessCurves 1\n            -showCompounds 1\n            -showLeafs 1\n            -showNumericAttrsOnly 0\n            -highlightActive 1\n            -autoSelectNewObjects 0\n            -doNotSelectNewObjects 0\n            -dropIsParent 1\n            -transmitFilters 0\n            -setFilter \"defaultSetFilter\" \n            -showSetMembers 1\n            -allowMultiSelection 1\n            -alwaysToggleSelect 0\n"
-		+ "            -directSelect 0\n            -displayMode \"DAG\" \n            -expandObjects 0\n            -setsIgnoreFilters 1\n            -containersIgnoreFilters 0\n            -editAttrName 0\n            -showAttrValues 0\n            -highlightSecondary 0\n            -showUVAttrsOnly 0\n            -showTextureNodesOnly 0\n            -attrAlphaOrder \"default\" \n            -animLayerFilterOptions \"allAffecting\" \n            -sortOrder \"none\" \n            -longNames 0\n            -niceNames 1\n            -showNamespace 1\n            -showPinIcons 0\n            -mapMotionTrails 0\n            -ignoreHiddenAttribute 0\n            $editorName;\n\t\tif (!$useSceneConfig) {\n\t\t\tpanel -e -l $label $panelName;\n\t\t}\n\t}\n\n\n\t$panelName = `sceneUIReplacement -getNextScriptedPanel \"graphEditor\" (localizedPanelLabel(\"Graph Editor\")) `;\n\tif (\"\" == $panelName) {\n\t\tif ($useSceneConfig) {\n\t\t\t$panelName = `scriptedPanel -unParent  -type \"graphEditor\" -l (localizedPanelLabel(\"Graph Editor\")) -mbv $menusOkayInPanels `;\n\n\t\t\t$editorName = ($panelName+\"OutlineEd\");\n"
-		+ "            outlinerEditor -e \n                -showShapes 1\n                -showReferenceNodes 0\n                -showReferenceMembers 0\n                -showAttributes 1\n                -showConnected 1\n                -showAnimCurvesOnly 1\n                -showMuteInfo 0\n                -organizeByLayer 1\n                -showAnimLayerWeight 1\n                -autoExpandLayers 1\n                -autoExpand 1\n                -showDagOnly 0\n                -showAssets 1\n                -showContainedOnly 0\n                -showPublishedAsConnected 0\n                -showContainerContents 0\n                -ignoreDagHierarchy 0\n                -expandConnections 1\n                -showUpstreamCurves 1\n                -showUnitlessCurves 1\n                -showCompounds 0\n                -showLeafs 1\n                -showNumericAttrsOnly 1\n                -highlightActive 0\n                -autoSelectNewObjects 1\n                -doNotSelectNewObjects 0\n                -dropIsParent 1\n                -transmitFilters 1\n"
-		+ "                -setFilter \"0\" \n                -showSetMembers 0\n                -allowMultiSelection 1\n                -alwaysToggleSelect 0\n                -directSelect 0\n                -displayMode \"DAG\" \n                -expandObjects 0\n                -setsIgnoreFilters 1\n                -containersIgnoreFilters 0\n                -editAttrName 0\n                -showAttrValues 0\n                -highlightSecondary 0\n                -showUVAttrsOnly 0\n                -showTextureNodesOnly 0\n                -attrAlphaOrder \"default\" \n                -animLayerFilterOptions \"allAffecting\" \n                -sortOrder \"none\" \n                -longNames 0\n                -niceNames 1\n                -showNamespace 1\n                -showPinIcons 1\n                -mapMotionTrails 1\n                -ignoreHiddenAttribute 0\n                $editorName;\n\n\t\t\t$editorName = ($panelName+\"GraphEd\");\n            animCurveEditor -e \n                -displayKeys 1\n                -displayTangents 0\n                -displayActiveKeys 0\n"
-		+ "                -displayActiveKeyTangents 1\n                -displayInfinities 0\n                -autoFit 0\n                -snapTime \"integer\" \n                -snapValue \"none\" \n                -showResults \"off\" \n                -showBufferCurves \"off\" \n                -smoothness \"fine\" \n                -resultSamples 1\n                -resultScreenSamples 0\n                -resultUpdate \"delayed\" \n                -showUpstreamCurves 1\n                -stackedCurves 0\n                -stackedCurvesMin -1\n                -stackedCurvesMax 1\n                -stackedCurvesSpace 0.2\n                -displayNormalized 0\n                -preSelectionHighlight 0\n                -constrainDrag 0\n                -classicMode 1\n                $editorName;\n\t\t}\n\t} else {\n\t\t$label = `panel -q -label $panelName`;\n\t\tscriptedPanel -edit -l (localizedPanelLabel(\"Graph Editor\")) -mbv $menusOkayInPanels  $panelName;\n\n\t\t\t$editorName = ($panelName+\"OutlineEd\");\n            outlinerEditor -e \n                -showShapes 1\n                -showReferenceNodes 0\n"
-		+ "                -showReferenceMembers 0\n                -showAttributes 1\n                -showConnected 1\n                -showAnimCurvesOnly 1\n                -showMuteInfo 0\n                -organizeByLayer 1\n                -showAnimLayerWeight 1\n                -autoExpandLayers 1\n                -autoExpand 1\n                -showDagOnly 0\n                -showAssets 1\n                -showContainedOnly 0\n                -showPublishedAsConnected 0\n                -showContainerContents 0\n                -ignoreDagHierarchy 0\n                -expandConnections 1\n                -showUpstreamCurves 1\n                -showUnitlessCurves 1\n                -showCompounds 0\n                -showLeafs 1\n                -showNumericAttrsOnly 1\n                -highlightActive 0\n                -autoSelectNewObjects 1\n                -doNotSelectNewObjects 0\n                -dropIsParent 1\n                -transmitFilters 1\n                -setFilter \"0\" \n                -showSetMembers 0\n                -allowMultiSelection 1\n"
-		+ "                -alwaysToggleSelect 0\n                -directSelect 0\n                -displayMode \"DAG\" \n                -expandObjects 0\n                -setsIgnoreFilters 1\n                -containersIgnoreFilters 0\n                -editAttrName 0\n                -showAttrValues 0\n                -highlightSecondary 0\n                -showUVAttrsOnly 0\n                -showTextureNodesOnly 0\n                -attrAlphaOrder \"default\" \n                -animLayerFilterOptions \"allAffecting\" \n                -sortOrder \"none\" \n                -longNames 0\n                -niceNames 1\n                -showNamespace 1\n                -showPinIcons 1\n                -mapMotionTrails 1\n                -ignoreHiddenAttribute 0\n                $editorName;\n\n\t\t\t$editorName = ($panelName+\"GraphEd\");\n            animCurveEditor -e \n                -displayKeys 1\n                -displayTangents 0\n                -displayActiveKeys 0\n                -displayActiveKeyTangents 1\n                -displayInfinities 0\n                -autoFit 0\n"
-		+ "                -snapTime \"integer\" \n                -snapValue \"none\" \n                -showResults \"off\" \n                -showBufferCurves \"off\" \n                -smoothness \"fine\" \n                -resultSamples 1\n                -resultScreenSamples 0\n                -resultUpdate \"delayed\" \n                -showUpstreamCurves 1\n                -stackedCurves 0\n                -stackedCurvesMin -1\n                -stackedCurvesMax 1\n                -stackedCurvesSpace 0.2\n                -displayNormalized 0\n                -preSelectionHighlight 0\n                -constrainDrag 0\n                -classicMode 1\n                $editorName;\n\t\tif (!$useSceneConfig) {\n\t\t\tpanel -e -l $label $panelName;\n\t\t}\n\t}\n\n\n\t$panelName = `sceneUIReplacement -getNextScriptedPanel \"dopeSheetPanel\" (localizedPanelLabel(\"Dope Sheet\")) `;\n\tif (\"\" == $panelName) {\n\t\tif ($useSceneConfig) {\n\t\t\t$panelName = `scriptedPanel -unParent  -type \"dopeSheetPanel\" -l (localizedPanelLabel(\"Dope Sheet\")) -mbv $menusOkayInPanels `;\n\n\t\t\t$editorName = ($panelName+\"OutlineEd\");\n"
-		+ "            outlinerEditor -e \n                -showShapes 1\n                -showReferenceNodes 0\n                -showReferenceMembers 0\n                -showAttributes 1\n                -showConnected 1\n                -showAnimCurvesOnly 1\n                -showMuteInfo 0\n                -organizeByLayer 1\n                -showAnimLayerWeight 1\n                -autoExpandLayers 1\n                -autoExpand 0\n                -showDagOnly 0\n                -showAssets 1\n                -showContainedOnly 0\n                -showPublishedAsConnected 0\n                -showContainerContents 0\n                -ignoreDagHierarchy 0\n                -expandConnections 1\n                -showUpstreamCurves 1\n                -showUnitlessCurves 0\n                -showCompounds 1\n                -showLeafs 1\n                -showNumericAttrsOnly 1\n                -highlightActive 0\n                -autoSelectNewObjects 0\n                -doNotSelectNewObjects 1\n                -dropIsParent 1\n                -transmitFilters 0\n"
-		+ "                -setFilter \"0\" \n                -showSetMembers 0\n                -allowMultiSelection 1\n                -alwaysToggleSelect 0\n                -directSelect 0\n                -displayMode \"DAG\" \n                -expandObjects 0\n                -setsIgnoreFilters 1\n                -containersIgnoreFilters 0\n                -editAttrName 0\n                -showAttrValues 0\n                -highlightSecondary 0\n                -showUVAttrsOnly 0\n                -showTextureNodesOnly 0\n                -attrAlphaOrder \"default\" \n                -animLayerFilterOptions \"allAffecting\" \n                -sortOrder \"none\" \n                -longNames 0\n                -niceNames 1\n                -showNamespace 1\n                -showPinIcons 0\n                -mapMotionTrails 1\n                -ignoreHiddenAttribute 0\n                $editorName;\n\n\t\t\t$editorName = ($panelName+\"DopeSheetEd\");\n            dopeSheetEditor -e \n                -displayKeys 1\n                -displayTangents 0\n                -displayActiveKeys 0\n"
-		+ "                -displayActiveKeyTangents 0\n                -displayInfinities 0\n                -autoFit 0\n                -snapTime \"integer\" \n                -snapValue \"none\" \n                -outliner \"dopeSheetPanel1OutlineEd\" \n                -showSummary 1\n                -showScene 0\n                -hierarchyBelow 0\n                -showTicks 1\n                -selectionWindow 0 0 0 0 \n                $editorName;\n\t\t}\n\t} else {\n\t\t$label = `panel -q -label $panelName`;\n\t\tscriptedPanel -edit -l (localizedPanelLabel(\"Dope Sheet\")) -mbv $menusOkayInPanels  $panelName;\n\n\t\t\t$editorName = ($panelName+\"OutlineEd\");\n            outlinerEditor -e \n                -showShapes 1\n                -showReferenceNodes 0\n                -showReferenceMembers 0\n                -showAttributes 1\n                -showConnected 1\n                -showAnimCurvesOnly 1\n                -showMuteInfo 0\n                -organizeByLayer 1\n                -showAnimLayerWeight 1\n                -autoExpandLayers 1\n                -autoExpand 0\n"
-		+ "                -showDagOnly 0\n                -showAssets 1\n                -showContainedOnly 0\n                -showPublishedAsConnected 0\n                -showContainerContents 0\n                -ignoreDagHierarchy 0\n                -expandConnections 1\n                -showUpstreamCurves 1\n                -showUnitlessCurves 0\n                -showCompounds 1\n                -showLeafs 1\n                -showNumericAttrsOnly 1\n                -highlightActive 0\n                -autoSelectNewObjects 0\n                -doNotSelectNewObjects 1\n                -dropIsParent 1\n                -transmitFilters 0\n                -setFilter \"0\" \n                -showSetMembers 0\n                -allowMultiSelection 1\n                -alwaysToggleSelect 0\n                -directSelect 0\n                -displayMode \"DAG\" \n                -expandObjects 0\n                -setsIgnoreFilters 1\n                -containersIgnoreFilters 0\n                -editAttrName 0\n                -showAttrValues 0\n                -highlightSecondary 0\n"
-		+ "                -showUVAttrsOnly 0\n                -showTextureNodesOnly 0\n                -attrAlphaOrder \"default\" \n                -animLayerFilterOptions \"allAffecting\" \n                -sortOrder \"none\" \n                -longNames 0\n                -niceNames 1\n                -showNamespace 1\n                -showPinIcons 0\n                -mapMotionTrails 1\n                -ignoreHiddenAttribute 0\n                $editorName;\n\n\t\t\t$editorName = ($panelName+\"DopeSheetEd\");\n            dopeSheetEditor -e \n                -displayKeys 1\n                -displayTangents 0\n                -displayActiveKeys 0\n                -displayActiveKeyTangents 0\n                -displayInfinities 0\n                -autoFit 0\n                -snapTime \"integer\" \n                -snapValue \"none\" \n                -outliner \"dopeSheetPanel1OutlineEd\" \n                -showSummary 1\n                -showScene 0\n                -hierarchyBelow 0\n                -showTicks 1\n                -selectionWindow 0 0 0 0 \n                $editorName;\n"
-		+ "\t\tif (!$useSceneConfig) {\n\t\t\tpanel -e -l $label $panelName;\n\t\t}\n\t}\n\n\n\t$panelName = `sceneUIReplacement -getNextScriptedPanel \"clipEditorPanel\" (localizedPanelLabel(\"Trax Editor\")) `;\n\tif (\"\" == $panelName) {\n\t\tif ($useSceneConfig) {\n\t\t\t$panelName = `scriptedPanel -unParent  -type \"clipEditorPanel\" -l (localizedPanelLabel(\"Trax Editor\")) -mbv $menusOkayInPanels `;\n\n\t\t\t$editorName = clipEditorNameFromPanel($panelName);\n            clipEditor -e \n                -displayKeys 0\n                -displayTangents 0\n                -displayActiveKeys 0\n                -displayActiveKeyTangents 0\n                -displayInfinities 0\n                -autoFit 0\n                -snapTime \"none\" \n                -snapValue \"none\" \n                -manageSequencer 0 \n                $editorName;\n\t\t}\n\t} else {\n\t\t$label = `panel -q -label $panelName`;\n\t\tscriptedPanel -edit -l (localizedPanelLabel(\"Trax Editor\")) -mbv $menusOkayInPanels  $panelName;\n\n\t\t\t$editorName = clipEditorNameFromPanel($panelName);\n            clipEditor -e \n"
-		+ "                -displayKeys 0\n                -displayTangents 0\n                -displayActiveKeys 0\n                -displayActiveKeyTangents 0\n                -displayInfinities 0\n                -autoFit 0\n                -snapTime \"none\" \n                -snapValue \"none\" \n                -manageSequencer 0 \n                $editorName;\n\t\tif (!$useSceneConfig) {\n\t\t\tpanel -e -l $label $panelName;\n\t\t}\n\t}\n\n\n\t$panelName = `sceneUIReplacement -getNextScriptedPanel \"sequenceEditorPanel\" (localizedPanelLabel(\"Camera Sequencer\")) `;\n\tif (\"\" == $panelName) {\n\t\tif ($useSceneConfig) {\n\t\t\t$panelName = `scriptedPanel -unParent  -type \"sequenceEditorPanel\" -l (localizedPanelLabel(\"Camera Sequencer\")) -mbv $menusOkayInPanels `;\n\n\t\t\t$editorName = sequenceEditorNameFromPanel($panelName);\n            clipEditor -e \n                -displayKeys 0\n                -displayTangents 0\n                -displayActiveKeys 0\n                -displayActiveKeyTangents 0\n                -displayInfinities 0\n                -autoFit 0\n"
-		+ "                -snapTime \"none\" \n                -snapValue \"none\" \n                -manageSequencer 1 \n                $editorName;\n\t\t}\n\t} else {\n\t\t$label = `panel -q -label $panelName`;\n\t\tscriptedPanel -edit -l (localizedPanelLabel(\"Camera Sequencer\")) -mbv $menusOkayInPanels  $panelName;\n\n\t\t\t$editorName = sequenceEditorNameFromPanel($panelName);\n            clipEditor -e \n                -displayKeys 0\n                -displayTangents 0\n                -displayActiveKeys 0\n                -displayActiveKeyTangents 0\n                -displayInfinities 0\n                -autoFit 0\n                -snapTime \"none\" \n                -snapValue \"none\" \n                -manageSequencer 1 \n                $editorName;\n\t\tif (!$useSceneConfig) {\n\t\t\tpanel -e -l $label $panelName;\n\t\t}\n\t}\n\n\n\t$panelName = `sceneUIReplacement -getNextScriptedPanel \"hyperGraphPanel\" (localizedPanelLabel(\"Hypergraph Hierarchy\")) `;\n\tif (\"\" == $panelName) {\n\t\tif ($useSceneConfig) {\n\t\t\t$panelName = `scriptedPanel -unParent  -type \"hyperGraphPanel\" -l (localizedPanelLabel(\"Hypergraph Hierarchy\")) -mbv $menusOkayInPanels `;\n"
+		+ "            -directSelect 0\n            -displayMode \"DAG\" \n            -expandObjects 0\n            -setsIgnoreFilters 1\n            -containersIgnoreFilters 0\n            -editAttrName 0\n            -showAttrValues 0\n            -highlightSecondary 0\n            -showUVAttrsOnly 0\n            -showTextureNodesOnly 0\n            -attrAlphaOrder \"default\" \n            -animLayerFilterOptions \"allAffecting\" \n            -sortOrder \"none\" \n            -longNames 0\n            -niceNames 1\n            -showNamespace 1\n            -showPinIcons 0\n            -mapMotionTrails 0\n            -ignoreHiddenAttribute 0\n            $editorName;\n\t\tif (!$useSceneConfig) {\n\t\t\tpanel -e -l $label $panelName;\n\t\t}\n\t}\n\tif ($useSceneConfig) {\n\t\toutlinerPanel -e -to $panelName;\n\t}\n\n\n\t$panelName = `sceneUIReplacement -getNextScriptedPanel \"graphEditor\" (localizedPanelLabel(\"Graph Editor\")) `;\n\tif (\"\" == $panelName) {\n\t\tif ($useSceneConfig) {\n\t\t\t$panelName = `scriptedPanel -unParent  -type \"graphEditor\" -l (localizedPanelLabel(\"Graph Editor\")) -mbv $menusOkayInPanels `;\n"
+		+ "\t\t\t$editorName = ($panelName+\"OutlineEd\");\n            outlinerEditor -e \n                -showShapes 1\n                -showReferenceNodes 0\n                -showReferenceMembers 0\n                -showAttributes 1\n                -showConnected 1\n                -showAnimCurvesOnly 1\n                -showMuteInfo 0\n                -organizeByLayer 1\n                -showAnimLayerWeight 1\n                -autoExpandLayers 1\n                -autoExpand 1\n                -showDagOnly 0\n                -showAssets 1\n                -showContainedOnly 0\n                -showPublishedAsConnected 0\n                -showContainerContents 0\n                -ignoreDagHierarchy 0\n                -expandConnections 1\n                -showUpstreamCurves 1\n                -showUnitlessCurves 1\n                -showCompounds 0\n                -showLeafs 1\n                -showNumericAttrsOnly 1\n                -highlightActive 0\n                -autoSelectNewObjects 1\n                -doNotSelectNewObjects 0\n                -dropIsParent 1\n"
+		+ "                -transmitFilters 1\n                -setFilter \"0\" \n                -showSetMembers 0\n                -allowMultiSelection 1\n                -alwaysToggleSelect 0\n                -directSelect 0\n                -displayMode \"DAG\" \n                -expandObjects 0\n                -setsIgnoreFilters 1\n                -containersIgnoreFilters 0\n                -editAttrName 0\n                -showAttrValues 0\n                -highlightSecondary 0\n                -showUVAttrsOnly 0\n                -showTextureNodesOnly 0\n                -attrAlphaOrder \"default\" \n                -animLayerFilterOptions \"allAffecting\" \n                -sortOrder \"none\" \n                -longNames 0\n                -niceNames 1\n                -showNamespace 1\n                -showPinIcons 1\n                -mapMotionTrails 1\n                -ignoreHiddenAttribute 0\n                $editorName;\n\n\t\t\t$editorName = ($panelName+\"GraphEd\");\n            animCurveEditor -e \n                -displayKeys 1\n                -displayTangents 0\n"
+		+ "                -displayActiveKeys 0\n                -displayActiveKeyTangents 1\n                -displayInfinities 0\n                -autoFit 0\n                -snapTime \"integer\" \n                -snapValue \"none\" \n                -showResults \"off\" \n                -showBufferCurves \"off\" \n                -smoothness \"fine\" \n                -resultSamples 1\n                -resultScreenSamples 0\n                -resultUpdate \"delayed\" \n                -showUpstreamCurves 1\n                -stackedCurves 0\n                -stackedCurvesMin -1\n                -stackedCurvesMax 1\n                -stackedCurvesSpace 0.2\n                -displayNormalized 0\n                -preSelectionHighlight 0\n                -constrainDrag 0\n                -classicMode 1\n                $editorName;\n\t\t}\n\t} else {\n\t\t$label = `panel -q -label $panelName`;\n\t\tscriptedPanel -edit -l (localizedPanelLabel(\"Graph Editor\")) -mbv $menusOkayInPanels  $panelName;\n\n\t\t\t$editorName = ($panelName+\"OutlineEd\");\n            outlinerEditor -e \n"
+		+ "                -showShapes 1\n                -showReferenceNodes 0\n                -showReferenceMembers 0\n                -showAttributes 1\n                -showConnected 1\n                -showAnimCurvesOnly 1\n                -showMuteInfo 0\n                -organizeByLayer 1\n                -showAnimLayerWeight 1\n                -autoExpandLayers 1\n                -autoExpand 1\n                -showDagOnly 0\n                -showAssets 1\n                -showContainedOnly 0\n                -showPublishedAsConnected 0\n                -showContainerContents 0\n                -ignoreDagHierarchy 0\n                -expandConnections 1\n                -showUpstreamCurves 1\n                -showUnitlessCurves 1\n                -showCompounds 0\n                -showLeafs 1\n                -showNumericAttrsOnly 1\n                -highlightActive 0\n                -autoSelectNewObjects 1\n                -doNotSelectNewObjects 0\n                -dropIsParent 1\n                -transmitFilters 1\n                -setFilter \"0\" \n"
+		+ "                -showSetMembers 0\n                -allowMultiSelection 1\n                -alwaysToggleSelect 0\n                -directSelect 0\n                -displayMode \"DAG\" \n                -expandObjects 0\n                -setsIgnoreFilters 1\n                -containersIgnoreFilters 0\n                -editAttrName 0\n                -showAttrValues 0\n                -highlightSecondary 0\n                -showUVAttrsOnly 0\n                -showTextureNodesOnly 0\n                -attrAlphaOrder \"default\" \n                -animLayerFilterOptions \"allAffecting\" \n                -sortOrder \"none\" \n                -longNames 0\n                -niceNames 1\n                -showNamespace 1\n                -showPinIcons 1\n                -mapMotionTrails 1\n                -ignoreHiddenAttribute 0\n                $editorName;\n\n\t\t\t$editorName = ($panelName+\"GraphEd\");\n            animCurveEditor -e \n                -displayKeys 1\n                -displayTangents 0\n                -displayActiveKeys 0\n                -displayActiveKeyTangents 1\n"
+		+ "                -displayInfinities 0\n                -autoFit 0\n                -snapTime \"integer\" \n                -snapValue \"none\" \n                -showResults \"off\" \n                -showBufferCurves \"off\" \n                -smoothness \"fine\" \n                -resultSamples 1\n                -resultScreenSamples 0\n                -resultUpdate \"delayed\" \n                -showUpstreamCurves 1\n                -stackedCurves 0\n                -stackedCurvesMin -1\n                -stackedCurvesMax 1\n                -stackedCurvesSpace 0.2\n                -displayNormalized 0\n                -preSelectionHighlight 0\n                -constrainDrag 0\n                -classicMode 1\n                $editorName;\n\t\tif (!$useSceneConfig) {\n\t\t\tpanel -e -l $label $panelName;\n\t\t}\n\t}\n\n\n\t$panelName = `sceneUIReplacement -getNextScriptedPanel \"dopeSheetPanel\" (localizedPanelLabel(\"Dope Sheet\")) `;\n\tif (\"\" == $panelName) {\n\t\tif ($useSceneConfig) {\n\t\t\t$panelName = `scriptedPanel -unParent  -type \"dopeSheetPanel\" -l (localizedPanelLabel(\"Dope Sheet\")) -mbv $menusOkayInPanels `;\n"
+		+ "\t\t\t$editorName = ($panelName+\"OutlineEd\");\n            outlinerEditor -e \n                -showShapes 1\n                -showReferenceNodes 0\n                -showReferenceMembers 0\n                -showAttributes 1\n                -showConnected 1\n                -showAnimCurvesOnly 1\n                -showMuteInfo 0\n                -organizeByLayer 1\n                -showAnimLayerWeight 1\n                -autoExpandLayers 1\n                -autoExpand 0\n                -showDagOnly 0\n                -showAssets 1\n                -showContainedOnly 0\n                -showPublishedAsConnected 0\n                -showContainerContents 0\n                -ignoreDagHierarchy 0\n                -expandConnections 1\n                -showUpstreamCurves 1\n                -showUnitlessCurves 0\n                -showCompounds 1\n                -showLeafs 1\n                -showNumericAttrsOnly 1\n                -highlightActive 0\n                -autoSelectNewObjects 0\n                -doNotSelectNewObjects 1\n                -dropIsParent 1\n"
+		+ "                -transmitFilters 0\n                -setFilter \"0\" \n                -showSetMembers 0\n                -allowMultiSelection 1\n                -alwaysToggleSelect 0\n                -directSelect 0\n                -displayMode \"DAG\" \n                -expandObjects 0\n                -setsIgnoreFilters 1\n                -containersIgnoreFilters 0\n                -editAttrName 0\n                -showAttrValues 0\n                -highlightSecondary 0\n                -showUVAttrsOnly 0\n                -showTextureNodesOnly 0\n                -attrAlphaOrder \"default\" \n                -animLayerFilterOptions \"allAffecting\" \n                -sortOrder \"none\" \n                -longNames 0\n                -niceNames 1\n                -showNamespace 1\n                -showPinIcons 0\n                -mapMotionTrails 1\n                -ignoreHiddenAttribute 0\n                $editorName;\n\n\t\t\t$editorName = ($panelName+\"DopeSheetEd\");\n            dopeSheetEditor -e \n                -displayKeys 1\n                -displayTangents 0\n"
+		+ "                -displayActiveKeys 0\n                -displayActiveKeyTangents 0\n                -displayInfinities 0\n                -autoFit 0\n                -snapTime \"integer\" \n                -snapValue \"none\" \n                -outliner \"dopeSheetPanel1OutlineEd\" \n                -showSummary 1\n                -showScene 0\n                -hierarchyBelow 0\n                -showTicks 1\n                -selectionWindow 0 0 0 0 \n                $editorName;\n\t\t}\n\t} else {\n\t\t$label = `panel -q -label $panelName`;\n\t\tscriptedPanel -edit -l (localizedPanelLabel(\"Dope Sheet\")) -mbv $menusOkayInPanels  $panelName;\n\n\t\t\t$editorName = ($panelName+\"OutlineEd\");\n            outlinerEditor -e \n                -showShapes 1\n                -showReferenceNodes 0\n                -showReferenceMembers 0\n                -showAttributes 1\n                -showConnected 1\n                -showAnimCurvesOnly 1\n                -showMuteInfo 0\n                -organizeByLayer 1\n                -showAnimLayerWeight 1\n                -autoExpandLayers 1\n"
+		+ "                -autoExpand 0\n                -showDagOnly 0\n                -showAssets 1\n                -showContainedOnly 0\n                -showPublishedAsConnected 0\n                -showContainerContents 0\n                -ignoreDagHierarchy 0\n                -expandConnections 1\n                -showUpstreamCurves 1\n                -showUnitlessCurves 0\n                -showCompounds 1\n                -showLeafs 1\n                -showNumericAttrsOnly 1\n                -highlightActive 0\n                -autoSelectNewObjects 0\n                -doNotSelectNewObjects 1\n                -dropIsParent 1\n                -transmitFilters 0\n                -setFilter \"0\" \n                -showSetMembers 0\n                -allowMultiSelection 1\n                -alwaysToggleSelect 0\n                -directSelect 0\n                -displayMode \"DAG\" \n                -expandObjects 0\n                -setsIgnoreFilters 1\n                -containersIgnoreFilters 0\n                -editAttrName 0\n                -showAttrValues 0\n"
+		+ "                -highlightSecondary 0\n                -showUVAttrsOnly 0\n                -showTextureNodesOnly 0\n                -attrAlphaOrder \"default\" \n                -animLayerFilterOptions \"allAffecting\" \n                -sortOrder \"none\" \n                -longNames 0\n                -niceNames 1\n                -showNamespace 1\n                -showPinIcons 0\n                -mapMotionTrails 1\n                -ignoreHiddenAttribute 0\n                $editorName;\n\n\t\t\t$editorName = ($panelName+\"DopeSheetEd\");\n            dopeSheetEditor -e \n                -displayKeys 1\n                -displayTangents 0\n                -displayActiveKeys 0\n                -displayActiveKeyTangents 0\n                -displayInfinities 0\n                -autoFit 0\n                -snapTime \"integer\" \n                -snapValue \"none\" \n                -outliner \"dopeSheetPanel1OutlineEd\" \n                -showSummary 1\n                -showScene 0\n                -hierarchyBelow 0\n                -showTicks 1\n                -selectionWindow 0 0 0 0 \n"
+		+ "                $editorName;\n\t\tif (!$useSceneConfig) {\n\t\t\tpanel -e -l $label $panelName;\n\t\t}\n\t}\n\n\n\t$panelName = `sceneUIReplacement -getNextScriptedPanel \"clipEditorPanel\" (localizedPanelLabel(\"Trax Editor\")) `;\n\tif (\"\" == $panelName) {\n\t\tif ($useSceneConfig) {\n\t\t\t$panelName = `scriptedPanel -unParent  -type \"clipEditorPanel\" -l (localizedPanelLabel(\"Trax Editor\")) -mbv $menusOkayInPanels `;\n\n\t\t\t$editorName = clipEditorNameFromPanel($panelName);\n            clipEditor -e \n                -displayKeys 0\n                -displayTangents 0\n                -displayActiveKeys 0\n                -displayActiveKeyTangents 0\n                -displayInfinities 0\n                -autoFit 0\n                -snapTime \"none\" \n                -snapValue \"none\" \n                -manageSequencer 0 \n                $editorName;\n\t\t}\n\t} else {\n\t\t$label = `panel -q -label $panelName`;\n\t\tscriptedPanel -edit -l (localizedPanelLabel(\"Trax Editor\")) -mbv $menusOkayInPanels  $panelName;\n\n\t\t\t$editorName = clipEditorNameFromPanel($panelName);\n"
+		+ "            clipEditor -e \n                -displayKeys 0\n                -displayTangents 0\n                -displayActiveKeys 0\n                -displayActiveKeyTangents 0\n                -displayInfinities 0\n                -autoFit 0\n                -snapTime \"none\" \n                -snapValue \"none\" \n                -manageSequencer 0 \n                $editorName;\n\t\tif (!$useSceneConfig) {\n\t\t\tpanel -e -l $label $panelName;\n\t\t}\n\t}\n\n\n\t$panelName = `sceneUIReplacement -getNextScriptedPanel \"sequenceEditorPanel\" (localizedPanelLabel(\"Camera Sequencer\")) `;\n\tif (\"\" == $panelName) {\n\t\tif ($useSceneConfig) {\n\t\t\t$panelName = `scriptedPanel -unParent  -type \"sequenceEditorPanel\" -l (localizedPanelLabel(\"Camera Sequencer\")) -mbv $menusOkayInPanels `;\n\n\t\t\t$editorName = sequenceEditorNameFromPanel($panelName);\n            clipEditor -e \n                -displayKeys 0\n                -displayTangents 0\n                -displayActiveKeys 0\n                -displayActiveKeyTangents 0\n                -displayInfinities 0\n"
+		+ "                -autoFit 0\n                -snapTime \"none\" \n                -snapValue \"none\" \n                -manageSequencer 1 \n                $editorName;\n\t\t}\n\t} else {\n\t\t$label = `panel -q -label $panelName`;\n\t\tscriptedPanel -edit -l (localizedPanelLabel(\"Camera Sequencer\")) -mbv $menusOkayInPanels  $panelName;\n\n\t\t\t$editorName = sequenceEditorNameFromPanel($panelName);\n            clipEditor -e \n                -displayKeys 0\n                -displayTangents 0\n                -displayActiveKeys 0\n                -displayActiveKeyTangents 0\n                -displayInfinities 0\n                -autoFit 0\n                -snapTime \"none\" \n                -snapValue \"none\" \n                -manageSequencer 1 \n                $editorName;\n\t\tif (!$useSceneConfig) {\n\t\t\tpanel -e -l $label $panelName;\n\t\t}\n\t}\n\n\n\t$panelName = `sceneUIReplacement -getNextScriptedPanel \"hyperGraphPanel\" (localizedPanelLabel(\"Hypergraph Hierarchy\")) `;\n\tif (\"\" == $panelName) {\n\t\tif ($useSceneConfig) {\n\t\t\t$panelName = `scriptedPanel -unParent  -type \"hyperGraphPanel\" -l (localizedPanelLabel(\"Hypergraph Hierarchy\")) -mbv $menusOkayInPanels `;\n"
 		+ "\t\t\t$editorName = ($panelName+\"HyperGraphEd\");\n            hyperGraph -e \n                -graphLayoutStyle \"hierarchicalLayout\" \n                -orientation \"horiz\" \n                -mergeConnections 1\n                -zoom 1\n                -animateTransition 0\n                -showRelationships 1\n                -showShapes 0\n                -showDeformers 0\n                -showExpressions 0\n                -showConstraints 0\n                -showConnectionFromSelected 0\n                -showConnectionToSelected 0\n                -showConstraintLabels 0\n                -showUnderworld 0\n                -showInvisible 1\n                -transitionFrames 1\n                -opaqueContainers 0\n                -freeform 0\n                -imagePosition 0 0 \n                -imageScale 1\n                -imageEnabled 0\n                -graphType \"DAG\" \n                -heatMapDisplay 0\n                -updateSelection 1\n                -updateNodeAdded 1\n                -useDrawOverrideColor 0\n                -limitGraphTraversal -1\n"
 		+ "                -range 0 0 \n                -iconSize \"smallIcons\" \n                -showCachedConnections 0\n                $editorName;\n\t\t}\n\t} else {\n\t\t$label = `panel -q -label $panelName`;\n\t\tscriptedPanel -edit -l (localizedPanelLabel(\"Hypergraph Hierarchy\")) -mbv $menusOkayInPanels  $panelName;\n\n\t\t\t$editorName = ($panelName+\"HyperGraphEd\");\n            hyperGraph -e \n                -graphLayoutStyle \"hierarchicalLayout\" \n                -orientation \"horiz\" \n                -mergeConnections 1\n                -zoom 1\n                -animateTransition 0\n                -showRelationships 1\n                -showShapes 0\n                -showDeformers 0\n                -showExpressions 0\n                -showConstraints 0\n                -showConnectionFromSelected 0\n                -showConnectionToSelected 0\n                -showConstraintLabels 0\n                -showUnderworld 0\n                -showInvisible 1\n                -transitionFrames 1\n                -opaqueContainers 0\n                -freeform 0\n"
 		+ "                -imagePosition 0 0 \n                -imageScale 1\n                -imageEnabled 0\n                -graphType \"DAG\" \n                -heatMapDisplay 0\n                -updateSelection 1\n                -updateNodeAdded 1\n                -useDrawOverrideColor 0\n                -limitGraphTraversal -1\n                -range 0 0 \n                -iconSize \"smallIcons\" \n                -showCachedConnections 0\n                $editorName;\n\t\tif (!$useSceneConfig) {\n\t\t\tpanel -e -l $label $panelName;\n\t\t}\n\t}\n\n\n\t$panelName = `sceneUIReplacement -getNextScriptedPanel \"hyperShadePanel\" (localizedPanelLabel(\"Hypershade\")) `;\n\tif (\"\" == $panelName) {\n\t\tif ($useSceneConfig) {\n\t\t\t$panelName = `scriptedPanel -unParent  -type \"hyperShadePanel\" -l (localizedPanelLabel(\"Hypershade\")) -mbv $menusOkayInPanels `;\n\t\t}\n\t} else {\n\t\t$label = `panel -q -label $panelName`;\n\t\tscriptedPanel -edit -l (localizedPanelLabel(\"Hypershade\")) -mbv $menusOkayInPanels  $panelName;\n\t\tif (!$useSceneConfig) {\n\t\t\tpanel -e -l $label $panelName;\n"
@@ -711,12 +705,12 @@ connectAttr "morph_locators_L.di" "landmark30.do";
 connectAttr "morph_locators_L.di" "landmark29.do";
 connectAttr "morph_locators_L.di" "landmark28.do";
 connectAttr "morph_locators_L.di" "landmark27.do";
-connectAttr "morph_locators_L.di" "landmark91.do";
+connectAttr "morph_locators_L.di" "landmark80.do";
+connectAttr "morph_locators_L.di" "landmark83.do";
 connectAttr "morph_locators_L.di" "landmark86.do";
-connectAttr "morph_locators_L.di" "landmark81.do";
-connectAttr "morph_locators_L.di" "landmark76.do";
-connectAttr "morph_locators_L.di" "landmark71.do";
-connectAttr "morph_locators_L.di" "landmark68.do";
+connectAttr "morph_locators_L.di" "landmark89.do";
+connectAttr "morph_locators_L.di" "landmark92.do";
+connectAttr "morph_locators_L.di" "landmark73.do";
 connectAttr "morph_locators_L.di" "landmark33.do";
 connectAttr "morph_locators_L.di" "landmark51.do";
 connectAttr "morph_locators_L.di" "landmark62.do";
@@ -731,11 +725,11 @@ connectAttr "morph_locators_L.di" "landmark13.do";
 connectAttr "morph_locators_L.di" "landmark14.do";
 connectAttr "morph_locators_L.di" "landmark15.do";
 connectAttr "morph_locators_L.di" "landmark16.do";
-connectAttr "morph_locators_L.di" "landmark93.do";
-connectAttr "morph_locators_L.di" "landmark88.do";
-connectAttr "morph_locators_L.di" "landmark83.do";
 connectAttr "morph_locators_L.di" "landmark78.do";
-connectAttr "morph_locators_L.di" "landmark73.do";
+connectAttr "morph_locators_L.di" "landmark77.do";
+connectAttr "morph_locators_L.di" "landmark76.do";
+connectAttr "morph_locators_L.di" "landmark75.do";
+connectAttr "morph_locators_L.di" "landmark74.do";
 connectAttr "morph_locators_L.di" "landmark56.do";
 connectAttr "morph_locators_L.di" "landmark55.do";
 connectAttr "morph_locators_L.di" "landmark54.do";
@@ -757,11 +751,11 @@ connectAttr "morph_locators_L.di" "landmark23.do";
 connectAttr "morph_locators_L.di" "landmark24.do";
 connectAttr "morph_locators_L.di" "landmark25.do";
 connectAttr "morph_locators_L.di" "landmark26.do";
-connectAttr "morph_locators_L.di" "landmark92.do";
+connectAttr "morph_locators_L.di" "landmark81.do";
+connectAttr "morph_locators_L.di" "landmark84.do";
 connectAttr "morph_locators_L.di" "landmark87.do";
-connectAttr "morph_locators_L.di" "landmark82.do";
-connectAttr "morph_locators_L.di" "landmark77.do";
-connectAttr "morph_locators_L.di" "landmark72.do";
+connectAttr "morph_locators_L.di" "landmark90.do";
+connectAttr "morph_locators_L.di" "landmark93.do";
 connectAttr "morph_locators_L.di" "landmark7.do";
 connectAttr "morph_locators_L.di" "landmark6.do";
 connectAttr "morph_locators_L.di" "landmark5.do";
@@ -770,14 +764,13 @@ connectAttr "morph_locators_L.di" "landmark3.do";
 connectAttr "morph_locators_L.di" "landmark2.do";
 connectAttr "morph_locators_L.di" "landmark1.do";
 connectAttr "morph_locators_L.di" "landmark0.do";
-connectAttr "morph_locators_L.di" "landmark89.do";
-connectAttr "morph_locators_L.di" "landmark84.do";
-connectAttr "morph_locators_L.di" "landmark79.do";
-connectAttr "morph_locators_L.di" "landmark74.do";
+connectAttr "morph_locators_L.di" "landmark68.do";
 connectAttr "morph_locators_L.di" "landmark69.do";
+connectAttr "morph_locators_L.di" "landmark70.do";
+connectAttr "morph_locators_L.di" "landmark71.do";
+connectAttr "morph_locators_L.di" "landmark72.do";
 connectAttr "morph_locators_L.di" "landmark58.do";
 connectAttr "morph_locators_L.di" "landmark59.do";
-connectAttr "morph_locators_L.di" "morph_locator71.do";
 connectAttr "morph_locators_L.di" "landmark60.do";
 connectAttr "morph_locators_L.di" "landmark67.do";
 connectAttr "morph_locators_L.di" "landmark61.do";
@@ -797,11 +790,11 @@ connectAttr "morph_locators_L.di" "landmark20.do";
 connectAttr "morph_locators_L.di" "landmark19.do";
 connectAttr "morph_locators_L.di" "landmark18.do";
 connectAttr "morph_locators_L.di" "landmark17.do";
-connectAttr "morph_locators_L.di" "landmark90.do";
+connectAttr "morph_locators_L.di" "landmark79.do";
+connectAttr "morph_locators_L.di" "landmark82.do";
 connectAttr "morph_locators_L.di" "landmark85.do";
-connectAttr "morph_locators_L.di" "landmark80.do";
-connectAttr "morph_locators_L.di" "landmark75.do";
-connectAttr "morph_locators_L.di" "landmark70.do";
+connectAttr "morph_locators_L.di" "landmark88.do";
+connectAttr "morph_locators_L.di" "landmark91.do";
 relationship "link" ":lightLinker1" ":initialShadingGroup.message" ":defaultLightSet.message";
 relationship "link" ":lightLinker1" ":initialParticleSE.message" ":defaultLightSet.message";
 relationship "shadowLink" ":lightLinker1" ":initialShadingGroup.message" ":defaultLightSet.message";
