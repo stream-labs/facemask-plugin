@@ -117,7 +117,49 @@ namespace smll {
 		MOUTH_INNER_7 = 66,
 		MOUTH_INNER_8 = 67,
 
+		// Here ends the detected 68 landmarks
 		NUM_FACIAL_LANDMARKS = 68,
+
+		// And here begins the extra ones
+
+		// Extra 11 head points
+		HEAD_1 = 68,
+		HEAD_2 = 69,
+		HEAD_3 = 70,
+		HEAD_4 = 71,
+		HEAD_5 = 72,
+		HEAD_6 = 73,
+		HEAD_7 = 74,
+		HEAD_8 = 75,
+		HEAD_9 = 76,
+		HEAD_10 = 77,
+		HEAD_11 = 78,
+
+		// Here ends the 79 morph landmarks
+		NUM_MORPH_LANDMARKS = 79,
+
+		// And even more head points
+		// - we use these to get a nice set
+		//   of points in 2D for the 11 head 
+		//   points above
+		HEAD_EXTRA_1 = 79,
+		HEAD_EXTRA_2 = 80,
+		HEAD_EXTRA_3 = 81,
+		HEAD_EXTRA_4 = 82,
+		HEAD_EXTRA_5 = 83,
+		HEAD_EXTRA_6 = 84,
+		HEAD_EXTRA_7 = 85,
+		HEAD_EXTRA_8 = 86,
+		HEAD_EXTRA_9 = 87,
+		HEAD_EXTRA_10 = 88,
+		HEAD_EXTRA_11 = 89,
+		HEAD_EXTRA_12 = 90,
+		HEAD_EXTRA_13 = 91,
+		HEAD_EXTRA_14 = 92,
+		HEAD_EXTRA_15 = 93,
+
+		// The whole sha-bang
+		NUM_LANDMARKS = 94,
 
 		// for convenience
 		NOSE_TIP = NOSE_4,
