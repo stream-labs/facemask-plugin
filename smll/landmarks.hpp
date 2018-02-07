@@ -117,21 +117,22 @@ namespace smll {
 		MOUTH_INNER_7 = 66,
 		MOUTH_INNER_8 = 67,
 
-		NUM_FACIAL_LANDMARKS = 68
+		NUM_FACIAL_LANDMARKS = 68,
+
+		// for convenience
+		NOSE_TIP = NOSE_4,
+		EYE_CENTER = NOSE_1,
+		CHIN = JAW_9,
+		LEFT_TEMPLE = JAW_1,
+		RIGHT_TEMPLE = JAW_17,
+		LEFT_INNER_EYE_CORNER = EYE_LEFT_4,
+		LEFT_OUTER_EYE_CORNER = EYE_LEFT_1,
+		RIGHT_INNER_EYE_CORNER = EYE_RIGHT_1,
+		RIGHT_OUTER_EYE_CORNER = EYE_RIGHT_4,
+		LEFT_MOUTH_CORNER = MOUTH_OUTER_1,
+		RIGHT_MOUTH_CORNER = MOUTH_OUTER_7,
 	};
 
-	// for convenience
-	static const int NOSE_TIP = NOSE_4;
-	static const int EYE_CENTER = NOSE_1;
-	static const int CHIN = JAW_9;
-	static const int LEFT_TEMPLE = JAW_1;
-	static const int RIGHT_TEMPLE = JAW_17;
-	static const int LEFT_INNER_EYE_CORNER = EYE_LEFT_4;
-	static const int LEFT_OUTER_EYE_CORNER = EYE_LEFT_1;
-	static const int RIGHT_INNER_EYE_CORNER = EYE_RIGHT_1;
-	static const int RIGHT_OUTER_EYE_CORNER = EYE_RIGHT_4;
-	static const int LEFT_MOUTH_CORNER = MOUTH_OUTER_1;
-	static const int RIGHT_MOUTH_CORNER = MOUTH_OUTER_7;
 
 	// access to 3D landmark points
 	std::vector<cv::Point3d>&	GetLandmarkPoints();
