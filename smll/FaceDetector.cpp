@@ -241,6 +241,7 @@ namespace smll {
 		// Project morph deltas to image space
 
 		// Camera internals
+		// TODO: cache these...creating every frame is a waste of time
 		// Approximate focal length.
 		double focal_length = (double)width * FOCAL_LENGTH_FACTOR;
 		cv::Point2d center = cv::Point2d(width / 2, height / 2);
@@ -977,6 +978,7 @@ namespace smll {
 		std::vector<cv::Point3d> model_points = GetLandmarkPoints(model_indices);
 
 		// Camera internals
+		// TODO: cache these...creating every frame is a waste of time
 		// Approximate focal length.
 		double focal_length = (double)m_stageWork.w * FOCAL_LENGTH_FACTOR; 
 		cv::Point2d center = cv::Point2d(m_stageWork.w / 2, m_stageWork.h / 2);

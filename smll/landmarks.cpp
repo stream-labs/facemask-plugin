@@ -211,6 +211,9 @@ namespace smll {
 			// FACE_CONTOUR_MOUTH_INNER_BOTTOM
 			g_face_contours.emplace_back(FaceContour({ MOUTH_INNER_5, MOUTH_INNER_6, MOUTH_INNER_7,
 				MOUTH_INNER_8, MOUTH_INNER_1 }));
+			// FACE_CONTOUR_HEAD
+			g_face_contours.emplace_back(FaceContour({ JAW_1, HEAD_1, HEAD_2, HEAD_3, HEAD_4,
+				HEAD_5, HEAD_6, HEAD_7, HEAD_8, HEAD_9, HEAD_10, HEAD_11, JAW_17 }));
 		}
 		return g_face_contours;
 	}

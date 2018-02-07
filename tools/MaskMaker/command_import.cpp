@@ -1177,7 +1177,7 @@ static string g_morph_channel_name = "morph";
 string GetChannelName(string nodeName, string varName) {
 	if (nodeName.substr(0, g_locator_name.size()) == g_locator_name) {
 		// get point index
-		int idx = atoi(nodeName.substr(g_locator_name.size()).c_str()) - 1;
+		int idx = atoi(nodeName.substr(g_locator_name.size()).c_str());
 		if (idx >= 0 && idx < 68) {
 			char temp[256];
 			snprintf(temp, sizeof(temp), "%s-%d-%s", g_morph_channel_name.c_str(), idx, varName.c_str());
@@ -1190,7 +1190,7 @@ string GetChannelName(string nodeName, string varName) {
 int GetDeltaIndex(string nodeName) {
 	if (nodeName.substr(0, g_locator_name.size()) == g_locator_name) {
 		// get point index
-		int idx = atoi(nodeName.substr(g_locator_name.size()).c_str()) - 1;
+		int idx = atoi(nodeName.substr(g_locator_name.size()).c_str());
 		return idx;
 	}
 	return -1;

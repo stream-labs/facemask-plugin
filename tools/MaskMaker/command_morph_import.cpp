@@ -135,12 +135,14 @@ void command_morph_import(Args& args) {
 		// delta from rest pose
 		aiVector3D delta = pose_points[i] - rest_points[i];
 
-		cout << "float $pos_x = `getAttr landmark" << i << ".translateX`;" << endl;
-		cout << "float $pos_y = `getAttr landmark" << i << ".translateY`;" << endl;
-		cout << "float $pos_z = `getAttr landmark" << i << ".translateZ`;" << endl;
-		cout << "setAttr landmark" << i << ".translateX " << "($pos_x + " << delta.x << ");" << endl;
-		cout << "setAttr landmark" << i << ".translateY " << "($pos_y + " << delta.y << ");" << endl;
-		cout << "setAttr landmark" << i << ".translateZ " << "($pos_z + " << delta.z << ");" << endl;
+		// MEL command to do morph
+		//
+		//cout << "float $pos_x = `getAttr landmark" << i << ".translateX`;" << endl;
+		//cout << "float $pos_y = `getAttr landmark" << i << ".translateY`;" << endl;
+		//cout << "float $pos_z = `getAttr landmark" << i << ".translateZ`;" << endl;
+		//cout << "setAttr landmark" << i << ".translateX " << "($pos_x + " << delta.x << ");" << endl;
+		//cout << "setAttr landmark" << i << ".translateY " << "($pos_y + " << delta.y << ");" << endl;
+		//cout << "setAttr landmark" << i << ".translateZ " << "($pos_z + " << delta.z << ");" << endl;
 
 		json d;
 		d["x"] = delta.x;
