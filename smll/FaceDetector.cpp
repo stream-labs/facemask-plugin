@@ -89,6 +89,7 @@ namespace smll {
 			destroy_threaded_memcpy_pool(m_memcpyEnv);
 	}
 
+
 	const cv::Mat& FaceDetector::GetCVCamMatrix() {
 		SetCVCamera();
 		return m_camera_matrix;
@@ -112,7 +113,9 @@ namespace smll {
 			cv::Point2f center = cv::Point2f(m_camera_w / 2.0f, m_camera_h / 2.0f);
 			m_camera_matrix =
 				(cv::Mat_<float>(3, 3) <<
-					focal_length, 0, center.x, 0, focal_length, center.y, 0, 0, 1);
+					focal_length, 0,			center.x, 
+					0,			  focal_length, center.y, 
+					0,			  0,			1);
 			// We assume no lens distortion
 			m_dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<float>::type);
 		}
@@ -251,6 +254,7 @@ namespace smll {
 		}
 	}
 
+
 	void FaceDetector::MakeTriangulation(MorphData& morphData, 
 		TriangulationResult& result) {
 
@@ -277,7 +281,8 @@ namespace smll {
 		//       (although, to be honest, with compiler opts and such, it
 		//        would likely take longer to separate them out)
 		const cv::Mat& rot = face.GetCVRotation();
-		cv::Mat trx = face.GetCVTranslation();
+		cv::Mat trx;
+		face.GetCVTranslation().copyTo(trx);
 		trx.at<double>(0, 0) = 0.0; // clear x & y, we'll center it
 		trx.at<double>(1, 0) = 0.0;
 		std::vector<cv::Point3f> deltas = morphData.GetCVDeltas();
@@ -448,21 +453,60 @@ namespace smll {
 			revVtxMap, borderpoints.size());
 	}
 
-	void	FaceDetector::AddHeadPoints(std::vector<cv::Point2f>& points, const Face& face) {
+
+	void FaceDetector::AddHeadPoints(std::vector<cv::Point2f>& points, const Face& face) {
+
+		points.reserve(points.size() + HP_NUM_HEAD_POINTS);
 
 		// get the head points
 		std::vector<cv::Point3f> headpoints = GetAllHeadPoints();
 
+		float w2 = CaptureWidth() / 2.0f;
+
 		// project all the head points
 		const cv::Mat& rot = face.GetCVRotation();
 		cv::Mat trx = face.GetCVTranslation();
-		std::vector<cv::Point3f> projheadpoints;
+		std::vector<cv::Point2f> projheadpoints;
 		cv::projectPoints(headpoints, rot, trx, GetCVCamMatrix(), GetCVDistCoeffs(), projheadpoints);
 
+		// debug: add all points
+		//
+		//for (auto p : projheadpoints) {
+		//	points.push_back(p);
+		//}
+		//return;
 
+		// select the correct points
+
+		// HEAD_1 -> HEAD_5
+		for (int i = 0, j = 0; i < 6; i++, j+=3) {
+			int h0 = HP_HEAD_1 + i;
+			int h1 = HP_HEAD_EXTRA_1 + j;
+			int h2 = HP_HEAD_EXTRA_2 + j;
+
+			if (projheadpoints[h0].x < projheadpoints[h1].x)
+				points.push_back(projheadpoints[h0]);
+			else if (projheadpoints[h1].x < projheadpoints[h2].x)
+				points.push_back(projheadpoints[h1]);
+			else
+				points.push_back(projheadpoints[h2]);
+		}
+		// HEAD_6
+		points.push_back(projheadpoints[HP_HEAD_6]);
+		// HEAD_7 -> HEAD_11
+		for (int i = 0, j = 12; i < 6; i++, j -= 3) {
+			int h0 = HP_HEAD_7 + i;
+			int h1 = HP_HEAD_EXTRA_3 + j;
+			int h2 = HP_HEAD_EXTRA_2 + j;
+
+			if (projheadpoints[h0].x > projheadpoints[h1].x)
+				points.push_back(projheadpoints[h0]);
+			else if (projheadpoints[h1].x > projheadpoints[h2].x)
+				points.push_back(projheadpoints[h1]);
+			else
+				points.push_back(projheadpoints[h2]);
+		}
 	}
-
-
 
 
 	// MakeHullPoints
@@ -551,7 +595,7 @@ namespace smll {
 				linesList.data(), linesList.size(), 0);
 			obs_leave_graphics();
 		}
-		
+		/*
 		// init a list of areas for triangles
 		std::vector<FaceAreaID> triangleAreas;
 		for (int i = 0; i < triangleList.size(); i++) {
@@ -667,6 +711,7 @@ namespace smll {
 				(void*)indices.data(), indices.size() * 3, 0);
 			obs_leave_graphics();
 		}
+		*/
 
 		// Create triangle list for everything
 		obs_enter_graphics();
@@ -681,7 +726,7 @@ namespace smll {
 		points.reserve(points.size() * 2);
 		for (unsigned int i = 0; i < points.size(); i++) {
 			int i2 = (i + 1) % points.size();
-			points.emplace(points.begin()+i2, cv::Point2f(
+			points.insert(points.begin()+i2, cv::Point2f(
 				(points[i].x + points[i2].x) / 2.0f,
 				(points[i].y + points[i2].y) / 2.0f));
 			i++;

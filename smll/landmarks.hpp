@@ -181,6 +181,41 @@ namespace smll {
 	std::vector<cv::Point3f>	GetLandmarkPoints(const std::vector<int>& indices);
 	cv::Point3f					GetLandmarkPoint(int which);
 
+	enum {
+		// Extra 11 head points
+		HP_HEAD_1 = 0,
+		HP_HEAD_2 = 1,
+		HP_HEAD_3 = 2,
+		HP_HEAD_4 = 3,
+		HP_HEAD_5 = 4,
+		HP_HEAD_6 = 5,
+		HP_HEAD_7 = 6,
+		HP_HEAD_8 = 7,
+		HP_HEAD_9 = 8,
+		HP_HEAD_10 = 9,
+		HP_HEAD_11 = 10,
+		HP_NUM_HEAD_POINTS = 11,
+
+		// And even more head points
+		HP_HEAD_EXTRA_1 = 11,
+		HP_HEAD_EXTRA_2 = 12,
+		HP_HEAD_EXTRA_3 = 13,
+		HP_HEAD_EXTRA_4 = 14,
+		HP_HEAD_EXTRA_5 = 15,
+		HP_HEAD_EXTRA_6 = 16,
+		HP_HEAD_EXTRA_7 = 17,
+		HP_HEAD_EXTRA_8 = 18,
+		HP_HEAD_EXTRA_9 = 19,
+		HP_HEAD_EXTRA_10 = 20,
+		HP_HEAD_EXTRA_11 = 21,
+		HP_HEAD_EXTRA_12 = 22,
+		HP_HEAD_EXTRA_13 = 23,
+		HP_HEAD_EXTRA_14 = 24,
+		HP_HEAD_EXTRA_15 = 25,
+
+		HP_NUM_ALL_HEAD_POINTS = 26
+	};
+
 	// special for morphing
 	std::vector<cv::Point3f>&	GetAllHeadPoints();
 
