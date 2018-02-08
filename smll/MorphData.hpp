@@ -34,7 +34,7 @@ extern "C" {
 
 namespace smll {
 
-	typedef std::array<vec3, NUM_FACIAL_LANDMARKS>				DeltaList;
+	typedef std::array<vec3, NUM_MORPH_LANDMARKS> DeltaList;
 
 	class MorphData
 	{

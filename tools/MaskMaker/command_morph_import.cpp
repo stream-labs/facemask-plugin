@@ -26,6 +26,9 @@ static string g_locator_name = "landmark";
 
 extern void RemovePostRotationNodes(aiNode* node);
 
+// 68 detected points + 11 head points = 79
+#define NUM_LANDMARK_POINTS		(79)
+
 
 void GetLandmarkPoints(const aiScene* scene, aiNode* node, aiVector3D* points) {
 	if (!node)
@@ -41,7 +44,7 @@ void GetLandmarkPoints(const aiScene* scene, aiNode* node, aiVector3D* points) {
 
 		// get point index
 		int idx = atoi(nodeName.substr(g_locator_name.size()).c_str());
-		if (idx >= 0 && idx < 68) {
+		if (idx >= 0 && idx < NUM_LANDMARK_POINTS) {
 			points[idx] = pos;
 		}
 	}
@@ -84,9 +87,9 @@ void command_morph_import(Args& args) {
 		aiProcess_CalcTangentSpace |
 		aiProcess_SortByPType;
 
-	aiVector3D rest_points[68];
-	aiVector3D pose_points[68];
-	for (int i = 0; i < 68; i++) {
+	aiVector3D rest_points[NUM_LANDMARK_POINTS];
+	aiVector3D pose_points[NUM_LANDMARK_POINTS];
+	for (int i = 0; i < NUM_LANDMARK_POINTS; i++) {
 		rest_points[i].x = 0.0f;
 		rest_points[i].y = 0.0f;
 		rest_points[i].z = 0.0f;
@@ -131,7 +134,7 @@ void command_morph_import(Args& args) {
 	// iterate points
 	json delts;
 	char temp[64];
-	for (int i = 0; i < 68; i++) {
+	for (int i = 0; i < NUM_LANDMARK_POINTS; i++) {
 		// delta from rest pose
 		aiVector3D delta = pose_points[i] - rest_points[i];
 

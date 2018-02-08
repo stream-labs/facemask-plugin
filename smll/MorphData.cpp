@@ -26,7 +26,7 @@ namespace smll {
 	MorphData::MorphData() 
 		: m_timestamp(TimeStamp::min())
 		, m_dirty(true) {
-		for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
+		for (int i = 0; i < NUM_MORPH_LANDMARKS; i++) {
 			vec3_zero(m_deltas.data() + i);
 		}
 	}
@@ -37,7 +37,8 @@ namespace smll {
 
 	std::vector<cv::Point3f> MorphData::GetCVDeltas() const {
 		std::vector<cv::Point3f> r;
-		for (unsigned int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
+		r.reserve(NUM_MORPH_LANDMARKS);
+		for (unsigned int i = 0; i < NUM_MORPH_LANDMARKS; i++) {
 			const vec3& v = m_deltas[i];
 			r.emplace_back(cv::Point3f(v.x, v.y, v.z));
 		}
@@ -64,7 +65,7 @@ namespace smll {
 
 	void MorphData::UpdateBitmask() {
 		m_bitmask.reset();
-		for (unsigned int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
+		for (unsigned int i = 0; i < NUM_MORPH_LANDMARKS; i++) {
 			if (vec3_is_nonzero(m_deltas[i])) {
 				m_bitmask.set(i);
 			}

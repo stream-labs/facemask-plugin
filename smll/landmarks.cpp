@@ -178,7 +178,10 @@ namespace smll {
 	std::vector<cv::Point3f>&	GetAllHeadPoints() {
 		if (g_head_points.size() == 0) {
 			GetLandmarkPoints();
-			g_head_points.assign(g_landmark_points.begin() + HEAD_1, g_landmark_points.end());
+			g_head_points.reserve(HP_NUM_ALL_HEAD_POINTS);
+			for (int i = HEAD_1; i < NUM_LANDMARKS; i++) {
+				g_head_points.push_back(g_landmark_points[i]);
+			}
 		}
 		return g_head_points;
 	}

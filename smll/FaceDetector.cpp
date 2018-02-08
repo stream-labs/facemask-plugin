@@ -305,7 +305,7 @@ namespace smll {
 		// Apply the morph deltas to points to create warpedpoints
 		std::vector<cv::Point2f> warpedpoints = points;
 		cv::Point2f c(width / 2, height / 2);
-		for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
+		for (int i = 0; i < NUM_MORPH_LANDMARKS; i++) {
 			// bitmask tells us which deltas are non-zero
 			if (morphData.GetBitmask()[i]) {
 				// offset from center
@@ -324,16 +324,18 @@ namespace smll {
 		//   contours are always contained in areas
 		//
 		std::vector<int> smoothedIndices;
-		for (int i = 0; i < NUM_FACE_CONTOURS; i++) {
-			FaceContourID fcid = (FaceContourID)i;
+		
+		{//for (int i = 0; i < NUM_FACE_CONTOURS; i++) {
+			FaceContourID fcid = FACE_CONTOUR_HEAD;// (FaceContourID)i;
 			// bitmask check if it's being morphed
 			const FaceContour& fc = GetFaceContour(fcid);
-			LandmarkBitmask m = fc.bitmask & morphData.GetBitmask();
-			if (m.any()) {
+			//LandmarkBitmask m = fc.bitmask & morphData.GetBitmask();
+			{//if (m.any()) {
 				// count how many we add
 				size_t howMany = points.size();
 				CatmullRomSmooth(points, fc.indices, CATMULL_ROM_STEPS);
 				CatmullRomSmooth(warpedpoints, fc.indices, CATMULL_ROM_STEPS);
+				assert(howMany == ((fc.indices.size() - 1) * (CATMULL_ROM_STEPS - 1)));
 				// set an index for new points
 				howMany = points.size() - howMany;
 				while (howMany > 0) {
@@ -359,9 +361,11 @@ namespace smll {
 		std::vector<cv::Point2f> hullpoints;
 		MakeHullPoints(points, warpedpoints, hullpoints);
 		//Subdivide(hullpoints);
+		points.reserve(points.size() + hullpoints.size());
+		warpedpoints.reserve(warpedpoints.size() + hullpoints.size());
 		for (int i = 0; i < hullpoints.size(); i++) {
-			points.emplace_back(hullpoints[i]);
-			warpedpoints.emplace_back(hullpoints[i]);
+			points.push_back(hullpoints[i]);
+			warpedpoints.push_back(hullpoints[i]);
 		}
 
 		// Create Triangulation
@@ -461,8 +465,6 @@ namespace smll {
 		// get the head points
 		std::vector<cv::Point3f> headpoints = GetAllHeadPoints();
 
-		float w2 = CaptureWidth() / 2.0f;
-
 		// project all the head points
 		const cv::Mat& rot = face.GetCVRotation();
 		cv::Mat trx = face.GetCVTranslation();
@@ -479,7 +481,7 @@ namespace smll {
 		// select the correct points
 
 		// HEAD_1 -> HEAD_5
-		for (int i = 0, j = 0; i < 6; i++, j+=3) {
+		for (int i = 0, j = 0; i < 5; i++, j+=3) {
 			int h0 = HP_HEAD_1 + i;
 			int h1 = HP_HEAD_EXTRA_1 + j;
 			int h2 = HP_HEAD_EXTRA_2 + j;
@@ -494,7 +496,7 @@ namespace smll {
 		// HEAD_6
 		points.push_back(projheadpoints[HP_HEAD_6]);
 		// HEAD_7 -> HEAD_11
-		for (int i = 0, j = 12; i < 6; i++, j -= 3) {
+		for (int i = 0, j = 12; i < 5; i++, j -= 3) {
 			int h0 = HP_HEAD_7 + i;
 			int h1 = HP_HEAD_EXTRA_3 + j;
 			int h2 = HP_HEAD_EXTRA_2 + j;
@@ -546,11 +548,11 @@ namespace smll {
 				// if dot product is positive
 				if (d.dot(v) > 0) {
 					// warped point expands hull
-					hullpoints.emplace_back(wp);
+					hullpoints.push_back(wp);
 				}
 				else {
 					// warped point shrinks hull, use original
-					hullpoints.emplace_back(p);
+					hullpoints.push_back(p);
 				}
 			}
 		}
@@ -599,7 +601,7 @@ namespace smll {
 		// init a list of areas for triangles
 		std::vector<FaceAreaID> triangleAreas;
 		for (int i = 0; i < triangleList.size(); i++) {
-			triangleAreas.emplace_back(FACE_AREA_INVALID);
+			triangleAreas.push_back(FACE_AREA_INVALID);
 		}
 
 		// NOTE: We know the order of the points in our vtx list
@@ -701,7 +703,7 @@ namespace smll {
 				// add the triangles for this area
 				for (int t = 0; t < triangleList.size(); t++) {
 					if (triangleAreas[t] == faid) {
-						indices.emplace_back(triangleList[t]);
+						indices.push_back(triangleList[t]);
 					}
 				}
 			}
@@ -743,6 +745,8 @@ namespace smll {
 		if (indices.size() < 3)
 			return;
 
+		points.reserve(points.size() + ((indices.size() - 1) * (steps - 1)));
+
 		float dt = 1.0f / (float)steps;
 
 		float x, y;
@@ -751,21 +755,21 @@ namespace smll {
 		size_t count_m1 = count - 1;
 		for (size_t i = 0; i < count; i++) {
 			if (i == 0) {
-				// 0 0 1 2
+				// 0 0 1 2 (i == 0)
 				i0 = indices[i];
 				i1 = indices[i];
 				i2 = indices[i + 1];
 				i3 = indices[i + 2];
 			}
 			else if (i == count_m1) {
-				// 6 7 8 8 
+				// 6 7 8 8 (i == 7)
 				i0 = indices[i - 1];
 				i1 = indices[i];
 				i2 = indices[i + 1];
 				i3 = indices[i + 1];
 			}
 			else {
-				// 2 3 4 5
+				// 2 3 4 5 (i == 3)
 				i0 = indices[i - 1];
 				i1 = indices[i];
 				i2 = indices[i + 1];
@@ -798,7 +802,7 @@ namespace smll {
 					 (2.0f * p0.y - 5.0f * p1.y + 4.0f * p2.y - p3.y) * t2 +
 					 (3.0f * p1.y - p0.y - 3.0f * p2.y + p3.y) * t3);
 
-				points.emplace_back(cv::Point2f(x, y));
+				points.push_back(cv::Point2f(x, y));
 			}
 		}
 	}
