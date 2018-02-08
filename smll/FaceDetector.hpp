@@ -142,6 +142,7 @@ private:
 		const std::vector<int>& smoothIndices,
 		const std::map<int,int>& revVtxMap,
 		size_t numBorderPoints);
+	void	AddHeadPoints(std::vector<cv::Point2f>& points, const Face& face);
 };
 
 

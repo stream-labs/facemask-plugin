@@ -177,9 +177,13 @@ namespace smll {
 
 
 	// access to 3D landmark points
-	std::vector<cv::Point3d>&	GetLandmarkPoints();
-	std::vector<cv::Point3d>	GetLandmarkPoints(const std::vector<int>& indices);
-	cv::Point3d					GetLandmarkPoint(int which);
+	std::vector<cv::Point3f>&	GetLandmarkPoints();
+	std::vector<cv::Point3f>	GetLandmarkPoints(const std::vector<int>& indices);
+	cv::Point3f					GetLandmarkPoint(int which);
+
+	// special for morphing
+	std::vector<cv::Point3f>&	GetAllHeadPoints();
+
 
 	// FaceContour: contour definitions
 	// - this is used to define segments of landmark points

@@ -243,13 +243,13 @@ namespace smll {
 		// Camera internals
 		// TODO: cache these...creating every frame is a waste of time
 		// Approximate focal length.
-		double focal_length = (double)width * FOCAL_LENGTH_FACTOR;
-		cv::Point2d center = cv::Point2d(width / 2, height / 2);
+		float focal_length = (float)width * FOCAL_LENGTH_FACTOR;
+		cv::Point2f center = cv::Point2f(width / 2, height / 2);
 		cv::Mat camera_matrix =
-			(cv::Mat_<double>(3, 3) <<
+			(cv::Mat_<float>(3, 3) <<
 				focal_length, 0, center.x, 0, focal_length, center.y, 0, 0, 1);
 		// We assume no lens distortion
-		cv::Mat dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<double>::type);
+		cv::Mat dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<float>::type);
 
 		// project the deltas
 		// TODO: only project non-zero deltas 
@@ -272,6 +272,9 @@ namespace smll {
 			points.push_back(cv::Point2f((float)facePoints[i].x(),
 				(float)facePoints[i].y()));
 		}
+
+		// add the head points
+		AddHeadPoints(points, face);
 
 		// Apply the morph deltas to points to create warpedpoints
 		std::vector<cv::Point2f> warpedpoints = points;
@@ -423,6 +426,37 @@ namespace smll {
 		MakeAreaIndices(result, triangleList, smoothedIndices, 
 			revVtxMap, borderpoints.size());
 	}
+
+	void	FaceDetector::AddHeadPoints(std::vector<cv::Point2f>& points, const Face& face) {
+
+		float width = (float)CaptureWidth();
+		float height = (float)CaptureHeight();
+
+		// Camera internals
+		// TODO: cache these...creating every frame is a waste of time
+		// Approximate focal length.
+		float focal_length = width * FOCAL_LENGTH_FACTOR;
+		cv::Point2f center = cv::Point2f(width / 2, height / 2);
+		cv::Mat camera_matrix =
+			(cv::Mat_<float>(3, 3) <<
+				focal_length, 0, center.x, 0, focal_length, center.y, 0, 0, 1);
+		// We assume no lens distortion
+		cv::Mat dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<float>::type);
+
+		// get the head points
+		std::vector<cv::Point3f> headpoints = GetAllHeadPoints();
+
+		// project all the head points
+		const cv::Mat& rot = face.GetCVRotation();
+		cv::Mat trx = face.GetCVTranslation();
+		std::vector<cv::Point3f> projheadpoints;
+		cv::projectPoints(headpoints, rot, trx, camera_matrix, dist_coeffs, projheadpoints);
+
+
+	}
+
+
+
 
 	// MakeHullPoints
 	// - these are extra points added to the morph to smooth out the appearance,
@@ -975,18 +1009,18 @@ namespace smll {
 			model_indices.push_back(NOSE_2);
 			model_indices.push_back(NOSE_3);
 		}
-		std::vector<cv::Point3d> model_points = GetLandmarkPoints(model_indices);
+		std::vector<cv::Point3f> model_points = GetLandmarkPoints(model_indices);
 
 		// Camera internals
 		// TODO: cache these...creating every frame is a waste of time
 		// Approximate focal length.
-		double focal_length = (double)m_stageWork.w * FOCAL_LENGTH_FACTOR; 
-		cv::Point2d center = cv::Point2d(m_stageWork.w / 2, m_stageWork.h / 2);
+		float focal_length = (float)m_stageWork.w * FOCAL_LENGTH_FACTOR;
+		cv::Point2f center = cv::Point2f(m_stageWork.w / 2.0f, m_stageWork.h / 2.0f);
 		cv::Mat camera_matrix = 
-			(cv::Mat_<double>(3, 3) << 
+			(cv::Mat_<float>(3, 3) <<
 				focal_length, 0, center.x, 0, focal_length, center.y, 0, 0, 1);
 		// We assume no lens distortion
-		cv::Mat dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<double>::type);
+		cv::Mat dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<float>::type);
 
 		int numIterations = Config::singleton().get_int(
 			CONFIG_INT_SOLVEPNP_ITERATIONS);
@@ -995,10 +1029,10 @@ namespace smll {
 			point* p = m_faces[i].m_points;
 
 			// 2D image points. 
-			std::vector<cv::Point2d> image_points;
+			std::vector<cv::Point2f> image_points;
 			for (int j = 0; j < model_indices.size(); j++) {
 				int idx = model_indices[j];
-				image_points.push_back(cv::Point2d(p[idx].x(), p[idx].y()));
+				image_points.push_back(cv::Point2f((float)p[idx].x(), (float)p[idx].y()));
 			}
 
 			if (m_faces[i].IncPoseResetCounter() > POSE_RESET_INTERVAL) {
