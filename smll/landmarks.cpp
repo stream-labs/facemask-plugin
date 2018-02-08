@@ -32,122 +32,131 @@ namespace smll {
 			/* This code was generated using the landmarks.ma Maya file (in the tools folder), and the
 			   following MEL code:
 
-			   string $landmarks[] = `ls -transforms "landmark*"`;
-			   string $obj;
-			   float $scale_x = 1;
-			   float $scale_y = -1;
-			   float $scale_z = -1;
-			   print("\n\n\n\n\n\n");
-			   for($obj in $landmarks) {
-				   float $pos_x = `getAttr ($obj + ".translateX")`;
-				   float $pos_y = `getAttr ($obj + ".translateY")`;
-				   float $pos_z = `getAttr ($obj + ".translateZ")`;
-				   $pos_x = $pos_x * $scale_x;
-				   $pos_y = $pos_y * $scale_y;
-				   $pos_z = $pos_z * $scale_z;
-				   print("g_landmark_points.push_back(cv::Point3f(");
-				   print($pos_x);
-				   print(",");
-				   print($pos_y);
-				   print(",");
-				   print($pos_z);
-				   print("));  //" + $obj + "\n");
+				string $landmarks[] = `ls -transforms "landmark*"`;
+				string $obj;
+				float $scale_x = 1;
+				float $scale_y = -1;
+				float $scale_z = -1;
+				print("\n\n\n\n\n\n");
+				for($obj in $landmarks) {
+					float $pos_x = `getAttr ($obj + ".translateX")`;
+					float $pos_y = `getAttr ($obj + ".translateY")`;
+					float $pos_z = `getAttr ($obj + ".translateZ")`;
+					$pos_x = $pos_x * $scale_x;
+					$pos_y = $pos_y * $scale_y;
+					$pos_z = $pos_z * $scale_z;
+					print("g_landmark_points.push_back(cv::Point3f(");
+					if ($pos_x == 0)
+						print($pos_x + ".0f");
+					else
+						print($pos_x + "f");
+					print(",");
+					if ($pos_y == 0)
+						print($pos_y + ".0f");
+					else
+						print($pos_y + "f");
+					print(",");
+					if ($pos_z == 0)
+						print($pos_z + ".0f");
+					else
+						print($pos_z + "f");
+					print("));  //" + $obj + "\n");
 				}
 			*/
-			g_landmark_points.push_back(cv::Point3f(-3.483503, -1.875, 6.257827));  //landmark0
-			g_landmark_points.push_back(cv::Point3f(-3.359597, -0.823819, 6.268504));  //landmark1
-			g_landmark_points.push_back(cv::Point3f(-3.293411, 0, 6.12556));  //landmark2
-			g_landmark_points.push_back(cv::Point3f(-3.029557, 0.889899, 5.949514));  //landmark3
-			g_landmark_points.push_back(cv::Point3f(-2.80784, 1.718492, 5.409257));  //landmark4
-			g_landmark_points.push_back(cv::Point3f(-2.43872, 2.56053, 4.327683));  //landmark5
-			g_landmark_points.push_back(cv::Point3f(-1.862064, 3.278655, 3.281386));  //landmark6
-			g_landmark_points.push_back(cv::Point3f(-0.988395, 3.766559, 2.330544));  //landmark7
-			g_landmark_points.push_back(cv::Point3f(0, 3.841394, 1.835872));  //landmark8
-			g_landmark_points.push_back(cv::Point3f(0.988395, 3.766559, 2.330544));  //landmark9
-			g_landmark_points.push_back(cv::Point3f(1.862064, 3.278655, 3.281386));  //landmark10
-			g_landmark_points.push_back(cv::Point3f(2.43872, 2.56053, 4.327683));  //landmark11
-			g_landmark_points.push_back(cv::Point3f(2.80784, 1.718492, 5.409257));  //landmark12
-			g_landmark_points.push_back(cv::Point3f(3.029557, 0.889899, 5.949514));  //landmark13
-			g_landmark_points.push_back(cv::Point3f(3.293411, 0, 6.12556));  //landmark14
-			g_landmark_points.push_back(cv::Point3f(3.359597, -0.823819, 6.268504));  //landmark15
-			g_landmark_points.push_back(cv::Point3f(3.483503, -1.875, 6.257827));  //landmark16
-			g_landmark_points.push_back(cv::Point3f(-2.643977, -2.489206, 2.20066));  //landmark17
-			g_landmark_points.push_back(cv::Point3f(-2.240227, -2.81817, 1.764281));  //landmark18
-			g_landmark_points.push_back(cv::Point3f(-1.665074, -3.058339, 1.403463));  //landmark19
-			g_landmark_points.push_back(cv::Point3f(-0.979298, -2.992587, 1.351679));  //landmark20
-			g_landmark_points.push_back(cv::Point3f(-0.414417, -2.683012, 1.193537));  //landmark21
-			g_landmark_points.push_back(cv::Point3f(0.414417, -2.683012, 1.193537));  //landmark22
-			g_landmark_points.push_back(cv::Point3f(0.979298, -2.992587, 1.351679));  //landmark23
-			g_landmark_points.push_back(cv::Point3f(1.665074, -3.058339, 1.403463));  //landmark24
-			g_landmark_points.push_back(cv::Point3f(2.240227, -2.81817, 1.764281));  //landmark25
-			g_landmark_points.push_back(cv::Point3f(2.643977, -2.489206, 2.20066));  //landmark26
-			g_landmark_points.push_back(cv::Point3f(0, -1.830124, 1.254827));  //landmark27
-			g_landmark_points.push_back(cv::Point3f(0, -1.146743, 0.734821));  //landmark28
-			g_landmark_points.push_back(cv::Point3f(0, -0.591507, 0.331088));  //landmark29
-			g_landmark_points.push_back(cv::Point3f(0, 0, 0));  //landmark30
-			g_landmark_points.push_back(cv::Point3f(-0.50783, 0.47857, 1.063397));  //landmark31
-			g_landmark_points.push_back(cv::Point3f(-0.304534, 0.616909, 0.95));  //landmark32
-			g_landmark_points.push_back(cv::Point3f(0, 0.720353, 0.864432));  //landmark33
-			g_landmark_points.push_back(cv::Point3f(0.304534, 0.616909, 0.95));  //landmark34
-			g_landmark_points.push_back(cv::Point3f(0.50783, 0.47857, 1.063397));  //landmark35
-			g_landmark_points.push_back(cv::Point3f(-2.379, -1.8, 2.442238));  //landmark36
-			g_landmark_points.push_back(cv::Point3f(-2.055, -2.1, 1.956067));  //landmark37
-			g_landmark_points.push_back(cv::Point3f(-1.4, -2.1, 1.822647));  //landmark38
-			g_landmark_points.push_back(cv::Point3f(-0.932132, -1.647759, 1.985483));  //landmark39
-			g_landmark_points.push_back(cv::Point3f(-1.4, -1.51, 1.952295));  //landmark40
-			g_landmark_points.push_back(cv::Point3f(-2.04, -1.51, 2.1085));  //landmark41
-			g_landmark_points.push_back(cv::Point3f(0.932132, -1.647759, 1.985483));  //landmark42
-			g_landmark_points.push_back(cv::Point3f(1.4, -2.1, 1.822647));  //landmark43
-			g_landmark_points.push_back(cv::Point3f(2.055, -2.1, 1.956067));  //landmark44
-			g_landmark_points.push_back(cv::Point3f(2.379, -1.8, 2.442238));  //landmark45
-			g_landmark_points.push_back(cv::Point3f(2.04, -1.51, 2.1085));  //landmark46
-			g_landmark_points.push_back(cv::Point3f(1.4, -1.51, 1.952295));  //landmark47
-			g_landmark_points.push_back(cv::Point3f(-1.413398, 1.759402, 1.817869));  //landmark48
-			g_landmark_points.push_back(cv::Point3f(-0.88371, 1.555559, 1.408546));  //landmark49
-			g_landmark_points.push_back(cv::Point3f(-0.380074, 1.457382, 1.120382));  //landmark50
-			g_landmark_points.push_back(cv::Point3f(0, 1.516837, 1.022306));  //landmark51
-			g_landmark_points.push_back(cv::Point3f(0.380074, 1.457382, 1.120382));  //landmark52
-			g_landmark_points.push_back(cv::Point3f(0.88371, 1.555559, 1.408546));  //landmark53
-			g_landmark_points.push_back(cv::Point3f(1.413398, 1.759402, 1.817869));  //landmark54
-			g_landmark_points.push_back(cv::Point3f(0.956854, 2.13336, 1.61844));  //landmark55
-			g_landmark_points.push_back(cv::Point3f(0.472234, 2.318487, 1.297367));  //landmark56
-			g_landmark_points.push_back(cv::Point3f(0, 2.432608, 1.286434));  //landmark57
-			g_landmark_points.push_back(cv::Point3f(-0.472234, 2.318487, 1.297367));  //landmark58
-			g_landmark_points.push_back(cv::Point3f(-0.956854, 2.13336, 1.61844));  //landmark59
-			g_landmark_points.push_back(cv::Point3f(-0.866954, 1.863487, 1.647584));  //landmark60
-			g_landmark_points.push_back(cv::Point3f(-0.454843, 1.831591, 1.401979));  //landmark61
-			g_landmark_points.push_back(cv::Point3f(0, 1.830229, 1.150779));  //landmark62
-			g_landmark_points.push_back(cv::Point3f(0.454843, 1.831591, 1.401979));  //landmark63
-			g_landmark_points.push_back(cv::Point3f(0.866954, 1.863487, 1.647584));  //landmark64
-			g_landmark_points.push_back(cv::Point3f(0.448663, 1.952122, 1.38448));  //landmark65
-			g_landmark_points.push_back(cv::Point3f(0, 1.984612, 1.157622));  //landmark66
-			g_landmark_points.push_back(cv::Point3f(-0.448663, 1.952122, 1.38448));  //landmark67
-			g_landmark_points.push_back(cv::Point3f(-3.491718, -2.961992, 6.153366));  //landmark68
-			g_landmark_points.push_back(cv::Point3f(-3.425202, -4.111108, 6.156497));  //landmark69
-			g_landmark_points.push_back(cv::Point3f(-3.07334, -5.372414, 6.173058));  //landmark70
-			g_landmark_points.push_back(cv::Point3f(-2.357762, -6.51628, 6.206738));  //landmark71
-			g_landmark_points.push_back(cv::Point3f(-1.267405, -7.183477, 6.258058));  //landmark72
-			g_landmark_points.push_back(cv::Point3f(0, -7.398334, 6.239257));  //landmark73
-			g_landmark_points.push_back(cv::Point3f(1.267405, -7.183477, 6.258058));  //landmark74
-			g_landmark_points.push_back(cv::Point3f(2.357762, -6.51628, 6.206738));  //landmark75
-			g_landmark_points.push_back(cv::Point3f(3.07334, -5.372414, 6.173058));  //landmark76
-			g_landmark_points.push_back(cv::Point3f(3.425202, -4.111108, 6.156497));  //landmark77
-			g_landmark_points.push_back(cv::Point3f(3.491718, -2.961992, 6.153366));  //landmark78
-			g_landmark_points.push_back(cv::Point3f(-2.700395, -3.384053, 2.259612));  //landmark79
-			g_landmark_points.push_back(cv::Point3f(0, -3.450692, 1.237835));  //landmark80
-			g_landmark_points.push_back(cv::Point3f(2.700395, -3.384053, 2.259612));  //landmark81
-			g_landmark_points.push_back(cv::Point3f(-2.608839, -4.392022, 2.733853));  //landmark82
-			g_landmark_points.push_back(cv::Point3f(0, -4.599808, 1.511702));  //landmark83
-			g_landmark_points.push_back(cv::Point3f(2.608839, -4.392022, 2.733853));  //landmark84
-			g_landmark_points.push_back(cv::Point3f(-2.103721, -5.614364, 3.228976));  //landmark85
-			g_landmark_points.push_back(cv::Point3f(0, -5.670252, 2.29845));  //landmark86
-			g_landmark_points.push_back(cv::Point3f(2.103721, -5.614364, 3.228976));  //landmark87
-			g_landmark_points.push_back(cv::Point3f(-1.685509, -6.51628, 4.342586));  //landmark88
-			g_landmark_points.push_back(cv::Point3f(0, -6.512243, 3.422938));  //landmark89
-			g_landmark_points.push_back(cv::Point3f(1.685509, -6.51628, 4.342586));  //landmark90
-			g_landmark_points.push_back(cv::Point3f(-0.945432, -7.183477, 5.251249));  //landmark91
-			g_landmark_points.push_back(cv::Point3f(0, -7.151992, 4.796728));  //landmark92
-			g_landmark_points.push_back(cv::Point3f(0.945432, -7.183477, 5.251249));  //landmark93
+			g_landmark_points.push_back(cv::Point3f(-3.483503406f, -1.875f, 6.257826823f));  //landmark0
+			g_landmark_points.push_back(cv::Point3f(-3.359597141f, -0.8238194924f, 6.268504316f));  //landmark1
+			g_landmark_points.push_back(cv::Point3f(-3.29341073f, -0.0f, 6.125560005f));  //landmark2
+			g_landmark_points.push_back(cv::Point3f(-3.029556606f, 0.8898986532f, 5.949513509f));  //landmark3
+			g_landmark_points.push_back(cv::Point3f(-2.807839534f, 1.718491903f, 5.409257409f));  //landmark4
+			g_landmark_points.push_back(cv::Point3f(-2.438720413f, 2.560530432f, 4.32768332f));  //landmark5
+			g_landmark_points.push_back(cv::Point3f(-1.862063832f, 3.278654632f, 3.281386081f));  //landmark6
+			g_landmark_points.push_back(cv::Point3f(-0.9883951084f, 3.766558606f, 2.330544137f));  //landmark7
+			g_landmark_points.push_back(cv::Point3f(0.0f, 3.841393622f, 1.83587187f));  //landmark8
+			g_landmark_points.push_back(cv::Point3f(0.9883951084f, 3.766558606f, 2.330544137f));  //landmark9
+			g_landmark_points.push_back(cv::Point3f(1.862063832f, 3.278654632f, 3.281386081f));  //landmark10
+			g_landmark_points.push_back(cv::Point3f(2.438720413f, 2.560530432f, 4.32768332f));  //landmark11
+			g_landmark_points.push_back(cv::Point3f(2.807839534f, 1.718491903f, 5.409257409f));  //landmark12
+			g_landmark_points.push_back(cv::Point3f(3.029556606f, 0.8898986532f, 5.949513509f));  //landmark13
+			g_landmark_points.push_back(cv::Point3f(3.29341073f, -0.0f, 6.125560005f));  //landmark14
+			g_landmark_points.push_back(cv::Point3f(3.359597141f, -0.8238194924f, 6.268504316f));  //landmark15
+			g_landmark_points.push_back(cv::Point3f(3.483503406f, -1.875f, 6.257826823f));  //landmark16
+			g_landmark_points.push_back(cv::Point3f(-2.643977f, -2.489205626f, 2.200659814f));  //landmark17
+			g_landmark_points.push_back(cv::Point3f(-2.24022692f, -2.81816975f, 1.764281101f));  //landmark18
+			g_landmark_points.push_back(cv::Point3f(-1.665074397f, -3.058339137f, 1.403462785f));  //landmark19
+			g_landmark_points.push_back(cv::Point3f(-0.9792975326f, -2.992586771f, 1.351679383f));  //landmark20
+			g_landmark_points.push_back(cv::Point3f(-0.414417114f, -2.683012037f, 1.193536808f));  //landmark21
+			g_landmark_points.push_back(cv::Point3f(0.414417114f, -2.683012037f, 1.193536808f));  //landmark22
+			g_landmark_points.push_back(cv::Point3f(0.9792975326f, -2.992586771f, 1.351679383f));  //landmark23
+			g_landmark_points.push_back(cv::Point3f(1.665074397f, -3.058339137f, 1.403462785f));  //landmark24
+			g_landmark_points.push_back(cv::Point3f(2.24022692f, -2.81816975f, 1.764281101f));  //landmark25
+			g_landmark_points.push_back(cv::Point3f(2.643977f, -2.489205626f, 2.200659814f));  //landmark26
+			g_landmark_points.push_back(cv::Point3f(0.0f, -1.83012447f, 1.2548274f));  //landmark27
+			g_landmark_points.push_back(cv::Point3f(0.0f, -1.146743411f, 0.7348212125f));  //landmark28
+			g_landmark_points.push_back(cv::Point3f(0.0f, -0.5915072192f, 0.3310879765f));  //landmark29
+			g_landmark_points.push_back(cv::Point3f(0.0f, -0.0f, -0.0f));  //landmark30
+			g_landmark_points.push_back(cv::Point3f(-0.5078303403f, 0.4785699918f, 1.063397473f));  //landmark31
+			g_landmark_points.push_back(cv::Point3f(-0.3045344039f, 0.6169094843f, 0.95f));  //landmark32
+			g_landmark_points.push_back(cv::Point3f(0.0f, 0.7203533372f, 0.8644320921f));  //landmark33
+			g_landmark_points.push_back(cv::Point3f(0.3045344039f, 0.6169094843f, 0.95f));  //landmark34
+			g_landmark_points.push_back(cv::Point3f(0.5078303403f, 0.4785699918f, 1.063397473f));  //landmark35
+			g_landmark_points.push_back(cv::Point3f(-2.379f, -1.8f, 2.442238431f));  //landmark36
+			g_landmark_points.push_back(cv::Point3f(-2.055f, -2.1f, 1.956067275f));  //landmark37
+			g_landmark_points.push_back(cv::Point3f(-1.4f, -2.1f, 1.822647331f));  //landmark38
+			g_landmark_points.push_back(cv::Point3f(-0.9321320395f, -1.647759215f, 1.985483325f));  //landmark39
+			g_landmark_points.push_back(cv::Point3f(-1.4f, -1.51f, 1.952295464f));  //landmark40
+			g_landmark_points.push_back(cv::Point3f(-2.04f, -1.51f, 2.108500226f));  //landmark41
+			g_landmark_points.push_back(cv::Point3f(0.9321320395f, -1.647759215f, 1.985483325f));  //landmark42
+			g_landmark_points.push_back(cv::Point3f(1.4f, -2.1f, 1.822647331f));  //landmark43
+			g_landmark_points.push_back(cv::Point3f(2.055f, -2.1f, 1.956067275f));  //landmark44
+			g_landmark_points.push_back(cv::Point3f(2.379f, -1.8f, 2.442238431f));  //landmark45
+			g_landmark_points.push_back(cv::Point3f(2.04f, -1.51f, 2.108500226f));  //landmark46
+			g_landmark_points.push_back(cv::Point3f(1.4f, -1.51f, 1.952295464f));  //landmark47
+			g_landmark_points.push_back(cv::Point3f(-1.413398424f, 1.759402258f, 1.81786896f));  //landmark48
+			g_landmark_points.push_back(cv::Point3f(-0.8837097315f, 1.555559414f, 1.408546073f));  //landmark49
+			g_landmark_points.push_back(cv::Point3f(-0.3800736479f, 1.45738193f, 1.120382417f));  //landmark50
+			g_landmark_points.push_back(cv::Point3f(0.0f, 1.516837487f, 1.022306071f));  //landmark51
+			g_landmark_points.push_back(cv::Point3f(0.3800736479f, 1.45738193f, 1.120382417f));  //landmark52
+			g_landmark_points.push_back(cv::Point3f(0.8837097315f, 1.555559414f, 1.408546073f));  //landmark53
+			g_landmark_points.push_back(cv::Point3f(1.413398424f, 1.759402258f, 1.81786896f));  //landmark54
+			g_landmark_points.push_back(cv::Point3f(0.9568543383f, 2.133360108f, 1.618440108f));  //landmark55
+			g_landmark_points.push_back(cv::Point3f(0.4722337603f, 2.318487353f, 1.297366611f));  //landmark56
+			g_landmark_points.push_back(cv::Point3f(0.0f, 2.432607974f, 1.286433896f));  //landmark57
+			g_landmark_points.push_back(cv::Point3f(-0.4722337603f, 2.318487353f, 1.297366611f));  //landmark58
+			g_landmark_points.push_back(cv::Point3f(-0.9568543383f, 2.133360108f, 1.618440108f));  //landmark59
+			g_landmark_points.push_back(cv::Point3f(-0.866954231f, 1.863486992f, 1.647583553f));  //landmark60
+			g_landmark_points.push_back(cv::Point3f(-0.4548429381f, 1.831590824f, 1.401979217f));  //landmark61
+			g_landmark_points.push_back(cv::Point3f(0.0f, 1.830228784f, 1.150778816f));  //landmark62
+			g_landmark_points.push_back(cv::Point3f(0.4548429381f, 1.831590824f, 1.401979217f));  //landmark63
+			g_landmark_points.push_back(cv::Point3f(0.866954231f, 1.863486992f, 1.647583553f));  //landmark64
+			g_landmark_points.push_back(cv::Point3f(0.4486628082f, 1.952122154f, 1.38448003f));  //landmark65
+			g_landmark_points.push_back(cv::Point3f(0.0f, 1.984611663f, 1.157622018f));  //landmark66
+			g_landmark_points.push_back(cv::Point3f(-0.4486628082f, 1.952122154f, 1.38448003f));  //landmark67
+			g_landmark_points.push_back(cv::Point3f(-3.491717695f, -2.961992051f, 6.153366279f));  //landmark68
+			g_landmark_points.push_back(cv::Point3f(-3.425201827f, -4.111108219f, 6.156496982f));  //landmark69
+			g_landmark_points.push_back(cv::Point3f(-3.073340494f, -5.372414472f, 6.173058038f));  //landmark70
+			g_landmark_points.push_back(cv::Point3f(-2.357762412f, -6.51628002f, 6.206738151f));  //landmark71
+			g_landmark_points.push_back(cv::Point3f(-1.267405458f, -7.183477499f, 6.258057979f));  //landmark72
+			g_landmark_points.push_back(cv::Point3f(0.0f, -7.398334079f, 6.239257358f));  //landmark73
+			g_landmark_points.push_back(cv::Point3f(1.267405458f, -7.183477499f, 6.258057979f));  //landmark74
+			g_landmark_points.push_back(cv::Point3f(2.357762412f, -6.51628002f, 6.206738151f));  //landmark75
+			g_landmark_points.push_back(cv::Point3f(3.073340494f, -5.372414472f, 6.173058038f));  //landmark76
+			g_landmark_points.push_back(cv::Point3f(3.425201827f, -4.111108219f, 6.156496982f));  //landmark77
+			g_landmark_points.push_back(cv::Point3f(3.491717695f, -2.961992051f, 6.153366279f));  //landmark78
+			g_landmark_points.push_back(cv::Point3f(-2.700395143f, -3.384052868f, 2.25961197f));  //landmark79
+			g_landmark_points.push_back(cv::Point3f(0.0f, -3.450691564f, 1.237835259f));  //landmark80
+			g_landmark_points.push_back(cv::Point3f(2.700395143f, -3.384052868f, 2.25961197f));  //landmark81
+			g_landmark_points.push_back(cv::Point3f(-2.608838683f, -4.392022168f, 2.73385297f));  //landmark82
+			g_landmark_points.push_back(cv::Point3f(0.0f, -4.599807731f, 1.511702317f));  //landmark83
+			g_landmark_points.push_back(cv::Point3f(2.608838683f, -4.392022168f, 2.73385297f));  //landmark84
+			g_landmark_points.push_back(cv::Point3f(-2.103720942f, -5.614363806f, 3.228975536f));  //landmark85
+			g_landmark_points.push_back(cv::Point3f(0.0f, -5.670252201f, 2.298449554f));  //landmark86
+			g_landmark_points.push_back(cv::Point3f(2.103720942f, -5.614363806f, 3.228975536f));  //landmark87
+			g_landmark_points.push_back(cv::Point3f(-1.685508739f, -6.51628002f, 4.34258624f));  //landmark88
+			g_landmark_points.push_back(cv::Point3f(0.0f, -6.512242897f, 3.42293761f));  //landmark89
+			g_landmark_points.push_back(cv::Point3f(1.685508739f, -6.51628002f, 4.34258624f));  //landmark90
+			g_landmark_points.push_back(cv::Point3f(-0.9454320571f, -7.183477499f, 5.25124897f));  //landmark91
+			g_landmark_points.push_back(cv::Point3f(-8.881784197e-016f, -7.151991675f, 4.796727772f));  //landmark92
+			g_landmark_points.push_back(cv::Point3f(0.9454320571f, -7.183477499f, 5.25124897f));  //landmark93
 		}
 		return g_landmark_points;
 	}
@@ -168,32 +177,8 @@ namespace smll {
 
 	std::vector<cv::Point3f>&	GetAllHeadPoints() {
 		if (g_head_points.size() == 0) {
-			g_head_points.push_back(cv::Point3f(-3.491718, -2.961992, 6.153366));  //landmark68
-			g_head_points.push_back(cv::Point3f(-3.425202, -4.111108, 6.156497));  //landmark69
-			g_head_points.push_back(cv::Point3f(-3.07334, -5.372414, 6.173058));  //landmark70
-			g_head_points.push_back(cv::Point3f(-2.357762, -6.51628, 6.206738));  //landmark71
-			g_head_points.push_back(cv::Point3f(-1.267405, -7.183477, 6.258058));  //landmark72
-			g_head_points.push_back(cv::Point3f(0, -7.398334, 6.239257));  //landmark73
-			g_head_points.push_back(cv::Point3f(1.267405, -7.183477, 6.258058));  //landmark74
-			g_head_points.push_back(cv::Point3f(2.357762, -6.51628, 6.206738));  //landmark75
-			g_head_points.push_back(cv::Point3f(3.07334, -5.372414, 6.173058));  //landmark76
-			g_head_points.push_back(cv::Point3f(3.425202, -4.111108, 6.156497));  //landmark77
-			g_head_points.push_back(cv::Point3f(3.491718, -2.961992, 6.153366));  //landmark78
-			g_head_points.push_back(cv::Point3f(-2.700395, -3.384053, 2.259612));  //landmark79
-			g_head_points.push_back(cv::Point3f(0, -3.450692, 1.237835));  //landmark80
-			g_head_points.push_back(cv::Point3f(2.700395, -3.384053, 2.259612));  //landmark81
-			g_head_points.push_back(cv::Point3f(-2.608839, -4.392022, 2.733853));  //landmark82
-			g_head_points.push_back(cv::Point3f(0, -4.599808, 1.511702));  //landmark83
-			g_head_points.push_back(cv::Point3f(2.608839, -4.392022, 2.733853));  //landmark84
-			g_head_points.push_back(cv::Point3f(-2.103721, -5.614364, 3.228976));  //landmark85
-			g_head_points.push_back(cv::Point3f(0, -5.670252, 2.29845));  //landmark86
-			g_head_points.push_back(cv::Point3f(2.103721, -5.614364, 3.228976));  //landmark87
-			g_head_points.push_back(cv::Point3f(-1.685509, -6.51628, 4.342586));  //landmark88
-			g_head_points.push_back(cv::Point3f(0, -6.512243, 3.422938));  //landmark89
-			g_head_points.push_back(cv::Point3f(1.685509, -6.51628, 4.342586));  //landmark90
-			g_head_points.push_back(cv::Point3f(-0.945432, -7.183477, 5.251249));  //landmark91
-			g_head_points.push_back(cv::Point3f(0, -7.151992, 4.796728));  //landmark92
-			g_head_points.push_back(cv::Point3f(0.945432, -7.183477, 5.251249));  //landmark93
+			GetLandmarkPoints();
+			g_head_points.assign(g_landmark_points.begin() + HEAD_1, g_landmark_points.end());
 		}
 		return g_head_points;
 	}

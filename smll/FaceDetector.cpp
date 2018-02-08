@@ -63,7 +63,9 @@ namespace smll {
 		, m_timeout(0)
         , m_trackingTimeout(0)
         , m_detectionTimeout(0)
-		, m_trackingFaceIndex(0) {
+		, m_trackingFaceIndex(0)
+		, m_camera_w(0)
+		, m_camera_h(0) {
 		// Load face detection and pose estimation models.
 		m_detector = get_frontal_face_detector();
 		deserialize(predictorFilename) >> m_predictor;
@@ -86,6 +88,36 @@ namespace smll {
 		if (m_memcpyEnv)
 			destroy_threaded_memcpy_pool(m_memcpyEnv);
 	}
+
+	const cv::Mat& FaceDetector::GetCVCamMatrix() {
+		SetCVCamera();
+		return m_camera_matrix;
+	}
+
+	const cv::Mat& FaceDetector::GetCVDistCoeffs() {
+		SetCVCamera();
+		return m_dist_coeffs;
+	}
+
+	void FaceDetector::SetCVCamera() {
+		int w = CaptureWidth();
+		int h = CaptureHeight();
+
+		if (m_camera_w != w || m_camera_h != h) {
+			m_camera_w = w;
+			m_camera_h = h;
+
+			// Approximate focal length.
+			float focal_length = (float)m_camera_w * FOCAL_LENGTH_FACTOR;
+			cv::Point2f center = cv::Point2f(m_camera_w / 2.0f, m_camera_h / 2.0f);
+			m_camera_matrix =
+				(cv::Mat_<float>(3, 3) <<
+					focal_length, 0, center.x, 0, focal_length, center.y, 0, 0, 1);
+			// We assume no lens distortion
+			m_dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<float>::type);
+		}
+	}
+
 
 	void FaceDetector::DetectFaces(const OBSTexture& capture, 
 		const OBSTexture& detect, const OBSTexture& track) {
@@ -240,17 +272,6 @@ namespace smll {
 
 		// Project morph deltas to image space
 
-		// Camera internals
-		// TODO: cache these...creating every frame is a waste of time
-		// Approximate focal length.
-		float focal_length = (float)width * FOCAL_LENGTH_FACTOR;
-		cv::Point2f center = cv::Point2f(width / 2, height / 2);
-		cv::Mat camera_matrix =
-			(cv::Mat_<float>(3, 3) <<
-				focal_length, 0, center.x, 0, focal_length, center.y, 0, 0, 1);
-		// We assume no lens distortion
-		cv::Mat dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<float>::type);
-
 		// project the deltas
 		// TODO: only project non-zero deltas 
 		//       (although, to be honest, with compiler opts and such, it
@@ -261,7 +282,7 @@ namespace smll {
 		trx.at<double>(1, 0) = 0.0;
 		std::vector<cv::Point3f> deltas = morphData.GetCVDeltas();
 		std::vector<cv::Point2f> projectedDeltas;
-		cv::projectPoints(deltas, rot, trx, camera_matrix, dist_coeffs, projectedDeltas);
+		cv::projectPoints(deltas, rot, trx, GetCVCamMatrix(), GetCVDistCoeffs(), projectedDeltas);
 
 		// make a list of points for triangulation
 		std::vector<cv::Point2f> points;
@@ -429,20 +450,6 @@ namespace smll {
 
 	void	FaceDetector::AddHeadPoints(std::vector<cv::Point2f>& points, const Face& face) {
 
-		float width = (float)CaptureWidth();
-		float height = (float)CaptureHeight();
-
-		// Camera internals
-		// TODO: cache these...creating every frame is a waste of time
-		// Approximate focal length.
-		float focal_length = width * FOCAL_LENGTH_FACTOR;
-		cv::Point2f center = cv::Point2f(width / 2, height / 2);
-		cv::Mat camera_matrix =
-			(cv::Mat_<float>(3, 3) <<
-				focal_length, 0, center.x, 0, focal_length, center.y, 0, 0, 1);
-		// We assume no lens distortion
-		cv::Mat dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<float>::type);
-
 		// get the head points
 		std::vector<cv::Point3f> headpoints = GetAllHeadPoints();
 
@@ -450,7 +457,7 @@ namespace smll {
 		const cv::Mat& rot = face.GetCVRotation();
 		cv::Mat trx = face.GetCVTranslation();
 		std::vector<cv::Point3f> projheadpoints;
-		cv::projectPoints(headpoints, rot, trx, camera_matrix, dist_coeffs, projheadpoints);
+		cv::projectPoints(headpoints, rot, trx, GetCVCamMatrix(), GetCVDistCoeffs(), projheadpoints);
 
 
 	}
@@ -1011,17 +1018,6 @@ namespace smll {
 		}
 		std::vector<cv::Point3f> model_points = GetLandmarkPoints(model_indices);
 
-		// Camera internals
-		// TODO: cache these...creating every frame is a waste of time
-		// Approximate focal length.
-		float focal_length = (float)m_stageWork.w * FOCAL_LENGTH_FACTOR;
-		cv::Point2f center = cv::Point2f(m_stageWork.w / 2.0f, m_stageWork.h / 2.0f);
-		cv::Mat camera_matrix = 
-			(cv::Mat_<float>(3, 3) <<
-				focal_length, 0, center.x, 0, focal_length, center.y, 0, 0, 1);
-		// We assume no lens distortion
-		cv::Mat dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<float>::type);
-
 		int numIterations = Config::singleton().get_int(
 			CONFIG_INT_SOLVEPNP_ITERATIONS);
 
@@ -1045,14 +1041,14 @@ namespace smll {
 			// Solve for pose
 			if (pnpMethod == PNP_RANSAC) {
 				cv::solvePnPRansac(model_points, image_points,
-					camera_matrix, dist_coeffs,
+					GetCVCamMatrix(), GetCVDistCoeffs(),
 					m_faces[i].m_cvRotation, m_faces[i].m_cvTranslation,
 					m_faces[i].m_poseInitialized,
 					numIterations);
 			}
 			else {
 				cv::solvePnP(model_points, image_points,
-					camera_matrix, dist_coeffs,
+					GetCVCamMatrix(), GetCVDistCoeffs(),
 					m_faces[i].m_cvRotation, m_faces[i].m_cvTranslation,
 					m_faces[i].m_poseInitialized,
 					pnpMethod);

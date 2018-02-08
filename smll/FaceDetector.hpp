@@ -75,6 +75,8 @@ public:
 	int CaptureHeight() const {
 		return m_capture.height;
 	}
+	const cv::Mat& GetCVCamMatrix();
+	const cv::Mat& GetCVDistCoeffs();
     
 private:
 
@@ -116,6 +118,12 @@ private:
 	// dlib stuff
 	dlib::frontal_face_detector		m_detector;
 	dlib::shape_predictor			m_predictor;
+
+	// openCV camera
+	int			m_camera_w, m_camera_h;
+	cv::Mat		m_camera_matrix;
+	cv::Mat		m_dist_coeffs;
+	void		SetCVCamera();
 
 	void	InvalidatePoses();
 
