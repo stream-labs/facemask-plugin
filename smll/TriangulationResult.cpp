@@ -30,9 +30,9 @@ extern "C" {
 namespace smll {
 
 	TriangulationResult::TriangulationResult() : vertexBuffer(nullptr),
-		lineIndices(nullptr), buildLines(false) {
-		for (int i = 0; i < NUM_FACE_AREAS; i++) {
-			areaIndices[i] = nullptr;
+		buildLines(false) {
+		for (int i = 0; i < NUM_INDEX_BUFFERS; i++) {
+			indexBuffers[i] = nullptr;
 		}
 	}
 
@@ -44,26 +44,22 @@ namespace smll {
 		obs_enter_graphics();
 		if (vertexBuffer)
 			gs_vertexbuffer_destroy(vertexBuffer);
-		for (int i = 0; i < NUM_FACE_AREAS; i++) {
-			if (areaIndices[i])
-				gs_indexbuffer_destroy(areaIndices[i]);
-			areaIndices[i] = nullptr;
-		}
-		if (lineIndices)
-			gs_indexbuffer_destroy(lineIndices);
-		obs_leave_graphics();
 		vertexBuffer = nullptr;
-		lineIndices = nullptr;
+		for (int i = 0; i < NUM_INDEX_BUFFERS; i++) {
+			if (indexBuffers[i])
+				gs_indexbuffer_destroy(indexBuffers[i]);
+			indexBuffers[i] = nullptr;
+		}
+		obs_leave_graphics();
 	}
 
 	void TriangulationResult::DestroyLineBuffer() {
 		obs_enter_graphics();
-		if (lineIndices)
-			gs_indexbuffer_destroy(lineIndices);
+		if (indexBuffers[IDXBUFF_LINES])
+			gs_indexbuffer_destroy(indexBuffers[IDXBUFF_LINES]);
 		obs_leave_graphics();
-		lineIndices = nullptr;
+		indexBuffers[IDXBUFF_LINES] = nullptr;
 	}
-
 
 	void TriangulationResult::TakeBuffersFrom(TriangulationResult& other) {
 
@@ -75,21 +71,14 @@ namespace smll {
 			vertexBuffer = other.vertexBuffer;
 			other.vertexBuffer = nullptr;
 		}
-		for (int i = 0; i < NUM_FACE_AREAS; i++) {
-			if (other.areaIndices[i]) {
-				if (areaIndices[i]) {
-					gs_indexbuffer_destroy(areaIndices[i]);
+		for (int i = 0; i < NUM_INDEX_BUFFERS; i++) {
+			if (other.indexBuffers[i]) {
+				if (indexBuffers[i]) {
+					gs_indexbuffer_destroy(indexBuffers[i]);
 				}
-				areaIndices[i] = other.areaIndices[i];
-				other.areaIndices[i] = nullptr;
+				indexBuffers[i] = other.indexBuffers[i];
+				other.indexBuffers[i] = nullptr;
 			}
-		}
-		if (other.lineIndices) {
-			if (lineIndices) {
-				gs_indexbuffer_destroy(lineIndices);
-			}
-			lineIndices = other.lineIndices;
-			other.lineIndices = nullptr;
 		}
 		obs_leave_graphics();
 	}

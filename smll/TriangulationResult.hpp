@@ -20,7 +20,6 @@
 */
 #pragma once
 
-#include "landmarks.hpp"
 
 extern "C" {
 #pragma warning( push )
@@ -33,14 +32,19 @@ namespace smll {
 
 	struct TriangulationResult
 	{
-		// TODO: We should be using GS::IndexBuffer and GS::VertexBuffer
-		//       classes here. Building of the vertex buffers, in particular,
-		//       is much more robust than what we are doing here.
-		//
-		gs_vertbuffer_t*		vertexBuffer;
-		gs_indexbuffer_t*		areaIndices[NUM_FACE_AREAS];
+		enum {
+			IDXBUFF_INVALID = -1,
 
-		gs_indexbuffer_t*		lineIndices;
+			IDXBUFF_BACKGROUND = 0,
+			IDXBUFF_FACE,
+			IDXBUFF_HULL,
+			IDXBUFF_LINES,
+
+			NUM_INDEX_BUFFERS
+		};
+
+		gs_vertbuffer_t*		vertexBuffer;
+		gs_indexbuffer_t*		indexBuffers[NUM_INDEX_BUFFERS];
 		bool					buildLines;
 
 		TriangulationResult();

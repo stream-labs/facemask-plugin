@@ -147,7 +147,6 @@ private:
 		std::vector<cv::Point2f>& hullpoints);
 	void	MakeAreaIndices(TriangulationResult& result,
 		const std::vector<cv::Vec3i>& triangles,
-		const std::vector<int>& smoothIndices,
 		const std::map<int,int>& revVtxMap,
 		size_t numBorderPoints);
 	void	AddHeadPoints(std::vector<cv::Point2f>& points, const Face& face);

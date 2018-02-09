@@ -187,8 +187,14 @@ namespace smll {
 	}
 
 
-	FaceContour::FaceContour(const std::vector<int>& indz) {
+	FaceContour::FaceContour(FaceContourID mid, const std::vector<int>& indz) {
+		id = mid;
 		indices = indz;
+		num_smooth_points = (indices.size() - 1) * (NUM_SMOOTHING_STEPS - 1);
+		smooth_points_index = 0;
+		for (const FaceContour& fc : g_face_contours) {
+			smooth_points_index += (int)fc.num_smooth_points;
+		}
 		bitmask.reset();
 		for (auto i : indices) {
 			bitmask.set(i);
@@ -197,45 +203,48 @@ namespace smll {
 
 	std::vector<FaceContour>&	GetFaceContours() {
 		if (g_face_contours.size() == 0) {
+			g_face_contours.reserve(NUM_FACE_CONTOURS);
 
-			// FACE_CONTOUR_CHIN
-			g_face_contours.emplace_back(FaceContour({ JAW_1, JAW_2, JAW_3,
-				JAW_4, JAW_5, JAW_6, JAW_7, JAW_8, JAW_9, JAW_10,
-				JAW_11, JAW_12, JAW_13, JAW_14, JAW_15, JAW_16, JAW_17 }));
-			// FACE_CONTOUR_EYEBROW_LEFT
-			g_face_contours.emplace_back(FaceContour({ EYEBROW_LEFT_1,
-				EYEBROW_LEFT_2, EYEBROW_LEFT_3, EYEBROW_LEFT_4, EYEBROW_LEFT_5 }));
-			// FACE_CONTOUR_EYEBROW_RIGHT
-			g_face_contours.emplace_back(FaceContour({ EYEBROW_RIGHT_1,
-				EYEBROW_RIGHT_2, EYEBROW_RIGHT_3, EYEBROW_RIGHT_4, EYEBROW_RIGHT_5 }));
-			// FACE_CONTOUR_NOSE_BRIDGE
-			g_face_contours.emplace_back(FaceContour({ NOSE_1, NOSE_2, NOSE_3, NOSE_4 }));
-			// FACE_CONTOUR_NOSE_BOTTOM
-			g_face_contours.emplace_back(FaceContour({ NOSE_5, NOSE_6, NOSE_7, NOSE_8, NOSE_9 }));
-			// FACE_CONTOUR_EYE_LEFT_TOP
-			g_face_contours.emplace_back(FaceContour({ EYE_LEFT_1, EYE_LEFT_2, EYE_LEFT_3, EYE_LEFT_4 }));
-			// FACE_CONTOUR_EYE_LEFT_BOTTOM
-			g_face_contours.emplace_back(FaceContour({ EYE_LEFT_4, EYE_LEFT_5, EYE_LEFT_6, EYE_LEFT_1 }));
-			// FACE_CONTOUR_EYE_RIGHT_TOP
-			g_face_contours.emplace_back(FaceContour({ EYE_RIGHT_1, EYE_RIGHT_2, EYE_RIGHT_3, EYE_RIGHT_4 }));
-			// FACE_CONTOUR_EYE_RIGHT_BOTTOM
-			g_face_contours.emplace_back(FaceContour({ EYE_RIGHT_4, EYE_RIGHT_5, EYE_RIGHT_6, EYE_RIGHT_1 }));
-			// FACE_CONTOUR_MOUTH_OUTER_TOP_LEFT
-			g_face_contours.emplace_back(FaceContour({ MOUTH_OUTER_1, MOUTH_OUTER_2, MOUTH_OUTER_3 }));
-			// FACE_CONTOUR_MOUTH_OUTER_TOP_RIGHT
-			g_face_contours.emplace_back(FaceContour({ MOUTH_OUTER_5, MOUTH_OUTER_6, MOUTH_OUTER_7 }));
-			// FACE_CONTOUR_MOUTH_OUTER_BOTTOM
-			g_face_contours.emplace_back(FaceContour({ MOUTH_OUTER_7, MOUTH_OUTER_8, MOUTH_OUTER_9,
-				MOUTH_OUTER_10, MOUTH_OUTER_11, MOUTH_OUTER_12, MOUTH_OUTER_1 }));
-			// FACE_CONTOUR_MOUTH_INNER_TOP
-			g_face_contours.emplace_back(FaceContour({ MOUTH_INNER_1, MOUTH_INNER_2, MOUTH_INNER_3,
+			g_face_contours.emplace_back(FaceContour(FACE_CONTOUR_CHIN,
+			{ JAW_1, JAW_2, JAW_3, JAW_4, JAW_5, JAW_6, JAW_7,
+				JAW_8, JAW_9, JAW_10,JAW_11, JAW_12, JAW_13, JAW_14,
+				JAW_15, JAW_16, JAW_17 }));
+			g_face_contours.emplace_back(FaceContour(FACE_CONTOUR_EYEBROW_LEFT, 
+			{ EYEBROW_LEFT_1, EYEBROW_LEFT_2, EYEBROW_LEFT_3, 
+				EYEBROW_LEFT_4, EYEBROW_LEFT_5 }));
+			g_face_contours.emplace_back(FaceContour(FACE_CONTOUR_EYEBROW_RIGHT, 
+			{ EYEBROW_RIGHT_1, EYEBROW_RIGHT_2, EYEBROW_RIGHT_3, 
+				EYEBROW_RIGHT_4, EYEBROW_RIGHT_5 }));
+			g_face_contours.emplace_back(FaceContour(FACE_CONTOUR_NOSE_BRIDGE, 
+			{ NOSE_1, NOSE_2, NOSE_3, NOSE_4 }));
+			g_face_contours.emplace_back(FaceContour(FACE_CONTOUR_NOSE_BOTTOM, 
+			{ NOSE_5, NOSE_6, NOSE_7, NOSE_8, NOSE_9 }));
+			g_face_contours.emplace_back(FaceContour(FACE_CONTOUR_EYE_LEFT_TOP, 
+			{ EYE_LEFT_1, EYE_LEFT_2, EYE_LEFT_3, EYE_LEFT_4 }));
+			g_face_contours.emplace_back(FaceContour(FACE_CONTOUR_EYE_LEFT_BOTTOM, 
+			{ EYE_LEFT_4, EYE_LEFT_5, EYE_LEFT_6, EYE_LEFT_1 }));
+			g_face_contours.emplace_back(FaceContour(FACE_CONTOUR_EYE_RIGHT_TOP,
+			{ EYE_RIGHT_1, EYE_RIGHT_2, EYE_RIGHT_3, EYE_RIGHT_4 }));
+			g_face_contours.emplace_back(FaceContour(FACE_CONTOUR_EYE_RIGHT_BOTTOM,
+			{ EYE_RIGHT_4, EYE_RIGHT_5, EYE_RIGHT_6, EYE_RIGHT_1 }));
+			g_face_contours.emplace_back(FaceContour(FACE_CONTOUR_MOUTH_OUTER_TOP_LEFT,
+			{ MOUTH_OUTER_1, MOUTH_OUTER_2, MOUTH_OUTER_3 }));
+			g_face_contours.emplace_back(FaceContour(FACE_CONTOUR_MOUTH_OUTER_TOP_RIGHT, 
+			{ MOUTH_OUTER_5, MOUTH_OUTER_6, MOUTH_OUTER_7 }));
+			g_face_contours.emplace_back(FaceContour(FACE_CONTOUR_MOUTH_OUTER_BOTTOM,
+			{ MOUTH_OUTER_7, MOUTH_OUTER_8, MOUTH_OUTER_9,
+				MOUTH_OUTER_10, MOUTH_OUTER_11, MOUTH_OUTER_12, 
+				MOUTH_OUTER_1 }));
+			g_face_contours.emplace_back(FaceContour(FACE_CONTOUR_MOUTH_INNER_TOP, 
+			{ MOUTH_INNER_1, MOUTH_INNER_2, MOUTH_INNER_3,
 				MOUTH_INNER_4, MOUTH_INNER_5 }));
-			// FACE_CONTOUR_MOUTH_INNER_BOTTOM
-			g_face_contours.emplace_back(FaceContour({ MOUTH_INNER_5, MOUTH_INNER_6, MOUTH_INNER_7,
+			g_face_contours.emplace_back(FaceContour(FACE_CONTOUR_MOUTH_INNER_BOTTOM, 
+			{ MOUTH_INNER_5, MOUTH_INNER_6, MOUTH_INNER_7,
 				MOUTH_INNER_8, MOUTH_INNER_1 }));
-			// FACE_CONTOUR_HEAD
-			g_face_contours.emplace_back(FaceContour({ JAW_1, HEAD_1, HEAD_2, HEAD_3, HEAD_4,
-				HEAD_5, HEAD_6, HEAD_7, HEAD_8, HEAD_9, HEAD_10, HEAD_11, JAW_17 }));
+			g_face_contours.emplace_back(FaceContour(FACE_CONTOUR_HEAD, 
+			{ JAW_1, HEAD_1, HEAD_2, HEAD_3, HEAD_4, HEAD_5, 
+				HEAD_6, HEAD_7, HEAD_8, HEAD_9, HEAD_10, 
+				HEAD_11, JAW_17 }));
 		}
 		return g_face_contours;
 	}
@@ -245,57 +254,181 @@ namespace smll {
 		return g_face_contours[which];
 	}
 
+	static inline void make_fan(std::vector<int>& indices,
+		const FaceContour& fctop, const FaceContour& fcbot,
+		int& botidx, int& topidx, int& topsmoothidx) {
+		// first tri
+		indices.push_back(fcbot.indices[botidx]);
+		indices.push_back(topsmoothidx);
+		indices.push_back(fctop.indices[topidx++]);
+		// middle tris
+		for (int j = 0; j < (NUM_SMOOTHING_STEPS - 2); j++, topsmoothidx++) {
+			indices.push_back(fcbot.indices[botidx]);
+			indices.push_back(topsmoothidx + 1);
+			indices.push_back(topsmoothidx);
+		}
+		// last tri
+		indices.push_back(fcbot.indices[botidx]);
+		indices.push_back(fctop.indices[topidx]);
+		indices.push_back(topsmoothidx++);
+	}
+
+	static inline void make_strip(std::vector<int>& indices,
+		const FaceContour& fctop, const FaceContour& fcbot,
+		int& botidx, int& topidx, int& botsmoothidx, int& topsmoothidx) {
+		// first quad
+		indices.push_back(fcbot.indices[botidx]);
+		indices.push_back(botsmoothidx);
+		indices.push_back(fctop.indices[topidx]);
+		indices.push_back(botsmoothidx);
+		indices.push_back(topsmoothidx);
+		indices.push_back(fctop.indices[topidx]);
+		topidx++;
+		botidx++;
+		// middle quads
+		for (int j = 0; j < (NUM_SMOOTHING_STEPS - 2); 
+			j++, topsmoothidx++, botsmoothidx++) {
+			indices.push_back(botsmoothidx);
+			indices.push_back(botsmoothidx + 1);
+			indices.push_back(topsmoothidx);
+			indices.push_back(botsmoothidx + 1);
+			indices.push_back(topsmoothidx + 1);
+			indices.push_back(topsmoothidx);
+		}
+		// last quad
+		indices.push_back(botsmoothidx);
+		indices.push_back(fcbot.indices[botidx]);
+		indices.push_back(topsmoothidx);
+		indices.push_back(fcbot.indices[botidx]);
+		indices.push_back(fctop.indices[topidx]);
+		indices.push_back(topsmoothidx);
+		topsmoothidx++;
+		botsmoothidx++;
+	}
 
 
-	FaceArea::FaceArea(const std::vector<int>& indz, BoolOp opp) {
+	FaceArea::FaceArea(FaceAreaID mid, const std::vector<int>& indz, 
+		const std::vector<FaceContourID>& cntz) {
+		id = mid;
 		indices = indz;
-		operation = opp;
+		contours = cntz;
 		bitmask.reset();
 		for (auto i : indices) {
 			bitmask.set(i);
+		}
+
+		const int nsm2 = NUM_SMOOTHING_STEPS - 2;
+
+		// top lips are special case
+		if (id == FACE_AREA_MOUTH_LIPS_TOP) {
+			const FaceContour& fctopL = GetFaceContour(contours[0]);
+			const FaceContour& fctopR = GetFaceContour(contours[1]);
+			const FaceContour& fcbot = GetFaceContour(contours[2]);
+			int topidx = 0;
+			int botidx = 0;
+			int topsmoothidx = fctopL.smooth_points_index;
+			int botsmoothidx = fcbot.smooth_points_index;
+
+			// left 
+			make_fan(indices, fctopL, fcbot, botidx, topidx, topsmoothidx);
+			make_strip(indices, fctopL, fcbot, botidx, topidx, botsmoothidx, topsmoothidx);
+			make_fan(indices, fctopL, fcbot, topidx, botidx, botsmoothidx);
+			// middle
+			indices.push_back(fcbot.indices[botidx]);
+			indices.push_back(MOUTH_OUTER_4);
+			indices.push_back(fctopL.indices[topidx]);
+			topidx = 0;
+			topsmoothidx = fctopL.smooth_points_index;
+			indices.push_back(fcbot.indices[botidx]);
+			indices.push_back(fctopR.indices[topidx]);
+			indices.push_back(MOUTH_OUTER_4);
+			// right
+			make_fan(indices, fctopR, fcbot, topidx, botidx, botsmoothidx);
+			make_strip(indices, fctopR, fcbot, botidx, topidx, botsmoothidx, topsmoothidx);
+			make_fan(indices, fctopR, fcbot, botidx, topidx, topsmoothidx);
+		}
+		else {
+			// typical case: top & bottom contours
+			// note: we set it up so top contour > bot contour
+			const FaceContour& fctop = GetFaceContour(contours[0]);
+			const FaceContour& fcbot = GetFaceContour(contours[1]);
+			size_t ntop = fctop.indices.size();
+			size_t nbot = fcbot.indices.size();
+			int topidx = 0;
+			int botidx = 0;
+			int topsmoothidx = fctop.smooth_points_index;
+			int botsmoothidx = fcbot.smooth_points_index;
+			for (int i = 0; i < ntop; i++) {
+				// fan
+				if ((i == 0 && (ntop > nbot)) ||
+					(i == (ntop-1) && (ntop > (nbot+1)))) {
+					// make fan
+					make_fan(indices, fctop, fcbot, botidx, topidx, topsmoothidx);
+				}
+				// strip
+				else {
+					// make strip
+					make_strip(indices, fctop, fcbot, botidx, topidx, botsmoothidx, topsmoothidx);
+				}
+			}
 		}
 	}
 
 	std::vector<FaceArea>&	GetFaceAreas() {
 		if (g_face_areas.size() == 0) {
-			
-			// FACE_AREA_EYE_LEFT
-			g_face_areas.emplace_back(FaceArea({ EYE_LEFT_1, EYE_LEFT_2, EYE_LEFT_3,
-				EYE_LEFT_4, EYE_LEFT_5, EYE_LEFT_6}, FaceArea::BoolOp::BOOLOP_ALL));
-			// FACE_AREA_EYE_RIGHT
-			g_face_areas.emplace_back(FaceArea({ EYE_RIGHT_1, EYE_RIGHT_2, EYE_RIGHT_3,
-				EYE_RIGHT_4, EYE_RIGHT_5, EYE_RIGHT_6 }, FaceArea::BoolOp::BOOLOP_ALL));
-			// FACE_AREA_MOUTH_HOLE
-			g_face_areas.emplace_back(FaceArea({ MOUTH_INNER_1, MOUTH_INNER_2, MOUTH_INNER_3,
-				MOUTH_INNER_4, MOUTH_INNER_5, MOUTH_INNER_6, MOUTH_INNER_7, MOUTH_INNER_8 }, 
-				FaceArea::BoolOp::BOOLOP_ALL));
-			// FACE_AREA_MOUTH_LIPS
-			g_face_areas.emplace_back(FaceArea({ MOUTH_INNER_1, MOUTH_INNER_2, MOUTH_INNER_3,
-				MOUTH_INNER_4, MOUTH_INNER_5, MOUTH_INNER_6, MOUTH_INNER_7, MOUTH_INNER_8,
-				MOUTH_OUTER_1, MOUTH_OUTER_2, MOUTH_OUTER_3, MOUTH_OUTER_4, MOUTH_OUTER_5,
-				MOUTH_OUTER_6, MOUTH_OUTER_7, MOUTH_OUTER_8, MOUTH_OUTER_9, MOUTH_OUTER_10,
-				MOUTH_OUTER_11, MOUTH_OUTER_12 },
-				FaceArea::BoolOp::BOOLOP_ALL));
-			// FACE_AREA_MOUTH
-			g_face_areas.emplace_back(FaceArea({ MOUTH_INNER_1, MOUTH_INNER_2, MOUTH_INNER_3,
-				MOUTH_INNER_4, MOUTH_INNER_5, MOUTH_INNER_6, MOUTH_INNER_7, MOUTH_INNER_8,
-				MOUTH_OUTER_1, MOUTH_OUTER_2, MOUTH_OUTER_3, MOUTH_OUTER_4, MOUTH_OUTER_5, 
-				MOUTH_OUTER_6, MOUTH_OUTER_7, MOUTH_OUTER_8, MOUTH_OUTER_9, MOUTH_OUTER_10, 
-				MOUTH_OUTER_11, MOUTH_OUTER_12 },
-				FaceArea::BoolOp::BOOLOP_ALL));
+			g_face_areas.reserve(NUM_FACE_AREAS);
 
-			// ALL LANDMARK POINTS
-			std::vector<int> allpoints;
-			for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
-				allpoints.push_back(i);
-			}
+			g_face_areas.emplace_back(FaceArea(FACE_AREA_EYE_LEFT,
+			{ EYE_LEFT_1, EYE_LEFT_2, EYE_LEFT_3,
+				EYE_LEFT_4, EYE_LEFT_5, EYE_LEFT_6}, 
+				{ FACE_CONTOUR_EYE_LEFT_TOP, 
+				FACE_CONTOUR_EYE_LEFT_BOTTOM }));
 
-			// FACE_AREA_BACKGROUND
-			g_face_areas.emplace_back(FaceArea(allpoints, FaceArea::BoolOp::BOOLOP_NOT_ALL));
-			// FACE_AREA_FACE
-			g_face_areas.emplace_back(FaceArea(allpoints, FaceArea::BoolOp::BOOLOP_ALL));
-			// FACE_AREA_EVERYTHING
-			g_face_areas.emplace_back(FaceArea(allpoints, FaceArea::BoolOp::BOOLOP_ANY));
+			g_face_areas.emplace_back(FaceArea(FACE_AREA_EYE_RIGHT,
+			{ EYE_RIGHT_1, EYE_RIGHT_2, EYE_RIGHT_3,
+				EYE_RIGHT_4, EYE_RIGHT_5, EYE_RIGHT_6 }, 
+				{ FACE_CONTOUR_EYE_RIGHT_TOP,
+				FACE_CONTOUR_EYE_RIGHT_BOTTOM }));
+
+			g_face_areas.emplace_back(FaceArea(FACE_AREA_BROW_LEFT,
+			{ EYE_LEFT_1, EYE_LEFT_2, EYE_LEFT_3,
+				EYE_LEFT_4, EYEBROW_LEFT_1, EYEBROW_LEFT_2,
+				EYEBROW_LEFT_3, EYEBROW_LEFT_4,
+				EYEBROW_LEFT_5 },
+				{ FACE_CONTOUR_EYEBROW_LEFT,
+				FACE_CONTOUR_EYE_LEFT_TOP }));
+
+			g_face_areas.emplace_back(FaceArea(FACE_AREA_BROW_RIGHT,
+			{ EYE_RIGHT_1, EYE_RIGHT_2, EYE_RIGHT_3,
+				EYE_RIGHT_4, EYEBROW_RIGHT_1, EYEBROW_RIGHT_2,
+				EYEBROW_RIGHT_3, EYEBROW_RIGHT_4,
+				EYEBROW_RIGHT_5 },
+				{ FACE_CONTOUR_EYEBROW_RIGHT,
+				FACE_CONTOUR_EYE_RIGHT_TOP }));
+
+			g_face_areas.emplace_back(FaceArea(FACE_AREA_MOUTH_HOLE,
+			{ MOUTH_INNER_1, MOUTH_INNER_2, MOUTH_INNER_3,
+				MOUTH_INNER_4, MOUTH_INNER_5, MOUTH_INNER_6, 
+				MOUTH_INNER_7, MOUTH_INNER_8 }, 
+				{ FACE_CONTOUR_MOUTH_INNER_TOP,
+				FACE_CONTOUR_MOUTH_INNER_BOTTOM }));
+
+			g_face_areas.emplace_back(FaceArea(FACE_AREA_MOUTH_LIPS_TOP,
+			{ MOUTH_INNER_1, MOUTH_INNER_2, MOUTH_INNER_3,
+				MOUTH_INNER_4, MOUTH_INNER_5, MOUTH_OUTER_1,
+				MOUTH_OUTER_2, MOUTH_OUTER_3, MOUTH_OUTER_4,
+				MOUTH_OUTER_5, MOUTH_OUTER_6, MOUTH_OUTER_7 },
+				{ FACE_CONTOUR_MOUTH_OUTER_TOP_LEFT,
+				FACE_CONTOUR_MOUTH_OUTER_TOP_RIGHT,
+				FACE_CONTOUR_MOUTH_INNER_TOP }));
+
+			g_face_areas.emplace_back(FaceArea(FACE_AREA_MOUTH_LIPS_BOTTOM,
+			{ MOUTH_INNER_5, MOUTH_INNER_6, MOUTH_INNER_7,
+				MOUTH_INNER_8, MOUTH_INNER_1, MOUTH_OUTER_7, 
+				MOUTH_OUTER_8, MOUTH_OUTER_9, MOUTH_OUTER_10, 
+				MOUTH_OUTER_11, MOUTH_OUTER_12,	MOUTH_OUTER_1 },
+				{ FACE_CONTOUR_MOUTH_OUTER_BOTTOM,
+				FACE_CONTOUR_MOUTH_INNER_BOTTOM }));
 		}
 		return g_face_areas;
 	}

@@ -45,7 +45,7 @@
 
 #define FOCAL_LENGTH_FACTOR		(1.0f)
 #define POSE_RESET_INTERVAL		(30)
-#define CATMULL_ROM_STEPS		(5)
+#define HULL_POINTS_SCALE		(1.25f)
 
 using namespace dlib;
 using namespace std;
@@ -282,7 +282,7 @@ namespace smll {
 		//        would likely take longer to separate them out)
 		const cv::Mat& rot = face.GetCVRotation();
 		cv::Mat trx;
-		face.GetCVTranslation().copyTo(trx);
+		face.GetCVTranslation().copyTo(trx); // make sure to copy!
 		trx.at<double>(0, 0) = 0.0; // clear x & y, we'll center it
 		trx.at<double>(1, 0) = 0.0;
 		std::vector<cv::Point3f> deltas = morphData.GetCVDeltas();
@@ -323,25 +323,13 @@ namespace smll {
 		// - it doesn't matter which one we choose, since whole 
 		//   contours are always contained in areas
 		//
-		std::vector<int> smoothedIndices;
-		
-		{//for (int i = 0; i < NUM_FACE_CONTOURS; i++) {
-			FaceContourID fcid = FACE_CONTOUR_HEAD;// (FaceContourID)i;
-			// bitmask check if it's being morphed
+		for (int i = 0; i < NUM_FACE_CONTOURS; i++) {
+			FaceContourID fcid = (FaceContourID)i;
 			const FaceContour& fc = GetFaceContour(fcid);
-			//LandmarkBitmask m = fc.bitmask & morphData.GetBitmask();
-			{//if (m.any()) {
+			{
 				// count how many we add
-				size_t howMany = points.size();
-				CatmullRomSmooth(points, fc.indices, CATMULL_ROM_STEPS);
-				CatmullRomSmooth(warpedpoints, fc.indices, CATMULL_ROM_STEPS);
-				assert(howMany == ((fc.indices.size() - 1) * (CATMULL_ROM_STEPS - 1)));
-				// set an index for new points
-				howMany = points.size() - howMany;
-				while (howMany > 0) {
-					smoothedIndices.push_back(fc.indices[0]);
-					howMany--;
-				}
+				CatmullRomSmooth(points, fc.indices, NUM_SMOOTHING_STEPS);
+				CatmullRomSmooth(warpedpoints, fc.indices, NUM_SMOOTHING_STEPS);
 			}
 		}
 
@@ -360,7 +348,6 @@ namespace smll {
 		// add hull points
 		std::vector<cv::Point2f> hullpoints;
 		MakeHullPoints(points, warpedpoints, hullpoints);
-		//Subdivide(hullpoints);
 		points.reserve(points.size() + hullpoints.size());
 		warpedpoints.reserve(warpedpoints.size() + hullpoints.size());
 		for (int i = 0; i < hullpoints.size(); i++) {
@@ -424,7 +411,7 @@ namespace smll {
 		// Either way, since I add my own border points myself, these first
 		// 4 vertices are crap to us, and all resulting triangles are also
 		// crap.
-		// We remove these triangles, and use a vtxMap we created above
+		// We ignore these triangles, and use a vtxMap we created above
 		// to re-index the triangle indices to our vtx list.
 		//
 		// Also, the subdiv2D object will merge vertices that are close enough
@@ -440,8 +427,10 @@ namespace smll {
 
 			// crap triangle?
 			if (i0 < 4 || i1 < 4 || i2 < 4) {
-				// duh-leeted
-				it = triangleList.erase(it);
+				// mark triangle as bad
+				(*it)[0] = 0;
+				(*it)[1] = 0;
+				(*it)[2] = 0;
 			}
 			else {
 				// re-index
@@ -453,8 +442,7 @@ namespace smll {
 		}
 
 		// Make Index Buffers
-		MakeAreaIndices(result, triangleList, smoothedIndices, 
-			revVtxMap, borderpoints.size());
+		MakeAreaIndices(result, triangleList, revVtxMap, borderpoints.size());
 	}
 
 
@@ -518,12 +506,13 @@ namespace smll {
 	void FaceDetector::MakeHullPoints(const std::vector<cv::Point2f>& points,
 		const std::vector<cv::Point2f>& warpedpoints, std::vector<cv::Point2f>& hullpoints) {
 		// consider outside contours only
-		const FaceContourID contours[3] = { FACE_CONTOUR_CHIN, FACE_CONTOUR_EYEBROW_LEFT, FACE_CONTOUR_EYEBROW_RIGHT };
+		const int num_contours = 2;
+		const FaceContourID contours[num_contours] = { FACE_CONTOUR_CHIN, FACE_CONTOUR_HEAD };
 
 		// find the center of the original points
 		int numPoints = 0;
 		cv::Point2f center(0.0f, 0.0f);
-		for (int i = 0; i < 3; i++) {
+		for (int i = 0; i < num_contours; i++) {
 			const FaceContour& fc = GetFaceContour(contours[i]);
 			for (int j = 0; j < fc.indices.size(); j++, numPoints++) {
 				center += points[fc.indices[j]];
@@ -535,7 +524,7 @@ namespace smll {
 		// - we do this by checking the dot product of the delta to the
 		//   warped point with the vector to the original point from
 		//   the center
-		for (int i = 0; i < 3; i++) {
+		for (int i = 0; i < num_contours; i++) {
 			const FaceContour& fc = GetFaceContour(contours[i]);
 			for (int j = 0; j < fc.indices.size(); j++) {
 				// get points
@@ -559,15 +548,20 @@ namespace smll {
 
 		// scale up hull points from center
 		for (int i = 0; i < hullpoints.size(); i++) {
-			hullpoints[i] = ((hullpoints[i] - center) * 1.25f) + center;
+			hullpoints[i] = ((hullpoints[i] - center) * HULL_POINTS_SCALE) + center;
 		}
+
+		// subdivide
+		// TODO: CATMULL ROM FASTER?
+		Subdivide(hullpoints);
+		Subdivide(hullpoints);
+		Subdivide(hullpoints);
 	}
 
 	// MakeAreaIndices : make index buffers for different areas of the face
 	//
 	void FaceDetector::MakeAreaIndices(TriangulationResult& result,
 		const std::vector<cv::Vec3i>& triangleList,
-		const std::vector<int>& smoothIndices,
 		const std::map<int, int>& revVtxMap,
 		size_t numBorderPoints) {
 		UNUSED_PARAMETER(numBorderPoints);
@@ -593,10 +587,13 @@ namespace smll {
 
 			// make index buffer
 			obs_enter_graphics();
-			result.lineIndices = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
+			result.indexBuffers[TriangulationResult::IDXBUFF_LINES] = 
+				gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
 				linesList.data(), linesList.size(), 0);
 			obs_leave_graphics();
 		}
+
+
 		/*
 		// init a list of areas for triangles
 		std::vector<FaceAreaID> triangleAreas;
@@ -716,10 +713,10 @@ namespace smll {
 		*/
 
 		// Create triangle list for everything
-		obs_enter_graphics();
-		result.areaIndices[FACE_AREA_EVERYTHING] = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
-			(void*)triangleList.data(), triangleList.size() * 3, 0);
-		obs_leave_graphics();
+		//obs_enter_graphics();
+		//result.areaIndices[FACE_AREA_EVERYTHING] = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
+		//	(void*)triangleList.data(), triangleList.size() * 3, 0);
+		//obs_leave_graphics();
 	}
 
 	// Subdivide : insert points half-way between all the points

@@ -37,6 +37,13 @@
 
 namespace smll {
 
+	// used to add smoothing points to face contours
+	// - number of steps in catmull rom smoothing
+	//   between points in the facial contours.
+	// - Note that 5 steps means 4 new points per
+	//   segment
+	static const int NUM_SMOOTHING_STEPS = 5;
+
 	// 68 Facial Landmark Indices
 	// 
 	enum
@@ -220,6 +227,9 @@ namespace smll {
 	std::vector<cv::Point3f>&	GetAllHeadPoints();
 
 
+	typedef std::bitset<NUM_MORPH_LANDMARKS>	LandmarkBitmask;
+
+
 	// FaceContour: contour definitions
 	// - this is used to define segments of landmark points
 	//   for smoothing
@@ -227,14 +237,6 @@ namespace smll {
 	// - some (like the eyes and mouth) include an extra index
 	//   at the end, so I added last index 
 	//
-	typedef std::bitset<NUM_MORPH_LANDMARKS>	LandmarkBitmask;
-	struct FaceContour {
-		std::vector<int>	indices;
-		LandmarkBitmask		bitmask;
-
-		FaceContour(const std::vector<int>& indices);
-	};
-
 	enum FaceContourID {
 		FACE_CONTOUR_INVALID = -1,
 		FACE_CONTOUR_CHIN = 0,
@@ -256,42 +258,46 @@ namespace smll {
 		NUM_FACE_CONTOURS
 	};
 
+	struct FaceContour {
+		FaceContourID		id;
+		std::vector<int>	indices;
+		LandmarkBitmask		bitmask;
+		size_t				num_smooth_points;
+		int					smooth_points_index;
+
+		FaceContour(FaceContourID id, const std::vector<int>& indices);
+	};
+
 	// Access to contours
 	std::vector<FaceContour>&	GetFaceContours();
 	const FaceContour&			GetFaceContour(FaceContourID which);
 
-	// FaceArea : triangle area definitions
-	// - some of the areas, like the background, do not have any 
-	//   landmark points that define them.
-	struct FaceArea {
-		std::vector<int>	indices;
-		LandmarkBitmask		bitmask;
 
-		enum BoolOp {
-			BOOLOP_ANY,
-			BOOLOP_ALL,
-			BOOLOP_NOT_ALL,
-		};
-		BoolOp				operation;
-
-		FaceArea(const std::vector<int>& indices, BoolOp op);
-	};
 
 	// Face Area ids
-	// note: these are calculated, in order, using the
-	//       bool operations defined for the area.
 	enum FaceAreaID {
 		FACE_AREA_INVALID = -1,
 		FACE_AREA_EYE_LEFT = 0,
 		FACE_AREA_EYE_RIGHT,
+		FACE_AREA_BROW_LEFT,
+		FACE_AREA_BROW_RIGHT,
 		FACE_AREA_MOUTH_HOLE,
-		FACE_AREA_MOUTH_LIPS,
-		FACE_AREA_MOUTH,		// HOLE + LIPS
-		FACE_AREA_BACKGROUND,
-		FACE_AREA_FACE,
-		FACE_AREA_EVERYTHING,
+		FACE_AREA_MOUTH_LIPS_TOP,
+		FACE_AREA_MOUTH_LIPS_BOTTOM,
 
 		NUM_FACE_AREAS
+	};
+
+	// FaceArea : static face mesh area definitions
+	struct FaceArea {
+		FaceAreaID					id;
+		std::vector<int>			indices;
+		std::vector<FaceContourID>	contours;
+		std::vector<int>			mesh_indices;
+		LandmarkBitmask				bitmask;
+
+		FaceArea(FaceAreaID id, const std::vector<int>& indices, 
+			const std::vector<FaceContourID>& contours);
 	};
 
 	// Access to areas
