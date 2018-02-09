@@ -347,6 +347,33 @@ namespace smll {
 			make_strip(indices, fctopR, fcbot, botidx, topidx, botsmoothidx, topsmoothidx);
 			make_fan(indices, fctopR, fcbot, botidx, topidx, topsmoothidx);
 		}
+		// nose is special case
+		else if (id == FACE_AREA_NOSE) {
+			const FaceContour& fctop = GetFaceContour(contours[0]);
+			const FaceContour& fcbot = GetFaceContour(contours[1]);
+			int topidx = 0;
+			int botidx = 0;
+			int topsmoothidx = fctop.smooth_points_index;
+			int botsmoothidx = fcbot.smooth_points_index;
+			// left nose
+			make_fan(indices, fctop, fcbot, botidx, topidx, topsmoothidx);
+			make_fan(indices, fctop, fcbot, botidx, topidx, topsmoothidx);
+			make_fan(indices, fctop, fcbot, botidx, topidx, topsmoothidx);
+			// right nose
+			topidx = 0;
+			topsmoothidx = fctop.smooth_points_index;
+			botidx = (int)fcbot.indices.size() - 1;
+			make_fan(indices, fctop, fcbot, botidx, topidx, topsmoothidx);
+			make_fan(indices, fctop, fcbot, botidx, topidx, topsmoothidx);
+			make_fan(indices, fctop, fcbot, botidx, topidx, topsmoothidx);
+			// bottom nose
+			botidx = 0;
+			make_fan(indices, fcbot, fctop, topidx, botidx, botsmoothidx);
+			make_fan(indices, fcbot, fctop, topidx, botidx, botsmoothidx);
+			make_fan(indices, fcbot, fctop, topidx, botidx, botsmoothidx);
+			make_fan(indices, fcbot, fctop, topidx, botidx, botsmoothidx);
+			make_fan(indices, fcbot, fctop, topidx, botidx, botsmoothidx);
+		}
 		else {
 			// typical case: top & bottom contours
 			// note: we set it up so top contour > bot contour
@@ -405,6 +432,12 @@ namespace smll {
 				EYEBROW_RIGHT_5 },
 				{ FACE_CONTOUR_EYEBROW_RIGHT,
 				FACE_CONTOUR_EYE_RIGHT_TOP }));
+
+			g_face_areas.emplace_back(FaceArea(FACE_AREA_NOSE,
+			{ NOSE_1, NOSE_2, NOSE_3, NOSE_4, NOSE_5, NOSE_6,
+				NOSE_7, NOSE_8,	NOSE_9 },
+				{ FACE_CONTOUR_NOSE_BRIDGE,
+				FACE_CONTOUR_NOSE_BOTTOM }));
 
 			g_face_areas.emplace_back(FaceArea(FACE_AREA_MOUTH_HOLE,
 			{ MOUTH_INNER_1, MOUTH_INNER_2, MOUTH_INNER_3,
