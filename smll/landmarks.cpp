@@ -254,6 +254,35 @@ namespace smll {
 		return g_face_contours[which];
 	}
 
+	FaceContourID GetContourID(int vtx_index) {
+		int lastContourIdx = g_face_contours.size() - 1;
+		int smooth_top = g_face_contours[lastContourIdx].smooth_points_index +
+			g_face_contours[lastContourIdx].num_smooth_points;
+		if (vtx_index < 0 || vtx_index >= smooth_top) {
+			return FACE_CONTOUR_INVALID;
+		}
+		if (vtx_index < NUM_MORPH_LANDMARKS) {
+			LandmarkBitmask b;
+			b.set(vtx_index);
+			for (const FaceContour& fc : g_face_contours) {
+				if ((fc.bitmask & b).any()) {
+					return fc.id;
+				}
+			}
+		}
+		else {
+			for (int i = 0; i < g_face_contours.size(); i++) {
+				if (vtx_index >= g_face_contours[i].smooth_points_index &&
+					vtx_index < (g_face_contours[i].smooth_points_index +
+						g_face_contours[i].num_smooth_points)) {
+					return g_face_contours[i].id;
+				}
+			}
+		}
+		return FACE_CONTOUR_INVALID;
+	}
+
+
 	static inline void make_fan(std::vector<int>& indices,
 		const FaceContour& fctop, const FaceContour& fcbot,
 		int& botidx, int& topidx, int& topsmoothidx) {

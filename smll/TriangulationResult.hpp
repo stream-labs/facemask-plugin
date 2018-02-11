@@ -20,6 +20,7 @@
 */
 #pragma once
 
+#include "landmarks.hpp"
 
 extern "C" {
 #pragma warning( push )
@@ -28,10 +29,13 @@ extern "C" {
 #pragma warning( pop )
 }
 
+#include <array>
+
 namespace smll {
 
-	struct TriangulationResult
+	class TriangulationResult
 	{
+	public:
 		enum {
 			IDXBUFF_INVALID = -1,
 
@@ -40,8 +44,15 @@ namespace smll {
 			IDXBUFF_HULL,
 			IDXBUFF_LINES,
 
-			NUM_INDEX_BUFFERS
+			NUM_INDEX_BUFFERS,
+
+			// We have no bitmask for lines, so use its
+			// entry in the bitmask table for invalid
+			// points
+			BITMASK_IDXBUFF_INVALID = IDXBUFF_LINES,
 		};
+
+		typedef std::array<LandmarkBitmask, NUM_INDEX_BUFFERS> BitmaskTable;
 
 		gs_vertbuffer_t*		vertexBuffer;
 		gs_indexbuffer_t*		indexBuffers[NUM_INDEX_BUFFERS];
@@ -54,6 +65,11 @@ namespace smll {
 		void DestroyBuffers();
 		void DestroyLineBuffer();
 		void TakeBuffersFrom(TriangulationResult& other);
+
+		static const BitmaskTable& GetBitmasks();
+
+	private:
+		static BitmaskTable bitmasks;
 	};
 
 }

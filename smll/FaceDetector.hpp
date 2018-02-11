@@ -125,6 +125,9 @@ private:
 	cv::Mat		m_dist_coeffs;
 	void		SetCVCamera();
 
+	std::vector<LandmarkBitmask>	m_vtxBitmaskLookup;
+	void	MakeVtxBitmaskLookup();
+
 	void	InvalidatePoses();
 
     void    DoFaceDetection();
@@ -146,9 +149,7 @@ private:
 		const std::vector<cv::Point2f>& warpedpoints, 
 		std::vector<cv::Point2f>& hullpoints);
 	void	MakeAreaIndices(TriangulationResult& result,
-		const std::vector<cv::Vec3i>& triangles,
-		const std::map<int,int>& revVtxMap,
-		size_t numBorderPoints);
+		const std::vector<cv::Vec3i>& triangles);
 	void	AddHeadPoints(std::vector<cv::Point2f>& points, const Face& face);
 };
 

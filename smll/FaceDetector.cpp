@@ -46,6 +46,13 @@
 #define FOCAL_LENGTH_FACTOR		(1.0f)
 #define POSE_RESET_INTERVAL		(30)
 #define HULL_POINTS_SCALE		(1.25f)
+// border points = 4 corners + subdivide
+#define NUM_BORDER_POINTS		(4 * 2 * 2 * 2) 
+#define NUM_BORDER_POINT_DIVS	(3)
+// hull points = head + jaw + subdivide
+#define NUM_HULL_POINTS			(28 * 2 * 2 * 2)
+#define NUM_HULL_POINT_DIVS		(3)
+
 
 using namespace dlib;
 using namespace std;
@@ -89,6 +96,30 @@ namespace smll {
 			destroy_threaded_memcpy_pool(m_memcpyEnv);
 	}
 
+	void FaceDetector::MakeVtxBitmaskLookup() {
+		if (m_vtxBitmaskLookup.size() == 0) {
+			for (int i = 0; i < NUM_MORPH_LANDMARKS; i++) {
+				LandmarkBitmask b;
+				b.set(i);
+				m_vtxBitmaskLookup.push_back(b);
+			}
+			for (int i = 0; i < NUM_FACE_CONTOURS; i++) {
+				const FaceContour& fc = GetFaceContour((FaceContourID)i);
+				for (int j = 0; j < fc.num_smooth_points; j++) {
+					m_vtxBitmaskLookup.push_back(fc.bitmask);
+				}
+			}
+			LandmarkBitmask bp, hp;
+			bp.set(BORDER_POINT);
+			hp.set(HULL_POINT);
+			for (int i = 0; i < NUM_BORDER_POINTS; i++) {
+				m_vtxBitmaskLookup.push_back(bp);
+			}
+			for (int i = 0; i < NUM_HULL_POINTS; i++) {
+				m_vtxBitmaskLookup.push_back(bp);
+			}
+		}
+	}
 
 	const cv::Mat& FaceDetector::GetCVCamMatrix() {
 		SetCVCamera();
@@ -265,6 +296,9 @@ namespace smll {
 		if (!morphData.IsValid())
 			return;
 
+		// make sure we have our bitmask lookup table
+		MakeVtxBitmaskLookup();
+
 		// only 1 face supported (for now)
 		if (m_faces.length == 0)
 			return;
@@ -314,34 +348,25 @@ namespace smll {
 		}
 
 		// add smoothing points
-		// - we smooth out any face contours that got morphed
-		// - we'll need to mark these new points so we know which
-		//   area they're in when we sort out our facial areas
-		//   later on
-		// - what we save is an index from the contour so that 
-		//   we can use that to find the area that point is in.
-		// - it doesn't matter which one we choose, since whole 
-		//   contours are always contained in areas
-		//
 		for (int i = 0; i < NUM_FACE_CONTOURS; i++) {
 			FaceContourID fcid = (FaceContourID)i;
 			const FaceContour& fc = GetFaceContour(fcid);
-			{
-				// count how many we add
-				CatmullRomSmooth(points, fc.indices, NUM_SMOOTHING_STEPS);
-				CatmullRomSmooth(warpedpoints, fc.indices, NUM_SMOOTHING_STEPS);
-			}
+			// smooth em out
+			CatmullRomSmooth(points, fc.indices, NUM_SMOOTHING_STEPS);
+			CatmullRomSmooth(warpedpoints, fc.indices, NUM_SMOOTHING_STEPS);
 		}
 
 		// add border points
 		std::vector<cv::Point2f> borderpoints;
+		// 4 corners
 		borderpoints.push_back(cv::Point2f(0, 0));
 		borderpoints.push_back(cv::Point2f(width, 0));
 		borderpoints.push_back(cv::Point2f(width, height));
 		borderpoints.push_back(cv::Point2f(0, height));
-		Subdivide(borderpoints);
-		Subdivide(borderpoints);
-		Subdivide(borderpoints);
+		// subdivide
+		for (int i = 0; i < NUM_BORDER_POINT_DIVS; i++) {
+			Subdivide(borderpoints);
+		}
 		points.insert(points.end(), borderpoints.begin(), borderpoints.end());
 		warpedpoints.insert(warpedpoints.end(), borderpoints.begin(), borderpoints.end());
 
@@ -355,28 +380,7 @@ namespace smll {
 			warpedpoints.push_back(hullpoints[i]);
 		}
 
-		// Create Triangulation
-
-		// create the openCV Subdiv2D object
-		cv::Rect rect(0, 0, CaptureWidth() + 1, CaptureHeight() + 1);
-		cv::Subdiv2D subdiv(rect);
-
-		// add our points to subdiv2d
-		// save a map: subdiv2d vtx id -> index into our points
-		std::map<int, int> vtxMap;
-		// save another map: our idx -> our idx
-		std::map<int, int> revVtxMap;
-		for (int i = 0; i < points.size(); i++) {
-			cv::Point2f& p = points[i];
-			if (rect.contains(p)) {
-				// note: this crashes if you insert a point outside the rect.
-				int vid = subdiv.insert(p);
-				vtxMap[vid] = i;
-				revVtxMap[i] = vid - 4;
-			}
-		}
-
-		// make the vertex buffer using our point lists
+		// make the vertex buffer 
 		obs_enter_graphics();
 		gs_render_start(true);
 		size_t nv = points.size();
@@ -392,6 +396,30 @@ namespace smll {
 		}
 		result.vertexBuffer = gs_render_save();
 		obs_leave_graphics();
+
+
+		// Create Triangulation
+
+		// create the openCV Subdiv2D object
+		cv::Rect rect(0, 0, CaptureWidth() + 1, CaptureHeight() + 1);
+		cv::Subdiv2D subdiv(rect);
+
+		// add our points to subdiv2d
+		// save a map: subdiv2d vtx id -> index into our points
+		std::map<int, int> vtxMap;
+		size_t nsmooth = GetFaceContour(FACE_CONTOUR_LAST).smooth_points_index +
+			GetFaceContour(FACE_CONTOUR_LAST).num_smooth_points;
+		LandmarkBitmask facebm = TriangulationResult::GetBitmasks()[TriangulationResult::IDXBUFF_FACE];
+		for (int i = 0; i < points.size(); i++) {
+			cv::Point2f& p = points[i];
+			// only add points belonging to face, hull, border
+			if (i >= nsmooth ||
+				(rect.contains(p) && (m_vtxBitmaskLookup[i] & facebm).any())) {
+				// note: this crashes if you insert a point outside the rect.
+				int vid = subdiv.insert(p);
+				vtxMap[vid] = i;
+			}
+		}
 
 		// get triangulation
 		std::vector<cv::Vec3i>	triangleList;
@@ -442,7 +470,7 @@ namespace smll {
 		}
 
 		// Make Index Buffers
-		MakeAreaIndices(result, triangleList, revVtxMap, borderpoints.size());
+		MakeAreaIndices(result, triangleList);
 	}
 
 
@@ -552,171 +580,87 @@ namespace smll {
 		}
 
 		// subdivide
-		// TODO: CATMULL ROM FASTER?
-		Subdivide(hullpoints);
-		Subdivide(hullpoints);
-		Subdivide(hullpoints);
+		for (int i = 0; i < NUM_BORDER_POINT_DIVS; i++) {
+			Subdivide(hullpoints);
+		}
 	}
 
 	// MakeAreaIndices : make index buffers for different areas of the face
 	//
 	void FaceDetector::MakeAreaIndices(TriangulationResult& result,
-		const std::vector<cv::Vec3i>& triangleList,
-		const std::map<int, int>& revVtxMap,
-		size_t numBorderPoints) {
-		UNUSED_PARAMETER(numBorderPoints);
+		const std::vector<cv::Vec3i>& triangleList) {
 
-		// make lines index buffer
+		// Sort out our triangles into areas for the triangulation result
+		std::vector<int> triangles[TriangulationResult::NUM_INDEX_BUFFERS];
+		triangles[TriangulationResult::IDXBUFF_BACKGROUND].reserve(triangleList.size() * 3);
+		triangles[TriangulationResult::IDXBUFF_FACE].reserve(triangleList.size() * 3);
+		triangles[TriangulationResult::IDXBUFF_HULL].reserve(triangleList.size() * 3);
 		if (result.buildLines) {
-			// convert to lines
-			std::vector<uint32_t> linesList;
-			for (int t = 0; t < triangleList.size(); t++) {
-				const cv::Vec3i& tri = triangleList[t];
-
-				int i0 = tri[0];
-				int i1 = tri[1];
-				int i2 = tri[2];
-
-				linesList.push_back(i0);
-				linesList.push_back(i1);
-				linesList.push_back(i1);
-				linesList.push_back(i2);
-				linesList.push_back(i2);
-				linesList.push_back(i0);
-			}
-
-			// make index buffer
-			obs_enter_graphics();
-			result.indexBuffers[TriangulationResult::IDXBUFF_LINES] = 
-				gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
-				linesList.data(), linesList.size(), 0);
-			obs_leave_graphics();
+			triangles[TriangulationResult::IDXBUFF_LINES].reserve(triangleList.size() * 6);
 		}
-
-
-		/*
-		// init a list of areas for triangles
-		std::vector<FaceAreaID> triangleAreas;
 		for (int i = 0; i < triangleList.size(); i++) {
-			triangleAreas.push_back(FACE_AREA_INVALID);
-		}
-
-		// NOTE: We know the order of the points in our vtx list
-		//       - first is the 68 landmark points
-		//       - next is the smooth points
-		//       - border points
-		//       - hull points
-		size_t numLandmarksAndSmooth = NUM_FACIAL_LANDMARKS + smoothIndices.size();
-
-		// define the area list for triangles
-		for (int i = 0; i < FACE_AREA_EVERYTHING; i++) {
-			FaceAreaID faid = (FaceAreaID)i;
-			const FaceArea& fa = GetFaceArea(faid);
-
-			// special case : MOUTH = LIPS + HOLE
-			if (faid == FACE_AREA_MOUTH)
+			const cv::Vec3i& tri = triangleList[i];
+			int i0 = tri[0];
+			int i1 = tri[1];
+			int i2 = tri[2];
+			if (i0 == i1 == i2 == 0) {
 				continue;
+			}
 
-			// find the triangles for this area
-			for (int t = 0; t < triangleList.size(); t++) {
+			// lookup bitmasks
+			LandmarkBitmask b0 = m_vtxBitmaskLookup[i0];
+			LandmarkBitmask b1 = m_vtxBitmaskLookup[i1];
+			LandmarkBitmask b2 = m_vtxBitmaskLookup[i2];
+			const TriangulationResult::BitmaskTable& trbt = 
+				TriangulationResult::GetBitmasks();
+			// check against areas 
+			if ((b0 & trbt[TriangulationResult::BITMASK_IDXBUFF_INVALID]).any() &&
+				(b1 & trbt[TriangulationResult::BITMASK_IDXBUFF_INVALID]).any() &&
+				(b2 & trbt[TriangulationResult::BITMASK_IDXBUFF_INVALID]).any()) {
+				continue;
+			}
 
-				// only consider triangles not already in an area
-				if (triangleAreas[t] == FACE_AREA_INVALID) {
-					const cv::Vec3i& tri = triangleList[t];
-					int i0 = tri[0];
-					int i1 = tri[1];
-					int i2 = tri[2];
+			// lines
+			if (result.buildLines) {
+				triangles[TriangulationResult::IDXBUFF_LINES].push_back(i0);
+				triangles[TriangulationResult::IDXBUFF_LINES].push_back(i1);
+				triangles[TriangulationResult::IDXBUFF_LINES].push_back(i1);
+				triangles[TriangulationResult::IDXBUFF_LINES].push_back(i2);
+				triangles[TriangulationResult::IDXBUFF_LINES].push_back(i2);
+				triangles[TriangulationResult::IDXBUFF_LINES].push_back(i0);
+			}
 
-					// make a bitmask for each point
-					LandmarkBitmask b0;
-					if (i0 < NUM_FACIAL_LANDMARKS) {
-						b0.set(i0);
-						b0.set(revVtxMap.at(i0));
-					}
-					else if (i0 < numLandmarksAndSmooth) {
-						b0.set(smoothIndices[i0 - NUM_FACIAL_LANDMARKS]);
-						b0.set(revVtxMap.at(smoothIndices[i0 - NUM_FACIAL_LANDMARKS]));
-					}
-					LandmarkBitmask b1;
-					if (i1 < NUM_FACIAL_LANDMARKS) {
-						b1.set(i1);
-						b1.set(revVtxMap.at(i1));
-					}
-					else if (i1 < numLandmarksAndSmooth) {
-						b1.set(smoothIndices[i1 - NUM_FACIAL_LANDMARKS]);
-						b1.set(revVtxMap.at(smoothIndices[i1 - NUM_FACIAL_LANDMARKS]));
-					}
-					LandmarkBitmask b2;
-					if (i2 < NUM_FACIAL_LANDMARKS) {
-						b2.set(i2);
-						b2.set(revVtxMap.at(i2));
-					}
-					else if (i2 < numLandmarksAndSmooth) {
-						b2.set(smoothIndices[i2 - NUM_FACIAL_LANDMARKS]);
-						b2.set(revVtxMap.at(smoothIndices[i2 - NUM_FACIAL_LANDMARKS]));
-					}
-
-					// do boolean logic to determine membership
-					bool inArea = false;
-					switch (fa.operation) {
-					case FaceArea::BoolOp::BOOLOP_ALL:
-						inArea = (fa.bitmask & b0).any() &&
-							(fa.bitmask & b1).any() &&
-							(fa.bitmask & b2).any();
-						break;
-					case FaceArea::BoolOp::BOOLOP_ANY:
-						inArea = (fa.bitmask & b0).any() ||
-							(fa.bitmask & b1).any() ||
-							(fa.bitmask & b2).any();
-						break;
-					case FaceArea::BoolOp::BOOLOP_NOT_ALL:
-						inArea = (!b0.any() || !b1.any() || !b2.any());
-						break;
-					}
-					// we in?
-					if (inArea) {
-						triangleAreas[t] = faid;
-					}
-				}				
+			if ((b0 & trbt[TriangulationResult::IDXBUFF_FACE]).any() &&
+				(b1 & trbt[TriangulationResult::IDXBUFF_FACE]).any() &&
+				(b2 & trbt[TriangulationResult::IDXBUFF_FACE]).any()) {
+				triangles[TriangulationResult::IDXBUFF_FACE].push_back(i0);
+				triangles[TriangulationResult::IDXBUFF_FACE].push_back(i1);
+				triangles[TriangulationResult::IDXBUFF_FACE].push_back(i2);
+			}
+			else if ((b0 & trbt[TriangulationResult::IDXBUFF_HULL]).any() &&
+				(b1 & trbt[TriangulationResult::IDXBUFF_HULL]).any() &&
+				(b2 & trbt[TriangulationResult::IDXBUFF_HULL]).any()) {
+				triangles[TriangulationResult::IDXBUFF_HULL].push_back(i0);
+				triangles[TriangulationResult::IDXBUFF_HULL].push_back(i1);
+				triangles[TriangulationResult::IDXBUFF_HULL].push_back(i2);
+			}
+			else if ((b0 & trbt[TriangulationResult::IDXBUFF_BACKGROUND]).any() ||
+				(b1 & trbt[TriangulationResult::IDXBUFF_BACKGROUND]).any() ||
+				(b2 & trbt[TriangulationResult::IDXBUFF_BACKGROUND]).any()) {
+				triangles[TriangulationResult::IDXBUFF_BACKGROUND].push_back(i0);
+				triangles[TriangulationResult::IDXBUFF_BACKGROUND].push_back(i1);
+				triangles[TriangulationResult::IDXBUFF_BACKGROUND].push_back(i2);
 			}
 		}
 
-		// Build Triangle Index Lists for areas
-		std::vector<cv::Vec3i> areaIndices[FACE_AREA_EVERYTHING];
-		for (int i = 0; i < FACE_AREA_EVERYTHING; i++) {
-			FaceAreaID faid = (FaceAreaID)i;
-			std::vector<cv::Vec3i>& indices = areaIndices[i];
-
-			// special case : MOUTH = LIPS + HOLE
-			if (faid == FACE_AREA_MOUTH) {
-				indices.insert(indices.end(),
-					areaIndices[FACE_AREA_MOUTH_LIPS].begin(),
-					areaIndices[FACE_AREA_MOUTH_LIPS].end());
-				indices.insert(indices.end(),
-					areaIndices[FACE_AREA_MOUTH_HOLE].begin(),
-					areaIndices[FACE_AREA_MOUTH_HOLE].end());
-			}
-			else {
-				// add the triangles for this area
-				for (int t = 0; t < triangleList.size(); t++) {
-					if (triangleAreas[t] == faid) {
-						indices.push_back(triangleList[t]);
-					}
-				}
-			}
-
+		// Build index buffers
+		int xxx = result.buildLines ? 0 : 1;
+		for (int i = 0; i < TriangulationResult::NUM_INDEX_BUFFERS - xxx; i++) {
 			obs_enter_graphics();
-			result.areaIndices[i] = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
-				(void*)indices.data(), indices.size() * 3, 0);
+			result.indexBuffers[i] = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
+				(void*)triangles[i].data(), triangles[i].size(), 0);
 			obs_leave_graphics();
 		}
-		*/
-
-		// Create triangle list for everything
-		//obs_enter_graphics();
-		//result.areaIndices[FACE_AREA_EVERYTHING] = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
-		//	(void*)triangleList.data(), triangleList.size() * 3, 0);
-		//obs_leave_graphics();
 	}
 
 	// Subdivide : insert points half-way between all the points

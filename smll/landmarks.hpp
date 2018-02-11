@@ -180,6 +180,13 @@ namespace smll {
 		RIGHT_OUTER_EYE_CORNER = EYE_RIGHT_4,
 		LEFT_MOUTH_CORNER = MOUTH_OUTER_1,
 		RIGHT_MOUTH_CORNER = MOUTH_OUTER_7,
+
+		// for mesh building
+		// - add these to LandmarkBitmask below, 
+		//   after the full set of morph points
+		BORDER_POINT = 79,
+		HULL_POINT = 80,
+		NUM_MESH_POINTS = 81,
 	};
 
 
@@ -227,7 +234,7 @@ namespace smll {
 	std::vector<cv::Point3f>&	GetAllHeadPoints();
 
 
-	typedef std::bitset<NUM_MORPH_LANDMARKS>	LandmarkBitmask;
+	typedef std::bitset<NUM_MESH_POINTS>	LandmarkBitmask;
 
 
 	// FaceContour: contour definitions
@@ -255,6 +262,7 @@ namespace smll {
 		FACE_CONTOUR_MOUTH_INNER_BOTTOM,
 		FACE_CONTOUR_HEAD,
 
+		FACE_CONTOUR_LAST = FACE_CONTOUR_HEAD,
 		NUM_FACE_CONTOURS
 	};
 
@@ -271,7 +279,7 @@ namespace smll {
 	// Access to contours
 	std::vector<FaceContour>&	GetFaceContours();
 	const FaceContour&			GetFaceContour(FaceContourID which);
-
+	FaceContourID				GetContourID(int vtx_index);
 
 
 	// Face Area ids

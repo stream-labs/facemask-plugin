@@ -29,6 +29,126 @@ extern "C" {
 
 namespace smll {
 
+	const TriangulationResult::BitmaskTable&
+		TriangulationResult::GetBitmasks() {
+		if (bitmasks[IDXBUFF_BACKGROUND].none()) {
+
+			bitmasks[IDXBUFF_BACKGROUND].set(BORDER_POINT);
+
+			bitmasks[IDXBUFF_FACE].set(JAW_1);
+			bitmasks[IDXBUFF_FACE].set(JAW_2);
+			bitmasks[IDXBUFF_FACE].set(JAW_3);
+			bitmasks[IDXBUFF_FACE].set(JAW_4);
+			bitmasks[IDXBUFF_FACE].set(JAW_5);
+			bitmasks[IDXBUFF_FACE].set(JAW_6);
+			bitmasks[IDXBUFF_FACE].set(JAW_7);
+			bitmasks[IDXBUFF_FACE].set(JAW_8);
+			bitmasks[IDXBUFF_FACE].set(JAW_9);
+			bitmasks[IDXBUFF_FACE].set(JAW_10);
+			bitmasks[IDXBUFF_FACE].set(JAW_11);
+			bitmasks[IDXBUFF_FACE].set(JAW_12);
+			bitmasks[IDXBUFF_FACE].set(JAW_13);
+			bitmasks[IDXBUFF_FACE].set(JAW_14);
+			bitmasks[IDXBUFF_FACE].set(JAW_15);
+			bitmasks[IDXBUFF_FACE].set(JAW_16);
+			bitmasks[IDXBUFF_FACE].set(JAW_17);
+			bitmasks[IDXBUFF_FACE].set(HEAD_1);
+			bitmasks[IDXBUFF_FACE].set(HEAD_2);
+			bitmasks[IDXBUFF_FACE].set(HEAD_3);
+			bitmasks[IDXBUFF_FACE].set(HEAD_4);
+			bitmasks[IDXBUFF_FACE].set(HEAD_5);
+			bitmasks[IDXBUFF_FACE].set(HEAD_6);
+			bitmasks[IDXBUFF_FACE].set(HEAD_7);
+			bitmasks[IDXBUFF_FACE].set(HEAD_8);
+			bitmasks[IDXBUFF_FACE].set(HEAD_9);
+			bitmasks[IDXBUFF_FACE].set(HEAD_10);
+			bitmasks[IDXBUFF_FACE].set(HEAD_11);
+			bitmasks[IDXBUFF_FACE].set(EYE_LEFT_1);
+			bitmasks[IDXBUFF_FACE].set(EYE_LEFT_2);
+			bitmasks[IDXBUFF_FACE].set(EYE_LEFT_3);
+			bitmasks[IDXBUFF_FACE].set(EYE_LEFT_4);
+			bitmasks[IDXBUFF_FACE].set(EYE_LEFT_5);
+			bitmasks[IDXBUFF_FACE].set(EYE_LEFT_6);
+			bitmasks[IDXBUFF_FACE].set(EYE_RIGHT_1);
+			bitmasks[IDXBUFF_FACE].set(EYE_RIGHT_2);
+			bitmasks[IDXBUFF_FACE].set(EYE_RIGHT_3);
+			bitmasks[IDXBUFF_FACE].set(EYE_RIGHT_4);
+			bitmasks[IDXBUFF_FACE].set(EYE_RIGHT_5);
+			bitmasks[IDXBUFF_FACE].set(EYE_RIGHT_6);
+			bitmasks[IDXBUFF_FACE].set(MOUTH_OUTER_1);
+			bitmasks[IDXBUFF_FACE].set(MOUTH_OUTER_2);
+			bitmasks[IDXBUFF_FACE].set(MOUTH_OUTER_3);
+			bitmasks[IDXBUFF_FACE].set(MOUTH_OUTER_4);
+			bitmasks[IDXBUFF_FACE].set(MOUTH_OUTER_5);
+			bitmasks[IDXBUFF_FACE].set(MOUTH_OUTER_6);
+			bitmasks[IDXBUFF_FACE].set(MOUTH_OUTER_7);
+			bitmasks[IDXBUFF_FACE].set(MOUTH_OUTER_8);
+			bitmasks[IDXBUFF_FACE].set(MOUTH_OUTER_9);
+			bitmasks[IDXBUFF_FACE].set(MOUTH_OUTER_10);
+			bitmasks[IDXBUFF_FACE].set(MOUTH_OUTER_11);
+			bitmasks[IDXBUFF_FACE].set(MOUTH_OUTER_12);
+
+			bitmasks[IDXBUFF_HULL].set(JAW_1);
+			bitmasks[IDXBUFF_HULL].set(JAW_2);
+			bitmasks[IDXBUFF_HULL].set(JAW_3);
+			bitmasks[IDXBUFF_HULL].set(JAW_4);
+			bitmasks[IDXBUFF_HULL].set(JAW_5);
+			bitmasks[IDXBUFF_HULL].set(JAW_6);
+			bitmasks[IDXBUFF_HULL].set(JAW_7);
+			bitmasks[IDXBUFF_HULL].set(JAW_8);
+			bitmasks[IDXBUFF_HULL].set(JAW_9);
+			bitmasks[IDXBUFF_HULL].set(JAW_10);
+			bitmasks[IDXBUFF_HULL].set(JAW_11);
+			bitmasks[IDXBUFF_HULL].set(JAW_12);
+			bitmasks[IDXBUFF_HULL].set(JAW_13);
+			bitmasks[IDXBUFF_HULL].set(JAW_14);
+			bitmasks[IDXBUFF_HULL].set(JAW_15);
+			bitmasks[IDXBUFF_HULL].set(JAW_16);
+			bitmasks[IDXBUFF_HULL].set(JAW_17);
+			bitmasks[IDXBUFF_HULL].set(HEAD_1);
+			bitmasks[IDXBUFF_HULL].set(HEAD_2);
+			bitmasks[IDXBUFF_HULL].set(HEAD_3);
+			bitmasks[IDXBUFF_HULL].set(HEAD_4);
+			bitmasks[IDXBUFF_HULL].set(HEAD_5);
+			bitmasks[IDXBUFF_HULL].set(HEAD_6);
+			bitmasks[IDXBUFF_HULL].set(HEAD_7);
+			bitmasks[IDXBUFF_HULL].set(HEAD_8);
+			bitmasks[IDXBUFF_HULL].set(HEAD_9);
+			bitmasks[IDXBUFF_HULL].set(HEAD_10);
+			bitmasks[IDXBUFF_HULL].set(HEAD_11);
+			bitmasks[IDXBUFF_HULL].set(HULL_POINT);
+
+			bitmasks[BITMASK_IDXBUFF_INVALID].set(EYE_LEFT_1);
+			bitmasks[BITMASK_IDXBUFF_INVALID].set(EYE_LEFT_2);
+			bitmasks[BITMASK_IDXBUFF_INVALID].set(EYE_LEFT_3);
+			bitmasks[BITMASK_IDXBUFF_INVALID].set(EYE_LEFT_4);
+			bitmasks[BITMASK_IDXBUFF_INVALID].set(EYE_LEFT_5);
+			bitmasks[BITMASK_IDXBUFF_INVALID].set(EYE_LEFT_6);
+			bitmasks[BITMASK_IDXBUFF_INVALID].set(EYE_RIGHT_1);
+			bitmasks[BITMASK_IDXBUFF_INVALID].set(EYE_RIGHT_2);
+			bitmasks[BITMASK_IDXBUFF_INVALID].set(EYE_RIGHT_3);
+			bitmasks[BITMASK_IDXBUFF_INVALID].set(EYE_RIGHT_4);
+			bitmasks[BITMASK_IDXBUFF_INVALID].set(EYE_RIGHT_5);
+			bitmasks[BITMASK_IDXBUFF_INVALID].set(EYE_RIGHT_6);
+			bitmasks[BITMASK_IDXBUFF_INVALID].set(MOUTH_OUTER_1);
+			bitmasks[BITMASK_IDXBUFF_INVALID].set(MOUTH_OUTER_2);
+			bitmasks[BITMASK_IDXBUFF_INVALID].set(MOUTH_OUTER_3);
+			bitmasks[BITMASK_IDXBUFF_INVALID].set(MOUTH_OUTER_4);
+			bitmasks[BITMASK_IDXBUFF_INVALID].set(MOUTH_OUTER_5);
+			bitmasks[BITMASK_IDXBUFF_INVALID].set(MOUTH_OUTER_6);
+			bitmasks[BITMASK_IDXBUFF_INVALID].set(MOUTH_OUTER_7);
+			bitmasks[BITMASK_IDXBUFF_INVALID].set(MOUTH_OUTER_8);
+			bitmasks[BITMASK_IDXBUFF_INVALID].set(MOUTH_OUTER_9);
+			bitmasks[BITMASK_IDXBUFF_INVALID].set(MOUTH_OUTER_10);
+			bitmasks[BITMASK_IDXBUFF_INVALID].set(MOUTH_OUTER_11);
+			bitmasks[BITMASK_IDXBUFF_INVALID].set(MOUTH_OUTER_12);
+		}
+		return bitmasks;
+	}
+
+	TriangulationResult::BitmaskTable TriangulationResult::bitmasks;
+	
+
 	TriangulationResult::TriangulationResult() : vertexBuffer(nullptr),
 		buildLines(false) {
 		for (int i = 0; i < NUM_INDEX_BUFFERS; i++) {
