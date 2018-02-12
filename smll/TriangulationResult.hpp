@@ -45,11 +45,6 @@ namespace smll {
 			IDXBUFF_LINES,
 
 			NUM_INDEX_BUFFERS,
-
-			// We have no bitmask for lines, so use its
-			// entry in the bitmask table for invalid
-			// points
-			BITMASK_IDXBUFF_INVALID = IDXBUFF_LINES,
 		};
 
 		typedef std::array<LandmarkBitmask, NUM_INDEX_BUFFERS> BitmaskTable;

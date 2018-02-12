@@ -116,7 +116,7 @@ namespace smll {
 				m_vtxBitmaskLookup.push_back(bp);
 			}
 			for (int i = 0; i < NUM_HULL_POINTS; i++) {
-				m_vtxBitmaskLookup.push_back(bp);
+				m_vtxBitmaskLookup.push_back(hp);
 			}
 		}
 	}
@@ -401,8 +401,9 @@ namespace smll {
 		// Create Triangulation
 
 		// create the openCV Subdiv2D object
-		cv::Rect rect(0, 0, CaptureWidth() + 1, CaptureHeight() + 1);
-		cv::Subdiv2D subdiv(rect);
+		cv::Rect sdrect(0, 0, CaptureWidth() + 1, CaptureHeight() + 1);
+		cv::Rect rect(0, 0, CaptureWidth(), CaptureHeight());
+		cv::Subdiv2D subdiv(sdrect);
 
 		// add our points to subdiv2d
 		// save a map: subdiv2d vtx id -> index into our points
@@ -416,8 +417,13 @@ namespace smll {
 			if (i >= nsmooth ||
 				((m_vtxBitmaskLookup[i] & facebm).any()) && rect.contains(p)) {
 				// note: this crashes if you insert a point outside the rect.
-				int vid = subdiv.insert(p);
-				vtxMap[vid] = i;
+				try {
+					int vid = subdiv.insert(p);
+					vtxMap[vid] = i;
+				}
+				catch (const std::exception& e) {
+					blog(LOG_DEBUG,"[FaceMask] ***** CAUGHT EXCEPTION CV::SUBDIV2D: %s", e.what());
+				}
 			}
 		}
 
@@ -575,7 +581,7 @@ namespace smll {
 
 		// subdivide
 		for (int i = 0; i < NUM_BORDER_POINT_DIVS; i++) {
-			Subdivide(hullpoints);
+			//Subdivide(hullpoints);
 		}
 	}
 
@@ -585,7 +591,7 @@ namespace smll {
 		const std::vector<cv::Vec3i>& triangleList) {
 
 		// Allocate temp storage for triangle indices
-		std::vector<int> triangles[TriangulationResult::NUM_INDEX_BUFFERS];
+		std::vector<uint32_t> triangles[TriangulationResult::NUM_INDEX_BUFFERS];
 		triangles[TriangulationResult::IDXBUFF_BACKGROUND].reserve(triangleList.size() * 3);
 		triangles[TriangulationResult::IDXBUFF_FACE].reserve(triangleList.size() * 3);
 		triangles[TriangulationResult::IDXBUFF_HULL].reserve(triangleList.size() * 3);
@@ -608,13 +614,21 @@ namespace smll {
 			const LandmarkBitmask& b0 = m_vtxBitmaskLookup[i0];
 			const LandmarkBitmask& b1 = m_vtxBitmaskLookup[i1];
 			const LandmarkBitmask& b2 = m_vtxBitmaskLookup[i2];
-			const TriangulationResult::BitmaskTable& trbt = 
-				TriangulationResult::GetBitmasks();
+			
+			LandmarkBitmask bgmask = TriangulationResult::GetBitmasks()[TriangulationResult::IDXBUFF_BACKGROUND];
+			LandmarkBitmask hullmask = TriangulationResult::GetBitmasks()[TriangulationResult::IDXBUFF_HULL];
+			LandmarkBitmask facemask = TriangulationResult::GetBitmasks()[TriangulationResult::IDXBUFF_FACE];
+			LandmarkBitmask leyemask = GetFaceArea(FACE_AREA_EYE_LEFT).bitmask;
+			LandmarkBitmask reyemask = GetFaceArea(FACE_AREA_EYE_RIGHT).bitmask;
+			LandmarkBitmask mouthmask = GetFaceArea(FACE_AREA_MOUTH_LIPS_TOP).bitmask |
+				GetFaceArea(FACE_AREA_MOUTH_LIPS_BOTTOM).bitmask;
+
 			// check against areas 
-			if ((b0 & trbt[TriangulationResult::BITMASK_IDXBUFF_INVALID]).any() &&
-				(b1 & trbt[TriangulationResult::BITMASK_IDXBUFF_INVALID]).any() &&
-				(b2 & trbt[TriangulationResult::BITMASK_IDXBUFF_INVALID]).any()) {
-				// SKIP INVALID
+			if (((b0 & leyemask).any() && (b1 & leyemask).any() && (b2 & leyemask).any())||
+				((b0 & reyemask).any() && (b1 & reyemask).any() && (b2 & reyemask).any()) ||
+				((b0 & mouthmask).any() && (b1 & mouthmask).any() && (b2 & mouthmask).any()))
+			{
+				// Skip eyes and mouth
 				continue;
 			}
 
@@ -628,24 +642,23 @@ namespace smll {
 				triangles[TriangulationResult::IDXBUFF_LINES].push_back(i0);
 			}
 
-			if ((b0 & trbt[TriangulationResult::IDXBUFF_FACE]).any() &&
-				(b1 & trbt[TriangulationResult::IDXBUFF_FACE]).any() &&
-				(b2 & trbt[TriangulationResult::IDXBUFF_FACE]).any()) {
+			if ((b0 & facemask).any() &&
+				(b1 & facemask).any() &&
+				(b2 & facemask).any()) {
 				triangles[TriangulationResult::IDXBUFF_FACE].push_back(i0);
 				triangles[TriangulationResult::IDXBUFF_FACE].push_back(i1);
 				triangles[TriangulationResult::IDXBUFF_FACE].push_back(i2);
 			}
-			else if ((b0 & trbt[TriangulationResult::IDXBUFF_HULL]).any() &&
-				(b1 & trbt[TriangulationResult::IDXBUFF_HULL]).any() &&
-				(b2 & trbt[TriangulationResult::IDXBUFF_HULL]).any()) {
+			else if ((b0 & hullmask).any() &&
+				(b1 & hullmask).any() &&
+				(b2 & hullmask).any()) {
 				triangles[TriangulationResult::IDXBUFF_HULL].push_back(i0);
 				triangles[TriangulationResult::IDXBUFF_HULL].push_back(i1);
 				triangles[TriangulationResult::IDXBUFF_HULL].push_back(i2);
 			}
-			else //if ((b0 & trbt[TriangulationResult::IDXBUFF_BACKGROUND]).any() ||
-				//(b1 & trbt[TriangulationResult::IDXBUFF_BACKGROUND]).any() ||
-				//(b2 & trbt[TriangulationResult::IDXBUFF_BACKGROUND]).any()) { 
-			{
+			else if ((b0 & bgmask).any() ||
+				(b1 & bgmask).any() ||
+				(b2 & bgmask).any()) { 
 				triangles[TriangulationResult::IDXBUFF_BACKGROUND].push_back(i0);
 				triangles[TriangulationResult::IDXBUFF_BACKGROUND].push_back(i1);
 				triangles[TriangulationResult::IDXBUFF_BACKGROUND].push_back(i2);

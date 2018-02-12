@@ -346,8 +346,6 @@ namespace smll {
 			bitmask.set(i);
 		}
 
-		/*
-
 		const int nsm2 = NUM_SMOOTHING_STEPS - 2;
 
 		// top lips are special case
@@ -430,7 +428,6 @@ namespace smll {
 				}
 			}
 		}
-		*/
 	}
 
 	std::vector<FaceArea>&	GetFaceAreas() {
