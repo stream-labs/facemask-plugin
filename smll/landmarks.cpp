@@ -255,9 +255,9 @@ namespace smll {
 	}
 
 	FaceContourID GetContourID(int vtx_index) {
-		int lastContourIdx = g_face_contours.size() - 1;
+		int lastContourIdx = (int)g_face_contours.size() - 1;
 		int smooth_top = g_face_contours[lastContourIdx].smooth_points_index +
-			g_face_contours[lastContourIdx].num_smooth_points;
+			(int)g_face_contours[lastContourIdx].num_smooth_points;
 		if (vtx_index < 0 || vtx_index >= smooth_top) {
 			return FACE_CONTOUR_INVALID;
 		}
@@ -346,6 +346,8 @@ namespace smll {
 			bitmask.set(i);
 		}
 
+		/*
+
 		const int nsm2 = NUM_SMOOTHING_STEPS - 2;
 
 		// top lips are special case
@@ -428,6 +430,7 @@ namespace smll {
 				}
 			}
 		}
+		*/
 	}
 
 	std::vector<FaceArea>&	GetFaceAreas() {

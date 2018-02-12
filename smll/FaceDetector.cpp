@@ -409,12 +409,12 @@ namespace smll {
 		std::map<int, int> vtxMap;
 		size_t nsmooth = GetFaceContour(FACE_CONTOUR_LAST).smooth_points_index +
 			GetFaceContour(FACE_CONTOUR_LAST).num_smooth_points;
-		LandmarkBitmask facebm = TriangulationResult::GetBitmasks()[TriangulationResult::IDXBUFF_FACE];
+		const LandmarkBitmask& facebm = TriangulationResult::GetBitmasks()[TriangulationResult::IDXBUFF_FACE];
 		for (int i = 0; i < points.size(); i++) {
 			cv::Point2f& p = points[i];
 			// only add points belonging to face, hull, border
 			if (i >= nsmooth ||
-				(rect.contains(p) && (m_vtxBitmaskLookup[i] & facebm).any())) {
+				((m_vtxBitmaskLookup[i] & facebm).any()) && rect.contains(p)) {
 				// note: this crashes if you insert a point outside the rect.
 				int vid = subdiv.insert(p);
 				vtxMap[vid] = i;
@@ -447,25 +447,19 @@ namespace smll {
 		// revVtxMap for area sorting later on.
 
 		// re-index triangles and remove bad ones
-		std::vector<cv::Vec3i>::iterator it = triangleList.begin();
-		while (it != triangleList.end()) {
-			int i0 = (*it)[0];
-			int i1 = (*it)[1];
-			int i2 = (*it)[2];
-
-			// crap triangle?
-			if (i0 < 4 || i1 < 4 || i2 < 4) {
+		for (int i = 0; i < triangleList.size(); i++) {
+			cv::Vec3i &t = triangleList[i];
+			if (t[0] < 4 || t[1] < 4 || t[2] < 4) {
 				// mark triangle as bad
-				(*it)[0] = 0;
-				(*it)[1] = 0;
-				(*it)[2] = 0;
+				t[0] = 0;
+				t[1] = 0;
+				t[2] = 0;
 			}
 			else {
 				// re-index
-				(*it)[0] = vtxMap[i0];
-				(*it)[1] = vtxMap[i1];
-				(*it)[2] = vtxMap[i2];
-				it++;
+				t[0] = vtxMap[t[0]];
+				t[1] = vtxMap[t[1]];
+				t[2] = vtxMap[t[2]];
 			}
 		}
 
@@ -590,7 +584,7 @@ namespace smll {
 	void FaceDetector::MakeAreaIndices(TriangulationResult& result,
 		const std::vector<cv::Vec3i>& triangleList) {
 
-		// Sort out our triangles into areas for the triangulation result
+		// Allocate temp storage for triangle indices
 		std::vector<int> triangles[TriangulationResult::NUM_INDEX_BUFFERS];
 		triangles[TriangulationResult::IDXBUFF_BACKGROUND].reserve(triangleList.size() * 3);
 		triangles[TriangulationResult::IDXBUFF_FACE].reserve(triangleList.size() * 3);
@@ -598,25 +592,29 @@ namespace smll {
 		if (result.buildLines) {
 			triangles[TriangulationResult::IDXBUFF_LINES].reserve(triangleList.size() * 6);
 		}
+
+		// Sort out our triangles 
 		for (int i = 0; i < triangleList.size(); i++) {
 			const cv::Vec3i& tri = triangleList[i];
 			int i0 = tri[0];
 			int i1 = tri[1];
 			int i2 = tri[2];
-			if (i0 == i1 == i2 == 0) {
+			if (i0 == 0 && i1 == 0 && i2 == 0) {
+				// SKIP INVALID
 				continue;
 			}
 
 			// lookup bitmasks
-			LandmarkBitmask b0 = m_vtxBitmaskLookup[i0];
-			LandmarkBitmask b1 = m_vtxBitmaskLookup[i1];
-			LandmarkBitmask b2 = m_vtxBitmaskLookup[i2];
+			const LandmarkBitmask& b0 = m_vtxBitmaskLookup[i0];
+			const LandmarkBitmask& b1 = m_vtxBitmaskLookup[i1];
+			const LandmarkBitmask& b2 = m_vtxBitmaskLookup[i2];
 			const TriangulationResult::BitmaskTable& trbt = 
 				TriangulationResult::GetBitmasks();
 			// check against areas 
 			if ((b0 & trbt[TriangulationResult::BITMASK_IDXBUFF_INVALID]).any() &&
 				(b1 & trbt[TriangulationResult::BITMASK_IDXBUFF_INVALID]).any() &&
 				(b2 & trbt[TriangulationResult::BITMASK_IDXBUFF_INVALID]).any()) {
+				// SKIP INVALID
 				continue;
 			}
 
@@ -644,9 +642,10 @@ namespace smll {
 				triangles[TriangulationResult::IDXBUFF_HULL].push_back(i1);
 				triangles[TriangulationResult::IDXBUFF_HULL].push_back(i2);
 			}
-			else if ((b0 & trbt[TriangulationResult::IDXBUFF_BACKGROUND]).any() ||
-				(b1 & trbt[TriangulationResult::IDXBUFF_BACKGROUND]).any() ||
-				(b2 & trbt[TriangulationResult::IDXBUFF_BACKGROUND]).any()) {
+			else //if ((b0 & trbt[TriangulationResult::IDXBUFF_BACKGROUND]).any() ||
+				//(b1 & trbt[TriangulationResult::IDXBUFF_BACKGROUND]).any() ||
+				//(b2 & trbt[TriangulationResult::IDXBUFF_BACKGROUND]).any()) { 
+			{
 				triangles[TriangulationResult::IDXBUFF_BACKGROUND].push_back(i0);
 				triangles[TriangulationResult::IDXBUFF_BACKGROUND].push_back(i1);
 				triangles[TriangulationResult::IDXBUFF_BACKGROUND].push_back(i2);
@@ -654,8 +653,9 @@ namespace smll {
 		}
 
 		// Build index buffers
-		int xxx = result.buildLines ? 0 : 1;
-		for (int i = 0; i < TriangulationResult::NUM_INDEX_BUFFERS - xxx; i++) {
+		for (int i = 0; i < TriangulationResult::NUM_INDEX_BUFFERS; i++) {
+			if (i == TriangulationResult::IDXBUFF_LINES && !result.buildLines)
+				continue;
 			obs_enter_graphics();
 			result.indexBuffers[i] = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
 				(void*)triangles[i].data(), triangles[i].size(), 0);
