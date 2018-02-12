@@ -304,6 +304,11 @@ namespace smll {
 			return;
 		Face& face = m_faces[0];
 
+		// get angle of face pose
+		const cv::Mat& m = face.GetCVRotation();
+		double angle = sqrt(m.dot(m));
+		blog(LOG_DEBUG, "face angle : %f", (float)angle);
+
 		// save capture width and height
 		float width = (float)CaptureWidth();
 		float height = (float)CaptureHeight();
@@ -554,7 +559,17 @@ namespace smll {
 		//   the center
 		for (int i = 0; i < num_contours; i++) {
 			const FaceContour& fc = GetFaceContour(contours[i]);
-			for (int j = 0; j < fc.indices.size(); j++) {
+			int is = 0;
+			size_t ie = fc.indices.size();
+			int ip = 1;
+			if (fc.id == FACE_CONTOUR_HEAD) {
+				// don't include jaw points twice, step backwards
+				is = (int)fc.indices.size() - 2;
+				ie = 0;
+				ip = -1;
+			}
+
+			for (int j = is; j != ie; j += ip) {
 				// get points
 				const cv::Point2f&	p = points[fc.indices[j]];
 				const cv::Point2f&	wp = warpedpoints[fc.indices[j]];
@@ -581,7 +596,7 @@ namespace smll {
 
 		// subdivide
 		for (int i = 0; i < NUM_BORDER_POINT_DIVS; i++) {
-			//Subdivide(hullpoints);
+			Subdivide(hullpoints);
 		}
 	}
 
