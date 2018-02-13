@@ -156,6 +156,8 @@ private:
 	void	AddContourSelective(cv::Subdiv2D& subdiv, const FaceContour& fc,
 		const std::vector<cv::Point2f>& points,
 		const std::vector<cv::Point2f>& warpedpoints, std::map<int, int>& vtxMap, bool checkLeft=true);
+	void	AddContour(cv::Subdiv2D& subdiv, const FaceContour& fc,	const std::vector<cv::Point2f>& points,
+		std::map<int, int>& vtxMap);
 };
 
 

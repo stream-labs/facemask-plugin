@@ -494,22 +494,53 @@ namespace smll {
 
 		bool turnedLeft = warpedpoints[NOSE_4].x < warpedpoints[NOSE_1].x;
 
-		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_EYEBROW_LEFT), points, warpedpoints, vtxMap, true);
-		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_EYE_LEFT_TOP), points, warpedpoints, vtxMap, true);
-		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_EYE_LEFT_BOTTOM), points, warpedpoints, vtxMap, true);
-		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_EYE_LEFT_BOTTOM), points, warpedpoints, vtxMap, true);
-		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_MOUTH_OUTER_TOP_LEFT), points, warpedpoints, vtxMap, true);
+		if (turnedLeft) {
+			AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_EYEBROW_LEFT), points, warpedpoints, vtxMap, true);
+			AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_EYE_LEFT_TOP), points, warpedpoints, vtxMap, true);
+			AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_EYE_LEFT_BOTTOM), points, warpedpoints, vtxMap, true);
+			AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_EYE_LEFT_BOTTOM), points, warpedpoints, vtxMap, true);
+			AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_MOUTH_OUTER_TOP_LEFT), points, warpedpoints, vtxMap, true);
 
-		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_EYEBROW_RIGHT), points, warpedpoints, vtxMap, false);
-		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_EYE_RIGHT_TOP), points, warpedpoints, vtxMap, false);
-		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_EYE_RIGHT_BOTTOM), points, warpedpoints, vtxMap, false);
-		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_EYE_RIGHT_BOTTOM), points, warpedpoints, vtxMap, false);
-		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_MOUTH_OUTER_TOP_RIGHT), points, warpedpoints, vtxMap, false);
+			AddContour(subdiv, GetFaceContour(FACE_CONTOUR_EYEBROW_RIGHT), points, vtxMap);
+			AddContour(subdiv, GetFaceContour(FACE_CONTOUR_EYE_RIGHT_TOP), points, vtxMap);
+			AddContour(subdiv, GetFaceContour(FACE_CONTOUR_EYE_RIGHT_BOTTOM), points, vtxMap);
+			AddContour(subdiv, GetFaceContour(FACE_CONTOUR_EYE_RIGHT_BOTTOM), points, vtxMap);
+			AddContour(subdiv, GetFaceContour(FACE_CONTOUR_MOUTH_OUTER_TOP_RIGHT), points, vtxMap);
+		}
+		else {
+			AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_EYEBROW_RIGHT), points, warpedpoints, vtxMap, false);
+			AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_EYE_RIGHT_TOP), points, warpedpoints, vtxMap, false);
+			AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_EYE_RIGHT_BOTTOM), points, warpedpoints, vtxMap, false);
+			AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_EYE_RIGHT_BOTTOM), points, warpedpoints, vtxMap, false);
+			AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_MOUTH_OUTER_TOP_RIGHT), points, warpedpoints, vtxMap, false);
+
+			AddContour(subdiv, GetFaceContour(FACE_CONTOUR_EYEBROW_LEFT), points, vtxMap);
+			AddContour(subdiv, GetFaceContour(FACE_CONTOUR_EYE_LEFT_TOP), points, vtxMap);
+			AddContour(subdiv, GetFaceContour(FACE_CONTOUR_EYE_LEFT_BOTTOM), points, vtxMap);
+			AddContour(subdiv, GetFaceContour(FACE_CONTOUR_EYE_LEFT_BOTTOM), points, vtxMap);
+			AddContour(subdiv, GetFaceContour(FACE_CONTOUR_MOUTH_OUTER_TOP_LEFT), points, vtxMap);
+		}
 
 		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_NOSE_BRIDGE), points, warpedpoints, vtxMap, turnedLeft);
 		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_NOSE_BOTTOM), points, warpedpoints, vtxMap, turnedLeft);
 		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_MOUTH_OUTER_BOTTOM), points, warpedpoints, vtxMap, turnedLeft);
 	}
+
+	void FaceDetector::AddContour(cv::Subdiv2D& subdiv, const FaceContour& fc, const std::vector<cv::Point2f>& points,
+		std::map<int, int>& vtxMap) {
+
+		// add points 
+		for (int i = 0; i < fc.indices.size(); i++) {
+			int vid = subdiv.insert(points[fc.indices[i]]);
+			vtxMap[vid] = fc.indices[i];
+		}
+		int smoothidx = fc.smooth_points_index;
+		for (int i = 0; i < fc.num_smooth_points; i++, smoothidx++) {
+			int vid = subdiv.insert(points[smoothidx]);
+			vtxMap[vid] = smoothidx;
+		}
+	}
+
 
 	void FaceDetector::AddContourSelective(cv::Subdiv2D& subdiv, const FaceContour& fc,
 		const std::vector<cv::Point2f>& points,
