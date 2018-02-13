@@ -101,7 +101,7 @@ static const int NUM_DRAW_BUCKETS = 1024;
 static const float BUCKETS_MAX_Z = 10.0f;
 static const float BUCKETS_MIN_Z = -100.0f;
 
-Mask::MaskData::MaskData() : m_data(nullptr) {
+Mask::MaskData::MaskData() : m_data(nullptr), m_morph(nullptr) {
 	m_drawBuckets = new Mask::SortedDrawObject*[NUM_DRAW_BUCKETS];
 	ClearSortedDrawObjects();
 }
@@ -118,6 +118,7 @@ void Mask::MaskData::Clear() {
 		obs_data_release(m_data);
 		m_data = nullptr;
 	}
+	m_morph = nullptr;
 }
 
 void Mask::MaskData::Load(const std::string& file) {
@@ -513,11 +514,11 @@ std::shared_ptr<Mask::Part> Mask::MaskData::LoadPart(std::string name, obs_data_
 	return current;
 }
 
-std::shared_ptr<Mask::Resource::Morph> Mask::MaskData::GetMorph() {
+Mask::Resource::Morph* Mask::MaskData::GetMorph() {
 	// cache the morph pointer so we dont constantly search for it
 	if (m_morph == nullptr) {
 		m_morph = std::dynamic_pointer_cast<Mask::Resource::Morph>
-			(GetResource(Mask::Resource::Type::Morph));
+			(GetResource(Mask::Resource::Type::Morph)).get();
 	}
 	return m_morph;
 }

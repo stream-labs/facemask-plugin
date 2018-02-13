@@ -109,7 +109,7 @@ namespace Mask {
 		void ClearSortedDrawObjects();
 		void AddSortedDrawObject(SortedDrawObject* obj);
 
-		std::shared_ptr<Resource::Morph> GetMorph();
+		Resource::Morph*	 GetMorph();
 		bool RenderMorphVideo(gs_texture* vidtex, uint32_t width, uint32_t height,
 			const smll::TriangulationResult& trires);
 
@@ -132,6 +132,6 @@ namespace Mask {
 		obs_data_t* m_data;
 		std::shared_ptr<Mask::Part> m_partWorld;
 		SortedDrawObject**	m_drawBuckets;
-		std::shared_ptr<Resource::Morph>	m_morph;
+		Resource::Morph*	m_morph;
 	};
 }

@@ -497,7 +497,7 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 			mdat->Tick(timeDelta);
 
 			// ask mask for a morph resource
-			std::shared_ptr<Mask::Resource::Morph> morph = mdat->GetMorph();
+			Mask::Resource::Morph* morph = mdat->GetMorph();
 
 			// (possibly) update morph buffer
 			std::unique_lock<std::mutex> morphlock(detection.morphs[midx].mutex, std::try_to_lock);
@@ -722,7 +722,19 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	}
 
 	// Draw the source video
-	mdat->RenderMorphVideo(vidTex, m_baseWidth, m_baseHeight, triangulation);
+	if (mdat) {
+		mdat->RenderMorphVideo(vidTex, m_baseWidth, m_baseHeight, triangulation);
+	} 
+	else {
+		// Draw the source video
+		gs_enable_depth_test(false);
+		gs_set_cull_mode(GS_NEITHER);
+		while (gs_effect_loop(defaultEffect, "Draw")) {
+			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+				"image"), vidTex);
+			gs_draw_sprite(vidTex, 0, m_baseWidth, m_baseHeight);
+		}
+	}
 
 	// draw face detection data
 	if (drawFaces)
