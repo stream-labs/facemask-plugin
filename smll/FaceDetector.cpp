@@ -630,7 +630,7 @@ namespace smll {
 			const LandmarkBitmask& b1 = m_vtxBitmaskLookup[i1];
 			const LandmarkBitmask& b2 = m_vtxBitmaskLookup[i2];
 			
-			LandmarkBitmask bgmask = TriangulationResult::GetBitmasks()[TriangulationResult::IDXBUFF_BACKGROUND];
+			//LandmarkBitmask bgmask = TriangulationResult::GetBitmasks()[TriangulationResult::IDXBUFF_BACKGROUND];
 			LandmarkBitmask hullmask = TriangulationResult::GetBitmasks()[TriangulationResult::IDXBUFF_HULL];
 			LandmarkBitmask facemask = TriangulationResult::GetBitmasks()[TriangulationResult::IDXBUFF_FACE];
 			LandmarkBitmask leyemask = GetFaceArea(FACE_AREA_EYE_LEFT).bitmask;
@@ -638,8 +638,19 @@ namespace smll {
 			LandmarkBitmask mouthmask = GetFaceArea(FACE_AREA_MOUTH_LIPS_TOP).bitmask |
 				GetFaceArea(FACE_AREA_MOUTH_LIPS_BOTTOM).bitmask;
 
-			// check against areas 
-			if (((b0 & leyemask).any() && (b1 & leyemask).any() && (b2 & leyemask).any())||
+			// one freakin' triangle! We think this is part of the mouth unless
+			// we consider this one triangle made entirely of mouth points, but STILL
+			// is part of the face.
+			LandmarkBitmask facemask2;
+			facemask2.set(MOUTH_OUTER_3);
+			facemask2.set(MOUTH_OUTER_4);
+			facemask2.set(MOUTH_OUTER_5);
+
+			// remove eyes and mouth, except for the special triangle
+			if ((b0 & facemask2).any() &&
+				(b1 & facemask2).any() &&
+				(b2 & facemask2).any()) {} // do nothing
+			else if (((b0 & leyemask).any() && (b1 & leyemask).any() && (b2 & leyemask).any())||
 				((b0 & reyemask).any() && (b1 & reyemask).any() && (b2 & reyemask).any()) ||
 				((b0 & mouthmask).any() && (b1 & mouthmask).any() && (b2 & mouthmask).any()))
 			{
@@ -671,9 +682,9 @@ namespace smll {
 				triangles[TriangulationResult::IDXBUFF_HULL].push_back(i1);
 				triangles[TriangulationResult::IDXBUFF_HULL].push_back(i2);
 			}
-			else if ((b0 & bgmask).any() ||
+			else /*if ((b0 & bgmask).any() ||
 				(b1 & bgmask).any() ||
-				(b2 & bgmask).any()) { 
+				(b2 & bgmask).any())*/ { 
 				triangles[TriangulationResult::IDXBUFF_BACKGROUND].push_back(i0);
 				triangles[TriangulationResult::IDXBUFF_BACKGROUND].push_back(i1);
 				triangles[TriangulationResult::IDXBUFF_BACKGROUND].push_back(i2);

@@ -27,11 +27,11 @@
 // ALIGNED : macro to align a memory address to 16b boundary
 #define ALIGNED(XXX) (((size_t)(XXX) & 0xF) ? (((size_t)(XXX) + 0x10) & 0xFFFFFFFFFFFFFFF0ULL) : (size_t)(XXX))
 
-#define MAKE32COLOR(a,b,g,r) \
-((((uint32_t)(r) << 24) & 0xFF000000) |\
- (((uint32_t)(g) << 16) & 0x00FF0000) |\
- (((uint32_t)(b) << 8)  & 0x0000FF00) |\
- (((uint32_t)(a) << 0)  & 0x000000FF))
+#define MAKE32COLOR(r,g,b,a) \
+((((uint32_t)(a) << 24) & 0xFF000000) |\
+ (((uint32_t)(b) << 16) & 0x00FF0000) |\
+ (((uint32_t)(g) << 8)  & 0x0000FF00) |\
+ (((uint32_t)(r) << 0)  & 0x000000FF))
 
 
 namespace Utils {

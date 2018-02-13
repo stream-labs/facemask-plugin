@@ -160,56 +160,76 @@ void Mask::Resource::Morph::RenderMorphVideo(gs_texture* vidtex,
 
 	// Effects
 	gs_effect_t* defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
+	gs_effect_t* solidEffect = obs_get_base_effect(OBS_EFFECT_SOLID);
+	gs_eparam_t* solidcolor = gs_effect_get_param_by_name(solidEffect, "color");
 
-	{
-		gs_effect_t    *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
-		gs_eparam_t    *color = gs_effect_get_param_by_name(solid, "color");
-		struct vec4 veccol;
-		vec4_from_rgba(&veccol, MAKE32COLOR(128, 128, 128, 255));
-		gs_effect_set_vec4(color, &veccol);
-		while (gs_effect_loop(solid, "Solid")) {
-			gs_draw_sprite(vidtex, 0, 1920, 1080);
-		}
-	}
-
+	struct vec4 veccol;
 
 	// Draw the source video
 	gs_enable_depth_test(false);
 	gs_set_cull_mode(GS_NEITHER);
-	while (gs_effect_loop(defaultEffect, "Draw")) {
-		gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+//	while (gs_effect_loop(defaultEffect, "Draw")) {
+	while (gs_effect_loop(solidEffect, "Solid")) {
+			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
 			"image"), vidtex); 
 			gs_load_vertexbuffer(trires.vertexBuffer);
-			//gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_BACKGROUND]);
-			//gs_draw(GS_TRIS, 0, 0);
-			//gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_HULL]);
-			//gs_draw(GS_TRIS, 0, 0);
-			//gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_FACE]);
-			//gs_draw(GS_TRIS, 0, 0);
 
+			// bg
+			vec4_from_rgba(&veccol, MAKE32COLOR(66, 134, 244, 255));
+			gs_effect_set_vec4(solidcolor, &veccol);
+			gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_BACKGROUND]);
+			gs_draw(GS_TRIS, 0, 0);
+
+			// hull
+			vec4_from_rgba(&veccol, MAKE32COLOR(41, 118, 242, 255));
+			gs_effect_set_vec4(solidcolor, &veccol);
+			gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_HULL]);
+			gs_draw(GS_TRIS, 0, 0);
+			
+			// face
+			vec4_from_rgba(&veccol, MAKE32COLOR(255, 220, 177, 255));
+			gs_effect_set_vec4(solidcolor, &veccol);
+			gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_FACE]);
+			gs_draw(GS_TRIS, 0, 0);
+
+			// eyes
+			vec4_from_rgba(&veccol, MAKE32COLOR(255, 255, 255, 255));
+			gs_effect_set_vec4(solidcolor, &veccol);
 			gs_load_indexbuffer(faceIndexBuffers[smll::FACE_AREA_EYE_LEFT]);
 			gs_draw(GS_TRIS, 0, 0);
 			gs_load_indexbuffer(faceIndexBuffers[smll::FACE_AREA_EYE_RIGHT]);
 			gs_draw(GS_TRIS, 0, 0);
+
+			// eyebrows & nose
+			vec4_from_rgba(&veccol, MAKE32COLOR(227, 161, 115, 255));
+			gs_effect_set_vec4(solidcolor, &veccol);
 			gs_load_indexbuffer(faceIndexBuffers[smll::FACE_AREA_BROW_LEFT]);
 			gs_draw(GS_TRIS, 0, 0);
 			gs_load_indexbuffer(faceIndexBuffers[smll::FACE_AREA_BROW_RIGHT]);
-			gs_draw(GS_TRIS, 0, 0);
+			gs_draw(GS_TRIS, 0, 0);			
 			gs_load_indexbuffer(faceIndexBuffers[smll::FACE_AREA_NOSE]);
 			gs_draw(GS_TRIS, 0, 0);
+
+			// lips
+			vec4_from_rgba(&veccol, MAKE32COLOR(255, 0, 0, 255));
+			gs_effect_set_vec4(solidcolor, &veccol);
 			gs_load_indexbuffer(faceIndexBuffers[smll::FACE_AREA_MOUTH_LIPS_TOP]);
 			gs_draw(GS_TRIS, 0, 0);
 			gs_load_indexbuffer(faceIndexBuffers[smll::FACE_AREA_MOUTH_LIPS_BOTTOM]);
 			gs_draw(GS_TRIS, 0, 0);
+
+			// mouth hole
+			vec4_from_rgba(&veccol, MAKE32COLOR(0, 0, 0, 255));
+			gs_effect_set_vec4(solidcolor, &veccol);
 			gs_load_indexbuffer(faceIndexBuffers[smll::FACE_AREA_MOUTH_HOLE]);
 			gs_draw(GS_TRIS, 0, 0);
+			
 	}
 
 	// draw lines
 	if (trires.indexBuffers[smll::TriangulationResult::IDXBUFF_LINES]) {
 		gs_effect_t    *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
 		gs_eparam_t    *color = gs_effect_get_param_by_name(solid, "color");
-		struct vec4 veccol;
 		vec4_from_rgba(&veccol, MAKE32COLOR(0, 255, 0, 200));
 		gs_effect_set_vec4(color, &veccol);
 		while (gs_effect_loop(solid, "Solid")) {
