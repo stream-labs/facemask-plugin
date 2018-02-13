@@ -218,8 +218,8 @@ namespace smll {
 				JAW_8, JAW_9, JAW_10,JAW_11, JAW_12, JAW_13, JAW_14,
 				JAW_15, JAW_16, JAW_17 }));
 			g_face_contours.push_back(FaceContour(FACE_CONTOUR_EYEBROW_LEFT, 
-			{ EYEBROW_LEFT_1, EYEBROW_LEFT_2, EYEBROW_LEFT_3, 
-				EYEBROW_LEFT_4, EYEBROW_LEFT_5 }));
+			{ EYEBROW_LEFT_5, EYEBROW_LEFT_4, EYEBROW_LEFT_3, 
+				EYEBROW_LEFT_2, EYEBROW_LEFT_1 }));
 			g_face_contours.push_back(FaceContour(FACE_CONTOUR_EYEBROW_RIGHT, 
 			{ EYEBROW_RIGHT_1, EYEBROW_RIGHT_2, EYEBROW_RIGHT_3, 
 				EYEBROW_RIGHT_4, EYEBROW_RIGHT_5 }));
@@ -228,9 +228,9 @@ namespace smll {
 			g_face_contours.push_back(FaceContour(FACE_CONTOUR_NOSE_BOTTOM, 
 			{ NOSE_5, NOSE_6, NOSE_7, NOSE_8, NOSE_9 }));
 			g_face_contours.push_back(FaceContour(FACE_CONTOUR_EYE_LEFT_TOP, 
-			{ EYE_LEFT_1, EYE_LEFT_2, EYE_LEFT_3, EYE_LEFT_4 }));
+			{ EYE_LEFT_4, EYE_LEFT_3, EYE_LEFT_2, EYE_LEFT_1 }));
 			g_face_contours.push_back(FaceContour(FACE_CONTOUR_EYE_LEFT_BOTTOM, 
-			{ EYE_LEFT_1, EYE_LEFT_6, EYE_LEFT_5, EYE_LEFT_4 }));
+			{ EYE_LEFT_4, EYE_LEFT_5, EYE_LEFT_6, EYE_LEFT_1 }));
 			g_face_contours.push_back(FaceContour(FACE_CONTOUR_EYE_RIGHT_TOP,
 			{ EYE_RIGHT_1, EYE_RIGHT_2, EYE_RIGHT_3, EYE_RIGHT_4 }));
 			g_face_contours.push_back(FaceContour(FACE_CONTOUR_EYE_RIGHT_BOTTOM,

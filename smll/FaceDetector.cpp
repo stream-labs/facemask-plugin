@@ -308,7 +308,8 @@ namespace smll {
 		// get angle of face pose
 		//const cv::Mat& m = face.GetCVRotation();
 		//double angle = sqrt(m.dot(m));
-		//blog(LOG_DEBUG, "face angle : %f", (float)angle);
+		//blog(LOG_DEBUG, "face angle : %f   v : %f %f %f", (float)angle,
+		//	m.at<float>(0, 0), m.at<float>(1, 0), m.at<float>(2, 0) );
 
 		// save capture width and height
 		float width = (float)CaptureWidth();
@@ -406,9 +407,8 @@ namespace smll {
 		// Create Triangulation
 
 		// create the openCV Subdiv2D object
-		cv::Rect sdrect(0, 0, CaptureWidth() + 1, CaptureHeight() + 1);
-		cv::Rect rect(0, 0, CaptureWidth(), CaptureHeight());
-		cv::Subdiv2D subdiv(sdrect);
+		cv::Rect rect(0, 0, CaptureWidth() + 1, CaptureHeight() + 1);
+		cv::Subdiv2D subdiv(rect);
 
 		// add our points to subdiv2d
 		// save a map: subdiv2d vtx id -> index into our points
@@ -419,18 +419,22 @@ namespace smll {
 		for (int i = 0; i < points.size(); i++) {
 			cv::Point2f& p = points[i];
 			// only add points belonging to face, hull, border
-			if (i >= nsmooth ||
-				((m_vtxBitmaskLookup[i] & facebm).any()) && rect.contains(p)) {
+			if ((i >= nsmooth || (m_vtxBitmaskLookup[i] & facebm).any())
+				&& rect.contains(p)) {
 				// note: this crashes if you insert a point outside the rect.
 				try {
 					int vid = subdiv.insert(p);
 					vtxMap[vid] = i;
 				}
 				catch (const std::exception& e) {
-					blog(LOG_DEBUG,"[FaceMask] ***** CAUGHT EXCEPTION CV::SUBDIV2D: %s", e.what());
+					blog(LOG_DEBUG, "[FaceMask] ***** CAUGHT EXCEPTION CV::SUBDIV2D: %s", e.what());
+					blog(LOG_DEBUG, "[FaceMask] ***** whilst adding point %d at (%f,%f)", i, p.x, p.y);
 				}
 			}
 		}
+
+		// TODO: selectively add eyebrows & nose points
+		AddSelectivePoints(subdiv, points, warpedpoints, vtxMap);
 
 		// get triangulation
 		std::vector<cv::Vec3i>	triangleList;
@@ -478,6 +482,68 @@ namespace smll {
 		MakeAreaIndices(result, triangleList);
 	}
 
+
+	void FaceDetector::AddSelectivePoints(cv::Subdiv2D& subdiv, 
+		const std::vector<cv::Point2f>& points,
+		const std::vector<cv::Point2f>& warpedpoints, std::map<int, int>& vtxMap) {
+
+		std::array<int, 8> lhead_points = { HEAD_5, HEAD_4, HEAD_3, HEAD_2, HEAD_1,	JAW_1, JAW_2, JAW_3 };
+
+		const FaceContour& fc_lbrow = GetFaceContour(FACE_CONTOUR_EYEBROW_LEFT);
+
+		// find min/max y of eyebrow points
+		float miny = warpedpoints[fc_lbrow.indices[0]].y;
+		float maxy = warpedpoints[fc_lbrow.indices[0]].y;
+		for (int i = 1; i < fc_lbrow.indices.size(); i++) {
+			if (warpedpoints[fc_lbrow.indices[i]].y < miny)
+				miny = warpedpoints[fc_lbrow.indices[i]].y;
+			if (warpedpoints[fc_lbrow.indices[i]].y > maxy)
+				maxy = warpedpoints[fc_lbrow.indices[i]].y;
+		}
+
+		// find hi/low points on sides of face
+		int lop = 0;
+		int hip = (int)lhead_points.size() - 1;
+		for (int i = 0; i < lhead_points.size(); i++) {
+			if (warpedpoints[lhead_points[i]].y < miny)
+				lop = i;
+			else
+				break;
+		}
+		for (int i = (int)lhead_points.size() - 1; i >= 0; i--) {
+			if (warpedpoints[lhead_points[i]].y > maxy)
+				hip = i;
+			else
+				break;
+		}
+		
+		// vector from hi/low points
+		const cv::Point2f& hi = warpedpoints[lhead_points[hip]];
+		const cv::Point2f& lo = warpedpoints[lhead_points[lop]];
+
+		// add points if they are inside the outside line
+		for (int i = 0; i < fc_lbrow.indices.size(); i++) {
+			const cv::Point2f& p1 = warpedpoints[fc_lbrow.indices[i]];
+			float d = (p1.x - lo.x) * (hi.y - lo.y) - (p1.y - lo.y) * (hi.x - lo.x);
+			if (d > 0.0f) {
+				int vid = subdiv.insert(points[fc_lbrow.indices[i]]);
+				vtxMap[vid] = fc_lbrow.indices[i];
+			}
+			else
+				break;
+		}
+		int smoothidx = fc_lbrow.smooth_points_index;
+		for (int i = 0; i < fc_lbrow.num_smooth_points; i++, smoothidx++) {
+			const cv::Point2f& p1 = warpedpoints[smoothidx];
+			float d = (p1.x - lo.x) * (hi.y - lo.y) - (p1.y - lo.y) * (hi.x - lo.x);
+			if (d > 0.0f) {
+				int vid = subdiv.insert(points[smoothidx]);
+				vtxMap[vid] = smoothidx;
+			}
+			else
+				break;
+		}
+	}
 
 	void FaceDetector::AddHeadPoints(std::vector<cv::Point2f>& points, const Face& face) {
 

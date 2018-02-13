@@ -191,7 +191,7 @@ void Mask::Resource::Morph::RenderMorphVideo(gs_texture* vidtex,
 			gs_effect_set_vec4(solidcolor, &veccol);
 			gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_FACE]);
 			gs_draw(GS_TRIS, 0, 0);
-
+			/*
 			// eyes
 			vec4_from_rgba(&veccol, MAKE32COLOR(255, 255, 255, 255));
 			gs_effect_set_vec4(solidcolor, &veccol);
@@ -223,7 +223,7 @@ void Mask::Resource::Morph::RenderMorphVideo(gs_texture* vidtex,
 			gs_effect_set_vec4(solidcolor, &veccol);
 			gs_load_indexbuffer(faceIndexBuffers[smll::FACE_AREA_MOUTH_HOLE]);
 			gs_draw(GS_TRIS, 0, 0);
-			
+			*/
 	}
 
 	// draw lines

@@ -151,6 +151,8 @@ private:
 	void	MakeAreaIndices(TriangulationResult& result,
 		const std::vector<cv::Vec3i>& triangles);
 	void	AddHeadPoints(std::vector<cv::Point2f>& points, const Face& face);
+	void    AddSelectivePoints(cv::Subdiv2D& subdiv, const std::vector<cv::Point2f>& points,
+		const std::vector<cv::Point2f>& warpedpoints, std::map<int, int>& vtxMap);
 };
 
 

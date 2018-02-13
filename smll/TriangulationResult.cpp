@@ -87,6 +87,11 @@ namespace smll {
 			bitmasks[IDXBUFF_FACE].set(MOUTH_OUTER_10);
 			bitmasks[IDXBUFF_FACE].set(MOUTH_OUTER_11);
 			bitmasks[IDXBUFF_FACE].set(MOUTH_OUTER_12);
+			bitmasks[IDXBUFF_FACE].set(EYEBROW_LEFT_1);
+			bitmasks[IDXBUFF_FACE].set(EYEBROW_LEFT_2);
+			bitmasks[IDXBUFF_FACE].set(EYEBROW_LEFT_3);
+			bitmasks[IDXBUFF_FACE].set(EYEBROW_LEFT_4);
+			bitmasks[IDXBUFF_FACE].set(EYEBROW_LEFT_5);
 
 			bitmasks[IDXBUFF_HULL].set(JAW_1);
 			bitmasks[IDXBUFF_HULL].set(JAW_2);
