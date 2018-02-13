@@ -306,10 +306,9 @@ namespace smll {
 		Face& face = m_faces[0];
 
 		// get angle of face pose
-		//const cv::Mat& m = face.GetCVRotation();
-		//double angle = sqrt(m.dot(m));
-		//blog(LOG_DEBUG, "face angle : %f   v : %f %f %f", (float)angle,
-		//	m.at<float>(0, 0), m.at<float>(1, 0), m.at<float>(2, 0) );
+		const cv::Mat& m = face.GetCVRotation();
+		double angle = sqrt(m.dot(m));
+		bool faceDeadOn = (angle < 0.1f);
 
 		// save capture width and height
 		float width = (float)CaptureWidth();
@@ -415,7 +414,11 @@ namespace smll {
 		std::map<int, int> vtxMap;
 		size_t nsmooth = GetFaceContour(FACE_CONTOUR_LAST).smooth_points_index +
 			GetFaceContour(FACE_CONTOUR_LAST).num_smooth_points;
-		const LandmarkBitmask& facebm = TriangulationResult::GetBitmasks()[TriangulationResult::IDXBUFF_FACE];
+		LandmarkBitmask facebm = TriangulationResult::GetBitmasks()[TriangulationResult::IDXBUFF_FACE];
+		if (faceDeadOn) {
+			// don't bother doing boundary checks if face is dead-on
+			facebm = facebm | TriangulationResult::GetBitmasks()[TriangulationResult::IDXBUFF_LINES];
+		}
 		for (int i = 0; i < points.size(); i++) {
 			cv::Point2f& p = points[i];
 			// only add points belonging to face, hull, border
@@ -433,8 +436,10 @@ namespace smll {
 			}
 		}
 
-		// TODO: selectively add eyebrows & nose points
-		AddSelectivePoints(subdiv, points, warpedpoints, vtxMap);
+		// selectively add eyebrows & nose points
+		if (!faceDeadOn) {
+			AddSelectivePoints(subdiv, points, warpedpoints, vtxMap);
+		}
 
 		// get triangulation
 		std::vector<cv::Vec3i>	triangleList;
@@ -483,60 +488,93 @@ namespace smll {
 	}
 
 
-	void FaceDetector::AddSelectivePoints(cv::Subdiv2D& subdiv, 
+	void FaceDetector::AddSelectivePoints(cv::Subdiv2D& subdiv,
 		const std::vector<cv::Point2f>& points,
 		const std::vector<cv::Point2f>& warpedpoints, std::map<int, int>& vtxMap) {
 
-		std::array<int, 8> lhead_points = { HEAD_5, HEAD_4, HEAD_3, HEAD_2, HEAD_1,	JAW_1, JAW_2, JAW_3 };
+		bool turnedLeft = warpedpoints[NOSE_4].x < warpedpoints[NOSE_1].x;
 
-		const FaceContour& fc_lbrow = GetFaceContour(FACE_CONTOUR_EYEBROW_LEFT);
+		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_EYEBROW_LEFT), points, warpedpoints, vtxMap, true);
+		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_EYE_LEFT_TOP), points, warpedpoints, vtxMap, true);
+		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_EYE_LEFT_BOTTOM), points, warpedpoints, vtxMap, true);
+		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_EYE_LEFT_BOTTOM), points, warpedpoints, vtxMap, true);
+		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_MOUTH_OUTER_TOP_LEFT), points, warpedpoints, vtxMap, true);
 
-		// find min/max y of eyebrow points
-		float miny = warpedpoints[fc_lbrow.indices[0]].y;
-		float maxy = warpedpoints[fc_lbrow.indices[0]].y;
-		for (int i = 1; i < fc_lbrow.indices.size(); i++) {
-			if (warpedpoints[fc_lbrow.indices[i]].y < miny)
-				miny = warpedpoints[fc_lbrow.indices[i]].y;
-			if (warpedpoints[fc_lbrow.indices[i]].y > maxy)
-				maxy = warpedpoints[fc_lbrow.indices[i]].y;
+		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_EYEBROW_RIGHT), points, warpedpoints, vtxMap, false);
+		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_EYE_RIGHT_TOP), points, warpedpoints, vtxMap, false);
+		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_EYE_RIGHT_BOTTOM), points, warpedpoints, vtxMap, false);
+		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_EYE_RIGHT_BOTTOM), points, warpedpoints, vtxMap, false);
+		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_MOUTH_OUTER_TOP_RIGHT), points, warpedpoints, vtxMap, false);
+
+		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_NOSE_BRIDGE), points, warpedpoints, vtxMap, turnedLeft);
+		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_NOSE_BOTTOM), points, warpedpoints, vtxMap, turnedLeft);
+		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_MOUTH_OUTER_BOTTOM), points, warpedpoints, vtxMap, turnedLeft);
+	}
+
+	void FaceDetector::AddContourSelective(cv::Subdiv2D& subdiv, const FaceContour& fc,
+		const std::vector<cv::Point2f>& points,
+		const std::vector<cv::Point2f>& warpedpoints, std::map<int, int>& vtxMap, 
+		bool checkLeft) {
+
+		std::array<int, 15> lhead_points = { HEAD_6, HEAD_5, HEAD_4, HEAD_3, HEAD_2, 
+			HEAD_1, JAW_1, JAW_2, JAW_3, JAW_4, JAW_5, JAW_6, JAW_7, JAW_8, JAW_9};
+		std::array<int, 15> rhead_points = { HEAD_6, HEAD_7, HEAD_8, HEAD_9, HEAD_10, 
+			HEAD_11, JAW_17, JAW_16, JAW_15, JAW_14, JAW_13, JAW_12, JAW_11, JAW_10,
+			JAW_9};
+
+
+		// find min/max y of contour points
+		float miny = warpedpoints[fc.indices[0]].y;
+		float maxy = warpedpoints[fc.indices[0]].y;
+		for (int i = 1; i < fc.indices.size(); i++) {
+			const cv::Point2f& p = warpedpoints[fc.indices[i]];
+			if (p.y < miny)
+				miny = p.y;
+			if (p.y > maxy)
+				maxy = p.y;
 		}
 
 		// find hi/low points on sides of face
+		std::array<int, 15>& headpoints = checkLeft ? lhead_points : rhead_points;
 		int lop = 0;
-		int hip = (int)lhead_points.size() - 1;
-		for (int i = 0; i < lhead_points.size(); i++) {
-			if (warpedpoints[lhead_points[i]].y < miny)
+		int hip = (int)headpoints.size() - 1;
+		for (int i = 1; i < headpoints.size(); i++) {
+			if (warpedpoints[headpoints[i]].y < miny)
 				lop = i;
 			else
 				break;
 		}
-		for (int i = (int)lhead_points.size() - 1; i >= 0; i--) {
-			if (warpedpoints[lhead_points[i]].y > maxy)
+		for (int i = (int)headpoints.size() - 2; i >= 0; i--) {
+			if (warpedpoints[headpoints[i]].y > maxy)
 				hip = i;
 			else
 				break;
 		}
-		
-		// vector from hi/low points
-		const cv::Point2f& hi = warpedpoints[lhead_points[hip]];
-		const cv::Point2f& lo = warpedpoints[lhead_points[lop]];
+
+		// hi low points
+		const cv::Point2f& hi = warpedpoints[headpoints[hip]];
+		const cv::Point2f& lo = warpedpoints[headpoints[lop]];
+
+		float m = 1.0f;
+		if (!checkLeft)
+			m = -1.0f;
 
 		// add points if they are inside the outside line
-		for (int i = 0; i < fc_lbrow.indices.size(); i++) {
-			const cv::Point2f& p1 = warpedpoints[fc_lbrow.indices[i]];
-			float d = (p1.x - lo.x) * (hi.y - lo.y) - (p1.y - lo.y) * (hi.x - lo.x);
-			if (d > 0.0f) {
-				int vid = subdiv.insert(points[fc_lbrow.indices[i]]);
-				vtxMap[vid] = fc_lbrow.indices[i];
+		for (int i = 0; i < fc.indices.size(); i++) {
+			const cv::Point2f& p1 = warpedpoints[fc.indices[i]];
+			float d = m * ((p1.x - lo.x) * (hi.y - lo.y) - (p1.y - lo.y) * (hi.x - lo.x));
+			if (d > 10.0f) {
+				int vid = subdiv.insert(points[fc.indices[i]]);
+				vtxMap[vid] = fc.indices[i];
 			}
 			else
 				break;
 		}
-		int smoothidx = fc_lbrow.smooth_points_index;
-		for (int i = 0; i < fc_lbrow.num_smooth_points; i++, smoothidx++) {
+		int smoothidx = fc.smooth_points_index;
+		for (int i = 0; i < fc.num_smooth_points; i++, smoothidx++) {
 			const cv::Point2f& p1 = warpedpoints[smoothidx];
-			float d = (p1.x - lo.x) * (hi.y - lo.y) - (p1.y - lo.y) * (hi.x - lo.x);
-			if (d > 0.0f) {
+			float d = m * ((p1.x - lo.x) * (hi.y - lo.y) - (p1.y - lo.y) * (hi.x - lo.x));
+			if (d > 10.0f) {
 				int vid = subdiv.insert(points[smoothidx]);
 				vtxMap[vid] = smoothidx;
 			}
@@ -544,6 +582,7 @@ namespace smll {
 				break;
 		}
 	}
+
 
 	void FaceDetector::AddHeadPoints(std::vector<cv::Point2f>& points, const Face& face) {
 
@@ -698,7 +737,8 @@ namespace smll {
 			
 			//LandmarkBitmask bgmask = TriangulationResult::GetBitmasks()[TriangulationResult::IDXBUFF_BACKGROUND];
 			LandmarkBitmask hullmask = TriangulationResult::GetBitmasks()[TriangulationResult::IDXBUFF_HULL];
-			LandmarkBitmask facemask = TriangulationResult::GetBitmasks()[TriangulationResult::IDXBUFF_FACE];
+			LandmarkBitmask facemask = TriangulationResult::GetBitmasks()[TriangulationResult::IDXBUFF_FACE] |
+				TriangulationResult::GetBitmasks()[TriangulationResult::IDXBUFF_LINES]; // include extra points here
 			LandmarkBitmask leyemask = GetFaceArea(FACE_AREA_EYE_LEFT).bitmask;
 			LandmarkBitmask reyemask = GetFaceArea(FACE_AREA_EYE_RIGHT).bitmask;
 			LandmarkBitmask mouthmask = GetFaceArea(FACE_AREA_MOUTH_LIPS_TOP).bitmask |
