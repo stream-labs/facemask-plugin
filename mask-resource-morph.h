@@ -20,13 +20,15 @@
 #pragma once
 #include "mask-resource.h"
 #include "mask-resource-animation.h"
-#include "landmarks.hpp"
+#include "smll/landmarks.hpp"
+#include "smll/TriangulationResult.hpp"
 #include "MorphData.hpp"
 #include <array>
 #include <string>
 extern "C" {
 #pragma warning( push )
 #pragma warning( disable: 4201 )
+#include <libobs/graphics/graphics.h>
 #include <libobs/graphics/vec3.h>
 #pragma warning( pop )
 }
@@ -47,6 +49,9 @@ namespace Mask {
 
 			const smll::MorphData&	GetMorphData() { return m_morphData; }
 
+			void RenderMorphVideo(gs_texture* vidtex, 
+				const smll::TriangulationResult& trires);
+
 			// IAnimatable
 			void SetAnimatableValue(float v,
 				Resource::AnimationChannelType act) override;
@@ -54,6 +59,9 @@ namespace Mask {
 		protected:
 
 			smll::MorphData		m_morphData;
+
+			std::array<gs_indexbuffer_t*, smll::NUM_FACE_AREAS> faceIndexBuffers;
+			void	MakeFaceIndexBuffers();
 		};
 	}
 }

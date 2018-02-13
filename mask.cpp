@@ -527,50 +527,22 @@ bool Mask::MaskData::RenderMorphVideo(gs_texture* vidtex, uint32_t width, uint32
 
 	bool didMorph = false;
 
-	// Effects
-	gs_effect_t* defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
-
-	// Draw the source video
-	gs_enable_depth_test(false);
-	gs_set_cull_mode(GS_NEITHER);
-	while (gs_effect_loop(defaultEffect, "Draw")) {
-		gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
-			"image"), vidtex);
-		if (trires.vertexBuffer) {
-			gs_load_vertexbuffer(trires.vertexBuffer);
-			//gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_BACKGROUND]);
-			//gs_draw(GS_TRIS, 0, 0);
-			gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_HULL]);
-			gs_draw(GS_TRIS, 0, 0);
-			//gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_FACE]);
-			//gs_draw(GS_TRIS, 0, 0);
-			didMorph = true;
-		}
-		else {
-			gs_draw_sprite(vidtex, 0, width, height);
-		}
+	GetMorph();
+	if (m_morph && trires.vertexBuffer) {
+		didMorph = true;
+		m_morph->RenderMorphVideo(vidtex, trires);
 	}
+	else {
+		// Effects
+		gs_effect_t* defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
 
-	// draw lines
-	if (trires.vertexBuffer &&
-		trires.indexBuffers[smll::TriangulationResult::IDXBUFF_LINES]) {
-		gs_effect_t    *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
-		gs_eparam_t    *color = gs_effect_get_param_by_name(solid, "color");
-		struct vec4 veccol;
-		vec4_from_rgba(&veccol, MAKE32COLOR(0, 255, 0, 200));
-		gs_effect_set_vec4(color, &veccol);
-		while (gs_effect_loop(solid, "Solid")) {
-			gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_LINES]);
-			gs_load_vertexbuffer(trires.vertexBuffer);
-			gs_draw(GS_LINES, 0, 0);
-		}
-		// and points
-		vec4_from_rgba(&veccol, MAKE32COLOR(255, 0, 0, 200));
-		gs_effect_set_vec4(color, &veccol);
-		while (gs_effect_loop(solid, "Solid")) {
-			gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_LINES]);
-			gs_load_vertexbuffer(trires.vertexBuffer);
-			gs_draw(GS_POINTS, 0, 0);
+		// Draw the source video
+		gs_enable_depth_test(false);
+		gs_set_cull_mode(GS_NEITHER);
+		while (gs_effect_loop(defaultEffect, "Draw")) {
+			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+				"image"), vidtex);
+			gs_draw_sprite(vidtex, 0, width, height);
 		}
 	}
 

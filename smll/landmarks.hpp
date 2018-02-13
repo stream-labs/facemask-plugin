@@ -279,7 +279,6 @@ namespace smll {
 	// Access to contours
 	std::vector<FaceContour>&	GetFaceContours();
 	const FaceContour&			GetFaceContour(FaceContourID which);
-	FaceContourID				GetContourID(int vtx_index);
 
 
 	// Face Area ids
@@ -302,7 +301,7 @@ namespace smll {
 		FaceAreaID					id;
 		std::vector<int>			indices;
 		std::vector<FaceContourID>	contours;
-		std::vector<int>			mesh_indices;
+		std::vector<uint32_t>		mesh_indices;
 		LandmarkBitmask				bitmask;
 
 		FaceArea(FaceAreaID id, const std::vector<int>& indices, 

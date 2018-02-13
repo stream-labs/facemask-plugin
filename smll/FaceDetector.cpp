@@ -96,6 +96,7 @@ namespace smll {
 			destroy_threaded_memcpy_pool(m_memcpyEnv);
 	}
 
+
 	void FaceDetector::MakeVtxBitmaskLookup() {
 		if (m_vtxBitmaskLookup.size() == 0) {
 			for (int i = 0; i < NUM_MORPH_LANDMARKS; i++) {
@@ -305,9 +306,9 @@ namespace smll {
 		Face& face = m_faces[0];
 
 		// get angle of face pose
-		const cv::Mat& m = face.GetCVRotation();
-		double angle = sqrt(m.dot(m));
-		blog(LOG_DEBUG, "face angle : %f", (float)angle);
+		//const cv::Mat& m = face.GetCVRotation();
+		//double angle = sqrt(m.dot(m));
+		//blog(LOG_DEBUG, "face angle : %f", (float)angle);
 
 		// save capture width and height
 		float width = (float)CaptureWidth();
@@ -354,8 +355,7 @@ namespace smll {
 
 		// add smoothing points
 		for (int i = 0; i < NUM_FACE_CONTOURS; i++) {
-			FaceContourID fcid = (FaceContourID)i;
-			const FaceContour& fc = GetFaceContour(fcid);
+			const FaceContour& fc = GetFaceContour((FaceContourID)i);
 			// smooth em out
 			CatmullRomSmooth(points, fc.indices, NUM_SMOOTHING_STEPS);
 			CatmullRomSmooth(warpedpoints, fc.indices, NUM_SMOOTHING_STEPS);
