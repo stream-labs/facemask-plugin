@@ -46,7 +46,7 @@ static const char* const kSettingsDemoFolder = "demoFolder";
 static const char* const kSettingsDemoInterval = "demoInterval";
 static const char* const kSettingsDemoDelay = "demoDelay";
 
-
+static const char* const kSettingsPixomojo = "pixomojo";
 
 // setting descriptions
 static const char* const kSettingsDeactivatedDesc = "Deactivate the filter";
@@ -63,6 +63,10 @@ static const char* const kSettingsDemoModeDesc = "Demo Mode";
 static const char* const kSettingsDemoFolderDesc = "Demo Mode Folder";
 static const char* const kSettingsDemoIntervalDesc = "Demo Mode Interval (seconds)";
 static const char* const kSettingsDemoDelayDesc = "Demo Mode Delay Between Masks (seconds)";
+
+static const char* const kSettingsPixomojoDesc = "Get more face masks from pixomojo.com";
+
+
 
 static const char* const kSettingsEmpty = "";
 

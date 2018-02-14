@@ -43,10 +43,6 @@
 
 #define NUM_FRAMES_TO_LOSE_FACE			(30)
 
-// list of masks (public version only)
-std::string					g_maskDataFolder;
-std::vector<std::string>	g_maskFilenameList;
-
 
 
 static float FOVA(float aspect) {
@@ -81,14 +77,6 @@ Plugin::FaceMaskFilter::FaceMaskFilter() {
 	filter.video_render = Instance::video_render;
 
 	obs_register_source(&filter);
-
-	// Populate our list of masks
-	char* maskPath = obs_module_file(kFileDefaultJson); 
-	if (maskPath == nullptr)
-		return;
-	g_maskDataFolder = Utils::dirname(maskPath);
-	bfree(maskPath);
-	g_maskFilenameList = Utils::ListFolder(g_maskDataFolder, "*.json");
 }
 
 Plugin::FaceMaskFilter::~FaceMaskFilter() {
@@ -260,13 +248,9 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 
 	obs_data_set_default_bool(data, kSettingsDeactivated, false);
 
-#if defined(PUBLIC_RELEASE)
-	obs_data_set_default_int(data, P_MASK, 0);
-#else
 	char* jsonName = obs_module_file(kFileDefaultJson);
 	obs_data_set_default_string(data, P_MASK, jsonName);
 	bfree(jsonName);
-#endif
 
 	obs_data_set_default_bool(data, kSettingsDrawMask, true);
 	obs_data_set_default_bool(data, kSettingsDrawFaces, false);
@@ -284,22 +268,18 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 #endif
 }
 
+
+bool onPixomojo(obs_properties_t *props, obs_property_t *property, void *data) {
+	UNUSED_PARAMETER(props);
+	UNUSED_PARAMETER(property);
+	UNUSED_PARAMETER(data);
+	ShellExecute(0, 0, "http://www.pixomojo.com/", 0, 0, SW_SHOW);
+	return true;
+}
+
 obs_properties_t * Plugin::FaceMaskFilter::Instance::get_properties(void *ptr) {
 	obs_properties_t* props = obs_properties_create();
 	obs_property_t* p = nullptr;
-
-#if defined(PUBLIC_RELEASE)
-
-	// mask drop-down
-	p = obs_properties_add_list(props, P_MASK, P_TRANSLATE(P_MASK),
-		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
-	for (int i = 0; i < g_maskFilenameList.size(); i++) {
-		std::vector<std::string> ss = Utils::split(g_maskFilenameList[i], '.');
-		obs_property_list_add_int(p, ss[0].c_str(), i);
-	}
-	obs_property_set_modified_callback(p, properties_modified);
-
-#else
 
 	// Basic Properties
 	p = obs_properties_add_path(props, P_MASK, P_TRANSLATE(P_MASK), 
@@ -307,6 +287,11 @@ obs_properties_t * Plugin::FaceMaskFilter::Instance::get_properties(void *ptr) {
 		"Face Mask JSON (*.json)", nullptr);
 	obs_property_set_long_description(p, P_TRANSLATE(P_DESC(P_MASK)));
 	obs_property_set_modified_callback(p, properties_modified);
+
+#if defined(PUBLIC_RELEASE)
+	obs_properties_add_button(props, kSettingsPixomojo, kSettingsPixomojoDesc, onPixomojo);
+
+#else
 
 	// disable the plugin
 	obs_properties_add_bool(props, kSettingsDeactivated,
@@ -374,20 +359,6 @@ void Plugin::FaceMaskFilter::Instance::update(void *ptr, obs_data_t *data) {
 
 void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 
-#if defined(PUBLIC_RELEASE)
-	{
-		int maskNum = (int)obs_data_get_int(data, P_MASK);
-		std::unique_lock<std::mutex> lock(maskDataMutex, std::try_to_lock);
-		if (lock.owns_lock()) {
-			if (!maskJsonFilename)
-				maskJsonFilename = new char[1024];
-			snprintf(maskJsonFilename, 1024, "%s/%s", 
-				g_maskDataFolder.c_str(), g_maskFilenameList[maskNum].c_str());
-		}
-	}
-
-#else
-
 	{
 		std::unique_lock<std::mutex> lock(maskDataMutex, std::try_to_lock);
 		if (lock.owns_lock()) {
@@ -395,9 +366,9 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 		}
 	}
 
+#if !defined(PUBLIC_RELEASE)
 	// update advanced properties
 	smll::Config::singleton().update_properties(data);
-
 #endif
 
 	// disabled flag
