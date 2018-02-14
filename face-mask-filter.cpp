@@ -637,6 +637,9 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// ----- SEND FRAME TO FACE DETECTION THREAD -----
 
+	// Note: Yeah, I know, this is a big and gross section of code. I may
+	//       or may not clean it up some day.
+	//
 	bool frameSent = false;
 
 	// Get the index
@@ -701,6 +704,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 						detect.w = detectTex.width;
 						detect.h = detectTex.height;
 						detect.stride = linesize;
+						detect.type = smll::OBSRenderer::OBSToSMLL(gs_texture_get_color_format(detectTex.texture));
 						detect.data = new char[detect.getSize()];
 					}
 					threaded_memcpy(detect.data, data, detect.getSize(), m_memcpyEnv);
@@ -749,6 +753,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 						track.w = trackTex.width;
 						track.h = trackTex.height;
 						track.stride = linesize;
+						track.type = smll::OBSRenderer::OBSToSMLL(gs_texture_get_color_format(trackTex.texture));
 						track.data = new char[track.getSize()]; // luma image
 					}
 
