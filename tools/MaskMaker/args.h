@@ -21,7 +21,7 @@
 #include "utils.h"
 
 // Texture size limit (max in either w/h)
-#define TEXTURE_SIZE_LIMIT		(512)
+#define TEXTURE_SIZE_LIMIT		(256)
 
 using namespace std;
 

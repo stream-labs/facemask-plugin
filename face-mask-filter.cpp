@@ -252,7 +252,7 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	obs_data_set_default_string(data, P_MASK, jsonName);
 	bfree(jsonName);
 
-	obs_data_set_default_bool(data, kSettingsGreenscreen, true);
+	obs_data_set_default_bool(data, kSettingsGreenscreen, false);
 
 	obs_data_set_default_bool(data, kSettingsDrawMask, true);
 	obs_data_set_default_bool(data, kSettingsDrawFaces, false);
