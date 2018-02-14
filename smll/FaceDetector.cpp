@@ -62,10 +62,7 @@ namespace smll {
 
 	FaceDetector::FaceDetector(const char* predictorFilename)
 		: m_captureStage(nullptr)
-		, m_detectStage(nullptr)
-		, m_trackingStage(nullptr)
 		, m_stageSize(0)
-		, m_stageType(SFT_UNDEFINED)
 		, m_memcpyEnv(nullptr)
 		, m_timeout(0)
         , m_trackingTimeout(0)
@@ -82,16 +79,12 @@ namespace smll {
 
 	FaceDetector::~FaceDetector() {
 		obs_enter_graphics();
-		if (m_detectStage)
-			gs_stagesurface_destroy(m_detectStage);
-		if (m_trackingStage)
-			gs_stagesurface_destroy(m_trackingStage);
 		if (m_captureStage)
 			gs_stagesurface_destroy(m_captureStage);
 		obs_leave_graphics();
 
-		if (m_stageWrapper.data)
-			delete[] m_stageWrapper.data;
+		if (m_stageWork.data)
+			delete[] m_stageWork.data;
 		if (m_memcpyEnv)
 			destroy_threaded_memcpy_pool(m_memcpyEnv);
 	}
@@ -155,9 +148,7 @@ namespace smll {
 
 
 	void FaceDetector::DetectFaces(const OBSTexture& capture, 
-		const OBSTexture& detect, const OBSTexture& track) {
-		// nothing is staged
-		m_stageType = SFT_UNDEFINED;
+		const ImageWrapper& detect, const ImageWrapper& track) {
 
 		// paranoid
 		if (m_faces.length == 0)
@@ -939,39 +930,33 @@ namespace smll {
 	}
 
     void FaceDetector::DoFaceDetection() {
-		bool copyTex = Config::singleton().get_bool(
-			CONFIG_BOOL_MAKE_DETECT_COPY);
-		if (copyTex)
-			StageAndCopyTexture(SFT_DETECT);
-		else
-			StageTexture(SFT_DETECT);
 
-		int ww = (int)((float)m_stageWork.w * 
+		int ww = (int)((float)m_detect.w * 
 			Config::singleton().get_double(
 				CONFIG_DOUBLE_FACE_DETECT_CROP_WIDTH));
-		int hh = (int)((float)m_stageWork.h * 
+		int hh = (int)((float)m_detect.h * 
 			Config::singleton().get_double(
 				CONFIG_DOUBLE_FACE_DETECT_CROP_HEIGHT));
-		int xx = (int)((float)(m_stageWork.w / 2) * 
+		int xx = (int)((float)(m_detect.w / 2) * 
 			Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_X)) + 
-			(m_stageWork.w / 2);
-		int yy = (int)((float)(m_stageWork.h / 2) * 
+			(m_detect.w / 2);
+		int yy = (int)((float)(m_detect.h / 2) * 
 			Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_Y)) + 
-			(m_stageWork.h / 2);
+			(m_detect.h / 2);
 
 		// need to transform back to capture size
 		int offsetX = xx - (ww / 2);
 		int offsetY = yy - (hh / 2);
 		float scale = (float)m_capture.width / m_detect.width;
 
-		char* cropdata = m_stageWork.data +
-			(m_stageWork.getStride() * offsetY) +
-			(m_stageWork.getNumElems() * offsetX);
+		char* cropdata = m_detect.data +
+			(m_detect.getStride() * offsetY) +
+			(m_detect.getNumElems() * offsetX);
 
         // detect faces
 		// NOTE : WE ASSUME A LUMA IMAGE HERE
         dlib_image_wrapper<unsigned char> fdimg(cropdata, 
-			ww, hh, m_stageWork.getStride());
+			ww, hh, m_detect.getStride());
         std::vector<rectangle> faces = m_detector(fdimg);
 
 		// only consider the face detection results if:
@@ -1004,81 +989,66 @@ namespace smll {
             }
         }
 
-		if (!copyTex)
-			UnstageTexture(SFT_DETECT);
+		UnstageCaptureTexture();
     }
     
         
     void FaceDetector::StartObjectTracking() {
-		bool copyTex = Config::singleton().get_bool(CONFIG_BOOL_MAKE_TRACK_COPY);
-		if (copyTex)
-			StageAndCopyTexture(SFT_TRACK);
-		else
-			StageTexture(SFT_TRACK);
-
-		int ww = (int)((float)m_stageWork.w *
+		int ww = (int)((float)m_track.w *
 			Config::singleton().get_double(CONFIG_DOUBLE_TRACKING_CROP_WIDTH));
-		int hh = (int)((float)m_stageWork.h * 
+		int hh = (int)((float)m_track.h * 
 			Config::singleton().get_double(CONFIG_DOUBLE_TRACKING_CROP_HEIGHT));
-		int xx = (int)((float)(m_stageWork.w / 2) * 
+		int xx = (int)((float)(m_track.w / 2) * 
 			Config::singleton().get_double(CONFIG_DOUBLE_TRACKING_CROP_X)) +
-			(m_stageWork.w / 2);
-		int yy = (int)((float)(m_stageWork.h / 2) *
+			(m_track.w / 2);
+		int yy = (int)((float)(m_track.h / 2) *
 			Config::singleton().get_double(CONFIG_DOUBLE_TRACKING_CROP_Y)) + 
-			(m_stageWork.h / 2);
+			(m_track.h / 2);
 
 		// need to transform back to capture size
 		int offsetX = xx - (ww / 2);
 		int offsetY = yy - (hh / 2);
 		float scale = (float)m_capture.width / m_track.width;
 
-		char* cropdata = m_stageWork.data +
-			(m_stageWork.getStride() * offsetY) + (m_stageWork.getNumElems() * 
+		char* cropdata = m_track.data +
+			(m_track.getStride() * offsetY) + (m_track.getNumElems() * 
 				offsetX);
 
         // wrap up our image
         dlib_image_wrapper<unsigned char> trimg(cropdata, ww, hh, 
-			m_stageWork.getStride());
+			m_track.getStride());
         
         // copy rects into our faces, start tracking
         for (int i = 0; i < m_faces.length; ++i) {
             m_faces[i].StartTracking(trimg, scale, offsetX, offsetY);
         }
-
-		if (!copyTex)
-			UnstageTexture(SFT_TRACK);
 	}
     
     
     void FaceDetector::UpdateObjectTracking() {
-		bool copyTex = Config::singleton().get_bool(CONFIG_BOOL_MAKE_TRACK_COPY);
-		if (copyTex)
-			StageAndCopyTexture(SFT_TRACK);
-		else
-			StageTexture(SFT_TRACK);
 
-		int ww = (int)((float)m_stageWork.w * 
+		int ww = (int)((float)m_track.w * 
 			Config::singleton().get_double(CONFIG_DOUBLE_TRACKING_CROP_WIDTH));
-		int hh = (int)((float)m_stageWork.h *
+		int hh = (int)((float)m_track.h *
 			Config::singleton().get_double(CONFIG_DOUBLE_TRACKING_CROP_HEIGHT));
-		int xx = (int)((float)(m_stageWork.w / 2) * 
+		int xx = (int)((float)(m_track.w / 2) * 
 			Config::singleton().get_double(CONFIG_DOUBLE_TRACKING_CROP_X)) +
-			(m_stageWork.w / 2);
-		int yy = (int)((float)(m_stageWork.h / 2) * 
+			(m_track.w / 2);
+		int yy = (int)((float)(m_track.h / 2) * 
 			Config::singleton().get_double(CONFIG_DOUBLE_TRACKING_CROP_Y)) +
-			(m_stageWork.h / 2);
+			(m_track.h / 2);
 
 		// need to transform back to capture size
 		int offsetX = xx - (ww / 2);
 		int offsetY = yy - (hh / 2);
 
-		char* cropdata = m_stageWork.data +
-			(m_stageWork.getStride() * offsetY) +
-			(m_stageWork.getNumElems() * offsetX);
+		char* cropdata = m_track.data +
+			(m_track.getStride() * offsetY) +
+			(m_track.getNumElems() * offsetX);
 
 		// wrap up our image
         dlib_image_wrapper<unsigned char> trimg(cropdata, ww, hh,
-			m_stageWork.getStride());
+			m_track.getStride());
         
         for (int i = 0; i < m_faces.length; i++) {
             // time-slice face tracking (only track 1 face per frame)
@@ -1093,25 +1063,16 @@ namespace smll {
                 }
             }
         }
-
-		if (!copyTex) {
-			UnstageTexture(SFT_TRACK);
-		}
 	}
     
     
     void FaceDetector::DetectLandmarks()
     {
-		bool copyTex = Config::singleton().get_bool(
-			CONFIG_BOOL_MAKE_CAPTURE_COPY);
-		if (copyTex)
-			StageAndCopyTexture(SFT_CAPTURE);
 
 		if (Config::singleton().get_bool(CONFIG_BOOL_LANDMARKS_ENABLE)) {
 			// detect landmarks
 			for (int f = 0; f < m_faces.length; f++) {
-				if (!copyTex)
-					StageTexture(SFT_CAPTURE);
+				StageCaptureTexture();
 
 				// Detect features on full-size frame
 				full_object_detection d;
@@ -1140,8 +1101,7 @@ namespace smll {
 						"bad image type for face detection - handle better");
 				}
 
-				if (!copyTex)
-					UnstageTexture(SFT_CAPTURE);
+				UnstageCaptureTexture();
 
 				// Save the face
 				if (d.num_parts() != NUM_FACIAL_LANDMARKS)
@@ -1166,8 +1126,6 @@ namespace smll {
 		// get config vars
 		int pnpMethod = Config::singleton().get_int(
 			CONFIG_INT_SOLVEPNP_ALGORITHM);
-		bool copyTex = Config::singleton().get_bool(
-			CONFIG_BOOL_MAKE_CAPTURE_COPY);
 
 		// build set of model points to use for solving 3D pose
 		// note: we use these points because they move the least
@@ -1201,9 +1159,6 @@ namespace smll {
 				m_faces[i].ResetPose();
 			}
 
-			if (!copyTex)
-				StageTexture(SFT_CAPTURE);
-
 			// Solve for pose
 			if (pnpMethod == PNP_RANSAC) {
 				cv::solvePnPRansac(model_points, image_points,
@@ -1221,9 +1176,6 @@ namespace smll {
 			}
 			m_faces[i].m_poseInitialized = true;
 
-			if (!copyTex)
-				UnstageTexture(SFT_CAPTURE);
-
 			// check for solvePnp result flip
 			// - make sure it doesn't use these results for next iteration
 			bool flipped = (m_faces[i].m_cvTranslation.at<double>(2, 0) < 0.0);
@@ -1234,6 +1186,7 @@ namespace smll {
 		}
 	}
 
+	/*
 	void FaceDetector::StageAndCopyTexture(SourceFrameType sft) {
 		// for all the early returns coming up next
 		m_stageWork = m_stageWrapper;
@@ -1337,54 +1290,34 @@ namespace smll {
 		// unstage the surface and leave graphics context
 		gs_stagesurface_unmap(*stage);
 		obs_leave_graphics();
-	}
+	}*/
 
-	void FaceDetector::StageTexture(SourceFrameType sft) {
-		// get pointers to the right stage and texture objects
-		gs_stagesurf_t** __restrict stage = nullptr;
-		OBSTexture* __restrict tex = nullptr;
-		switch (sft) {
-		case SFT_CAPTURE:
-			stage = &m_captureStage;
-			tex = &m_capture;
-			break;
-		case SFT_DETECT:
-			stage = &m_detectStage;
-			tex = &m_detect;
-			break;
-		case SFT_TRACK:
-			stage = &m_trackingStage;
-			tex = &m_track;
-			break;
-		default:
-			return;
-		}
-
-		// enter graphics context - don't stay here long!
+	void FaceDetector::StageCaptureTexture() {
+		// stage texture and enter graphics context
 		obs_enter_graphics();
 
 		// need to stage the surface so we can read from it
 		// (re)alloc the stage surface if necessary
-		if (*stage == nullptr ||
-			(int)gs_stagesurface_get_width(*stage) != tex->width ||
-			(int)gs_stagesurface_get_height(*stage) != tex->height) {
-			if (*stage)
-				gs_stagesurface_destroy(*stage);
-			*stage = gs_stagesurface_create(tex->width, tex->height,
-				gs_texture_get_color_format(tex->texture));
+		if (m_captureStage == nullptr ||
+			(int)gs_stagesurface_get_width(m_captureStage) != m_capture.width ||
+			(int)gs_stagesurface_get_height(m_captureStage) != m_capture.height) {
+			if (m_captureStage)
+				gs_stagesurface_destroy(m_captureStage);
+			m_captureStage = gs_stagesurface_create(m_capture.width, m_capture.height,
+				gs_texture_get_color_format(m_capture.texture));
 		}
-		gs_stage_texture(*stage, tex->texture);
+		gs_stage_texture(m_captureStage, m_capture.texture);
 
 		// mapping the stage surface 
 		uint8_t *data; uint32_t linesize;
-		if (gs_stagesurface_map(*stage, &data, &linesize)) {
+		if (gs_stagesurface_map(m_captureStage, &data, &linesize)) {
 
 			// Wrap the staged texture data
-			m_stageWork.w = tex->width;
-			m_stageWork.h = tex->height;
+			m_stageWork.w = m_capture.width;
+			m_stageWork.h = m_capture.height;
 			m_stageWork.stride = linesize;
 			m_stageWork.type = OBSRenderer::OBSToSMLL(
-				gs_texture_get_color_format(tex->texture));
+				gs_texture_get_color_format(m_capture.texture));
 			m_stageWork.data = (char*)data;
 		}
 		else {
@@ -1393,25 +1326,9 @@ namespace smll {
 		}
 	}
 
-	void FaceDetector::UnstageTexture(SourceFrameType sft) {
-		// get pointers to the right stage and texture objects
-		gs_stagesurf_t* stage = nullptr;
-		switch (sft) {
-		case SFT_CAPTURE:
-			stage = m_captureStage;
-			break;
-		case SFT_DETECT:
-			stage = m_detectStage;
-			break;
-		case SFT_TRACK:
-			stage = m_trackingStage;
-			break;
-		default:
-			return;
-		}
-
+	void FaceDetector::UnstageCaptureTexture() {
 		// unstage the surface and leave graphics context
-		gs_stagesurface_unmap(stage);
+		gs_stagesurface_unmap(m_captureStage);
 		obs_leave_graphics();
 	}
 	

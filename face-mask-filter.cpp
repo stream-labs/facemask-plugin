@@ -629,12 +629,12 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			frameSent = true;
 
 			smll::OBSTexture& capture = detection.frames[fidx].capture;
-			smll::OBSTexture& detect = detection.frames[fidx].detect;
-			smll::OBSTexture& track = detection.frames[fidx].track;
+			smll::ImageWrapper& detect = detection.frames[fidx].detect;
+			smll::ImageWrapper& track = detection.frames[fidx].track;
 
 			detection.frames[fidx].timestamp = sourceTimestamp;
 
-			// (re) allocate frame if necessary
+			// (re) allocate capture texture if necessary
 			if (capture.width != m_baseWidth ||
 				capture.height != m_baseHeight) {
 				capture.width = m_baseWidth;
@@ -645,30 +645,45 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				capture.texture = gs_texture_create(m_baseWidth, m_baseHeight, fmt, 0, 0, 0);
 			}
 
-			// copy it
+			// copy capture texture
 			gs_copy_texture(capture.texture, sourceTexture);
 
-			// make face detection image
-			detect.width = smll::Config::singleton().get_int(
+			// render detect texture 
+			smll::OBSTexture detectTex;
+			detectTex.width = smll::Config::singleton().get_int(
 				smll::CONFIG_INT_FACE_DETECT_WIDTH);
-			detect.height = (int)((float)detect.width *
+			detectTex.height = (int)((float)detectTex.width *
 				(float)m_baseHeight / (float)m_baseWidth);
 			smllRenderer->SpriteTexRender(capture.texture,
-				detectTexRender, detect.width, detect.height);
-			detect.texture = gs_texrender_get_texture(detectTexRender);
+				detectTexRender, detectTex.width, detectTex.height);
+			detectTex.texture = gs_texrender_get_texture(detectTexRender);
+			
+			// copy detect texture
+			if (detect.width != detectTex.width ||
+				detect.height != detectTex.height) {
+				if (detect.data)
+					delete[] detect.data;
+				detect.width = detectTex.width;
+				detect.height = detectTex.height;
+				detect.data = new char[detect.w * detect.h]; // luma image
+			}
 
-			// make tracking image
-			track.width = smll::Config::singleton().get_int(
+
+
+
+			// render track texture
+			smll::OBSTexture trackTex;
+			trackTex.width = smll::Config::singleton().get_int(
 				smll::CONFIG_INT_TRACKING_WIDTH);
-			track.height = (int)((float)track.width *
+			trackTex.height = (int)((float)trackTex.width *
 				(float)m_baseHeight / (float)m_baseWidth);
-			if (track.width == detect.width &&
-				track.height == detect.height) {
-				track.texture = detect.texture;
+			if (trackTex.width == detectTex.width &&
+				trackTex.height == detectTex.height) {
+				trackTex.texture = detectTex.texture;
 			} else {
 				smllRenderer->SpriteTexRender(capture.texture,
-					trackTexRender, track.width, track.height);
-				track.texture = gs_texrender_get_texture(trackTexRender);
+					trackTexRender, trackTex.width, trackTex.height);
+				trackTex.texture = gs_texrender_get_texture(trackTexRender);
 			}
 		}
 	}

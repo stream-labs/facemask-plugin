@@ -172,8 +172,8 @@ namespace Plugin {
 				// frames circular buffer (video_render()'s thread -> detection thread)
 				struct CachedFrame {
 					smll::OBSTexture	capture;
-					smll::OBSTexture	detect;
-					smll::OBSTexture	track;
+					smll::ImageWrapper	detect;
+					smll::ImageWrapper	track;
 					std::mutex			mutex;
 					TimeStamp			timestamp;
 				};

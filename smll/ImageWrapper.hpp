@@ -41,8 +41,14 @@ typedef enum ImageType
 
 struct ImageWrapper
 {
-	int				w;
-	int				h;
+	union {
+		int				w;
+		int				width;
+	};
+	union {
+		int				h;
+		int				height;
+	};
 	int				stride;
 	ImageType		type;
 	char*			data;

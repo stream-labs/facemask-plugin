@@ -135,18 +135,6 @@ namespace smll {
 	static const char* const CONFIG_INT_SOLVEPNP_ITERATIONS = 
 		"solvePNPiterations";
 
-	// Use threaded memcpy
-	static const char* const CONFIG_BOOL_USE_THREADED_MEMCPY =
-		"useThreadedMemcpy";
-
-	// Texture copying
-	static const char* const CONFIG_BOOL_MAKE_CAPTURE_COPY = 
-		"makeCaptureTexCopy";
-	static const char* const CONFIG_BOOL_MAKE_DETECT_COPY = 
-		"makeDetectTexCopy";
-	static const char* const CONFIG_BOOL_MAKE_TRACK_COPY =
-		"makeTrackTexCopy";
-
 	static const char* const CONFIG_INT_SPEED_LIMIT = 
 		"detectSpeedLimit";
 

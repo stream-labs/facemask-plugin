@@ -56,8 +56,8 @@ public:
 	~FaceDetector();
 
 	void DetectFaces(const OBSTexture& capture, 
-					 const OBSTexture& detect, 
-					 const OBSTexture& track);
+					 const ImageWrapper& detect,
+					 const ImageWrapper& track);
 
 	void MakeTriangulation(MorphData& morphData, TriangulationResult& result);
 
@@ -83,27 +83,14 @@ private:
 	// Faces
 	Faces			m_faces;
 
-	typedef enum SourceFrameType
-	{
-		SFT_UNDEFINED,
-		SFT_CAPTURE,
-		SFT_DETECT,
-		SFT_TRACK,
-
-	} SourceFrameType;
-
 	// Image Buffers
 	OBSTexture		m_capture;
-	OBSTexture		m_detect;
-	OBSTexture		m_track;
+	ImageWrapper	m_detect;
+	ImageWrapper	m_track;
 
 	gs_stagesurf_t* m_captureStage;
-	gs_stagesurf_t*	m_detectStage;
-	gs_stagesurf_t*	m_trackingStage;
 
 	int				m_stageSize;
-	SourceFrameType m_stageType;
-	ImageWrapper	m_stageWrapper;
 	ImageWrapper	m_stageWork;
 	struct memcpy_environment* m_memcpyEnv;
 
@@ -136,9 +123,8 @@ private:
     void    DetectLandmarks();
 	void    DoPoseEstimation();
 
-	void 	StageAndCopyTexture(SourceFrameType sft);
-	void 	StageTexture(SourceFrameType sft);
-	void 	UnstageTexture(SourceFrameType sft);
+	void 	StageCaptureTexture();
+	void 	UnstageCaptureTexture();
 
 	void	Subdivide(std::vector<cv::Point2f>& points);
 	void	CatmullRomSmooth(std::vector<cv::Point2f>& points, 

@@ -102,13 +102,6 @@ namespace smll {
 		friend class FaceDetector;
 
 		void					ResetPose();
-		inline void				UpdateTransform() {
-			SetRotation(m_cvRotation);
-			SetTranslation(m_cvTranslation);
-		}
-		void					SetRotation(cv::Mat m);
-		void					SetTranslation(cv::Mat m);
-		bool					CheckForFlip();
 
 		template <typename image_type> void
 			StartTracking(const image_type& image, float scale, int x, int y) {
