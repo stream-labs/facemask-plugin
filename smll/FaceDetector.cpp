@@ -1066,6 +1066,7 @@ namespace smll {
 
 		if (Config::singleton().get_bool(CONFIG_BOOL_LANDMARKS_ENABLE)) {
 			// detect landmarks
+			obs_enter_graphics();
 			for (int f = 0; f < m_faces.length; f++) {
 				StageCaptureTexture();
 
@@ -1107,6 +1108,7 @@ namespace smll {
 					m_faces[f].m_points[j] = point(d.part(j).x(), d.part(j).y());
 				}
 			}
+			obs_leave_graphics();
 
 			// Do 3D Pose Estimation
 			if (Config::singleton().get_bool(CONFIG_BOOL_POSES_ENALBLE))
@@ -1181,116 +1183,7 @@ namespace smll {
 		}
 	}
 
-	/*
-	void FaceDetector::StageAndCopyTexture(SourceFrameType sft) {
-		// for all the early returns coming up next
-		m_stageWork = m_stageWrapper;
-
-		// dont re-stage
-		if (m_stageType == sft)
-			return;
-
-		// get pointers to the right stage and texture objects
-		gs_stagesurf_t** __restrict stage = nullptr;
-		OBSTexture* __restrict tex = nullptr;
-		switch (sft)
-		{
-		case SFT_CAPTURE:
-			// dont re-stage
-			if (m_stageType == SFT_DETECT &&
-				m_detect.texture == m_capture.texture)
-				return;
-			if (m_stageType == SFT_TRACK &&
-				m_track.texture == m_capture.texture)
-				return;
-			stage = &m_captureStage;
-			tex = &m_capture;
-			break;
-		case SFT_DETECT:
-			// dont re-stage
-			if (m_stageType == SFT_CAPTURE &&
-				m_capture.texture == m_detect.texture)
-				return;
-			if (m_stageType == SFT_TRACK &&
-				m_track.texture == m_detect.texture)
-				return;
-			stage = &m_detectStage;
-			tex = &m_detect;
-			break;
-		case SFT_TRACK:
-			// dont re-stage
-			if (m_stageType == SFT_CAPTURE &&
-				m_capture.texture == m_track.texture)
-				return;
-			if (m_stageType == SFT_DETECT &&
-				m_detect.texture == m_track.texture)
-				return;
-			stage = &m_trackingStage;
-			tex = &m_track;
-			break;
-		default:
-			return;
-		}
-
-		// enter graphics context - don't stay here long!
-		obs_enter_graphics();
-
-		// need to stage the surface so we can read from it
-		// (re)alloc the stage surface if necessary
-		if (*stage == nullptr ||
-			(int)gs_stagesurface_get_width(*stage) != tex->width ||
-			(int)gs_stagesurface_get_height(*stage) != tex->height) {
-			if (*stage)
-				gs_stagesurface_destroy(*stage);
-			*stage = gs_stagesurface_create(tex->width, tex->height,
-				gs_texture_get_color_format(tex->texture));
-		}
-		gs_stage_texture(*stage, tex->texture);
-
-		// mapping the stage surface 
-		uint8_t *data; uint32_t linesize;
-		if (gs_stagesurface_map(*stage, &data, &linesize)) {
-
-			// make sure our space is big enough. 
-			int texSize = tex->height * linesize;
-			if (m_stageSize < texSize) {
-				if (m_stageWrapper.data)
-					delete[] m_stageWrapper.data;
-				m_stageWrapper.data = new char[texSize];
-				m_stageSize = texSize;
-			}
-
-			// copy texture data
-			if (Config::singleton().get_bool(CONFIG_BOOL_USE_THREADED_MEMCPY))
-				threaded_memcpy(m_stageWrapper.data, data, texSize, m_memcpyEnv);
-			else
-				std::memcpy(m_stageWrapper.data, data, texSize);
-
-			// Wrap the staged texture data
-			m_stageType = sft;
-			m_stageWrapper.w = tex->width;
-			m_stageWrapper.h = tex->height;
-			m_stageWrapper.stride = linesize;
-			m_stageWrapper.type =
-				OBSRenderer::OBSToSMLL(
-					gs_texture_get_color_format(tex->texture));
-
-			m_stageWork = m_stageWrapper;
-		}
-		else {
-			blog(LOG_DEBUG, "unable to stage texture!!! bad news!");
-			m_stageWork = ImageWrapper();
-		}
-	
-		// unstage the surface and leave graphics context
-		gs_stagesurface_unmap(*stage);
-		obs_leave_graphics();
-	}*/
-
 	void FaceDetector::StageCaptureTexture() {
-		// stage texture and enter graphics context
-		obs_enter_graphics();
-
 		// need to stage the surface so we can read from it
 		// (re)alloc the stage surface if necessary
 		if (m_captureStage == nullptr ||
@@ -1324,7 +1217,6 @@ namespace smll {
 	void FaceDetector::UnstageCaptureTexture() {
 		// unstage the surface and leave graphics context
 		gs_stagesurface_unmap(m_captureStage);
-		obs_leave_graphics();
 	}
 	
 } // smll namespace
