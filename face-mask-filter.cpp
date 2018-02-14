@@ -129,7 +129,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	demoModeOn(false), demoCurrentMask(0), demoModeInterval(0.0f), demoModeDelay(0.0f),
 	demoModeElapsed(0.0f), demoModeInDelay(false), drawMask(true), 
 	drawFaces(false), drawMorphTris(false), drawFDRect(false), drawTRRect(false), 
-	filterPreviewMode(false), performanceSetting(-1), testingStage(nullptr) {
+	filterPreviewMode(false), autoGreenScreen(false), testingStage(nullptr) {
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
 
 	m_memcpyEnv = init_threaded_memcpy_pool(0);
@@ -252,6 +252,8 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	obs_data_set_default_string(data, P_MASK, jsonName);
 	bfree(jsonName);
 
+	obs_data_set_default_bool(data, kSettingsGreenscreen, true);
+
 	obs_data_set_default_bool(data, kSettingsDrawMask, true);
 	obs_data_set_default_bool(data, kSettingsDrawFaces, false);
 	obs_data_set_default_bool(data, kSettingsDrawMorphTris, false);
@@ -289,9 +291,14 @@ obs_properties_t * Plugin::FaceMaskFilter::Instance::get_properties(void *ptr) {
 	obs_property_set_modified_callback(p, properties_modified);
 
 #if defined(PUBLIC_RELEASE)
-	obs_properties_add_button(props, kSettingsPixomojo, kSettingsPixomojoDesc, onPixomojo);
+	obs_properties_add_button(props, kSettingsPixomojo, kSettingsPixomojoDesc,
+		onPixomojo);
+#endif
 
-#else
+	obs_properties_add_bool(props, kSettingsGreenscreen,
+		kSettingsGreenscreenDesc);
+
+#if !defined(PUBLIC_RELEASE)
 
 	// disable the plugin
 	obs_properties_add_bool(props, kSettingsDeactivated,
@@ -379,6 +386,8 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 		detection.frameIndex = -1;
 		detection.facesIndex = -1;
 	}
+
+	autoGreenScreen = obs_data_get_bool(data, kSettingsGreenscreen);
 
 	// demo mode
 	demoModeOn = obs_data_get_bool(data, kSettingsDemoMode);
@@ -679,6 +688,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 						detect.data = new char[detect.getSize()];
 					}
 					threaded_memcpy(detect.data, data, detect.getSize(), m_memcpyEnv);
+					//memcpy(detect.data, data, detect.getSize());
 					gs_stagesurface_unmap(detectStage);
 				}
 			}
@@ -729,6 +739,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					}
 
 					threaded_memcpy(track.data, data, track.getSize(), m_memcpyEnv);
+					//memcpy(track.data, data, track.getSize());
 					gs_stagesurface_unmap(trackStage);
 				}
 			}
@@ -784,8 +795,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		}
 	}
 
+
 	// Draw the source video
 	if (mdat) {
+		triangulation.autoGreenScreen = autoGreenScreen;
 		mdat->RenderMorphVideo(vidTex, m_baseWidth, m_baseHeight, triangulation);
 	} 
 	else {

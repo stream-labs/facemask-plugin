@@ -48,6 +48,9 @@ static const char* const kSettingsDemoDelay = "demoDelay";
 
 static const char* const kSettingsPixomojo = "pixomojo";
 
+static const char* const kSettingsGreenscreen = "greenscreen";
+
+
 // setting descriptions
 static const char* const kSettingsDeactivatedDesc = "Deactivate the filter";
 static const char* const kSettingsDrawMaskDesc = "Draw the face mask";
@@ -65,6 +68,8 @@ static const char* const kSettingsDemoIntervalDesc = "Demo Mode Interval (second
 static const char* const kSettingsDemoDelayDesc = "Demo Mode Delay Between Masks (seconds)";
 
 static const char* const kSettingsPixomojoDesc = "Get more face masks from pixomojo.com";
+
+static const char* const kSettingsGreenscreenDesc = "Automatic Green Screen";
 
 
 

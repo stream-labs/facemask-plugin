@@ -79,6 +79,16 @@ Mask::Resource::Morph::Morph(Mask::MaskData* parent, std::string name, obs_data_
 	}
 }
 
+
+Mask::Resource::Morph::Morph(Mask::MaskData* parent, std::string name)
+	: IBase(parent, name) {
+
+	for (int i = 0; i < smll::NUM_FACE_AREAS; i++) {
+		faceIndexBuffers[i] = nullptr;
+	}
+	m_morphData.Stamp();
+}
+
 Mask::Resource::Morph::~Morph() {
 	obs_enter_graphics();
 	for (int i = 0; i < smll::NUM_FACE_AREAS; i++) {
@@ -169,21 +179,21 @@ void Mask::Resource::Morph::RenderMorphVideo(gs_texture* vidtex,
 	gs_enable_depth_test(false);
 	gs_set_cull_mode(GS_NEITHER);
 
-	/*
 	// GREEN SCREEN
-	while (gs_effect_loop(solidEffect, "Solid")) {
-		gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
-			"image"), vidtex);
-		gs_load_vertexbuffer(trires.vertexBuffer);
+	if (trires.autoGreenScreen) {
+		while (gs_effect_loop(solidEffect, "Solid")) {
+			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+				"image"), vidtex);
+			gs_load_vertexbuffer(trires.vertexBuffer);
 
-		vec4_from_rgba(&veccol, MAKE32COLOR(0, 255, 0, 255));
-		gs_effect_set_vec4(solidcolor, &veccol);
-		gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_BACKGROUND]);
-		gs_draw(GS_TRIS, 0, 0);
-		gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_HULL]);
-		gs_draw(GS_TRIS, 0, 0);
+			vec4_from_rgba(&veccol, MAKE32COLOR(0, 255, 0, 255));
+			gs_effect_set_vec4(solidcolor, &veccol);
+			gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_BACKGROUND]);
+			gs_draw(GS_TRIS, 0, 0);
+			gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_HULL]);
+			gs_draw(GS_TRIS, 0, 0);
+		}
 	}
-	*/
 
 	while (gs_effect_loop(defaultEffect, "Draw")) {
 //	while (gs_effect_loop(solidEffect, "Solid")) {
@@ -191,18 +201,20 @@ void Mask::Resource::Morph::RenderMorphVideo(gs_texture* vidtex,
 			"image"), vidtex); 
 			gs_load_vertexbuffer(trires.vertexBuffer);
 
-			// bg
-			vec4_from_rgba(&veccol, MAKE32COLOR(66, 134, 244, 255));
-			gs_effect_set_vec4(solidcolor, &veccol);
-			gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_BACKGROUND]);
-			gs_draw(GS_TRIS, 0, 0);
+			if (!trires.autoGreenScreen) {
+				// bg
+				vec4_from_rgba(&veccol, MAKE32COLOR(66, 134, 244, 255));
+				gs_effect_set_vec4(solidcolor, &veccol);
+				gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_BACKGROUND]);
+				gs_draw(GS_TRIS, 0, 0);
 
-			// hull
-			vec4_from_rgba(&veccol, MAKE32COLOR(41, 118, 242, 255));
-			gs_effect_set_vec4(solidcolor, &veccol);
-			gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_HULL]);
-			gs_draw(GS_TRIS, 0, 0);
-			
+				// hull
+				vec4_from_rgba(&veccol, MAKE32COLOR(41, 118, 242, 255));
+				gs_effect_set_vec4(solidcolor, &veccol);
+				gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_HULL]);
+				gs_draw(GS_TRIS, 0, 0);
+			}
+
 			// face
 			vec4_from_rgba(&veccol, MAKE32COLOR(255, 220, 177, 255));
 			gs_effect_set_vec4(solidcolor, &veccol);

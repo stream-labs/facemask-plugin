@@ -53,6 +53,8 @@ namespace smll {
 		gs_indexbuffer_t*		indexBuffers[NUM_INDEX_BUFFERS];
 		bool					buildLines;
 
+		bool					autoGreenScreen;
+
 		TriangulationResult();
 		TriangulationResult(const TriangulationResult& r) { *this = r; }
 		~TriangulationResult();

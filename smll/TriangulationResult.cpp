@@ -148,7 +148,7 @@ namespace smll {
 	
 
 	TriangulationResult::TriangulationResult() : vertexBuffer(nullptr),
-		buildLines(false) {
+		buildLines(false), autoGreenScreen(false) {
 		for (int i = 0; i < NUM_INDEX_BUFFERS; i++) {
 			indexBuffers[i] = nullptr;
 		}

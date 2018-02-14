@@ -40,6 +40,7 @@ namespace Mask {
 		class Morph : public IBase, public IAnimatable {
 		public:
 			Morph(Mask::MaskData* parent, std::string name, obs_data_t* data);
+			Morph(Mask::MaskData* parent, std::string name); // constructs an "identity" morph
 			virtual ~Morph();
 
 			virtual Type GetType() override;

@@ -158,8 +158,7 @@ namespace Plugin {
 			bool				drawFDRect;
 			bool				drawTRRect;
 			bool				filterPreviewMode;
-
-			int					performanceSetting;
+			bool				autoGreenScreen;
 
 			// for testing
 			gs_stagesurf_t*		testingStage;
