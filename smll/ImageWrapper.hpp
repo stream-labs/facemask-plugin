@@ -41,14 +41,8 @@ typedef enum ImageType
 
 struct ImageWrapper
 {
-	union {
-		int				w;
-		int				width;
-	};
-	union {
-		int				h;
-		int				height;
-	};
+	int				w;
+	int				h;
 	int				stride;
 	ImageType		type;
 	char*			data;
@@ -59,6 +53,8 @@ struct ImageWrapper
 		: w(_w), h(_h), stride(_s), type(_t), data(d) {}
 	int				getStride() const { 
 		return (stride == 0) ? (w * getNumElems()) : stride; }
+	int				getSize() const {
+		return h * getStride();	}
 	int				getNumElems() const {
 		return std::vector<int>({ 1, 3, 3, 4, 4, 3, 0, 0 })[(int)type];
 	}

@@ -36,6 +36,11 @@
 #include "mask-resource-morph.h"
 #include "mask-resource-effect.h"
 
+ // yep...this is what we're doin
+#include <libobs/util/threaded-memcpy.c>
+
+
+
 #define NUM_FRAMES_TO_LOSE_FACE			(30)
 
 // list of masks (public version only)
@@ -131,12 +136,15 @@ int findClosest(const smll::DetectionResult& result, const smll::DetectionResult
 
 Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *source)
 	: m_source(source), m_baseWidth(640), m_baseHeight(480), m_isActive(true), m_isVisible(true),
-	m_isDisabled(false), maskDataShutdown(false), maskJsonFilename(nullptr), maskData(nullptr),
+	m_isDisabled(false), detectStage(nullptr), trackStage(nullptr), maskDataShutdown(false), 
+	maskJsonFilename(nullptr), maskData(nullptr),
 	demoModeOn(false), demoCurrentMask(0), demoModeInterval(0.0f), demoModeDelay(0.0f),
 	demoModeElapsed(0.0f), demoModeInDelay(false), drawMask(true), 
 	drawFaces(false), drawMorphTris(false), drawFDRect(false), drawTRRect(false), 
 	filterPreviewMode(false), performanceSetting(-1), testingStage(nullptr) {
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
+
+	m_memcpyEnv = init_threaded_memcpy_pool(0);
 
 	obs_enter_graphics();
 	m_sourceRenderTarget = gs_texrender_create(GS_RGBA, GS_ZS_NONE);
@@ -198,14 +206,27 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 		if (detection.frames[i].capture.texture) {
 			gs_texture_destroy(detection.frames[i].capture.texture);
 		}
+		if (detection.frames[i].detect.data) {
+			delete[] detection.frames[i].detect.data;
+		}
+		if (detection.frames[i].track.data) {
+			delete[] detection.frames[i].track.data;
+		}
 	}
 	if (testingStage)
 		gs_stagesurface_destroy(testingStage);
+	if (detectStage)
+		gs_stagesurface_destroy(detectStage);
+	if (trackStage)
+		gs_stagesurface_destroy(trackStage);
 	maskData = nullptr;
 	obs_leave_graphics();
 
 	delete smllFaceDetector;
 	delete smllRenderer;
+
+	if (m_memcpyEnv)
+		destroy_threaded_memcpy_pool(m_memcpyEnv);
 
 	T.SendString("filter destroyed");
 	PLOG_DEBUG("<%" PRIXPTR "> Finalized.", this);
@@ -657,17 +678,35 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			smllRenderer->SpriteTexRender(capture.texture,
 				detectTexRender, detectTex.width, detectTex.height);
 			detectTex.texture = gs_texrender_get_texture(detectTexRender);
-			
-			// copy detect texture
-			if (detect.width != detectTex.width ||
-				detect.height != detectTex.height) {
-				if (detect.data)
-					delete[] detect.data;
-				detect.width = detectTex.width;
-				detect.height = detectTex.height;
-				detect.data = new char[detect.w * detect.h]; // luma image
-			}
 
+			// stage and copy
+			if (detectStage == nullptr ||
+				(int)gs_stagesurface_get_width(detectStage) != detectTex.width ||
+				(int)gs_stagesurface_get_height(detectStage) != detectTex.height) {
+				if (detectStage)
+					gs_stagesurface_destroy(detectStage);
+				detectStage = gs_stagesurface_create(detectTex.width, detectTex.height,
+					gs_texture_get_color_format(detectTex.texture));
+			}
+			gs_stage_texture(detectStage, detectTex.texture);
+			{
+				uint8_t *data; uint32_t linesize;
+				if (gs_stagesurface_map(detectStage, &data, &linesize)) {
+					// (re) allocate detect image buffer if necessary
+					if (detect.w != detectTex.width ||
+						detect.h != detectTex.height ||
+						detect.stride != (int)linesize) {
+						if (detect.data)
+							delete[] detect.data;
+						detect.w = detectTex.width;
+						detect.h = detectTex.height;
+						detect.stride = linesize;
+						detect.data = new char[detect.getSize()];
+					}
+					threaded_memcpy(detect.data, data, detect.getSize(), m_memcpyEnv);
+					gs_stagesurface_unmap(detectStage);
+				}
+			}
 
 
 
@@ -677,16 +716,49 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				smll::CONFIG_INT_TRACKING_WIDTH);
 			trackTex.height = (int)((float)trackTex.width *
 				(float)m_baseHeight / (float)m_baseWidth);
+			// use detect texture if same size
 			if (trackTex.width == detectTex.width &&
 				trackTex.height == detectTex.height) {
 				trackTex.texture = detectTex.texture;
-			} else {
+			}
+			else {
 				smllRenderer->SpriteTexRender(capture.texture,
 					trackTexRender, trackTex.width, trackTex.height);
 				trackTex.texture = gs_texrender_get_texture(trackTexRender);
 			}
+
+			// stage and copy
+			if (trackStage == nullptr ||
+				(int)gs_stagesurface_get_width(trackStage) != trackTex.width ||
+				(int)gs_stagesurface_get_height(trackStage) != trackTex.height) {
+				if (trackStage)
+					gs_stagesurface_destroy(trackStage);
+				trackStage = gs_stagesurface_create(trackTex.width, trackTex.height,
+					gs_texture_get_color_format(trackTex.texture));
+			}
+			gs_stage_texture(trackStage, trackTex.texture);
+			{
+				uint8_t *data; uint32_t linesize;
+				if (gs_stagesurface_map(trackStage, &data, &linesize)) {
+					// (re) allocate track image buffer if necessary
+					if (track.w != trackTex.width ||
+						track.h != trackTex.height ||
+						track.stride != (int)linesize) {
+						if (track.data)
+							delete[] track.data;
+						track.w = trackTex.width;
+						track.h = trackTex.height;
+						track.stride = linesize;
+						track.data = new char[track.getSize()]; // luma image
+					}
+
+					threaded_memcpy(track.data, data, track.getSize(), m_memcpyEnv);
+					gs_stagesurface_unmap(trackStage);
+				}
+			}
 		}
 	}
+
 	if (frameSent) {
 		std::unique_lock<std::mutex> lock(detection.mutex);
 		detection.frameIndex = (fidx + 1) % ThreadData::BUFFER_SIZE;
@@ -986,7 +1058,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			(frameEnd - frameStart);
 		long long speedLimit = smll::Config::singleton().get_int(
 			smll::CONFIG_INT_SPEED_LIMIT) * 1000;
-		long long sleepTime = std::max(speedLimit - elapsedMs.count(),
+		long long sleepTime = max(speedLimit - elapsedMs.count(),
 			(long long)0);
 		if (sleepTime > 0)
 			std::this_thread::sleep_for(std::chrono::microseconds(sleepTime));

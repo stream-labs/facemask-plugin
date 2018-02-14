@@ -107,7 +107,7 @@ namespace Plugin {
 
 		private:
 			// Filter State
-			obs_source_t *m_source;
+			obs_source_t* m_source;
 			int32_t m_baseWidth, m_baseHeight;
 			bool m_isActive;
 			bool m_isVisible;
@@ -119,10 +119,14 @@ namespace Plugin {
 			smll::FaceDetector*		smllFaceDetector;
 			smll::OBSRenderer*		smllRenderer;
 
-			gs_texrender_t	   *m_sourceRenderTarget;
-			gs_texrender_t	   *drawTexRender;
-			gs_texrender_t	   *detectTexRender;
-			gs_texrender_t	   *trackTexRender;
+			gs_texrender_t*		m_sourceRenderTarget;
+			gs_texrender_t*		drawTexRender;
+			gs_texrender_t*		detectTexRender;
+			gs_texrender_t*		trackTexRender;
+			gs_stagesurf_t*		detectStage;
+			gs_stagesurf_t*		trackStage;
+
+			struct memcpy_environment* m_memcpyEnv;
 
 			char*				maskJsonFilename;
 			std::string			currentMaskJsonFilename;

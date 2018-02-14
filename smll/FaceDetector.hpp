@@ -92,7 +92,6 @@ private:
 
 	int				m_stageSize;
 	ImageWrapper	m_stageWork;
-	struct memcpy_environment* m_memcpyEnv;
 
 	// Face detection timeouts
 	int				m_timeout;

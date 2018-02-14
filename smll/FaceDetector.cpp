@@ -37,8 +37,6 @@
 #include <opencv2/opencv.hpp>
 #include <vector>
 
-// yep...this is what we're doin
-#include <libobs/util/threaded-memcpy.c>
 
 
 #pragma warning( pop )
@@ -63,7 +61,6 @@ namespace smll {
 	FaceDetector::FaceDetector(const char* predictorFilename)
 		: m_captureStage(nullptr)
 		, m_stageSize(0)
-		, m_memcpyEnv(nullptr)
 		, m_timeout(0)
         , m_trackingTimeout(0)
         , m_detectionTimeout(0)
@@ -73,8 +70,6 @@ namespace smll {
 		// Load face detection and pose estimation models.
 		m_detector = get_frontal_face_detector();
 		deserialize(predictorFilename) >> m_predictor;
-
-		m_memcpyEnv = init_threaded_memcpy_pool(0);
 	}
 
 	FaceDetector::~FaceDetector() {
@@ -82,11 +77,6 @@ namespace smll {
 		if (m_captureStage)
 			gs_stagesurface_destroy(m_captureStage);
 		obs_leave_graphics();
-
-		if (m_stageWork.data)
-			delete[] m_stageWork.data;
-		if (m_memcpyEnv)
-			destroy_threaded_memcpy_pool(m_memcpyEnv);
 	}
 
 
@@ -171,8 +161,10 @@ namespace smll {
         // better check if the camera res has changed on us
         if ((capture.width != m_capture.width) || 
 			(capture.height != m_capture.height) ||
-			(track.width != m_track.width) ||
-			(track.height != m_track.height)) {
+			(detect.w != m_detect.w) ||
+			(detect.h != m_detect.h) ||
+			(track.w != m_track.w) ||
+			(track.h != m_track.h)) {
             // forget whatever we thought were faces
             m_faces.length = 0;
 			InvalidatePoses();
@@ -931,6 +923,7 @@ namespace smll {
 
     void FaceDetector::DoFaceDetection() {
 
+		// get cropping info from config and detect image dimensions
 		int ww = (int)((float)m_detect.w * 
 			Config::singleton().get_double(
 				CONFIG_DOUBLE_FACE_DETECT_CROP_WIDTH));
@@ -944,14 +937,15 @@ namespace smll {
 			Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_Y)) + 
 			(m_detect.h / 2);
 
-		// need to transform back to capture size
+		// cropping offset
 		int offsetX = xx - (ww / 2);
 		int offsetY = yy - (hh / 2);
-		float scale = (float)m_capture.width / m_detect.width;
-
 		char* cropdata = m_detect.data +
 			(m_detect.getStride() * offsetY) +
 			(m_detect.getNumElems() * offsetX);
+
+		// need to scale back
+		float scale = (float)m_capture.width / m_detect.w;
 
         // detect faces
 		// NOTE : WE ASSUME A LUMA IMAGE HERE
@@ -988,12 +982,12 @@ namespace smll {
 					offsetY) * scale));
             }
         }
-
-		UnstageCaptureTexture();
     }
     
         
     void FaceDetector::StartObjectTracking() {
+
+		// get crop info from config and track image dimensions
 		int ww = (int)((float)m_track.w *
 			Config::singleton().get_double(CONFIG_DOUBLE_TRACKING_CROP_WIDTH));
 		int hh = (int)((float)m_track.h * 
@@ -1005,20 +999,21 @@ namespace smll {
 			Config::singleton().get_double(CONFIG_DOUBLE_TRACKING_CROP_Y)) + 
 			(m_track.h / 2);
 
-		// need to transform back to capture size
+		// cropping offset
 		int offsetX = xx - (ww / 2);
 		int offsetY = yy - (hh / 2);
-		float scale = (float)m_capture.width / m_track.width;
-
 		char* cropdata = m_track.data +
-			(m_track.getStride() * offsetY) + (m_track.getNumElems() * 
-				offsetX);
+			(m_track.getStride() * offsetY) + 
+			(m_track.getNumElems() * offsetX);
+
+		// need to scale back
+		float scale = (float)m_capture.width / m_track.w;
 
         // wrap up our image
         dlib_image_wrapper<unsigned char> trimg(cropdata, ww, hh, 
 			m_track.getStride());
         
-        // copy rects into our faces, start tracking
+        // start tracking
         for (int i = 0; i < m_faces.length; ++i) {
             m_faces[i].StartTracking(trimg, scale, offsetX, offsetY);
         }
@@ -1027,6 +1022,7 @@ namespace smll {
     
     void FaceDetector::UpdateObjectTracking() {
 
+		// get cropping info from config and track image dimensions
 		int ww = (int)((float)m_track.w * 
 			Config::singleton().get_double(CONFIG_DOUBLE_TRACKING_CROP_WIDTH));
 		int hh = (int)((float)m_track.h *
@@ -1038,10 +1034,9 @@ namespace smll {
 			Config::singleton().get_double(CONFIG_DOUBLE_TRACKING_CROP_Y)) +
 			(m_track.h / 2);
 
-		// need to transform back to capture size
+		// cropping offset
 		int offsetX = xx - (ww / 2);
 		int offsetY = yy - (hh / 2);
-
 		char* cropdata = m_track.data +
 			(m_track.getStride() * offsetY) +
 			(m_track.getNumElems() * offsetX);
