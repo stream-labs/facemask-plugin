@@ -948,10 +948,34 @@ namespace smll {
 		float scale = (float)m_capture.width / m_detect.w;
 
         // detect faces
-		// NOTE : WE ASSUME A LUMA IMAGE HERE
-        dlib_image_wrapper<unsigned char> fdimg(cropdata, 
-			ww, hh, m_detect.getStride());
-        std::vector<rectangle> faces = m_detector(fdimg);
+		std::vector<rectangle> faces;
+		if (m_detect.type == IMAGETYPE_BGR) {
+			dlib_image_wrapper<bgr_pixel> fdimg(cropdata,
+				ww, hh, m_detect.getStride());
+			faces = m_detector(fdimg);
+		}
+		else if (m_detect.type == IMAGETYPE_RGB) {
+			dlib_image_wrapper<rgb_pixel> fdimg(cropdata,
+				ww, hh, m_detect.getStride());
+			faces = m_detector(fdimg);
+		}
+		else if (m_detect.type == IMAGETYPE_RGBA) {
+			throw std::invalid_argument(
+				"bad image type for face detection - alpha not allowed");
+			//dlib_image_wrapper<rgb_alpha_pixel> fdimg(cropdata,
+			//	ww, hh, m_detect.getStride());
+			//faces = m_detector(fdimg);
+		}
+		else if (m_detect.type == IMAGETYPE_LUMA) {
+			dlib_image_wrapper<unsigned char> fdimg(cropdata,
+				ww, hh, m_detect.getStride());
+			faces = m_detector(fdimg);
+		}
+		else {
+			throw std::invalid_argument(
+				"bad image type for face detection - handle better");
+		}
+
 
 		// only consider the face detection results if:
         //
@@ -1009,14 +1033,41 @@ namespace smll {
 		// need to scale back
 		float scale = (float)m_capture.width / m_track.w;
 
-        // wrap up our image
-        dlib_image_wrapper<unsigned char> trimg(cropdata, ww, hh, 
-			m_track.getStride());
-        
         // start tracking
-        for (int i = 0; i < m_faces.length; ++i) {
-            m_faces[i].StartTracking(trimg, scale, offsetX, offsetY);
-        }
+		if (m_track.type == IMAGETYPE_BGR) {
+			dlib_image_wrapper<bgr_pixel> trimg(cropdata,
+				ww, hh, m_track.getStride());
+			for (int i = 0; i < m_faces.length; ++i) {
+				m_faces[i].StartTracking(trimg, scale, offsetX, offsetY);
+			}
+		}
+		else if (m_track.type == IMAGETYPE_RGB) {
+			dlib_image_wrapper<rgb_pixel> trimg(cropdata,
+				ww, hh, m_track.getStride());
+			for (int i = 0; i < m_faces.length; ++i) {
+				m_faces[i].StartTracking(trimg, scale, offsetX, offsetY);
+			}
+		}
+		else if (m_track.type == IMAGETYPE_RGBA) {
+			throw std::invalid_argument(
+				"bad image type for face detection - alpha not allowed");
+			//dlib_image_wrapper<rgb_alpha_pixel> trimg(cropdata,
+			//	ww, hh, m_track.getStride());
+			//for (int i = 0; i < m_faces.length; ++i) {
+			//	m_faces[i].StartTracking(trimg, scale, offsetX, offsetY);
+			//}
+		}
+		else if (m_track.type == IMAGETYPE_LUMA) {
+			dlib_image_wrapper<unsigned char> trimg(cropdata,
+				ww, hh, m_track.getStride());
+			for (int i = 0; i < m_faces.length; ++i) {
+				m_faces[i].StartTracking(trimg, scale, offsetX, offsetY);
+			}
+		}
+		else {
+			throw std::invalid_argument(
+				"bad image type for face detection - handle better");
+		}
 	}
     
     
@@ -1041,23 +1092,83 @@ namespace smll {
 			(m_track.getStride() * offsetY) +
 			(m_track.getNumElems() * offsetX);
 
-		// wrap up our image
-        dlib_image_wrapper<unsigned char> trimg(cropdata, ww, hh,
-			m_track.getStride());
-        
-        for (int i = 0; i < m_faces.length; i++) {
-            // time-slice face tracking (only track 1 face per frame)
-            if (i == m_trackingFaceIndex) {
-                double confidence = m_faces[i].UpdateTracking(trimg);
-                if (confidence < Config::singleton().get_double(
-					CONFIG_DOUBLE_TRACKING_THRESHOLD)) {
-                    // lost confidence in tracking. time to detect faces again.
-                    // BAIL
-					m_faces.length = 0;
-                    break;
-                }
-            }
-        }
+		// update object tracking
+		if (m_track.type == IMAGETYPE_BGR) {
+			dlib_image_wrapper<bgr_pixel> trimg(cropdata,
+				ww, hh, m_track.getStride());
+			for (int i = 0; i < m_faces.length; i++) {
+				// time-slice face tracking (only track 1 face per frame)
+				if (i == m_trackingFaceIndex) {
+					double confidence = m_faces[i].UpdateTracking(trimg);
+					if (confidence < Config::singleton().get_double(
+						CONFIG_DOUBLE_TRACKING_THRESHOLD)) {
+						// lost confidence in tracking. time to detect faces again.
+						// BAIL
+						m_faces.length = 0;
+						break;
+					}
+				}
+			}
+		}
+		else if (m_track.type == IMAGETYPE_RGB) {
+			dlib_image_wrapper<rgb_pixel> trimg(cropdata,
+				ww, hh, m_track.getStride());
+			for (int i = 0; i < m_faces.length; i++) {
+				// time-slice face tracking (only track 1 face per frame)
+				if (i == m_trackingFaceIndex) {
+					double confidence = m_faces[i].UpdateTracking(trimg);
+					if (confidence < Config::singleton().get_double(
+						CONFIG_DOUBLE_TRACKING_THRESHOLD)) {
+						// lost confidence in tracking. time to detect faces again.
+						// BAIL
+						m_faces.length = 0;
+						break;
+					}
+				}
+			}
+		}
+		else if (m_track.type == IMAGETYPE_RGBA) {
+			throw std::invalid_argument(
+				"bad image type for face detection - alpha not allowed");
+			/*
+			dlib_image_wrapper<rgb_alpha_pixel> trimg(cropdata,
+				ww, hh, m_track.getStride());
+			for (int i = 0; i < m_faces.length; i++) {
+				// time-slice face tracking (only track 1 face per frame)
+				if (i == m_trackingFaceIndex) {
+					double confidence = m_faces[i].UpdateTracking(trimg);
+					if (confidence < Config::singleton().get_double(
+						CONFIG_DOUBLE_TRACKING_THRESHOLD)) {
+						// lost confidence in tracking. time to detect faces again.
+						// BAIL
+						m_faces.length = 0;
+						break;
+					}
+				}
+			}
+			*/
+		}
+		else if (m_track.type == IMAGETYPE_LUMA) {
+			dlib_image_wrapper<unsigned char> trimg(cropdata,
+				ww, hh, m_track.getStride());
+			for (int i = 0; i < m_faces.length; i++) {
+				// time-slice face tracking (only track 1 face per frame)
+				if (i == m_trackingFaceIndex) {
+					double confidence = m_faces[i].UpdateTracking(trimg);
+					if (confidence < Config::singleton().get_double(
+						CONFIG_DOUBLE_TRACKING_THRESHOLD)) {
+						// lost confidence in tracking. time to detect faces again.
+						// BAIL
+						m_faces.length = 0;
+						break;
+					}
+				}
+			}
+		}
+		else {
+			throw std::invalid_argument(
+				"bad image type for face detection - handle better");
+		}
 	}
     
     
