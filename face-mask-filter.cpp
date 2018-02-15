@@ -31,6 +31,9 @@
 #include <string>
 #include <map>
 
+// Windows AV run time stuff
+#include <avrt.h>
+
 #include "mask-resource-image.h"
 #include "mask-resource-mesh.h"
 #include "mask-resource-morph.h"
@@ -43,6 +46,12 @@
 
 #define NUM_FRAMES_TO_LOSE_FACE			(30)
 
+
+// Windows MMCSS thread task name
+//
+// see registry: Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\...
+//
+#define MM_THREAD_TASK_NAME				"Window Manager" //"Serato Pro Audio Background"
 
 
 static float FOVA(float aspect) {
@@ -124,7 +133,7 @@ int findClosest(const smll::DetectionResult& result, const smll::DetectionResult
 
 Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *source)
 	: m_source(source), m_baseWidth(640), m_baseHeight(480), m_isActive(true), m_isVisible(true),
-	m_isDisabled(false), detectStage(nullptr), trackStage(nullptr), maskDataShutdown(false), 
+	m_isDisabled(false), m_taskHandle(NULL), detectStage(nullptr), trackStage(nullptr), maskDataShutdown(false),
 	maskJsonFilename(nullptr), maskData(nullptr),
 	demoModeOn(false), demoCurrentMask(0), demoModeInterval(0.0f), demoModeDelay(0.0f),
 	demoModeElapsed(0.0f), demoModeInDelay(false), drawMask(true), 
@@ -146,6 +155,15 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	smllFaceDetector = new smll::FaceDetector(landmarksName);
 	bfree(landmarksName); // We need to free it after it is used.
 	smllRenderer = new smll::OBSRenderer(); 
+
+	// set our mm thread task
+	if (!m_taskHandle) {
+		DWORD taskIndex = 0;
+		m_taskHandle = AvSetMmThreadCharacteristics(TEXT(MM_THREAD_TASK_NAME), &taskIndex);
+		if (m_taskHandle == NULL) {
+			blog(LOG_DEBUG, "[FaceMask] Failed to set MM thread characteristics");
+		}
+	}
 
 	// initialize face detection thread data
 	{
@@ -215,6 +233,10 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 
 	if (m_memcpyEnv)
 		destroy_threaded_memcpy_pool(m_memcpyEnv);
+
+	if (m_taskHandle != NULL) {
+		AvRevertMmThreadCharacteristics(m_taskHandle);
+	}
 
 	T.SendString("filter destroyed");
 	PLOG_DEBUG("<%" PRIXPTR "> Finalized.", this);
@@ -461,6 +483,7 @@ void Plugin::FaceMaskFilter::Instance::video_tick(void *ptr, float timeDelta) {
 
 void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 
+
 	// ----- GET FACES FROM OTHER THREAD -----
 	updateFaces();
 
@@ -652,12 +675,14 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			// copy capture texture
 			gs_copy_texture(capture.texture, sourceTexture);
 
-			// render detect texture 
+			// detect texture dimensions
 			smll::OBSTexture detectTex;
 			detectTex.width = smll::Config::singleton().get_int(
 				smll::CONFIG_INT_FACE_DETECT_WIDTH);
 			detectTex.height = (int)((float)detectTex.width *
 				(float)m_baseHeight / (float)m_baseWidth);
+
+			// render the detect texture
 			smllRenderer->SpriteTexRender(capture.texture,
 				detectTexRender, detectTex.width, detectTex.height);
 			detectTex.texture = gs_texrender_get_texture(detectTexRender);
@@ -687,60 +712,64 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 						detect.type = smll::OBSRenderer::OBSToSMLL(gs_texture_get_color_format(detectTex.texture));
 						detect.data = new char[detect.getSize()];
 					}
-					threaded_memcpy(detect.data, data, detect.getSize(), m_memcpyEnv);
-					//memcpy(detect.data, data, detect.getSize());
+					//threaded_memcpy(detect.data, data, detect.getSize(), m_memcpyEnv);
+					memcpy(detect.data, data, detect.getSize());
 					gs_stagesurface_unmap(detectStage);
 				}
 			}
 
 
-
-			// render track texture
+			// track texture dimensions
 			smll::OBSTexture trackTex;
 			trackTex.width = smll::Config::singleton().get_int(
 				smll::CONFIG_INT_TRACKING_WIDTH);
 			trackTex.height = (int)((float)trackTex.width *
 				(float)m_baseHeight / (float)m_baseWidth);
+
 			// use detect texture if same size
 			if (trackTex.width == detectTex.width &&
 				trackTex.height == detectTex.height) {
-				trackTex.texture = detectTex.texture;
+
+				// skip all this if they are the same size
+				track = detect;
 			}
 			else {
+
+				// render the track texture
 				smllRenderer->SpriteTexRender(capture.texture,
 					trackTexRender, trackTex.width, trackTex.height);
 				trackTex.texture = gs_texrender_get_texture(trackTexRender);
-			}
 
-			// stage and copy
-			if (trackStage == nullptr ||
-				(int)gs_stagesurface_get_width(trackStage) != trackTex.width ||
-				(int)gs_stagesurface_get_height(trackStage) != trackTex.height) {
-				if (trackStage)
-					gs_stagesurface_destroy(trackStage);
-				trackStage = gs_stagesurface_create(trackTex.width, trackTex.height,
-					gs_texture_get_color_format(trackTex.texture));
-			}
-			gs_stage_texture(trackStage, trackTex.texture);
-			{
-				uint8_t *data; uint32_t linesize;
-				if (gs_stagesurface_map(trackStage, &data, &linesize)) {
-					// (re) allocate track image buffer if necessary
-					if (track.w != trackTex.width ||
-						track.h != trackTex.height ||
-						track.stride != (int)linesize) {
-						if (track.data)
-							delete[] track.data;
-						track.w = trackTex.width;
-						track.h = trackTex.height;
-						track.stride = linesize;
-						track.type = smll::OBSRenderer::OBSToSMLL(gs_texture_get_color_format(trackTex.texture));
-						track.data = new char[track.getSize()]; // luma image
+				// stage and copy
+				if (trackStage == nullptr ||
+					(int)gs_stagesurface_get_width(trackStage) != trackTex.width ||
+					(int)gs_stagesurface_get_height(trackStage) != trackTex.height) {
+					if (trackStage)
+						gs_stagesurface_destroy(trackStage);
+					trackStage = gs_stagesurface_create(trackTex.width, trackTex.height,
+						gs_texture_get_color_format(trackTex.texture));
+				}
+				gs_stage_texture(trackStage, trackTex.texture);
+				{
+					uint8_t *data; uint32_t linesize;
+					if (gs_stagesurface_map(trackStage, &data, &linesize)) {
+						// (re) allocate track image buffer if necessary
+						if (track.w != trackTex.width ||
+							track.h != trackTex.height ||
+							track.stride != (int)linesize) {
+							if (track.data)
+								delete[] track.data;
+							track.w = trackTex.width;
+							track.h = trackTex.height;
+							track.stride = linesize;
+							track.type = smll::OBSRenderer::OBSToSMLL(gs_texture_get_color_format(trackTex.texture));
+							track.data = new char[track.getSize()]; // luma image
+						}
+
+						//threaded_memcpy(track.data, data, track.getSize(), m_memcpyEnv);
+						memcpy(track.data, data, track.getSize());
+						gs_stagesurface_unmap(trackStage);
 					}
-
-					threaded_memcpy(track.data, data, track.getSize(), m_memcpyEnv);
-					//memcpy(track.data, data, track.getSize());
-					gs_stagesurface_unmap(trackStage);
 				}
 			}
 		}
@@ -953,6 +982,13 @@ int32_t Plugin::FaceMaskFilter::Instance::StaticThreadMain(Instance *ptr) {
 
 int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 
+	HANDLE hTask = NULL;
+	DWORD taskIndex = 0;
+	hTask = AvSetMmThreadCharacteristics(TEXT(MM_THREAD_TASK_NAME), &taskIndex);
+	if (hTask == NULL) {
+		blog(LOG_DEBUG, "[FaceMask] Failed to set MM thread characteristics");
+	}
+
 	// run until we're shut down
 	TimeStamp lastTimestamp;
 	while (true) {
@@ -1051,6 +1087,10 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			(long long)0);
 		if (sleepTime > 0)
 			std::this_thread::sleep_for(std::chrono::microseconds(sleepTime));
+	}
+
+	if (hTask != NULL) {
+		AvRevertMmThreadCharacteristics(hTask);
 	}
 
 	return 0;

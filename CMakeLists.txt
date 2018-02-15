@@ -213,6 +213,7 @@ SET(facemask-plugin_DATA
 SET(facemask-plugin_LIBRARIES
 	dlib::dlib
 	${OpenCV_LIBS}
+	avrt.lib
 )
 
 INCLUDE_DIRECTORIES(

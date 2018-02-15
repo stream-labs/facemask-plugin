@@ -112,6 +112,7 @@ namespace Plugin {
 			bool m_isActive;
 			bool m_isVisible;
 			bool m_isDisabled;
+			HANDLE m_taskHandle;
 
 			// Options
 
@@ -166,7 +167,7 @@ namespace Plugin {
 			// Detection
 			struct ThreadData {
 
-				static const int BUFFER_SIZE = 4;
+				static const int BUFFER_SIZE = 8;
 
 				std::thread thread;
 				std::mutex mutex;
