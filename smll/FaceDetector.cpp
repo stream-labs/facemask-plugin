@@ -138,7 +138,7 @@ namespace smll {
 
 
 	void FaceDetector::DetectFaces(const OBSTexture& capture, 
-		const ImageWrapper& detect, const ImageWrapper& track) {
+		const ImageWrapper& detect) {
 
 		// paranoid
 		if (m_faces.length == 0)
@@ -162,9 +162,7 @@ namespace smll {
         if ((capture.width != m_capture.width) || 
 			(capture.height != m_capture.height) ||
 			(detect.w != m_detect.w) ||
-			(detect.h != m_detect.h) ||
-			(track.w != m_track.w) ||
-			(track.h != m_track.h)) {
+			(detect.h != m_detect.h)) {
             // forget whatever we thought were faces
             m_faces.length = 0;
 			InvalidatePoses();
@@ -172,7 +170,6 @@ namespace smll {
 
 		// save frames
 		m_capture = capture;
-		m_track = track;
 		m_detect = detect;
         
         // what are we doing here
@@ -1012,54 +1009,54 @@ namespace smll {
     void FaceDetector::StartObjectTracking() {
 
 		// get crop info from config and track image dimensions
-		int ww = (int)((float)m_track.w *
-			Config::singleton().get_double(CONFIG_DOUBLE_TRACKING_CROP_WIDTH));
-		int hh = (int)((float)m_track.h * 
-			Config::singleton().get_double(CONFIG_DOUBLE_TRACKING_CROP_HEIGHT));
-		int xx = (int)((float)(m_track.w / 2) * 
-			Config::singleton().get_double(CONFIG_DOUBLE_TRACKING_CROP_X)) +
-			(m_track.w / 2);
-		int yy = (int)((float)(m_track.h / 2) *
-			Config::singleton().get_double(CONFIG_DOUBLE_TRACKING_CROP_Y)) + 
-			(m_track.h / 2);
+		int ww = (int)((float)m_detect.w *
+			Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_WIDTH));
+		int hh = (int)((float)m_detect.h *
+			Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_HEIGHT));
+		int xx = (int)((float)(m_detect.w / 2) *
+			Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_X)) +
+			(m_detect.w / 2);
+		int yy = (int)((float)(m_detect.h / 2) *
+			Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_Y)) +
+			(m_detect.h / 2);
 
 		// cropping offset
 		int offsetX = xx - (ww / 2);
 		int offsetY = yy - (hh / 2);
-		char* cropdata = m_track.data +
-			(m_track.getStride() * offsetY) + 
-			(m_track.getNumElems() * offsetX);
+		char* cropdata = m_detect.data +
+			(m_detect.getStride() * offsetY) + 
+			(m_detect.getNumElems() * offsetX);
 
 		// need to scale back
-		float scale = (float)m_capture.width / m_track.w;
+		float scale = (float)m_capture.width / m_detect.w;
 
         // start tracking
-		if (m_track.type == IMAGETYPE_BGR) {
+		if (m_detect.type == IMAGETYPE_BGR) {
 			dlib_image_wrapper<bgr_pixel> trimg(cropdata,
-				ww, hh, m_track.getStride());
+				ww, hh, m_detect.getStride());
 			for (int i = 0; i < m_faces.length; ++i) {
 				m_faces[i].StartTracking(trimg, scale, offsetX, offsetY);
 			}
 		}
-		else if (m_track.type == IMAGETYPE_RGB) {
+		else if (m_detect.type == IMAGETYPE_RGB) {
 			dlib_image_wrapper<rgb_pixel> trimg(cropdata,
-				ww, hh, m_track.getStride());
+				ww, hh, m_detect.getStride());
 			for (int i = 0; i < m_faces.length; ++i) {
 				m_faces[i].StartTracking(trimg, scale, offsetX, offsetY);
 			}
 		}
-		else if (m_track.type == IMAGETYPE_RGBA) {
+		else if (m_detect.type == IMAGETYPE_RGBA) {
 			throw std::invalid_argument(
 				"bad image type for face detection - alpha not allowed");
 			//dlib_image_wrapper<rgb_alpha_pixel> trimg(cropdata,
-			//	ww, hh, m_track.getStride());
+			//	ww, hh, m_detect.getStride());
 			//for (int i = 0; i < m_faces.length; ++i) {
 			//	m_faces[i].StartTracking(trimg, scale, offsetX, offsetY);
 			//}
 		}
-		else if (m_track.type == IMAGETYPE_LUMA) {
+		else if (m_detect.type == IMAGETYPE_LUMA) {
 			dlib_image_wrapper<unsigned char> trimg(cropdata,
-				ww, hh, m_track.getStride());
+				ww, hh, m_detect.getStride());
 			for (int i = 0; i < m_faces.length; ++i) {
 				m_faces[i].StartTracking(trimg, scale, offsetX, offsetY);
 			}
@@ -1073,24 +1070,24 @@ namespace smll {
     
     void FaceDetector::UpdateObjectTracking() {
 
-		// get cropping info from config and track image dimensions
-		int ww = (int)((float)m_track.w * 
-			Config::singleton().get_double(CONFIG_DOUBLE_TRACKING_CROP_WIDTH));
-		int hh = (int)((float)m_track.h *
-			Config::singleton().get_double(CONFIG_DOUBLE_TRACKING_CROP_HEIGHT));
-		int xx = (int)((float)(m_track.w / 2) * 
-			Config::singleton().get_double(CONFIG_DOUBLE_TRACKING_CROP_X)) +
-			(m_track.w / 2);
-		int yy = (int)((float)(m_track.h / 2) * 
-			Config::singleton().get_double(CONFIG_DOUBLE_TRACKING_CROP_Y)) +
-			(m_track.h / 2);
+		// get crop info from config and track image dimensions
+		int ww = (int)((float)m_detect.w *
+			Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_WIDTH));
+		int hh = (int)((float)m_detect.h *
+			Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_HEIGHT));
+		int xx = (int)((float)(m_detect.w / 2) *
+			Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_X)) +
+			(m_detect.w / 2);
+		int yy = (int)((float)(m_detect.h / 2) *
+			Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_Y)) +
+			(m_detect.h / 2);
 
 		// cropping offset
 		int offsetX = xx - (ww / 2);
 		int offsetY = yy - (hh / 2);
-		char* cropdata = m_track.data +
-			(m_track.getStride() * offsetY) +
-			(m_track.getNumElems() * offsetX);
+		char* cropdata = m_detect.data +
+			(m_detect.getStride() * offsetY) +
+			(m_detect.getNumElems() * offsetX);
 
 #define INNER_LOOP for (int i = 0; i < m_faces.length; i++) {\
 			if (i == m_trackingFaceIndex) {\
@@ -1104,26 +1101,26 @@ namespace smll {
 		}\
 
 		// update object tracking
-		if (m_track.type == IMAGETYPE_BGR) {
+		if (m_detect.type == IMAGETYPE_BGR) {
 			dlib_image_wrapper<bgr_pixel> trimg(cropdata,
-				ww, hh, m_track.getStride());
+				ww, hh, m_detect.getStride());
 			INNER_LOOP;
 		}
-		else if (m_track.type == IMAGETYPE_RGB) {
+		else if (m_detect.type == IMAGETYPE_RGB) {
 			dlib_image_wrapper<rgb_pixel> trimg(cropdata,
-				ww, hh, m_track.getStride());
+				ww, hh, m_detect.getStride());
 			INNER_LOOP;
 		}
-		else if (m_track.type == IMAGETYPE_RGBA) {
+		else if (m_detect.type == IMAGETYPE_RGBA) {
 			throw std::invalid_argument(
 				"bad image type for face detection - alpha not allowed");
 			//dlib_image_wrapper<rgb_alpha_pixel> trimg(cropdata,
-			//	ww, hh, m_track.getStride());
+			//	ww, hh, m_detect.getStride());
 			//INNER_LOOP;
 		}
-		else if (m_track.type == IMAGETYPE_LUMA) {
+		else if (m_detect.type == IMAGETYPE_LUMA) {
 			dlib_image_wrapper<unsigned char> trimg(cropdata,
-				ww, hh, m_track.getStride());
+				ww, hh, m_detect.getStride());
 			INNER_LOOP;
 		}
 		else {

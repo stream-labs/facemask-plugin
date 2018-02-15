@@ -138,10 +138,10 @@ int findClosest(const smll::DetectionResult& result, const smll::DetectionResult
 Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *source)
 	: m_source(source), m_baseWidth(640), m_baseHeight(480), m_isActive(true), m_isVisible(true),
 	m_isDisabled(false), m_taskHandle(NULL), m_memcpyEnv(nullptr), detectStage(nullptr), 
-	trackStage(nullptr), maskDataShutdown(false), maskJsonFilename(nullptr), maskData(nullptr),
+	maskDataShutdown(false), maskJsonFilename(nullptr), maskData(nullptr),
 	demoModeOn(false), demoCurrentMask(0), demoModeInterval(0.0f), demoModeDelay(0.0f),
 	demoModeElapsed(0.0f), demoModeInDelay(false), drawMask(true), 
-	drawFaces(false), drawMorphTris(false), drawFDRect(false), drawTRRect(false), 
+	drawFaces(false), drawMorphTris(false), drawFDRect(false), 
 	filterPreviewMode(false), autoGreenScreen(false), testingStage(nullptr) {
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
 
@@ -151,7 +151,6 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	obs_enter_graphics();
 	m_sourceRenderTarget = gs_texrender_create(GS_RGBA, GS_ZS_NONE);
 	detectTexRender = gs_texrender_create(GS_R8, GS_ZS_NONE);
-	trackTexRender = gs_texrender_create(GS_R8, GS_ZS_NONE);
 	drawTexRender = gs_texrender_create(GS_RGBA, GS_Z32F); // has depth buffer
 	obs_leave_graphics();
 
@@ -214,14 +213,10 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 	T.SendString("threads stopped");
 	PLOG_DEBUG("<%" PRIXPTR "> Worker Thread stopped.", this);
 
-	int fw = smll::Config::singleton().get_int(smll::CONFIG_INT_FACE_DETECT_WIDTH);
-	int tw = smll::Config::singleton().get_int(smll::CONFIG_INT_TRACKING_WIDTH);
-
 	obs_enter_graphics();
 	gs_texrender_destroy(m_sourceRenderTarget);
 	gs_texrender_destroy(drawTexRender);
 	gs_texrender_destroy(detectTexRender);
-	gs_texrender_destroy(trackTexRender);
 	for (int i = 0; i < ThreadData::BUFFER_SIZE; i++) {
 		if (detection.frames[i].capture.texture) {
 			gs_texture_destroy(detection.frames[i].capture.texture);
@@ -229,16 +224,11 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 		if (detection.frames[i].detect.data) {
 			delete[] detection.frames[i].detect.data;
 		}
-		if (detection.frames[i].track.data && (fw != tw)) {
-			delete[] detection.frames[i].track.data;
-		}
 	}
 	if (testingStage)
 		gs_stagesurface_destroy(testingStage);
 	if (detectStage)
 		gs_stagesurface_destroy(detectStage);
-	if (trackStage)
-		gs_stagesurface_destroy(trackStage);
 	maskData = nullptr;
 	obs_leave_graphics();
 
@@ -294,7 +284,6 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	obs_data_set_default_bool(data, kSettingsDrawFaces, false);
 	obs_data_set_default_bool(data, kSettingsDrawMorphTris, false);
 	obs_data_set_default_bool(data, kSettingsDrawFDCropRect, false);
-	obs_data_set_default_bool(data, kSettingsDrawTRCropRect, false);
 
 	obs_data_set_default_bool(data, kSettingsDemoMode, false);
 	obs_data_set_default_double(data, kSettingsDemoInterval, 5.0f);
@@ -359,8 +348,6 @@ obs_properties_t * Plugin::FaceMaskFilter::Instance::get_properties(void *ptr) {
 		kSettingsDrawMorphTrisDesc);
 	obs_properties_add_bool(props, kSettingsDrawFDCropRect,
 		kSettingsDrawFDCropRectDesc);
-	obs_properties_add_bool(props, kSettingsDrawTRCropRect,
-		kSettingsDrawTRCropRectDesc);
 
 	// add advanced configuration params
 	smll::Config::singleton().get_properties(props);
@@ -436,7 +423,6 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	drawFaces = obs_data_get_bool(data, kSettingsDrawFaces);
 	drawMorphTris = obs_data_get_bool(data, kSettingsDrawMorphTris);
 	drawFDRect = obs_data_get_bool(data, kSettingsDrawFDCropRect);
-	drawTRRect = obs_data_get_bool(data, kSettingsDrawTRCropRect);
 }
 
 void Plugin::FaceMaskFilter::Instance::activate(void *ptr) {
@@ -799,7 +785,6 @@ bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sou
 
 			smll::OBSTexture& capture = detection.frames[fidx].capture;
 			smll::ImageWrapper& detect = detection.frames[fidx].detect;
-			smll::ImageWrapper& track = detection.frames[fidx].track;
 
 			detection.frames[fidx].timestamp = sourceTimestamp;
 
@@ -859,63 +844,6 @@ bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sou
 					else
 						memcpy(detect.data, data, detect.getSize());
 					gs_stagesurface_unmap(detectStage);
-				}
-			}
-
-
-			// track texture dimensions
-			smll::OBSTexture trackTex;
-			trackTex.width = smll::Config::singleton().get_int(
-				smll::CONFIG_INT_TRACKING_WIDTH);
-			trackTex.height = (int)((float)trackTex.width *
-				(float)m_baseHeight / (float)m_baseWidth);
-
-			// use detect texture if same size
-			if (trackTex.width == detectTex.width &&
-				trackTex.height == detectTex.height) {
-
-				// skip all this if they are the same size
-				track = detect;
-			}
-			else {
-
-				// render the track texture
-				smllRenderer->SpriteTexRender(capture.texture,
-					trackTexRender, trackTex.width, trackTex.height);
-				trackTex.texture = gs_texrender_get_texture(trackTexRender);
-
-				// stage and copy
-				if (trackStage == nullptr ||
-					(int)gs_stagesurface_get_width(trackStage) != trackTex.width ||
-					(int)gs_stagesurface_get_height(trackStage) != trackTex.height) {
-					if (trackStage)
-						gs_stagesurface_destroy(trackStage);
-					trackStage = gs_stagesurface_create(trackTex.width, trackTex.height,
-						gs_texture_get_color_format(trackTex.texture));
-				}
-				gs_stage_texture(trackStage, trackTex.texture);
-				{
-					uint8_t *data; uint32_t linesize;
-					if (gs_stagesurface_map(trackStage, &data, &linesize)) {
-						// (re) allocate track image buffer if necessary
-						if (track.w != trackTex.width ||
-							track.h != trackTex.height ||
-							track.stride != (int)linesize) {
-							if (track.data)
-								delete[] track.data;
-							track.w = trackTex.width;
-							track.h = trackTex.height;
-							track.stride = linesize;
-							track.type = smll::OBSRenderer::OBSToSMLL(gs_texture_get_color_format(trackTex.texture));
-							track.data = new char[track.getSize()]; // luma image
-						}
-
-						if (m_memcpyEnv)
-							threaded_memcpy(track.data, data, track.getSize(), m_memcpyEnv);
-						else
-							memcpy(track.data, data, track.getSize());
-						gs_stagesurface_unmap(trackStage);
-					}
 				}
 			}
 		}
@@ -1052,8 +980,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			else {
 				// new frame - do the face detection
 				smllFaceDetector->DetectFaces(detection.frames[fidx].capture,
-					detection.frames[fidx].detect,
-					detection.frames[fidx].track);
+					detection.frames[fidx].detect);
 				lastTimestamp = detection.frames[fidx].timestamp;
 			}
 		}
@@ -1248,33 +1175,6 @@ void Plugin::FaceMaskFilter::Instance::drawCropRects(int width, int height) {
 		r.set_left(x);
 		r.set_right(x + w);
 		smllRenderer->SetDrawColor(255, 0, 255);
-		smllRenderer->DrawRect(r);
-	}
-
-	if (drawTRRect) {
-		dlib::rectangle r;
-		int x = (int)((float)(width / 2) *
-			smll::Config::singleton().get_double(
-				smll::CONFIG_DOUBLE_TRACKING_CROP_X)) + (width / 2);
-		int y = (int)((float)(height / 2) *
-			smll::Config::singleton().get_double(
-				smll::CONFIG_DOUBLE_TRACKING_CROP_Y)) + (height / 2);
-		int w = (int)((float)width *
-			smll::Config::singleton().get_double(
-				smll::CONFIG_DOUBLE_TRACKING_CROP_WIDTH));
-		int h = (int)((float)height *
-			smll::Config::singleton().get_double(
-				smll::CONFIG_DOUBLE_TRACKING_CROP_HEIGHT));
-
-		// need to transform back to capture size
-		x -= w / 2;
-		y -= h / 2;
-
-		r.set_top(y);
-		r.set_bottom(y + h);
-		r.set_left(x);
-		r.set_right(x + w);
-		smllRenderer->SetDrawColor(0, 255, 255);
 		smllRenderer->DrawRect(r);
 	}
 }

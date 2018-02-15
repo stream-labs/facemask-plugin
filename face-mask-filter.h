@@ -126,9 +126,7 @@ namespace Plugin {
 			gs_texrender_t*		m_sourceRenderTarget;
 			gs_texrender_t*		drawTexRender;
 			gs_texrender_t*		detectTexRender;
-			gs_texrender_t*		trackTexRender;
 			gs_stagesurf_t*		detectStage;
-			gs_stagesurf_t*		trackStage;
 
 			struct memcpy_environment* m_memcpyEnv;
 
@@ -160,7 +158,6 @@ namespace Plugin {
 			bool				drawFaces;
 			bool				drawMorphTris;
 			bool				drawFDRect;
-			bool				drawTRRect;
 			bool				filterPreviewMode;
 			bool				autoGreenScreen;
 
@@ -180,7 +177,6 @@ namespace Plugin {
 				struct CachedFrame {
 					smll::OBSTexture	capture;
 					smll::ImageWrapper	detect;
-					smll::ImageWrapper	track;
 					std::mutex			mutex;
 					TimeStamp			timestamp;
 				};

@@ -39,7 +39,6 @@ static const char* const kSettingsDrawMask = "drawmask";
 static const char* const kSettingsDrawFaces = "drawfaces";
 static const char* const kSettingsDrawMorphTris = "drawmorphtris";
 static const char* const kSettingsDrawFDCropRect = "drawFDCropRect";
-static const char* const kSettingsDrawTRCropRect = "drawTRCropRect";
 
 static const char* const kSettingsDemoMode = "demoMode";
 static const char* const kSettingsDemoFolder = "demoFolder";
@@ -59,8 +58,6 @@ static const char* const kSettingsDrawFacesDesc = "Draw Face Landmark Data";
 static const char* const kSettingsDrawMorphTrisDesc = "Draw Morph Wireframe";
 static const char* const kSettingsDrawFDCropRectDesc =
 	"Draw Face Detect Crop Rectangle";
-static const char* const kSettingsDrawTRCropRectDesc =
-	"Draw Tracking Crop Rectangle"; 
 
 static const char* const kSettingsDemoModeDesc = "Demo Mode";
 static const char* const kSettingsDemoFolderDesc = "Demo Mode Folder";

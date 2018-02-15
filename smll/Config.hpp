@@ -103,19 +103,8 @@ namespace smll {
 
 	// Tracking Vars ----------
 
-	// Scale Width
-	static const char* const CONFIG_INT_TRACKING_WIDTH = 
-		"trackingWidth";
-
-	// Cropping
-	static const char* const CONFIG_DOUBLE_TRACKING_CROP_WIDTH =
-		"trackingCropWidth";
-	static const char* const CONFIG_DOUBLE_TRACKING_CROP_HEIGHT =
-		"trackingCropHeight";
-	static const char* const CONFIG_DOUBLE_TRACKING_CROP_X =
-		"trackingCropX";
-	static const char* const CONFIG_DOUBLE_TRACKING_CROP_Y =
-		"trackingCropY";
+	// NOTE: tracking now uses same image dimensions as face
+	//       detection.
 
 	// Execution Frequency
 	static const char* const CONFIG_INT_TRACKING_FREQUNCY =

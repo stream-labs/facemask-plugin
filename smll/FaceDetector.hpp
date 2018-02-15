@@ -56,8 +56,7 @@ public:
 	~FaceDetector();
 
 	void DetectFaces(const OBSTexture& capture, 
-					 const ImageWrapper& detect,
-					 const ImageWrapper& track);
+					 const ImageWrapper& detect);
 
 	void MakeTriangulation(MorphData& morphData, TriangulationResult& result);
 
@@ -86,7 +85,6 @@ private:
 	// Image Buffers
 	OBSTexture		m_capture;
 	ImageWrapper	m_detect;
-	ImageWrapper	m_track;
 
 	gs_stagesurf_t* m_captureStage;
 
