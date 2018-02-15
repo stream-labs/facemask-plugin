@@ -185,6 +185,12 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 
 	this->update(data);
 
+	//
+	// DEBUG: Print out openCV build information
+	//
+	//std::string cvBuildInfo = cv::getBuildInformation();
+	//blog(LOG_DEBUG, "OpenCV Build Info\n-----------------\n%s", cvBuildInfo.c_str());
+	//
 
 	PLOG_DEBUG("<%" PRIXPTR "> Initialized.", this);
 }

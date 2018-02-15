@@ -39,25 +39,23 @@ typedef enum ImageType
 
 } ImageType;
 
-struct ImageWrapper
+class ImageWrapper
 {
+public:
 	int				w;
 	int				h;
 	int				stride;
 	ImageType		type;
 	char*			data;
 
-	ImageWrapper() : w(0), h(0), stride(0), type(IMAGETYPE_INVALID), 
-		data(nullptr) {}
-	ImageWrapper(int _w, int _h, int _s, ImageType _t, char* d)
-		: w(_w), h(_h), stride(_s), type(_t), data(d) {}
-	int				getStride() const { 
-		return (stride == 0) ? (w * getNumElems()) : stride; }
-	int				getSize() const {
-		return h * getStride();	}
-	int				getNumElems() const {
-		return std::vector<int>({ 1, 3, 3, 4, 4, 3, 0, 0 })[(int)type];
-	}
+	ImageWrapper();
+	ImageWrapper(int _w, int _h, int _s, ImageType _t, char* d);
+
+	int		getStride() const;
+	int		getSize() const;
+	int		getNumElems() const;
+
+	void	ResizeTo(ImageWrapper& other) const;
 };
 
 

@@ -44,7 +44,13 @@ SET(OpenCV_LIBS
 	optimized "${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_${OpenCV_VERSION}/lib/intel64/ippicvmt.lib"
 )
 include_directories("${OpenCV_DIR}/include")
+
+# zlib
 include_directories("${OpenCV_DIR}/3rdparty/include")
+
+# intel IPP
+include_directories("${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_331/include")
+include_directories("${OpenCV_DIR}/3rdparty/ippicv/ippiw_win_331/include")
 
 # smll
 include_directories("smll")
@@ -162,6 +168,7 @@ SET(smll_SOURCES
 	"${SMLLDir}/Face.cpp"
 	"${SMLLDir}/FaceDetector.cpp"
 	"${SMLLDir}/OBSRenderer.cpp"
+	"${SMLLDir}/ImageWrapper.cpp"
 	"${SMLLDir}/landmarks.cpp"
 	"${SMLLDir}/MorphData.cpp"
 	"${SMLLDir}/TestingPipe.cpp"
