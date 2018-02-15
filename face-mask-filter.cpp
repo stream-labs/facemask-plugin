@@ -208,6 +208,9 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 	T.SendString("threads stopped");
 	PLOG_DEBUG("<%" PRIXPTR "> Worker Thread stopped.", this);
 
+	int fw = smll::Config::singleton().get_int(smll::CONFIG_INT_FACE_DETECT_WIDTH);
+	int tw = smll::Config::singleton().get_int(smll::CONFIG_INT_TRACKING_WIDTH);
+
 	obs_enter_graphics();
 	gs_texrender_destroy(m_sourceRenderTarget);
 	gs_texrender_destroy(drawTexRender);
@@ -220,7 +223,7 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 		if (detection.frames[i].detect.data) {
 			delete[] detection.frames[i].detect.data;
 		}
-		if (detection.frames[i].track.data) {
+		if (detection.frames[i].track.data && (fw != tw)) {
 			delete[] detection.frames[i].track.data;
 		}
 	}
