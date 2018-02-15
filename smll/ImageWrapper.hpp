@@ -56,6 +56,7 @@ public:
 	int		getNumElems() const;
 
 	void	ResizeTo(ImageWrapper& other) const;
+	void	ColorConvertTo(ImageWrapper& other) const;
 };
 
 
