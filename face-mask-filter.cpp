@@ -43,8 +43,12 @@
 #include <libobs/util/threaded-memcpy.c>
 
 
-
+// how many frames before we consider a face "lost"
 #define NUM_FRAMES_TO_LOSE_FACE			(30)
+
+// use threaded memcpy (not sure if this actually helps
+// due to windows thread priorities)
+#define USE_THREADED_MEMCPY				(true)
 
 
 // Windows MMCSS thread task name
@@ -133,15 +137,16 @@ int findClosest(const smll::DetectionResult& result, const smll::DetectionResult
 
 Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *source)
 	: m_source(source), m_baseWidth(640), m_baseHeight(480), m_isActive(true), m_isVisible(true),
-	m_isDisabled(false), m_taskHandle(NULL), detectStage(nullptr), trackStage(nullptr), maskDataShutdown(false),
-	maskJsonFilename(nullptr), maskData(nullptr),
+	m_isDisabled(false), m_taskHandle(NULL), m_memcpyEnv(nullptr), detectStage(nullptr), 
+	trackStage(nullptr), maskDataShutdown(false), maskJsonFilename(nullptr), maskData(nullptr),
 	demoModeOn(false), demoCurrentMask(0), demoModeInterval(0.0f), demoModeDelay(0.0f),
 	demoModeElapsed(0.0f), demoModeInDelay(false), drawMask(true), 
 	drawFaces(false), drawMorphTris(false), drawFDRect(false), drawTRRect(false), 
 	filterPreviewMode(false), autoGreenScreen(false), testingStage(nullptr) {
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
 
-	m_memcpyEnv = init_threaded_memcpy_pool(0);
+	if (USE_THREADED_MEMCPY)
+		m_memcpyEnv = init_threaded_memcpy_pool(0);
 
 	obs_enter_graphics();
 	m_sourceRenderTarget = gs_texrender_create(GS_RGBA, GS_ZS_NONE);
@@ -712,8 +717,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 						detect.type = smll::OBSRenderer::OBSToSMLL(gs_texture_get_color_format(detectTex.texture));
 						detect.data = new char[detect.getSize()];
 					}
-					//threaded_memcpy(detect.data, data, detect.getSize(), m_memcpyEnv);
-					memcpy(detect.data, data, detect.getSize());
+					if (m_memcpyEnv)
+						threaded_memcpy(detect.data, data, detect.getSize(), m_memcpyEnv);
+					else
+						memcpy(detect.data, data, detect.getSize());
 					gs_stagesurface_unmap(detectStage);
 				}
 			}
@@ -766,8 +773,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 							track.data = new char[track.getSize()]; // luma image
 						}
 
-						//threaded_memcpy(track.data, data, track.getSize(), m_memcpyEnv);
-						memcpy(track.data, data, track.getSize());
+						if (m_memcpyEnv)
+							threaded_memcpy(track.data, data, track.getSize(), m_memcpyEnv);
+						else
+							memcpy(track.data, data, track.getSize());
 						gs_stagesurface_unmap(trackStage);
 					}
 				}
