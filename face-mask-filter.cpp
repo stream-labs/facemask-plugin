@@ -51,7 +51,7 @@
 //
 // see registry: Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\...
 //
-#define MM_THREAD_TASK_NAME				"Window Manager" //"Serato Pro Audio Background"
+#define MM_THREAD_TASK_NAME				"DisplayPostProcessing"
 
 
 static float FOVA(float aspect) {
