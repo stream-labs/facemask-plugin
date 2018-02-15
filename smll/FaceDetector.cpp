@@ -1092,78 +1092,39 @@ namespace smll {
 			(m_track.getStride() * offsetY) +
 			(m_track.getNumElems() * offsetX);
 
+#define INNER_LOOP for (int i = 0; i < m_faces.length; i++) {\
+			if (i == m_trackingFaceIndex) {\
+				double confidence = m_faces[i].UpdateTracking(trimg);\
+				if (confidence < Config::singleton().get_double(\
+					CONFIG_DOUBLE_TRACKING_THRESHOLD)) {\
+					m_faces.length = 0;\
+					break;\
+				}\
+			}\
+		}\
+
 		// update object tracking
 		if (m_track.type == IMAGETYPE_BGR) {
 			dlib_image_wrapper<bgr_pixel> trimg(cropdata,
 				ww, hh, m_track.getStride());
-			for (int i = 0; i < m_faces.length; i++) {
-				// time-slice face tracking (only track 1 face per frame)
-				if (i == m_trackingFaceIndex) {
-					double confidence = m_faces[i].UpdateTracking(trimg);
-					if (confidence < Config::singleton().get_double(
-						CONFIG_DOUBLE_TRACKING_THRESHOLD)) {
-						// lost confidence in tracking. time to detect faces again.
-						// BAIL
-						m_faces.length = 0;
-						break;
-					}
-				}
-			}
+			INNER_LOOP;
 		}
 		else if (m_track.type == IMAGETYPE_RGB) {
 			dlib_image_wrapper<rgb_pixel> trimg(cropdata,
 				ww, hh, m_track.getStride());
-			for (int i = 0; i < m_faces.length; i++) {
-				// time-slice face tracking (only track 1 face per frame)
-				if (i == m_trackingFaceIndex) {
-					double confidence = m_faces[i].UpdateTracking(trimg);
-					if (confidence < Config::singleton().get_double(
-						CONFIG_DOUBLE_TRACKING_THRESHOLD)) {
-						// lost confidence in tracking. time to detect faces again.
-						// BAIL
-						m_faces.length = 0;
-						break;
-					}
-				}
-			}
+			INNER_LOOP;
 		}
 		else if (m_track.type == IMAGETYPE_RGBA) {
 			throw std::invalid_argument(
 				"bad image type for face detection - alpha not allowed");
-			/*
-			dlib_image_wrapper<rgb_alpha_pixel> trimg(cropdata,
-				ww, hh, m_track.getStride());
-			for (int i = 0; i < m_faces.length; i++) {
-				// time-slice face tracking (only track 1 face per frame)
-				if (i == m_trackingFaceIndex) {
-					double confidence = m_faces[i].UpdateTracking(trimg);
-					if (confidence < Config::singleton().get_double(
-						CONFIG_DOUBLE_TRACKING_THRESHOLD)) {
-						// lost confidence in tracking. time to detect faces again.
-						// BAIL
-						m_faces.length = 0;
-						break;
-					}
-				}
-			}
-			*/
+			//dlib_image_wrapper<rgb_alpha_pixel> trimg(cropdata,
+			//	ww, hh, m_track.getStride());
+			//INNER_LOOP;
 		}
 		else if (m_track.type == IMAGETYPE_LUMA) {
 			dlib_image_wrapper<unsigned char> trimg(cropdata,
 				ww, hh, m_track.getStride());
-			for (int i = 0; i < m_faces.length; i++) {
-				// time-slice face tracking (only track 1 face per frame)
-				if (i == m_trackingFaceIndex) {
-					double confidence = m_faces[i].UpdateTracking(trimg);
-					if (confidence < Config::singleton().get_double(
-						CONFIG_DOUBLE_TRACKING_THRESHOLD)) {
-						// lost confidence in tracking. time to detect faces again.
-						// BAIL
-						m_faces.length = 0;
-						break;
-					}
-				}
-			}
+			INNER_LOOP;
 		}
 		else {
 			throw std::invalid_argument(
