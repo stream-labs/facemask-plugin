@@ -105,6 +105,9 @@ namespace Plugin {
 			void drawMaskData(const smll::DetectionResult& face,
 				Mask::MaskData*	maskData, bool depthOnly);
 
+			gs_texture* RenderSourceTexture(gs_effect_t* effect);
+			bool SendSourceTextureToThread(gs_texture* sourceTexture);
+
 		private:
 			// Filter State
 			obs_source_t* m_source;

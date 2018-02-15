@@ -600,59 +600,187 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	}
 
 	// Effects
-	gs_effect_t
-		*defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
+	gs_effect_t* defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
 
-#pragma region Source To Texture
-	// Render previous Filters to texture.
-	gs_texrender_reset(m_sourceRenderTarget);
-	if (gs_texrender_begin(m_sourceRenderTarget, m_baseWidth, m_baseHeight)) {
-		if (obs_source_process_filter_begin(m_source, GS_RGBA,
-			OBS_NO_DIRECT_RENDERING)) {
-			gs_blend_state_push();
-			gs_projection_push();
-
-			gs_ortho(0, (float)m_baseWidth, 0, (float)m_baseHeight, -1, 1);
-			gs_set_cull_mode(GS_NEITHER);
-			gs_reset_blend_state();
-			gs_blend_function_separate(
-				gs_blend_type::GS_BLEND_ONE,
-				gs_blend_type::GS_BLEND_ZERO,
-				gs_blend_type::GS_BLEND_ONE,
-				gs_blend_type::GS_BLEND_ZERO);
-			gs_enable_depth_test(false);
-			gs_enable_stencil_test(false);
-			gs_enable_stencil_write(false);
-			gs_enable_color(true, true, true, true);
-
-			vec4 empty;
-			vec4_zero(&empty);
-			gs_clear(GS_CLEAR_COLOR, &empty, 0, 0);
-
-			obs_source_process_filter_end(m_source,
-				effect ? effect : defaultEffect, m_baseWidth, m_baseHeight);
-
-			gs_projection_pop();
-			gs_blend_state_pop();
-		}
-		gs_texrender_end(m_sourceRenderTarget);
-	}
-	/// Grab a usable texture reference (valid until next reset).
-	gs_texture* sourceTexture = gs_texrender_get_texture(m_sourceRenderTarget);
+	// Render source frame to a texture
+	gs_texture* sourceTexture = RenderSourceTexture(effect ? effect : defaultEffect);
 	if (sourceTexture == NULL) {
 		// Failed to grab a usable texture, so skip.
 		obs_source_skip_video_filter(m_source);
 		return;
 	}
-	// timestamp for this frame
-	TimeStamp sourceTimestamp = NEW_TIMESTAMP;
-
-#pragma endregion Source To Texture
 
 	// smll needs a "viewport" to draw
 	smllRenderer->SetViewport(m_baseWidth, m_baseHeight);
 
 	// ----- SEND FRAME TO FACE DETECTION THREAD -----
+	SendSourceTextureToThread(sourceTexture);
+
+	// ----- DRAW -----
+
+	// start
+	smllRenderer->DrawBegin();
+
+	// Set up sampler state
+	// Note: We need to wrap for morphing
+	gs_sampler_info sinfo;
+	sinfo.address_u = GS_ADDRESS_WRAP;
+	sinfo.address_v = GS_ADDRESS_WRAP;
+	sinfo.address_w = GS_ADDRESS_CLAMP;
+	sinfo.filter = GS_FILTER_LINEAR;
+	sinfo.border_color = 0;
+	sinfo.max_anisotropy = 0;
+	gs_samplerstate_t* ss = gs_samplerstate_create(&sinfo);
+	gs_load_samplerstate(ss, 0);
+	gs_samplerstate_destroy(ss);
+
+	// mask to draw
+	Mask::MaskData* mdat = maskData.get();
+	if (demoModeOn && demoMaskDatas.size() > 0) {
+		if (demoCurrentMask >= 0 &&
+			demoCurrentMask < demoMaskDatas.size()) {
+			mdat = demoMaskDatas[demoCurrentMask].get();
+		}
+	}
+	
+	// Select the video frame to draw
+	// - since we are already caching frames of video for the
+	//   face detection thread to consume, we can likely find
+	//   the frame of video that matches the timestamp of the
+	//   current detection data.
+	gs_texture_t* vidTex = sourceTexture;
+	for (int i = 0; i < ThreadData::BUFFER_SIZE; i++) {
+		if (detection.frames[i].timestamp == timestamp &&
+			detection.frames[i].capture.texture != nullptr &&
+			detection.frames[i].capture.width == m_baseWidth &&
+			detection.frames[i].capture.height == m_baseHeight) {
+			vidTex = detection.frames[i].capture.texture;
+			break;
+		}
+	}
+
+	// Draw the source video
+	if (mdat) {
+		triangulation.autoGreenScreen = autoGreenScreen;
+		mdat->RenderMorphVideo(vidTex, m_baseWidth, m_baseHeight, triangulation);
+	} 
+	else {
+		// Draw the source video
+		gs_enable_depth_test(false);
+		gs_set_cull_mode(GS_NEITHER);
+		while (gs_effect_loop(defaultEffect, "Draw")) {
+			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+				"image"), vidTex);
+			gs_draw_sprite(vidTex, 0, m_baseWidth, m_baseHeight);
+		}
+	}
+
+	// draw face detection data
+	if (drawFaces)
+		smllRenderer->DrawFaces(faces);
+
+	gs_enable_depth_test(true);
+	gs_depth_function(GS_LESS);
+
+	// draw crop rectangles
+	drawCropRects(m_baseWidth, m_baseHeight);
+
+	// some reasons triangulation should be destroyed
+	if (!mdat || faces.length == 0) {
+		triangulation.DestroyBuffers();
+	}
+
+	// ready?
+	gs_texture* tex2 = nullptr;
+	if (faces.length > 0 && !demoModeInDelay) {
+
+		// draw stuff to texture
+		gs_texrender_reset(drawTexRender);
+		texRenderBegin(m_baseWidth, m_baseHeight);
+		if (gs_texrender_begin(drawTexRender, m_baseWidth, m_baseHeight)) {
+
+			// clear
+			vec4 black;
+			vec4_zero(&black);
+			gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
+
+			if (drawMask && mdat) {
+				std::unique_lock<std::mutex> lock(maskDataMutex, std::try_to_lock);
+				if (lock.owns_lock()) {
+					// Check here for no morph
+					if (!mdat->GetMorph()) {
+						triangulation.DestroyBuffers();
+					}
+
+					// Draw depth-only stuff
+					for (int i = 0; i < faces.length; i++) {
+						drawMaskData(faces[i], mdat, true);
+					}
+					// clear the color buffer (leaving depth info there)
+					gs_clear(GS_CLEAR_COLOR, &black, 1.0f, 0);
+
+					// Draw regular stuff
+					for (int i = 0; i < faces.length; i++) {
+						drawMaskData(faces[i], mdat, false);
+					}
+				}
+			}
+			
+			gs_texrender_end(drawTexRender);
+		}
+		texRenderEnd();
+		tex2 = gs_texrender_get_texture(drawTexRender);
+	}
+
+	// TEST MODE RENDERING
+	if (smll::Config::singleton().get_bool(smll::CONFIG_BOOL_IN_TEST_MODE))	{
+		if (faces.length > 0) {
+
+			dlib::point pos = faces[0].GetPosition();
+
+			if (!testingStage) {
+				testingStage = gs_stagesurface_create(m_baseWidth, m_baseHeight, GS_RGBA);
+			}
+			gs_stage_texture(testingStage, tex2);
+			uint8_t *data; uint32_t linesize;
+			if (gs_stagesurface_map(testingStage, &data, &linesize)) {
+
+				uint8_t* pixel = data + (pos.y() * linesize) + (pos.x() * 4);
+				uint8_t red = *pixel++;
+				uint8_t green = *pixel++;
+				uint8_t blue = *pixel++;
+				uint8_t alpha = *pixel++;
+
+				char buf[128];
+				snprintf(buf, sizeof(buf), "detected pixel %d,%d,%d,%d",
+					(int)red, (int)green, (int)blue, (int)alpha);
+				smll::TestingPipe::singleton().SendString(buf);
+
+				gs_stagesurface_unmap(testingStage);
+			}
+		}
+	}
+
+
+	if (tex2) {
+		// draw the rendering on top of the video
+		gs_set_cull_mode(GS_NEITHER);
+		while (gs_effect_loop(defaultEffect, "Draw")) {
+			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+				"image"), tex2);
+			gs_draw_sprite(tex2, 0, m_baseWidth, m_baseHeight);
+		}
+	}
+
+	// end
+	smllRenderer->DrawEnd();
+}
+
+bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sourceTexture) {
+
+	// timestamp for this frame
+	TimeStamp sourceTimestamp = NEW_TIMESTAMP;
+
 
 	// Note: Yeah, I know, this is a big and gross section of code. I may
 	//       or may not clean it up some day.
@@ -798,167 +926,49 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		detection.frameIndex = (fidx + 1) % ThreadData::BUFFER_SIZE;
 	}
 
-
-	// ----- DRAW -----
-
-	// start
-	smllRenderer->DrawBegin();
-
-	// Set up sampler state
-	// Note: We need to wrap for morphing
-	gs_sampler_info sinfo;
-	sinfo.address_u = GS_ADDRESS_WRAP;
-	sinfo.address_v = GS_ADDRESS_WRAP;
-	sinfo.address_w = GS_ADDRESS_CLAMP;
-	sinfo.filter = GS_FILTER_LINEAR;
-	sinfo.border_color = 0;
-	sinfo.max_anisotropy = 0;
-	gs_samplerstate_t* ss = gs_samplerstate_create(&sinfo);
-	gs_load_samplerstate(ss, 0);
-	gs_samplerstate_destroy(ss);
-
-	// mask to draw
-	Mask::MaskData* mdat = maskData.get();
-	if (demoModeOn && demoMaskDatas.size() > 0) {
-		if (demoCurrentMask >= 0 &&
-			demoCurrentMask < demoMaskDatas.size()) {
-			mdat = demoMaskDatas[demoCurrentMask].get();
-		}
-	}
-	
-	// Select the video frame to draw
-	// - since we are already caching frames of video for the
-	//   face detection thread to consume, we can likely find
-	//   the frame of video that matches the timestamp of the
-	//   current detection data.
-	gs_texture_t* vidTex = sourceTexture;
-	for (int i = 0; i < ThreadData::BUFFER_SIZE; i++) {
-		if (detection.frames[i].timestamp == timestamp &&
-			detection.frames[i].capture.texture != nullptr &&
-			detection.frames[i].capture.width == m_baseWidth &&
-			detection.frames[i].capture.height == m_baseHeight) {
-			vidTex = detection.frames[i].capture.texture;
-			break;
-		}
-	}
-
-
-	// Draw the source video
-	if (mdat) {
-		triangulation.autoGreenScreen = autoGreenScreen;
-		mdat->RenderMorphVideo(vidTex, m_baseWidth, m_baseHeight, triangulation);
-	} 
-	else {
-		// Draw the source video
-		gs_enable_depth_test(false);
-		gs_set_cull_mode(GS_NEITHER);
-		while (gs_effect_loop(defaultEffect, "Draw")) {
-			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
-				"image"), vidTex);
-			gs_draw_sprite(vidTex, 0, m_baseWidth, m_baseHeight);
-		}
-	}
-
-	// draw face detection data
-	if (drawFaces)
-		smllRenderer->DrawFaces(faces);
-
-	gs_enable_depth_test(true);
-	gs_depth_function(GS_LESS);
-
-	// draw crop rectangles
-	drawCropRects(m_baseWidth, m_baseHeight);
-
-	// some reasons triangulation should be destroyed
-	if (!mdat || faces.length == 0) {
-		triangulation.DestroyBuffers();
-	}
-
-	// ready?
-	gs_texture* tex2 = nullptr;
-	if (faces.length > 0 && !demoModeInDelay) {
-
-		// draw stuff to texture
-		gs_texrender_reset(drawTexRender);
-		texRenderBegin(m_baseWidth, m_baseHeight);
-		if (gs_texrender_begin(drawTexRender, m_baseWidth, m_baseHeight)) {
-
-			// clear
-			vec4 black;
-			vec4_zero(&black);
-			gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
-
-			if (drawMask && mdat) {
-				std::unique_lock<std::mutex> lock(maskDataMutex, std::try_to_lock);
-				if (lock.owns_lock()) {
-					// Check here for no morph
-					if (!mdat->GetMorph()) {
-						triangulation.DestroyBuffers();
-					}
-
-					// Draw depth-only stuff
-					for (int i = 0; i < faces.length; i++) {
-						drawMaskData(faces[i], mdat, true);
-					}
-					// clear the color buffer (leaving depth info there)
-					gs_clear(GS_CLEAR_COLOR, &black, 1.0f, 0);
-
-					// Draw regular stuff
-					for (int i = 0; i < faces.length; i++) {
-						drawMaskData(faces[i], mdat, false);
-					}
-				}
-			}
-			
-			gs_texrender_end(drawTexRender);
-		}
-		texRenderEnd();
-		tex2 = gs_texrender_get_texture(drawTexRender);
-	}
-
-	// TEST MODE RENDERING
-	if (smll::Config::singleton().get_bool(smll::CONFIG_BOOL_IN_TEST_MODE))	{
-		if (faces.length > 0) {
-
-			dlib::point pos = faces[0].GetPosition();
-
-			if (!testingStage) {
-				testingStage = gs_stagesurface_create(m_baseWidth, m_baseHeight, GS_RGBA);
-			}
-			gs_stage_texture(testingStage, tex2);
-			uint8_t *data; uint32_t linesize;
-			if (gs_stagesurface_map(testingStage, &data, &linesize)) {
-
-				uint8_t* pixel = data + (pos.y() * linesize) + (pos.x() * 4);
-				uint8_t red = *pixel++;
-				uint8_t green = *pixel++;
-				uint8_t blue = *pixel++;
-				uint8_t alpha = *pixel++;
-
-				char buf[128];
-				snprintf(buf, sizeof(buf), "detected pixel %d,%d,%d,%d",
-					(int)red, (int)green, (int)blue, (int)alpha);
-				smll::TestingPipe::singleton().SendString(buf);
-
-				gs_stagesurface_unmap(testingStage);
-			}
-		}
-	}
-
-
-	if (tex2) {
-		// draw the rendering on top of the video
-		gs_set_cull_mode(GS_NEITHER);
-		while (gs_effect_loop(defaultEffect, "Draw")) {
-			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
-				"image"), tex2);
-			gs_draw_sprite(tex2, 0, m_baseWidth, m_baseHeight);
-		}
-	}
-
-	// end
-	smllRenderer->DrawEnd();
+	return frameSent;
 }
+
+gs_texture* Plugin::FaceMaskFilter::Instance::RenderSourceTexture(gs_effect_t* effect) {
+
+	// Render previous Filters to texture.
+	gs_texrender_reset(m_sourceRenderTarget);
+	if (gs_texrender_begin(m_sourceRenderTarget, m_baseWidth, m_baseHeight)) {
+		if (obs_source_process_filter_begin(m_source, GS_RGBA,
+			OBS_NO_DIRECT_RENDERING)) {
+			gs_blend_state_push();
+			gs_projection_push();
+
+			gs_ortho(0, (float)m_baseWidth, 0, (float)m_baseHeight, -1, 1);
+			gs_set_cull_mode(GS_NEITHER);
+			gs_reset_blend_state();
+			gs_blend_function_separate(
+				gs_blend_type::GS_BLEND_ONE,
+				gs_blend_type::GS_BLEND_ZERO,
+				gs_blend_type::GS_BLEND_ONE,
+				gs_blend_type::GS_BLEND_ZERO);
+			gs_enable_depth_test(false);
+			gs_enable_stencil_test(false);
+			gs_enable_stencil_write(false);
+			gs_enable_color(true, true, true, true);
+
+			vec4 empty;
+			vec4_zero(&empty);
+			gs_clear(GS_CLEAR_COLOR, &empty, 0, 0);
+
+			obs_source_process_filter_end(m_source,
+				effect, m_baseWidth, m_baseHeight);
+
+			gs_projection_pop();
+			gs_blend_state_pop();
+		}
+		gs_texrender_end(m_sourceRenderTarget);
+	}
+	return gs_texrender_get_texture(m_sourceRenderTarget);
+}
+
+
+
 
 void Plugin::FaceMaskFilter::Instance::drawMaskData(const smll::DetectionResult& face,
 	Mask::MaskData*	_maskData, bool depthOnly) {
