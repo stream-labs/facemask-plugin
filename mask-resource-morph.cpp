@@ -73,7 +73,7 @@ Mask::Resource::Morph::Morph(Mask::MaskData* parent, std::string name, obs_data_
 		numPoints++;
 	}
 	// sanity check
-	if (numPoints > smll::NUM_FACIAL_LANDMARKS) {
+	if (numPoints > smll::NUM_MORPH_LANDMARKS) {
 		PLOG_ERROR("Bad deltas section in '%s'. Too many deltas.", name.c_str());
 		throw std::logic_error("Morph has bad deltas section. Too many deltas.");
 	}

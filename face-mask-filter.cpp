@@ -308,10 +308,14 @@ obs_properties_t * Plugin::FaceMaskFilter::Instance::get_properties(void *ptr) {
 	obs_properties_t* props = obs_properties_create();
 	obs_property_t* p = nullptr;
 
+	char* jsonName = obs_module_file(kFileDefaultJson);
+	std::string maskDir = Utils::dirname(jsonName);
+	bfree(jsonName);
+
 	// Basic Properties
 	p = obs_properties_add_path(props, P_MASK, P_TRANSLATE(P_MASK), 
 		obs_path_type::OBS_PATH_FILE, 
-		"Face Mask JSON (*.json)", nullptr);
+		"Face Mask JSON (*.json)", maskDir.c_str());
 	obs_property_set_long_description(p, P_TRANSLATE(P_DESC(P_MASK)));
 	obs_property_set_modified_callback(p, properties_modified);
 
