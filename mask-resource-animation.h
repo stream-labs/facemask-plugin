@@ -89,6 +89,8 @@ namespace Mask {
 			virtual void Update(Mask::Part* part, float time) override;
 			virtual void Render(Mask::Part* part) override;
 
+			void Rewind();
+
 		protected:
 			float							m_duration;
 			float							m_fps;

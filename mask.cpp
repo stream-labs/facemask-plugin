@@ -584,8 +584,11 @@ bool Mask::MaskData::RenderMorphVideo(gs_texture* vidtex, uint32_t width, uint32
 }
 
 void Mask::MaskData::RewindAnimations() {
-	m_morph = std::dynamic_pointer_cast<Mask::Resource::Morph>
-		(GetResource(Mask::Resource::Type::Morph)).get();
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			aakv.second->Rewind();
+		}
+	}
 }
 
 

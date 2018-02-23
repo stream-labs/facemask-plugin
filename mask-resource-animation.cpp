@@ -207,6 +207,21 @@ void Mask::Resource::Animation::Render(Mask::Part* part) {
 	return;
 }
 
+void Mask::Resource::Animation::Rewind() {
+
+	m_parent->instanceDatas.Push(m_id);
+
+	// get our instance data
+	std::shared_ptr<AnimationInstanceData> instData =
+		m_parent->instanceDatas.GetData<AnimationInstanceData>();
+
+	// reset time
+	instData->elapsed = 0.0f;
+
+	m_parent->instanceDatas.Pop();
+}
+
+
 Mask::Resource::AnimationChannelType 
 Mask::Resource::Animation::AnimationTypeFromString(const std::string& s) {
 
