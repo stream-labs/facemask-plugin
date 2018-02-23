@@ -34,6 +34,8 @@ SET(OpenCV_LIBS
 	optimized "${OpenCV_DIR}/lib/Release/opencv_imgcodecs${OpenCV_VERSION}.lib"
 	debug "${OpenCV_DIR}/lib/Debug/opencv_imgproc${OpenCV_VERSION}d.lib"
 	optimized "${OpenCV_DIR}/lib/Release/opencv_imgproc${OpenCV_VERSION}.lib"
+	debug "${OpenCV_DIR}/3rdparty/lib/Debug/libpngd.lib"
+	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libpng.lib"
 	debug "${OpenCV_DIR}/3rdparty/lib/Debug/zlibd.lib"
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/zlib.lib"
 	debug "${OpenCV_DIR}/3rdparty/lib/Debug/ittnotifyd.lib"

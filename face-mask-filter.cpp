@@ -139,9 +139,9 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	: m_source(source), m_baseWidth(640), m_baseHeight(480), m_isActive(true), m_isVisible(true),
 	m_isDisabled(false), m_taskHandle(NULL), m_memcpyEnv(nullptr), detectStage(nullptr), 
 	maskDataShutdown(false), maskJsonFilename(nullptr), maskData(nullptr),
-	demoModeOn(false), demoCurrentMask(0), demoModeInterval(0.0f), demoModeDelay(0.0f),
-	demoModeElapsed(0.0f), demoModeInDelay(false), drawMask(true), 
-	drawFaces(false), drawMorphTris(false), drawFDRect(false), 
+	demoModeOn(false), demoModeMaskChanged(false), demoCurrentMask(0), demoModeInterval(0.0f), 
+	demoModeDelay(0.0f), demoModeElapsed(0.0f), demoModeInDelay(false), demoModeGenPreviews(false),
+	drawMask(true),	drawFaces(false), drawMorphTris(false), drawFDRect(false), 
 	filterPreviewMode(false), autoGreenScreen(false), testingStage(nullptr) {
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
 
@@ -280,6 +280,8 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 
 	obs_data_set_default_bool(data, kSettingsGreenscreen, false);
 
+	obs_data_set_default_bool(data, kSettingsGenPreviews, false);
+
 	obs_data_set_default_bool(data, kSettingsDrawMask, true);
 	obs_data_set_default_bool(data, kSettingsDrawFaces, false);
 	obs_data_set_default_bool(data, kSettingsDrawMorphTris, false);
@@ -342,6 +344,9 @@ obs_properties_t * Plugin::FaceMaskFilter::Instance::get_properties(void *ptr) {
 		kSettingsDemoIntervalDesc, 1.0f, 60.0f, 1.0f);
 	obs_properties_add_float_slider(props, kSettingsDemoDelay,
 		kSettingsDemoDelayDesc, 1.0f, 60.0f, 1.0f);
+
+	obs_properties_add_bool(props, kSettingsGenPreviews,
+		kSettingsGenPreviewsDesc);
 
 	// debug drawing flags
 	obs_properties_add_bool(props, kSettingsDrawMask,
@@ -421,6 +426,7 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	demoModeFolder = obs_data_get_string(data, kSettingsDemoFolder);
 	demoModeInterval = (float)obs_data_get_double(data, kSettingsDemoInterval);
 	demoModeDelay = (float)obs_data_get_double(data, kSettingsDemoDelay);
+	demoModeGenPreviews = obs_data_get_bool(data, kSettingsGenPreviews);
 
 	// update our param values
 	drawMask = obs_data_get_bool(data, kSettingsDrawMask);
@@ -500,6 +506,7 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 		}
 		else if (!demoModeInDelay && (demoModeElapsed > demoModeInterval)) {
 			demoCurrentMask = (demoCurrentMask + 1) % demoMaskDatas.size();
+			demoModeMaskChanged = true;
 			demoModeElapsed -= demoModeInterval;
 			demoModeInDelay = true;
 		}
@@ -764,6 +771,14 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// end
 	smllRenderer->DrawEnd();
+
+	// generate previews?
+	if (demoModeOn && demoModeMaskChanged && demoModeGenPreviews) {
+
+		blog(LOG_DEBUG, "make thumbs for: %s", demoMaskFilenames[demoCurrentMask].c_str());
+
+	}
+	demoModeMaskChanged = false;
 }
 
 bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sourceTexture) {
@@ -1106,11 +1121,15 @@ void Plugin::FaceMaskFilter::Instance::LoadDemo() {
 	std::vector<std::string> files = Utils::ListFolder(demoModeFolder, "*.json");
 
 	demoMaskDatas.clear();
+	demoMaskFilenames.clear();
 	for (int i = 0; i < files.size(); i++) {
-		demoMaskDatas.push_back(std::unique_ptr<Mask::MaskData>(LoadMask(demoModeFolder + "\\" + files[i])));
+		std::string fn = demoModeFolder + "\\" + files[i];
+		demoMaskDatas.push_back(std::unique_ptr<Mask::MaskData>(LoadMask(fn)));
+		demoMaskFilenames.push_back(fn);
 		std::this_thread::sleep_for(std::chrono::microseconds(1));
 	}
 	demoCurrentMask = 0;
+	demoModeMaskChanged = true;
 }
 
 

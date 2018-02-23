@@ -140,13 +140,16 @@ namespace Plugin {
 
 			// demo mode
 			bool				demoModeOn;
+			bool				demoModeMaskChanged;
 			std::string			demoModeFolder;
 			int					demoCurrentMask;
 			float				demoModeElapsed;
 			float				demoModeInterval;
 			float				demoModeDelay;
 			bool				demoModeInDelay;
+			bool				demoModeGenPreviews;
 			std::vector<std::unique_ptr<Mask::MaskData>>	demoMaskDatas;
+			std::vector<std::string> demoMaskFilenames;
 
 			// our current face detection results
 			smll::DetectionResults		faces;
