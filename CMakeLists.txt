@@ -223,6 +223,7 @@ SET(facemask-plugin_LIBRARIES
 	dlib::dlib
 	${OpenCV_LIBS}
 	avrt.lib
+	Shlwapi.lib
 )
 
 INCLUDE_DIRECTORIES(

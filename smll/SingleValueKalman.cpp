@@ -52,11 +52,15 @@ namespace smll {
 		Q =	.05, .05, .0,
 			.05, .05, .0,
 			.0, .0, .0;
-		R =	1;
 		P =	.1, .1, .1,
 			.1, 10000, 10,
 			.1, 10, 100;
 
+		// R largely determines the "smoothing factor"
+		// under 0 is low, 1 is good, 5 is high, 10 is too much
+		// - I keep this at 1 for the facemask plugin
+		// - I set this to 4 for generating previews
+		R = 4;
 
 		m_kf = new KalmanFilter<double, m, n>(dt, A, C, Q, R, P);
 	}

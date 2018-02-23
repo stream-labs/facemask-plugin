@@ -27,6 +27,7 @@
 #include <smll/TestingPipe.hpp>
 #include <smll/landmarks.hpp>
 
+#include <Shlwapi.h>
 #include <memory>
 #include <string>
 #include <map>
@@ -508,9 +509,9 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 		else if (!demoModeInDelay && (demoModeElapsed > demoModeInterval)) {
 			demoCurrentMask = (demoCurrentMask + 1) % demoMaskDatas.size();
 			demoModeMaskChanged = true;
+			demoModeSavingFrames = false;
 			demoModeElapsed -= demoModeInterval;
 			demoModeInDelay = true;
-			demoModeSavingFrames = false;
 		}
 	}
 
@@ -718,6 +719,11 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					// clear the color buffer (leaving depth info there)
 					gs_clear(GS_CLEAR_COLOR, &black, 1.0f, 0);
 
+					// if we are generating thumbs, add video to this texture
+					if (mdat && demoModeOn && demoModeMaskChanged && demoModeGenPreviews && demoModeSavingFrames) {
+						mdat->RenderMorphVideo(vidTex, m_baseWidth, m_baseHeight, triangulation);
+					}
+
 					// Draw regular stuff
 					for (int i = 0; i < faces.length; i++) {
 						drawMaskData(faces[i], mdat, false);
@@ -775,58 +781,47 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	smllRenderer->DrawEnd();
 
 	// generate previews?
-	if (demoModeOn && demoModeMaskChanged && demoModeGenPreviews) {
+	if (demoModeOn && !demoModeInDelay && 
+		demoModeMaskChanged && demoModeGenPreviews) {
 
-		//blog(LOG_DEBUG, "make thumbs for: %s", demoMaskFilenames[demoCurrentMask].c_str());
-
-		std::string outFolder = demoMaskFilenames[demoCurrentMask] + ".render";
+		// get frame color
+		if (!testingStage) {
+			testingStage = gs_stagesurface_create(m_baseWidth, m_baseHeight, GS_RGBA);
+		}
+		gs_stage_texture(testingStage, vidTex);
+		uint8_t *data; uint32_t linesize;
+		bool isRed = false;
+		if (gs_stagesurface_map(testingStage, &data, &linesize)) {
+			uint8_t red = *data++;
+			uint8_t green = *data++;
+			uint8_t blue = *data++;
+			if (red > 253 && green < 2 && blue < 2) {
+				isRed = true;
+			}
+			gs_stagesurface_unmap(testingStage);
+		}
 
 		if (demoModeSavingFrames) {
-
-			if (!testingStage) {
-				testingStage = gs_stagesurface_create(m_baseWidth, m_baseHeight, GS_RGBA);
+			// sometimes the red frame is 2 frames
+			if (isRed) {
+				mdat->RewindAnimations();
 			}
-			gs_stage_texture(testingStage, vidTex);
-			uint8_t *data; uint32_t linesize;
-			if (gs_stagesurface_map(testingStage, &data, &linesize)) {
+			else {
+				PreviewFrame pf(tex2, m_baseWidth, m_baseHeight);
+				previewFrames.emplace_back(pf);
 
-				cv::Mat vm(m_baseHeight, m_baseWidth, CV_8UC4, data, linesize);
-
-				char fname[256];
-				snprintf(fname, sizeof(fname), "frame%04d.png", demoModeGenFrameNum++);
-				std::string outFile = outFolder + "/" + fname;
-				cv::imwrite(outFile.c_str(), vm);
-
-				gs_stagesurface_unmap(testingStage);
-			}
-			if (demoModeGenFrameNum > 120) {
-				// done
-				demoModeMaskChanged = false;
-				demoModeSavingFrames = false;
+				if (previewFrames.size() > 240) {
+					// done
+					WritePreviewFrames();
+					demoModeMaskChanged = false;
+					demoModeSavingFrames = false;
+				}
 			}
 		}
-		else {
-			// waiting for a red frame
-			if (!testingStage) {
-				testingStage = gs_stagesurface_create(m_baseWidth, m_baseHeight, GS_RGBA);
-			}
-			gs_stage_texture(testingStage, vidTex);
-			uint8_t *data; uint32_t linesize;
-			if (gs_stagesurface_map(testingStage, &data, &linesize)) {
-
-				uint8_t red = *data++;
-				uint8_t green = *data++;
-				uint8_t blue = *data++;
-
-				if (red > 252 && green < 3 && blue < 3) {
-					mdat->RewindAnimations();
-					demoModeSavingFrames = true;
-					demoModeGenFrameNum = 0;
-					::CreateDirectory(outFolder.c_str(), NULL);
-				}
-
-				gs_stagesurface_unmap(testingStage);
-			}
+		else if (isRed) {
+			// ready to go
+			mdat->RewindAnimations();
+			demoModeSavingFrames = true;
 		}
 	}
 }
@@ -1168,15 +1163,25 @@ void Plugin::FaceMaskFilter::Instance::LoadDemo() {
 
 	blog(LOG_DEBUG, "loading demo folder %s", demoModeFolder.c_str());
 
-	std::vector<std::string> files = Utils::ListFolder(demoModeFolder, "*.json");
+	std::vector<std::string> files = Utils::ListFolderRecursive(demoModeFolder, "*.json");
 
 	demoMaskDatas.clear();
 	demoMaskFilenames.clear();
 	for (int i = 0; i < files.size(); i++) {
+		if (i == 20)
+			break;
+
 		std::string fn = demoModeFolder + "\\" + files[i];
-		demoMaskDatas.push_back(std::unique_ptr<Mask::MaskData>(LoadMask(fn)));
-		demoMaskFilenames.push_back(fn);
-		std::this_thread::sleep_for(std::chrono::microseconds(1));
+		bool addMask = true;
+		if (demoModeGenPreviews) {
+			std::string gifname = fn.substr(0, fn.length() - 4) + "gif";
+			addMask = (::PathFileExists(gifname.c_str()) != TRUE);
+		}
+		if (addMask) {
+			demoMaskDatas.push_back(std::unique_ptr<Mask::MaskData>(LoadMask(fn)));
+			demoMaskFilenames.push_back(fn);
+			std::this_thread::sleep_for(std::chrono::microseconds(1));
+		}
 	}
 	demoCurrentMask = 0;
 	demoModeMaskChanged = true;
@@ -1360,5 +1365,102 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 			}
 		}
 	}
+}
+
+void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
+
+	obs_enter_graphics();
+
+	// if the gif already exists, clean up and bail
+	std::string gifname = demoMaskFilenames[demoCurrentMask].substr(0, demoMaskFilenames[demoCurrentMask].length() - 4) + "gif";
+	if (::PathFileExists(gifname.c_str()) == TRUE) {
+		for (int i = 0; i < previewFrames.size(); i++) {
+			const PreviewFrame& frame = previewFrames[i];
+			gs_texture_destroy(frame.vidtex);
+		}
+		previewFrames.clear();
+		obs_leave_graphics();
+		return;
+	}
+
+	// create output folder
+	std::string outFolder = demoMaskFilenames[demoCurrentMask] + ".render";
+	::CreateDirectory(outFolder.c_str(), NULL);
+
+	// write out frames
+	for (int i = 0; i < previewFrames.size(); i++) {
+		const PreviewFrame& frame = previewFrames[i];
+
+		cv::Mat vidf(m_baseWidth, m_baseHeight, CV_8UC4);
+
+		if (!testingStage) {
+			testingStage = gs_stagesurface_create(m_baseWidth, m_baseHeight, GS_RGBA);
+		}
+
+		// get vid tex
+		gs_stage_texture(testingStage, frame.vidtex);
+		uint8_t *data; uint32_t linesize;
+		if (gs_stagesurface_map(testingStage, &data, &linesize)) {
+
+			cv::Mat cvm = cv::Mat(m_baseHeight, m_baseWidth, CV_8UC4, data, linesize);
+			cvm.copyTo(vidf);
+
+			gs_stagesurface_unmap(testingStage);
+		}
+
+		// convert rgba -> bgra
+		uint8_t* vpixel = vidf.data;
+		for (int w = 0; w < m_baseWidth; w++)
+			for (int h = 0; h < m_baseHeight; h++) {
+				uint8_t red = vpixel[0];
+				uint8_t blue = vpixel[2];
+				vpixel[0] = blue;
+				vpixel[2] = red;
+				vpixel += 4;
+			}
+
+		// crop
+		int offset = (m_baseWidth - m_baseHeight) * 2;
+		cv::Mat cropf(m_baseHeight, m_baseHeight, CV_8UC4, vidf.data + offset, linesize);
+
+		char temp[256];
+		snprintf(temp, sizeof(temp), "frame%04d.png", i);
+		std::string outFile = outFolder + "/" + temp;
+		cv::imwrite(outFile.c_str(), cropf);
+
+		// kill frame data
+		gs_texture_destroy(frame.vidtex);
+	}
+
+	previewFrames.clear();
+
+	obs_leave_graphics();
+
+	std::string cmd = "c:\\STREAMLABS\\slart\\gifmaker.bat ";
+	cmd += outFolder;
+	::system(cmd.c_str());
+}
+
+
+Plugin::FaceMaskFilter::Instance::PreviewFrame::PreviewFrame(gs_texture_t* v, 
+	int w, int h) {
+	obs_enter_graphics();
+	gs_color_format fmt = gs_texture_get_color_format(v);
+	vidtex = gs_texture_create(w, h, fmt, 0, 0, 0);
+	gs_copy_texture(vidtex, v);
+	obs_leave_graphics();
+}
+
+Plugin::FaceMaskFilter::Instance::PreviewFrame::PreviewFrame(const PreviewFrame& other) {
+	*this = other;
+}
+
+Plugin::FaceMaskFilter::Instance::PreviewFrame& 
+Plugin::FaceMaskFilter::Instance::PreviewFrame::operator=(const PreviewFrame& other) {
+	vidtex = other.vidtex;
+	return *this;
+}
+
+Plugin::FaceMaskFilter::Instance::PreviewFrame::~PreviewFrame() {
 }
 

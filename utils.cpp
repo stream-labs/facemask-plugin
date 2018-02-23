@@ -79,16 +79,48 @@ namespace Utils {
 		HANDLE handle = FindFirstFile(ss.c_str(), &search_data);
 		while (handle != INVALID_HANDLE_VALUE)
 		{
-			r.push_back(search_data.cFileName);
+			std::string fn = search_data.cFileName;
+			if (search_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+				continue;
+			}
+			r.push_back(fn);
 
 			if (FindNextFile(handle, &search_data) == FALSE)
 				break;
 		}
 
-		//Close the handle after use or memory/resource leak
 		FindClose(handle);
 		return r;
 	}
+
+	std::vector<std::string> ListFolderRecursive(std::string path, std::string glob) {
+		std::vector<std::string> r = ListFolder(path, glob);
+
+		WIN32_FIND_DATA search_data;
+		memset(&search_data, 0, sizeof(WIN32_FIND_DATA));
+
+		std::string ss = path + "\\*";
+		HANDLE handle = FindFirstFile(ss.c_str(), &search_data);
+		while (handle != INVALID_HANDLE_VALUE)
+		{
+			std::string fn = search_data.cFileName;
+			if (search_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+				if (fn != "." && fn != "..") {
+					std::vector<std::string> rr = ListFolderRecursive(path + "\\" + fn, glob);
+					for (int i = 0; i < rr.size(); i++) {
+						rr[i] = fn + "\\" + rr[i];
+					}
+					r.insert(r.end(), rr.begin(), rr.end());
+				}
+			}
+			if (FindNextFile(handle, &search_data) == FALSE)
+				break;
+		}
+
+		FindClose(handle);
+		return r;
+	}
+
 
 
 	// ------------------------------------------------------------------------------

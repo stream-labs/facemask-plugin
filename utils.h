@@ -40,7 +40,8 @@ namespace Utils {
 	extern const char* GetTempFileName();
 	extern const char* Base64ToTempFile(std::string base64String);
 	extern void DeleteTempFile(std::string filename);
-	extern std::vector<std::string> ListFolder(std::string path, std::string glob="*");
+	extern std::vector<std::string> ListFolder(std::string path, std::string glob = "*");
+	extern std::vector<std::string> ListFolderRecursive(std::string path, std::string glob = "*");
 	extern std::vector<std::string> split(const std::string &s, char delim);
 	extern std::string dirname(const std::string &p);
 }

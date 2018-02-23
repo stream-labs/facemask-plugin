@@ -149,9 +149,19 @@ namespace Plugin {
 			bool				demoModeInDelay;
 			bool				demoModeGenPreviews;
 			bool				demoModeSavingFrames;
-			int					demoModeGenFrameNum;
 			std::vector<std::unique_ptr<Mask::MaskData>>	demoMaskDatas;
 			std::vector<std::string> demoMaskFilenames;
+
+			struct PreviewFrame {
+				gs_texture_t*	vidtex;
+
+				PreviewFrame(gs_texture_t* v, int w, int h);
+				PreviewFrame(const PreviewFrame& other);
+				PreviewFrame& operator=(const PreviewFrame& other);
+				~PreviewFrame();
+			};
+			std::vector<PreviewFrame>	previewFrames;
+			void WritePreviewFrames();
 
 			// our current face detection results
 			smll::DetectionResults		faces;
