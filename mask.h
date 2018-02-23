@@ -91,27 +91,38 @@ namespace Mask {
 		MaskData();
 		virtual ~MaskData();
 
+		// data
 		void Clear();
 		void Load(const std::string& file);
 
+		// resources
 		void AddResource(const std::string& name, std::shared_ptr<Resource::IBase> resource);
 		std::shared_ptr<Resource::IBase> GetResource(const std::string& name);
 		std::shared_ptr<Resource::IBase> GetResource(Resource::Type type);
+		size_t GetNumResources(Resource::Type type);
+		std::shared_ptr<Resource::IBase> GetResource(Resource::Type type, int which);
 		std::shared_ptr<Resource::IBase> RemoveResource(const std::string& name);
 
+		// parts
 		void AddPart(const std::string& name, std::shared_ptr<Part> part);
 		std::shared_ptr<Part> GetPart(const std::string& name);
 		std::shared_ptr<Part> RemovePart(const std::string& name);
 
+		// main: tick & render
 		void Tick(float time);
 		void Render(bool depthOnly = false);
 
+		// sorted draw objects
 		void ClearSortedDrawObjects();
 		void AddSortedDrawObject(SortedDrawObject* obj);
 
+		// morphs
 		Resource::Morph*	 GetMorph();
 		bool RenderMorphVideo(gs_texture* vidtex, uint32_t width, uint32_t height,
 			const smll::TriangulationResult& trires);
+
+		// animation
+		void	RewindAnimations();
 
 		// global instance datas
 		MaskInstanceDatas	instanceDatas;

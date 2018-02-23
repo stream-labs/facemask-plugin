@@ -259,6 +259,30 @@ std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::GetResource(Mask::Resourc
 	return nullptr;
 }
 
+size_t Mask::MaskData::GetNumResources(Mask::Resource::Type type) {
+	size_t count = 0;
+	for (auto kv = m_resources.begin(); kv != m_resources.end(); kv++) {
+		if (kv->second->GetType() == type) {
+			count++;
+		}
+	}
+	return count;
+}
+
+std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::GetResource(Mask::Resource::Type type, int which) {
+	int count = 0;
+	for (auto kv = m_resources.begin(); kv != m_resources.end(); kv++) {
+		if (kv->second->GetType() == type && count == which) {
+			return kv->second;
+		}
+		else {
+			count++;
+		}
+	}
+	return nullptr;
+}
+
+
 std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::RemoveResource(const std::string& name) {
 	if (name.length() == 0)
 		throw std::invalid_argument("name must be at least one character long");
@@ -558,4 +582,10 @@ bool Mask::MaskData::RenderMorphVideo(gs_texture* vidtex, uint32_t width, uint32
 
 	return didMorph;
 }
+
+void Mask::MaskData::RewindAnimations() {
+	m_morph = std::dynamic_pointer_cast<Mask::Resource::Morph>
+		(GetResource(Mask::Resource::Type::Morph)).get();
+}
+
 
