@@ -58,6 +58,8 @@
 //
 #define MM_THREAD_TASK_NAME				"DisplayPostProcessing"
 
+// Maximum for number of masks loaded in demo mode
+#define DEMO_MODE_MAX_MASKS				(10)
 
 static float FOVA(float aspect) {
 	// field of view angle matched to focal length for solvePNP
@@ -803,19 +805,18 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 		if (demoModeSavingFrames) {
 			// sometimes the red frame is 2 frames
-			if (isRed) {
+			if (isRed && previewFrames.size() < 1) {
 				mdat->RewindAnimations();
+			}
+			else if (isRed) {
+				// done
+				WritePreviewFrames();
+				demoModeMaskChanged = false;
+				demoModeSavingFrames = false;
 			}
 			else {
 				PreviewFrame pf(tex2, m_baseWidth, m_baseHeight);
 				previewFrames.emplace_back(pf);
-
-				if (previewFrames.size() > 240) {
-					// done
-					WritePreviewFrames();
-					demoModeMaskChanged = false;
-					demoModeSavingFrames = false;
-				}
 			}
 		}
 		else if (isRed) {
@@ -1168,7 +1169,7 @@ void Plugin::FaceMaskFilter::Instance::LoadDemo() {
 	demoMaskDatas.clear();
 	demoMaskFilenames.clear();
 	for (int i = 0; i < files.size(); i++) {
-		if (i == 20)
+		if (demoMaskDatas.size() == DEMO_MODE_MAX_MASKS)
 			break;
 
 		std::string fn = demoModeFolder + "\\" + files[i];
@@ -1391,42 +1392,45 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 	for (int i = 0; i < previewFrames.size(); i++) {
 		const PreviewFrame& frame = previewFrames[i];
 
-		cv::Mat vidf(m_baseWidth, m_baseHeight, CV_8UC4);
+		// skip first frame for more seamless loop
+		if (i > 0 && i < (previewFrames.size() - 1)) {
+			cv::Mat vidf(m_baseWidth, m_baseHeight, CV_8UC4);
 
-		if (!testingStage) {
-			testingStage = gs_stagesurface_create(m_baseWidth, m_baseHeight, GS_RGBA);
-		}
-
-		// get vid tex
-		gs_stage_texture(testingStage, frame.vidtex);
-		uint8_t *data; uint32_t linesize;
-		if (gs_stagesurface_map(testingStage, &data, &linesize)) {
-
-			cv::Mat cvm = cv::Mat(m_baseHeight, m_baseWidth, CV_8UC4, data, linesize);
-			cvm.copyTo(vidf);
-
-			gs_stagesurface_unmap(testingStage);
-		}
-
-		// convert rgba -> bgra
-		uint8_t* vpixel = vidf.data;
-		for (int w = 0; w < m_baseWidth; w++)
-			for (int h = 0; h < m_baseHeight; h++) {
-				uint8_t red = vpixel[0];
-				uint8_t blue = vpixel[2];
-				vpixel[0] = blue;
-				vpixel[2] = red;
-				vpixel += 4;
+			if (!testingStage) {
+				testingStage = gs_stagesurface_create(m_baseWidth, m_baseHeight, GS_RGBA);
 			}
 
-		// crop
-		int offset = (m_baseWidth - m_baseHeight) * 2;
-		cv::Mat cropf(m_baseHeight, m_baseHeight, CV_8UC4, vidf.data + offset, linesize);
+			// get vid tex
+			gs_stage_texture(testingStage, frame.vidtex);
+			uint8_t *data; uint32_t linesize;
+			if (gs_stagesurface_map(testingStage, &data, &linesize)) {
 
-		char temp[256];
-		snprintf(temp, sizeof(temp), "frame%04d.png", i);
-		std::string outFile = outFolder + "/" + temp;
-		cv::imwrite(outFile.c_str(), cropf);
+				cv::Mat cvm = cv::Mat(m_baseHeight, m_baseWidth, CV_8UC4, data, linesize);
+				cvm.copyTo(vidf);
+
+				gs_stagesurface_unmap(testingStage);
+			}
+
+			// convert rgba -> bgra
+			uint8_t* vpixel = vidf.data;
+			for (int w = 0; w < m_baseWidth; w++)
+				for (int h = 0; h < m_baseHeight; h++) {
+					uint8_t red = vpixel[0];
+					uint8_t blue = vpixel[2];
+					vpixel[0] = blue;
+					vpixel[2] = red;
+					vpixel += 4;
+				}
+
+			// crop
+			int offset = (m_baseWidth - m_baseHeight) * 2;
+			cv::Mat cropf(m_baseHeight, m_baseHeight, CV_8UC4, vidf.data + offset, linesize);
+
+			char temp[256];
+			snprintf(temp, sizeof(temp), "frame%04d.png", i);
+			std::string outFile = outFolder + "/" + temp;
+			cv::imwrite(outFile.c_str(), cropf);
+		}
 
 		// kill frame data
 		gs_texture_destroy(frame.vidtex);
