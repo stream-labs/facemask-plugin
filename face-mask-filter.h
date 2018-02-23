@@ -148,6 +148,8 @@ namespace Plugin {
 			float				demoModeDelay;
 			bool				demoModeInDelay;
 			bool				demoModeGenPreviews;
+			bool				demoModeSavingFrames;
+			int					demoModeGenFrameNum;
 			std::vector<std::unique_ptr<Mask::MaskData>>	demoMaskDatas;
 			std::vector<std::string> demoMaskFilenames;
 

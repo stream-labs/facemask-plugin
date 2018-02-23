@@ -141,8 +141,9 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	maskDataShutdown(false), maskJsonFilename(nullptr), maskData(nullptr),
 	demoModeOn(false), demoModeMaskChanged(false), demoCurrentMask(0), demoModeInterval(0.0f), 
 	demoModeDelay(0.0f), demoModeElapsed(0.0f), demoModeInDelay(false), demoModeGenPreviews(false),
-	drawMask(true),	drawFaces(false), drawMorphTris(false), drawFDRect(false), 
-	filterPreviewMode(false), autoGreenScreen(false), testingStage(nullptr) {
+	demoModeSavingFrames(false), drawMask(true),	drawFaces(false), drawMorphTris(false), 
+	drawFDRect(false), filterPreviewMode(false), autoGreenScreen(false), testingStage(nullptr) {
+
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
 
 	if (USE_THREADED_MEMCPY)
@@ -509,6 +510,7 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 			demoModeMaskChanged = true;
 			demoModeElapsed -= demoModeInterval;
 			demoModeInDelay = true;
+			demoModeSavingFrames = false;
 		}
 	}
 
@@ -657,7 +659,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	}
 
 	// Draw the source video
-	if (mdat) {
+	if (mdat && !demoModeInDelay) {
 		triangulation.autoGreenScreen = autoGreenScreen;
 		mdat->RenderMorphVideo(vidTex, m_baseWidth, m_baseHeight, triangulation);
 	} 
@@ -775,10 +777,58 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// generate previews?
 	if (demoModeOn && demoModeMaskChanged && demoModeGenPreviews) {
 
-		blog(LOG_DEBUG, "make thumbs for: %s", demoMaskFilenames[demoCurrentMask].c_str());
+		//blog(LOG_DEBUG, "make thumbs for: %s", demoMaskFilenames[demoCurrentMask].c_str());
 
+		std::string outFolder = demoMaskFilenames[demoCurrentMask] + ".render";
+
+		if (demoModeSavingFrames) {
+
+			if (!testingStage) {
+				testingStage = gs_stagesurface_create(m_baseWidth, m_baseHeight, GS_RGBA);
+			}
+			gs_stage_texture(testingStage, vidTex);
+			uint8_t *data; uint32_t linesize;
+			if (gs_stagesurface_map(testingStage, &data, &linesize)) {
+
+				cv::Mat vm(m_baseHeight, m_baseWidth, CV_8UC4, data, linesize);
+
+				char fname[256];
+				snprintf(fname, sizeof(fname), "frame%04d.png", demoModeGenFrameNum++);
+				std::string outFile = outFolder + "/" + fname;
+				cv::imwrite(outFile.c_str(), vm);
+
+				gs_stagesurface_unmap(testingStage);
+			}
+			if (demoModeGenFrameNum > 120) {
+				// done
+				demoModeMaskChanged = false;
+				demoModeSavingFrames = false;
+			}
+		}
+		else {
+			// waiting for a red frame
+			if (!testingStage) {
+				testingStage = gs_stagesurface_create(m_baseWidth, m_baseHeight, GS_RGBA);
+			}
+			gs_stage_texture(testingStage, vidTex);
+			uint8_t *data; uint32_t linesize;
+			if (gs_stagesurface_map(testingStage, &data, &linesize)) {
+
+				uint8_t red = *data++;
+				uint8_t green = *data++;
+				uint8_t blue = *data++;
+
+				if (red > 252 && green < 3 && blue < 3) {
+					mdat->RewindAnimations();
+					demoModeSavingFrames = true;
+					demoModeGenFrameNum = 0;
+					::CreateDirectory(outFolder.c_str(), NULL);
+				}
+
+				gs_stagesurface_unmap(testingStage);
+			}
+		}
 	}
-	demoModeMaskChanged = false;
 }
 
 bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sourceTexture) {
@@ -1130,6 +1180,7 @@ void Plugin::FaceMaskFilter::Instance::LoadDemo() {
 	}
 	demoCurrentMask = 0;
 	demoModeMaskChanged = true;
+	demoModeSavingFrames = false;
 }
 
 
