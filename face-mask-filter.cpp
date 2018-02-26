@@ -59,7 +59,7 @@
 #define MM_THREAD_TASK_NAME				"DisplayPostProcessing"
 
 // Maximum for number of masks loaded in demo mode
-#define DEMO_MODE_MAX_MASKS				(10)
+#define DEMO_MODE_MAX_MASKS				(100)
 
 static float FOVA(float aspect) {
 	// field of view angle matched to focal length for solvePNP
@@ -797,7 +797,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			uint8_t red = *data++;
 			uint8_t green = *data++;
 			uint8_t blue = *data++;
-			if (red > 253 && green < 2 && blue < 2) {
+			if (red > 252 && green < 3 && blue < 3) {
 				isRed = true;
 			}
 			gs_stagesurface_unmap(testingStage);
