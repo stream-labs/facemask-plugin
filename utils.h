@@ -43,4 +43,5 @@ namespace Utils {
 	extern std::vector<std::string> ListFolder(std::string path, std::string glob="*");
 	extern std::vector<std::string> split(const std::string &s, char delim);
 	extern std::string dirname(const std::string &p);
+	extern void find_and_replace(std::string& source, std::string const& find, std::string const& replace);
 }

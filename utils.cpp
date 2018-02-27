@@ -110,7 +110,7 @@ namespace Utils {
 	}
 
 
-	extern std::string dirname(const std::string &p) {
+	std::string dirname(const std::string &p) {
 		size_t e = p.length() - 1;
 		const char* pch = p.c_str();
 		while (e >= 0) {
@@ -122,4 +122,14 @@ namespace Utils {
 		return p.substr(0, e);
 	}
 
+	//
+	// http://bits.mdminhazulhaque.io/cpp/find-and-replace-all-occurrences-in-cpp-string.html
+	//
+	void find_and_replace(std::string& source, std::string const& find, std::string const& replace) {
+		for (std::string::size_type i = 0; (i = source.find(find, i)) != std::string::npos;)
+		{
+			source.replace(i, find.length(), replace);
+			i += replace.length();
+		}
+	}
 }

@@ -169,6 +169,12 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 		}
 	}
 
+	// get list of masks
+	char* maskname = obs_module_file(kFileDefaultJson);
+	std::string maskPath = Utils::dirname(maskname);
+	maskJsonList = Utils::ListFolder(maskPath, "*.json");
+	bfree(maskname);
+
 	// initialize face detection thread data
 	{
 		std::unique_lock<std::mutex> lock(detection.mutex);
@@ -274,9 +280,13 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 
 	obs_data_set_default_bool(data, kSettingsDeactivated, false);
 
+#ifdef PUBLIC_RELEASE	
+	obs_data_set_default_int(data, P_MASK, 0);
+#else
 	char* jsonName = obs_module_file(kFileDefaultJson);
 	obs_data_set_default_string(data, P_MASK, jsonName);
 	bfree(jsonName);
+#endif
 
 	obs_data_set_default_bool(data, kSettingsGreenscreen, false);
 
@@ -296,32 +306,47 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 }
 
 
-bool onPixomojo(obs_properties_t *props, obs_property_t *property, void *data) {
-	UNUSED_PARAMETER(props);
-	UNUSED_PARAMETER(property);
-	UNUSED_PARAMETER(data);
-	ShellExecute(0, 0, "http://www.pixomojo.com/", 0, 0, SW_SHOW);
-	return true;
-}
-
 obs_properties_t * Plugin::FaceMaskFilter::Instance::get_properties(void *ptr) {
 	obs_properties_t* props = obs_properties_create();
+
+	// If OBS gave us a source (internally called "context"),
+	// we can use that here.
+	if (ptr != nullptr)
+		reinterpret_cast<Instance*>(ptr)->get_properties(props);
+
+	return props;
+}
+
+void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
+	// Source-specific properties can be added through this.
 	obs_property_t* p = nullptr;
 
 	char* jsonName = obs_module_file(kFileDefaultJson);
 	std::string maskDir = Utils::dirname(jsonName);
 	bfree(jsonName);
 
-	// Basic Properties
-	p = obs_properties_add_path(props, P_MASK, P_TRANSLATE(P_MASK), 
-		obs_path_type::OBS_PATH_FILE, 
+
+#if defined(PUBLIC_RELEASE)
+	// mask
+	p = obs_properties_add_list(props, P_MASK, P_TRANSLATE(P_MASK),
+		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
+	for (int i = 0; i < maskJsonList.size(); i++) {
+		std::string n = maskJsonList[i];
+		Utils::find_and_replace(n, ".json", "");
+		Utils::find_and_replace(n, ".head", "");
+		Utils::find_and_replace(n, ".", " ");
+		obs_property_list_add_int(p, n.c_str(), i);
+	}
+	obs_property_set_modified_callback(p, properties_modified);
+
+#else
+	// mask
+	p = obs_properties_add_path(props, P_MASK, P_TRANSLATE(P_MASK),
+		obs_path_type::OBS_PATH_FILE,
 		"Face Mask JSON (*.json)", maskDir.c_str());
 	obs_property_set_long_description(p, P_TRANSLATE(P_DESC(P_MASK)));
 	obs_property_set_modified_callback(p, properties_modified);
 
-#if defined(PUBLIC_RELEASE)
-	obs_properties_add_button(props, kSettingsPixomojo, kSettingsPixomojoDesc,
-		onPixomojo);
 #endif
 
 	obs_properties_add_bool(props, kSettingsGreenscreen,
@@ -357,18 +382,6 @@ obs_properties_t * Plugin::FaceMaskFilter::Instance::get_properties(void *ptr) {
 	smll::Config::singleton().get_properties(props);
 
 #endif
-
-	// If OBS gave us a source (internally called "context"),
-	// we can use that here.
-	if (ptr != nullptr)
-		reinterpret_cast<Instance*>(ptr)->get_properties(props);
-
-	return props;
-}
-
-void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
-	// Source-specific properties can be added through this.
-	UNUSED_PARAMETER(props);
 }
 
 bool Plugin::FaceMaskFilter::Instance::properties_modified(obs_properties_t *pr, obs_property_t *p, obs_data_t *data) {
@@ -396,7 +409,12 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	{
 		std::unique_lock<std::mutex> lock(maskDataMutex, std::try_to_lock);
 		if (lock.owns_lock()) {
+#ifdef PUBLIC_RELEASE
+			long long idx = obs_data_get_int(data, P_MASK);
+			maskJsonFilename = maskJsonList[idx % maskJsonList.size()].c_str();
+#else
 			maskJsonFilename = (char*)obs_data_get_string(data, P_MASK);
+#endif
 		}
 	}
 
@@ -1071,8 +1089,16 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 				if ((maskData == nullptr) &&
 					maskJsonFilename && maskJsonFilename[0]) {
 
+					std::string maskFilename = maskJsonFilename;
+#ifdef PUBLIC_RELEASE
+					char* maskname = obs_module_file(kFileDefaultJson);
+					std::string maskPath = Utils::dirname(maskname);
+					bfree(maskname);
+					maskFilename = maskPath + "/" + maskJsonFilename;
+#endif
+
 					// load mask
-					maskData = std::unique_ptr<Mask::MaskData>(LoadMask(maskJsonFilename));
+					maskData = std::unique_ptr<Mask::MaskData>(LoadMask(maskFilename));
 					currentMaskJsonFilename = maskJsonFilename;
 				}
 
