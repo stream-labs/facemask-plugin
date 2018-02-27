@@ -333,8 +333,10 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 	for (int i = 0; i < maskJsonList.size(); i++) {
 		std::string n = maskJsonList[i];
 		Utils::find_and_replace(n, ".json", "");
+		Utils::find_and_replace(n, "+depth_head", "");
 		Utils::find_and_replace(n, ".head", "");
 		Utils::find_and_replace(n, ".", " ");
+		Utils::find_and_replace(n, "+", " + ");
 		obs_property_list_add_int(p, n.c_str(), i);
 	}
 	obs_property_set_modified_callback(p, properties_modified);
