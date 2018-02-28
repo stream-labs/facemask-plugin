@@ -509,15 +509,23 @@ namespace smll {
 	void FaceDetector::AddContour(cv::Subdiv2D& subdiv, const FaceContour& fc, const std::vector<cv::Point2f>& points,
 		std::map<int, int>& vtxMap) {
 
+		cv::Rect rect(0, 0, CaptureWidth() + 1, CaptureHeight() + 1);
+
 		// add points 
 		for (int i = 0; i < fc.indices.size(); i++) {
-			int vid = subdiv.insert(points[fc.indices[i]]);
-			vtxMap[vid] = fc.indices[i];
+			const cv::Point2f& p = points[fc.indices[i]];
+			if (rect.contains(p)) {
+				int vid = subdiv.insert(p);
+				vtxMap[vid] = fc.indices[i];
+			}
 		}
 		int smoothidx = fc.smooth_points_index;
 		for (int i = 0; i < fc.num_smooth_points; i++, smoothidx++) {
-			int vid = subdiv.insert(points[smoothidx]);
-			vtxMap[vid] = smoothidx;
+			const cv::Point2f& p = points[smoothidx];
+			if (rect.contains(p)) {
+				int vid = subdiv.insert(p);
+				vtxMap[vid] = smoothidx;
+			}
 		}
 	}
 
@@ -533,6 +541,7 @@ namespace smll {
 			HEAD_11, JAW_17, JAW_16, JAW_15, JAW_14, JAW_13, JAW_12, JAW_11, JAW_10,
 			JAW_9};
 
+		cv::Rect rect(0, 0, CaptureWidth() + 1, CaptureHeight() + 1);
 
 		// find min/max y of contour points
 		float miny = warpedpoints[fc.indices[0]].y;
@@ -574,8 +583,9 @@ namespace smll {
 		for (int i = 0; i < fc.indices.size(); i++) {
 			const cv::Point2f& p1 = warpedpoints[fc.indices[i]];
 			float d = m * ((p1.x - lo.x) * (hi.y - lo.y) - (p1.y - lo.y) * (hi.x - lo.x));
-			if (d > 10.0f) {
-				int vid = subdiv.insert(points[fc.indices[i]]);
+			const cv::Point2f& p = points[fc.indices[i]];
+			if (d > 10.0f && rect.contains(p)) {
+				int vid = subdiv.insert(p);
 				vtxMap[vid] = fc.indices[i];
 			}
 			else
@@ -585,8 +595,9 @@ namespace smll {
 		for (int i = 0; i < fc.num_smooth_points; i++, smoothidx++) {
 			const cv::Point2f& p1 = warpedpoints[smoothidx];
 			float d = m * ((p1.x - lo.x) * (hi.y - lo.y) - (p1.y - lo.y) * (hi.x - lo.x));
-			if (d > 10.0f) {
-				int vid = subdiv.insert(points[smoothidx]);
+			const cv::Point2f& p = points[smoothidx];
+			if (d > 10.0f && rect.contains(p)) {
+				int vid = subdiv.insert(p);
 				vtxMap[vid] = smoothidx;
 			}
 			else
