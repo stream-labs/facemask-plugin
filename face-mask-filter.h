@@ -130,8 +130,9 @@ namespace Plugin {
 
 			struct memcpy_environment* m_memcpyEnv;
 
-			char*				maskJsonFilename;
+			const char*			maskJsonFilename;
 			std::string			currentMaskJsonFilename;
+			std::vector<std::string>	maskJsonList;
 
 			bool				maskDataShutdown;
 			std::thread			maskDataThread;
