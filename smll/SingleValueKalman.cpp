@@ -60,7 +60,8 @@ namespace smll {
 		// under 0 is low, 1 is good, 5 is high, 10 is too much
 		// - I keep this at 1 for the facemask plugin
 		// - I set this to 4 for generating previews
-		R = 4;
+		// TODO: set this to 4 automatically when generating thumbs
+		R = 1;
 
 		m_kf = new KalmanFilter<double, m, n>(dt, A, C, Q, R, P);
 	}
