@@ -10,7 +10,7 @@ rem ^
 
 import sys, subprocess, os, json, uuid
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QListWidget, QVBoxLayout, QPushButton, QScrollArea, QMainWindow, QCheckBox, QHBoxLayout, QTextEdit
-from PyQt5.QtGui import QIcon, QBrush, QColor, QFont, QPixmap
+from PyQt5.QtGui import QIcon, QBrush, QColor, QFont, QPixmap, QMovie
 
 
 MAKEARTBATFILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),"makeart.bat")
@@ -81,6 +81,7 @@ def createGetMetaData(fbxfile):
 		metadata["uuid"] = str(uuid.uuid4())
 		metadata["depth_head"] = False
 		metadata["is_morph"] = False
+		metadata["texture_max"] = 256
 		metadata["do_not_release"] = False
 		metadata["license"] = "Copyright 2017 - General Working Inc. - All rights reserved."		
 		metadata["website"] = "http://streamlabs.com"
@@ -97,66 +98,77 @@ class ArtToolWindow(QMainWindow):
 		QMainWindow.__init__(self, *args) 
  
 		# Main pane for the window
-		self.mainPane = QWidget()
+		mainPane = QWidget()
+		self.mainLayout = QHBoxLayout(mainPane)
 		 
 		# Get list of fbx files
 		self.fbxfiles = getFileList(".")
 		 
 		# make a list widget
-		self.fbxlist = QListWidget(self.mainPane)
+		self.fbxlist = QListWidget()
 		for fbx in self.fbxfiles:
 			self.fbxlist.addItem(fbx[2:])
-		self.fbxlist.setGeometry(10, 10, 300, 500)
+		self.fbxlist.setGeometry(0, 0, 300, 500)
+		self.fbxlist.setMaximumWidth(300)
 		self.fbxlist.itemClicked.connect(lambda: self.onFbxClicked())
+		self.mainLayout.addWidget(self.fbxlist)
 		
 		# color some items
-		self.fbxlist.item(10).setForeground(QBrush(QColor("#FF0000")))
-		self.fbxlist.item(10).setIcon(QIcon('maskicon.png'))
-		self.fbxlist.item(11).setForeground(QBrush(QColor("#32CD32")))
-		self.fbxlist.item(11).setIcon(QIcon('morphicon.png'))
-		self.fbxlist.item(12).setForeground(QBrush(QColor("#FF7F50")))
-		self.fbxlist.item(12).setIcon(QIcon('maskicon.png'))
+		self.fbxlist.item(0).setForeground(QBrush(QColor("#FF0000")))
+		self.fbxlist.item(0).setIcon(QIcon('maskicon.png'))
+		self.fbxlist.item(1).setForeground(QBrush(QColor("#32CD32")))
+		self.fbxlist.item(1).setIcon(QIcon('morphicon.png'))
+		self.fbxlist.item(2).setForeground(QBrush(QColor("#FF7F50")))
+		self.fbxlist.item(2).setIcon(QIcon('maskicon.png'))
 		
 		# Show the window
-		self.setCentralWidget(self.mainPane)
-		self.setGeometry(100,100, 1000, 600)
+		self.setCentralWidget(mainPane)
+		self.setGeometry(2000, 100, 1000, 600)
 		self.setWindowTitle('Streamlabs Art Tool')
 		self.setWindowIcon(QIcon('arttoolicon.png'))
 		
-		self.fag = None
+		# Blank pane
+		self.fag = QWidget()
+		self.mainLayout.addWidget(self.fag)
+		self.fag.setGeometry(0,0,500, 500)
 		
+		# test
 		metadata = createGetMetaData(self.fbxfiles[0])
-		print(metadata)
+
+
 		
 	def onFbxClicked(self):
 	
 		fbxfile = self.fbxfiles[self.fbxlist.currentRow()]
 		
 		if self.fag:
-			self.fag.setParent(None)
-			self.fag = None
+			self.mainLayout.removeWidget(self.fag)
+			self.fag.deleteLater()
+			
 		
-		f = QFont( "Arial", 12, QFont.Bold )
-		self.fag = QWidget(self.mainPane)
+		self.fag = QWidget()
+		self.mainLayout.addWidget(self.fag)
+		self.fag.setGeometry(0,0,500, 500)
 
 		# mask icon png
 		q = QLabel()
 		q.setParent(self.fag)
-		pf = os.path.abspath(fbxfile.lower().replace(".fbx",".png"))
-		q.setPixmap(QPixmap(pf))
+		pf = os.path.abspath(fbxfile.lower().replace(".fbx",".gif"))
+		m = QMovie(pf)
+		q.setMovie(m)
+		m.start()
 		q.setScaledContents(True)
-		q.setGeometry(330, 10, 64, 64)
+		q.setGeometry(0, 10, 64, 64)
 		q.show()
 
 		# mask file name
 		q = QLabel(fbxfile[2:])
 		q.setParent(self.fag)
-		q.setGeometry(400, 10, 500, 36)
-		q.setFont(f)
+		q.setGeometry(66, 44, 500, 36)
+		q.setFont(QFont( "Arial", 14, QFont.Bold ))
 		q.show()
 				
 		self.fag.show()
-		
 
 if __name__ == '__main__':
 	
