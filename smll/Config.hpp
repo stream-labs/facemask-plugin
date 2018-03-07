@@ -61,6 +61,10 @@ namespace smll {
 	static const char* const CONFIG_BOOL_TOGGLE_SETTINGS = 
 		"toggleFDSettings";
 
+	// Smoothing factor
+	static const char* const CONFIG_FLOAT_SMOOTHING_FACTOR =
+		"smoothingFactor";
+
 	// Enable Flags ----------
 	static const char* const CONFIG_BOOL_FACE_DETECT_ENABLE = 
 		"faceDetectEnable";

@@ -20,6 +20,7 @@
 */
 
 #include "SingleValueKalman.hpp"
+#include "Config.hpp"
 
 namespace smll {
 
@@ -57,11 +58,11 @@ namespace smll {
 			.1, 10, 100;
 
 		// R largely determines the "smoothing factor"
-		// under 0 is low, 1 is good, 5 is high, 10 is too much
-		// - I keep this at 1 for the facemask plugin
-		// - I set this to 4 for generating previews
-		// TODO: set this to 4 automatically when generating thumbs
-		R = 1;
+		// Grab from the config. 
+		// This doesn't work. We need to get through an update loop first. boo.
+		double r = Config::singleton().get_double(CONFIG_FLOAT_SMOOTHING_FACTOR);
+		r = 1.0; // hard-code to 4 for thumbs
+		R = r;
 
 		m_kf = new KalmanFilter<double, m, n>(dt, A, C, Q, R, P);
 	}

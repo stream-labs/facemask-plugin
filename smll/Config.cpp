@@ -25,8 +25,10 @@
 namespace smll {
 
 	// Static strings for config setting descriptions
-	static const char* const CONFIG_BOOL_TOGGLE_SETTINGS_DESC = 
+	static const char* const CONFIG_BOOL_TOGGLE_SETTINGS_DESC =
 		"Show Advanced Settings";
+	static const char* const CONFIG_FLOAT_SMOOTHING_FACTOR_DESC =
+		"Smoothing Factor";
 	static const char* const CONFIG_BOOL_FACE_DETECT_ENABLE_DESC = 
 		"faceDetectEnable";
 	static const char* const CONFIG_BOOL_TRACKING_ENABLE_DESC = 
@@ -130,6 +132,8 @@ namespace smll {
 
 		AddParam(CONFIG_BOOL_KALMAN_ENABLE,
 			CONFIG_BOOL_KALMAN_ENABLE_DESC, true);
+		AddParam(CONFIG_FLOAT_SMOOTHING_FACTOR,
+			CONFIG_FLOAT_SMOOTHING_FACTOR_DESC, 1.0, 0.0, 10.0, 0.1);
 
 		AddParam(CONFIG_INT_FACE_DETECT_WIDTH, 
 			CONFIG_INT_FACE_DETECT_WIDTH_DESC, 480, 120, 1200, 20);
