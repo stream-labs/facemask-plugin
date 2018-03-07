@@ -8,9 +8,9 @@ rem ^
 '''
 
 
-import sys, subprocess, os, json
-from PyQt5.QtWidgets import QApplication, QWidget, QListWidget, QVBoxLayout, QPushButton, QScrollArea, QMainWindow, QCheckBox, QHBoxLayout, QTextEdit
-from PyQt5.QtGui import QIcon, QBrush, QColor
+import sys, subprocess, os, json, uuid
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QListWidget, QVBoxLayout, QPushButton, QScrollArea, QMainWindow, QCheckBox, QHBoxLayout, QTextEdit
+from PyQt5.QtGui import QIcon, QBrush, QColor, QFont, QPixmap
 
 
 MAKEARTBATFILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),"makeart.bat")
@@ -26,7 +26,8 @@ def execute(cmd):
 	popen.stdout.close()
 	return_code = popen.wait()
 	if return_code:
-		raise subprocess.CalledProcessError(return_code, cmd)
+		# raise subprocess.CalledProcessError(return_code, cmd)
+		pass
 
 # Gets a list of files
 def getFileList(folder):
@@ -52,6 +53,14 @@ def createMetaFolder(folder):
 		for line in execute(cmd):
 			print("SVN: " + line)
 		
+def writeMetaData(metafile, metadata):
+	f = open(metafile,"w")
+	f.write(json.dumps(metadata, indent=4))
+	f.close()
+	cmd = SVNBIN + " add " + os.path.abspath(metafile)
+	for line in execute(cmd):
+		print("SVN: " + line)
+		
 def createGetMetaData(fbxfile):
 	metafolder = getMetaFolder(fbxfile)
 	createMetaFolder(metafolder)
@@ -64,20 +73,19 @@ def createGetMetaData(fbxfile):
 		f.close()
 	else:
 		# create new metadata
-		metadata["name"] = os.path.basename(fbxfile).lower().replace(".fbx","")
+		metadata["name"] = ""
 		metadata["description"] = ""
 		metadata["author"] = ""
 		metadata["tags"] = ""
-		metadata["needs_depth"] = False
+		metadata["fbx_modtime"] = os.path.getmtime(fbxfile)
+		metadata["uuid"] = str(uuid.uuid4())
+		metadata["depth_head"] = False
+		metadata["is_morph"] = False
 		metadata["do_not_release"] = False
 		metadata["license"] = "Copyright 2017 - General Working Inc. - All rights reserved."		
 		metadata["website"] = "http://streamlabs.com"
-		f = open(metafile,"w")
-		f.write(json.dumps(metadata, indent=4))
-		f.close()
-		cmd = SVNBIN + " add " + os.path.abspath(metafile)
-		for line in execute(cmd):
-			print("SVN: " + line)
+		# write it
+		writeMetaData(metafile, metadata)
 		
 	return metadata
 		
@@ -89,29 +97,65 @@ class ArtToolWindow(QMainWindow):
 		QMainWindow.__init__(self, *args) 
  
 		# Main pane for the window
-		mainPane = QWidget()
+		self.mainPane = QWidget()
 		 
 		# Get list of fbx files
 		self.fbxfiles = getFileList(".")
 		 
 		# make a list widget
-		fbxlist = QListWidget(mainPane)
+		self.fbxlist = QListWidget(self.mainPane)
 		for fbx in self.fbxfiles:
-			fbxlist.addItem(fbx[1:])
-		fbxlist.setGeometry(10,10,300,500)
+			self.fbxlist.addItem(fbx[2:])
+		self.fbxlist.setGeometry(10, 10, 300, 500)
+		self.fbxlist.itemClicked.connect(lambda: self.onFbxClicked())
 		
 		# color some items
-		fbxlist.item(10).setForeground(QBrush(QColor("#FF0000")))
-		fbxlist.item(10).setIcon(QIcon('arttoolicon.png'))
+		self.fbxlist.item(10).setForeground(QBrush(QColor("#FF0000")))
+		self.fbxlist.item(10).setIcon(QIcon('maskicon.png'))
+		self.fbxlist.item(11).setForeground(QBrush(QColor("#32CD32")))
+		self.fbxlist.item(11).setIcon(QIcon('morphicon.png'))
+		self.fbxlist.item(12).setForeground(QBrush(QColor("#FF7F50")))
+		self.fbxlist.item(12).setIcon(QIcon('maskicon.png'))
 		
 		# Show the window
-		self.setCentralWidget(mainPane)
-		self.setGeometry(100,100, 800, 600)
+		self.setCentralWidget(self.mainPane)
+		self.setGeometry(100,100, 1000, 600)
 		self.setWindowTitle('Streamlabs Art Tool')
 		self.setWindowIcon(QIcon('arttoolicon.png'))
 		
+		self.fag = None
+		
 		metadata = createGetMetaData(self.fbxfiles[0])
 		print(metadata)
+		
+	def onFbxClicked(self):
+	
+		fbxfile = self.fbxfiles[self.fbxlist.currentRow()]
+		
+		if self.fag:
+			self.fag.setParent(None)
+			self.fag = None
+		
+		f = QFont( "Arial", 12, QFont.Bold )
+		self.fag = QWidget(self.mainPane)
+
+		# mask icon png
+		q = QLabel()
+		q.setParent(self.fag)
+		pf = os.path.abspath(fbxfile.lower().replace(".fbx",".png"))
+		q.setPixmap(QPixmap(pf))
+		q.setScaledContents(True)
+		q.setGeometry(330, 10, 64, 64)
+		q.show()
+
+		# mask file name
+		q = QLabel(fbxfile[2:])
+		q.setParent(self.fag)
+		q.setGeometry(400, 10, 500, 36)
+		q.setFont(f)
+		q.show()
+				
+		self.fag.show()
 		
 
 if __name__ == '__main__':
