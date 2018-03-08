@@ -61,7 +61,7 @@ namespace smll {
 		// Grab from the config. 
 		// This doesn't work. We need to get through an update loop first. boo.
 		double r = Config::singleton().get_double(CONFIG_FLOAT_SMOOTHING_FACTOR);
-		r = 4.0; // hard-code to 4 for thumbs
+		r = 1.0; // hard-code to 4 for thumbs
 		R = r;
 
 		m_kf = new KalmanFilter<double, m, n>(dt, A, C, Q, R, P);
