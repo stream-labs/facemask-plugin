@@ -9,7 +9,7 @@ rem ^
 
 
 import sys, subprocess, os, json, uuid
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QListWidget, QVBoxLayout, QPushButton, QScrollArea, QMainWindow, QCheckBox, QHBoxLayout, QTextEdit
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QListWidget, QVBoxLayout, QPushButton, QScrollArea, QMainWindow, QCheckBox, QHBoxLayout, QTextEdit, QLineEdit
 from PyQt5.QtGui import QIcon, QBrush, QColor, QFont, QPixmap, QMovie
 
 
@@ -19,6 +19,11 @@ SVNBIN = os.path.join("c:\\",'"Program Files"',"TortoiseSVN","bin","svn")
 
 	
 # Executes a shell command
+# usage:
+# 
+# for line in execute(cmd):
+#   print(line)
+#
 def execute(cmd):
 	popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True, shell=True)
 	for stdout_line in iter(popen.stdout.readline, ""):
@@ -40,7 +45,6 @@ def getFileList(folder):
 
 	return fileList
 
-
 def getMetaFolder(fbxfile):
 	dn = os.path.dirname(fbxfile)
 	dn = os.path.join(dn, ".art").replace("\\","/")
@@ -52,7 +56,7 @@ def createMetaFolder(folder):
 		cmd = SVNBIN + " add " + os.path.abspath(folder)
 		for line in execute(cmd):
 			print("SVN: " + line)
-		
+
 def writeMetaData(metafile, metadata):
 	f = open(metafile,"w")
 	f.write(json.dumps(metadata, indent=4))
@@ -60,7 +64,7 @@ def writeMetaData(metafile, metadata):
 	cmd = SVNBIN + " add " + os.path.abspath(metafile)
 	for line in execute(cmd):
 		print("SVN: " + line)
-		
+
 def createGetMetaData(fbxfile):
 	metafolder = getMetaFolder(fbxfile)
 	createMetaFolder(metafolder)
@@ -89,9 +93,13 @@ def createGetMetaData(fbxfile):
 		writeMetaData(metafile, metadata)
 		
 	return metadata
-		
-		
-		
+
+	
+
+	
+	
+	
+	
 class ArtToolWindow(QMainWindow): 
 
 	def __init__(self, *args): 
@@ -128,31 +136,57 @@ class ArtToolWindow(QMainWindow):
 		self.setWindowIcon(QIcon('arttoolicon.png'))
 		
 		# Blank pane
-		self.fag = QWidget()
-		self.mainLayout.addWidget(self.fag)
-		self.fag.setGeometry(0,0,500, 500)
+		self.rightPane = None
+		self.createRightPane(None)
 		
 		# test
-		metadata = createGetMetaData(self.fbxfiles[0])
-
-
-		
-	def onFbxClicked(self):
+		self.metadata = createGetMetaData(self.fbxfiles[0])
 	
-		fbxfile = self.fbxfiles[self.fbxlist.currentRow()]
-		
-		if self.fag:
-			self.mainLayout.removeWidget(self.fag)
-			self.fag.deleteLater()
-			
-		
-		self.fag = QWidget()
-		self.mainLayout.addWidget(self.fag)
-		self.fag.setGeometry(0,0,500, 500)
+	def createTextUI(self, name, field, y):
+	
+		critical = field in ["name", "author", "license"]
+	
+		q = QLabel(name)
+		q.setParent(self.rightPane)
+		q.setGeometry(0, y, 500, 36)
+		q.setFont(QFont( "Arial", 12, QFont.Bold ))
+		#q.setStyleSheet('color: #FF0000')
+		q.show()
 
+		text = self.metadata[field]
+		q = QLineEdit(text)
+		q.setParent(self.rightPane)
+		q.setGeometry(100, y, 500, 30)
+		q.setFont(QFont( "Arial", 12, QFont.Bold ))
+		if critical and len(text) == 0:
+			q.setStyleSheet("border: 1px solid #FF0000;")
+		else:
+			q.setStyleSheet("border: 0px;")
+		q.textChanged.connect(lambda text: self.onTextFieldChanged(text, field))
+		q.show()
+	
+		self.paneWidgets[field] = q
+	
+	
+	# Creates right pane
+	#
+	def createRightPane(self, fbxfile):
+		if self.rightPane:
+			self.mainLayout.removeWidget(self.rightPane)
+			self.rightPane.deleteLater()
+	
+		self.rightPane = QWidget()
+		self.mainLayout.addWidget(self.rightPane)
+		self.rightPane.setGeometry(0,0,500, 500)
+		self.rightPane.show()
+
+		# empty pane
+		if fbxfile == None:
+			return
+		
 		# mask icon png
 		q = QLabel()
-		q.setParent(self.fag)
+		q.setParent(self.rightPane)
 		pf = os.path.abspath(fbxfile.lower().replace(".fbx",".gif"))
 		m = QMovie(pf)
 		q.setMovie(m)
@@ -163,13 +197,50 @@ class ArtToolWindow(QMainWindow):
 
 		# mask file name
 		q = QLabel(fbxfile[2:])
-		q.setParent(self.fag)
+		q.setParent(self.rightPane)
 		q.setGeometry(66, 44, 500, 36)
 		q.setFont(QFont( "Arial", 14, QFont.Bold ))
 		q.show()
-				
-		self.fag.show()
+		
+		self.paneWidgets = dict()
+		
+		# name
+		y = 100
+		dy = 40
+		self.createTextUI("Pretty Name", "name", y)
+		
+		# description
+		y += dy
+		self.createTextUI("Description", "description", y)
+		
+		# author
+		y += dy
+		self.createTextUI("Author", "author", y)
+		
+		# tags
+		y += dy
+		self.createTextUI("Tags", "tags", y)
+		
 
+	
+	# FBX file clicked in list
+	#
+	def onFbxClicked(self):
+		fbxfile = self.fbxfiles[self.fbxlist.currentRow()]
+		self.createRightPane(fbxfile)
+
+	# text field changed
+	def onTextFieldChanged(self, text, field):
+		critical = field in ["name", "author", "license"]
+		self.metadata[field] = text
+		if critical and len(text) == 0:
+			self.paneWidgets[field].setStyleSheet("border: 1px solid #FF0000;")
+		else:
+			self.paneWidgets[field].setStyleSheet("border: 0px;")		
+			
+		
+		
+		
 if __name__ == '__main__':
 	
 	# We're a Qt App
