@@ -24,6 +24,7 @@
 #include "command_morph_import.h"
 #include "command_merge.h"
 #include "command_tweak.h"
+#include "command_depends.h"
 
 
 using namespace std;
@@ -52,6 +53,8 @@ int main(int argc, char** argv) {
 		command_morph_import(args);
 	else if (args.command == "tweak")
 		command_tweak(args);
+	else if (args.command == "depends")
+		command_depends(args);
 
 	//getchar();
     return 0;
