@@ -45,7 +45,7 @@ def getFileList(folder):
 
 	return fileList
 
-def getMetaFolder(fbxfile):
+def getMetaFolderName(fbxfile):
 	dn = os.path.dirname(fbxfile)
 	dn = os.path.join(dn, ".art").replace("\\","/")
 	return dn
@@ -57,6 +57,12 @@ def createMetaFolder(folder):
 		for line in execute(cmd):
 			print("SVN: " + line)
 
+def getMetaFileName(fbxfile):
+	metafolder = getMetaFolderName(fbxfile)
+	createMetaFolder(metafolder)
+	metafile = os.path.join(metafolder, os.path.basename(fbxfile).lower().replace(".fbx",".meta")).replace("\\","/")
+	return metafile
+			
 def writeMetaData(metafile, metadata):
 	f = open(metafile,"w")
 	f.write(json.dumps(metadata, indent=4))
@@ -66,9 +72,7 @@ def writeMetaData(metafile, metadata):
 		print("SVN: " + line)
 
 def createGetMetaData(fbxfile):
-	metafolder = getMetaFolder(fbxfile)
-	createMetaFolder(metafolder)
-	metafile = os.path.join(metafolder, os.path.basename(fbxfile).lower().replace(".fbx",".meta")).replace("\\","/")
+	metafile = getMetaFileName(fbxfile)
 	metadata = dict()
 	if os.path.exists(metafile):
 		# read existing metadata
@@ -95,7 +99,8 @@ def createGetMetaData(fbxfile):
 	return metadata
 
 	
-
+FIELD_WIDTH = 150
+PANE_WIDTH = 700
 	
 	
 	
@@ -131,7 +136,7 @@ class ArtToolWindow(QMainWindow):
 		
 		# Show the window
 		self.setCentralWidget(mainPane)
-		self.setGeometry(2000, 100, 1000, 600)
+		self.setGeometry(2000, 100, 1024, 768)
 		self.setWindowTitle('Streamlabs Art Tool')
 		self.setWindowIcon(QIcon('arttoolicon.png'))
 		
@@ -143,12 +148,11 @@ class ArtToolWindow(QMainWindow):
 		self.metadata = createGetMetaData(self.fbxfiles[0])
 	
 	def createTextUI(self, name, field, y):
-	
 		critical = field in ["name", "author", "license"]
 	
 		q = QLabel(name)
 		q.setParent(self.rightPane)
-		q.setGeometry(0, y, 500, 36)
+		q.setGeometry(0, y, FIELD_WIDTH, 36)
 		q.setFont(QFont( "Arial", 12, QFont.Bold ))
 		#q.setStyleSheet('color: #FF0000')
 		q.show()
@@ -156,7 +160,7 @@ class ArtToolWindow(QMainWindow):
 		text = self.metadata[field]
 		q = QLineEdit(text)
 		q.setParent(self.rightPane)
-		q.setGeometry(100, y, 500, 30)
+		q.setGeometry(FIELD_WIDTH, y, PANE_WIDTH - FIELD_WIDTH, 30)
 		q.setFont(QFont( "Arial", 12, QFont.Bold ))
 		if critical and len(text) == 0:
 			q.setStyleSheet("border: 1px solid #FF0000;")
@@ -167,6 +171,40 @@ class ArtToolWindow(QMainWindow):
 	
 		self.paneWidgets[field] = q
 	
+	def createLabelUI(self, name, field, y):
+		q = QLabel(name)
+		q.setParent(self.rightPane)
+		q.setGeometry(0, y, FIELD_WIDTH, 36)
+		q.setFont(QFont( "Arial", 12, QFont.Bold ))
+		q.show()
+
+		text = self.metadata[field]
+		q = QLabel(text)
+		q.setParent(self.rightPane)
+		q.setGeometry(FIELD_WIDTH, y, PANE_WIDTH - FIELD_WIDTH, 30)
+		q.setFont(QFont( "Arial", 12, QFont.Bold ))
+		q.show()
+	
+		self.paneWidgets[field] = q
+
+	def createCheckboxUI(self, name, field, y):
+		q = QLabel(name)
+		q.setParent(self.rightPane)
+		q.setGeometry(0, y, FIELD_WIDTH, 36)
+		q.setFont(QFont( "Arial", 12, QFont.Bold ))
+		q.show()
+
+		isset = self.metadata[field]
+		q = QCheckBox()
+		q.setParent(self.rightPane)
+		q.setGeometry(FIELD_WIDTH, y, PANE_WIDTH - FIELD_WIDTH, 30)
+		q.setFont(QFont( "Arial", 12, QFont.Bold ))
+		q.stateChanged.connect(lambda state: self.onCheckboxChanged(state, field))
+		q.show()
+	
+		self.paneWidgets[field] = q
+
+
 	
 	# Creates right pane
 	#
@@ -177,7 +215,7 @@ class ArtToolWindow(QMainWindow):
 	
 		self.rightPane = QWidget()
 		self.mainLayout.addWidget(self.rightPane)
-		self.rightPane.setGeometry(0,0,500, 500)
+		self.rightPane.setGeometry(0,0,PANE_WIDTH, 500)
 		self.rightPane.show()
 
 		# empty pane
@@ -198,7 +236,7 @@ class ArtToolWindow(QMainWindow):
 		# mask file name
 		q = QLabel(fbxfile[2:])
 		q.setParent(self.rightPane)
-		q.setGeometry(66, 44, 500, 36)
+		q.setGeometry(66, 44, 600, 36)
 		q.setFont(QFont( "Arial", 14, QFont.Bold ))
 		q.show()
 		
@@ -221,7 +259,30 @@ class ArtToolWindow(QMainWindow):
 		y += dy
 		self.createTextUI("Tags", "tags", y)
 		
+		# uuid
+		y += dy
+		self.createLabelUI("UUID", "uuid", y)
 
+		# depth_head
+		y += dy
+		self.createCheckboxUI("Depth Head", "depth_head", y)
+	
+		# is_morph
+		y += dy
+		self.createCheckboxUI("Is a Morph", "is_morph", y)
+	
+		# do_not_release
+		y += dy
+		self.createCheckboxUI("Do Not Release", "do_not_release", y)
+	
+		# license
+		y += dy
+		self.createTextUI("License", "license", y)
+
+		# website
+		y += dy
+		self.createTextUI("Website", "website", y)
+		
 	
 	# FBX file clicked in list
 	#
@@ -238,7 +299,12 @@ class ArtToolWindow(QMainWindow):
 		else:
 			self.paneWidgets[field].setStyleSheet("border: 0px;")		
 			
-		
+	# checkbox changed
+	def onCheckboxChanged(self, state, field):
+		if state == 0:
+			self.metadata[field] = False
+		else:
+			self.metadata[field] = True
 		
 		
 if __name__ == '__main__':
