@@ -9,13 +9,14 @@ rem ^
 
 
 import sys, subprocess, os, json, uuid
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QListWidget, QVBoxLayout, QPushButton, QComboBox
-from PyQt5.QtWidgets import QScrollArea, QMainWindow, QCheckBox, QHBoxLayout, QTextEdit, QLineEdit
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QListWidget, QVBoxLayout, QPushButton, QComboBox, QDateTimeEdit, QDialogButtonBox
+from PyQt5.QtWidgets import QScrollArea, QMainWindow, QCheckBox, QHBoxLayout, QTextEdit, QLineEdit, QFrame, QDialog
 from PyQt5.QtGui import QIcon, QBrush, QColor, QFont, QPixmap, QMovie
-
+from PyQt5.QtCore import QDateTime, Qt
 
 MAKEARTBATFILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),"makeart.bat")
 
+SVNENABLED = True
 SVNBIN = os.path.join("c:\\",'"Program Files"',"TortoiseSVN","bin","svn")
 
 	
@@ -80,7 +81,7 @@ def createMetaFolder(folder):
 		os.makedirs(folder)
 		cmd = SVNBIN + " add " + os.path.abspath(folder)
 		for line in execute(cmd):
-			print("SVN: " + line)
+			pass
 
 def getMetaFileName(fbxfile):
 	metafolder = getMetaFolderName(fbxfile)
@@ -93,7 +94,7 @@ def writeMetaData(metafile, metadata):
 	f.close()
 	cmd = SVNBIN + " add " + os.path.abspath(metafile)
 	for line in execute(cmd):
-		print("SVN: " + line)
+		pass
 
 def createGetMetaData(fbxfile):
 	metafolder = getMetaFolderName(fbxfile)
@@ -172,10 +173,57 @@ def checkMetaDataFile(fbxfile):
 	# check it
 	return checkMetaData(metadata)
 	
+def createGetConfig():
+	createMetaFolder("./.art")
+	metafile = "./.art/config.meta"
+	config = dict()
+	if os.path.exists(metafile):
+		f = open(metafile,"r")
+		config = json.loads(f.read())
+		f.close()
+	else:
+		config["x"] = 50
+		config["y"] = 50
+		writeMetaData(metafile, config)
+	return config
+	
+
+class DateTimeDialog(QDialog):
+
+	def __init__(self, parent = None):
+		super(DateTimeDialog, self).__init__(parent)
+
+		layout = QVBoxLayout(self)
+
+		# nice widget for editing the date
+		self.datetime = QDateTimeEdit(self)
+		self.datetime.setCalendarPopup(True)
+		self.datetime.setDateTime(QDateTime.currentDateTime())
+		layout.addWidget(self.datetime)
+
+		# OK and Cancel buttons
+		buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, Qt.Horizontal, self)
+		buttons.accepted.connect(self.accept)
+		buttons.rejected.connect(self.reject)
+		layout.addWidget(buttons)
+
+	# get current date and time from the dialog
+	def dateTime(self):
+		return self.datetime.dateTime()
+
+	# static method to create the dialog and return (date, time, accepted)
+	@staticmethod
+	def getDateTime(parent = None):
+		dialog = DateTimeDialog(parent)
+		result = dialog.exec_()
+		date = dialog.dateTime()
+		return (date.date(), date.time(), result == QDialog.Accepted)
+
+
 	
 	
 FIELD_WIDTH = 150
-PANE_WIDTH = 700
+PANE_WIDTH = 690
 TEXTURE_SIZES = ["32","64","128","256","512","1024","2048"]
 	
 def critical(field):
@@ -185,7 +233,10 @@ def critical(field):
 class ArtToolWindow(QMainWindow): 
 
 	def __init__(self, *args): 
-		QMainWindow.__init__(self, *args) 
+		super(ArtToolWindow, self).__init__(*args) 
+ 
+		# Load our config
+		self.config = createGetConfig()
  
 		# Main pane for the window
 		mainPane = QWidget()
@@ -193,25 +244,38 @@ class ArtToolWindow(QMainWindow):
 		 
 		# Get list of fbx files
 		self.fbxfiles = getFileList(".")
-		 
+		
+		# Left pane
+		leftPane = QWidget()
+		
 		# make a list widget
 		self.fbxlist = QListWidget()
 		for fbx in self.fbxfiles:
 			self.fbxlist.addItem(fbx[2:])
-		self.fbxlist.setGeometry(0, 0, 300, 500)
-		self.fbxlist.setMaximumWidth(300)
 		self.fbxlist.itemClicked.connect(lambda: self.onFbxClicked())
-		self.mainLayout.addWidget(self.fbxlist)
+		self.fbxlist.setParent(leftPane)
+		self.fbxlist.setGeometry(0, 0, 300, 600)
+
+		# add left pane to main layout
+		self.mainLayout.addWidget(leftPane)
+		leftPane.setGeometry(0, 0, 300, 768)
+		
+		# add a line
+		line = QFrame()
+		line.setFrameShape(QFrame.VLine)
+		line.setFrameShadow(QFrame.Sunken)
+		self.mainLayout.addWidget(line)
 		
 		# color items
 		for idx in range(0, len(self.fbxfiles)):
 			self.setFbxColorIcon(idx)
+			self.fbxlist.item(idx).setFont(QFont( "Arial", 12, QFont.Bold ))
 			
 		# Show the window
 		self.setCentralWidget(mainPane)
-		self.setGeometry(2000, 100, 1024, 768)
+		self.setGeometry(self.config["x"], self.config["y"], 1024, 768)
 		self.setWindowTitle('Streamlabs Art Tool')
-		self.setWindowIcon(QIcon('arttoolicon.png'))
+		self.setWindowIcon(QIcon('icons/arttoolicon.png'))
 		
 		# Blank pane
 		self.rightPane = None
@@ -313,11 +377,11 @@ class ArtToolWindow(QMainWindow):
 			self.fbxlist.item(idx).setForeground(QBrush(QColor("#000000")))
 			
 		if mt == MASK_UNKNOWN:
-			self.fbxlist.item(idx).setIcon(QIcon("unknownicon.png"))
+			self.fbxlist.item(idx).setIcon(QIcon("icons/unknownicon.png"))
 		elif mt == MASK_NORMAL:
-			self.fbxlist.item(idx).setIcon(QIcon("maskicon.png"))
+			self.fbxlist.item(idx).setIcon(QIcon("icons/maskicon.png"))
 		elif mt == MASK_MORPH:
-			self.fbxlist.item(idx).setIcon(QIcon("morphicon.png"))
+			self.fbxlist.item(idx).setIcon(QIcon("icons/morphicon.png"))
 
 	def setFbxColorIcon(self, idx):
 		mdc,mt = checkMetaDataFile(self.fbxfiles[idx])
@@ -337,6 +401,7 @@ class ArtToolWindow(QMainWindow):
 		self.rightPane = QWidget()
 		self.mainLayout.addWidget(self.rightPane)
 		self.rightPane.setGeometry(0,0,PANE_WIDTH, 500)
+		self.rightPane.setMinimumWidth(PANE_WIDTH)
 		self.rightPane.show()
 
 		# empty pane
@@ -361,6 +426,14 @@ class ArtToolWindow(QMainWindow):
 		q.setFont(QFont( "Arial", 14, QFont.Bold ))
 		q.show()
 		
+		# buttons
+		b = QPushButton("BUILD")
+		b.setParent(self.rightPane)
+		b.setGeometry(66, 10, 64, 32)
+		q.setFont(QFont( "Arial", 14, QFont.Bold ))
+		b.pressed.connect(lambda: self.onBuild())
+		b.show()
+		
 		# widgets below stored in this dict
 		self.paneWidgets = dict()
 		
@@ -368,60 +441,57 @@ class ArtToolWindow(QMainWindow):
 		y = 100
 		dy = 40
 		self.createTextUI("Pretty Name", "name", y)
-		
 		# description
 		y += dy
 		self.createTextUI("Description", "description", y)
-		
 		# author
 		y += dy
 		self.createTextUI("Author", "author", y)
-		
 		# tags
 		y += dy
 		self.createTextUI("Tags", "tags", y)
-		
 		# uuid
 		y += dy
 		self.createLabelUI("UUID", "uuid", y)
-
 		# depth_head
 		y += dy
 		self.createCheckboxUI("Depth Head", "depth_head", y)
-	
 		# is_morph
 		y += dy
 		self.createCheckboxUI("Is a Morph", "is_morph", y)
-	
 		# is_vip
 		y += dy
 		self.createCheckboxUI("V.I.P. Mask", "is_vip", y)
-	
 		# do_not_release
 		y += dy
 		self.createCheckboxUI("Do Not Release", "do_not_release", y)
-	
 		# texture_max
 		y += dy
 		self.createTextureSizeUI("Max Texture Size", "texture_max", y)
-	
 		# license
 		y += dy
 		self.createTextUI("License", "license", y)
-
 		# website
 		y += dy
 		self.createTextUI("Website", "website", y)
 		
+		# output window
+		self.outputWindow = QTextEdit()
+		self.outputWindow.setParent(self.rightPane)
+		self.outputWindow.setGeometry(0, y, PANE_WIDTH, 200)
+		self.outputWindow.show()
+		
 	
-	# FBX file clicked in list
-	#
-	def onFbxClicked(self):
+	def saveCurrentMetadata(self):
 		if self.metadata:
 			fbxfile = self.fbxfiles[self.currentFbx]
 			metafile = getMetaFileName(fbxfile)
 			writeMetaData(metafile, self.metadata)
-			
+	
+	# FBX file clicked in list
+	#
+	def onFbxClicked(self):
+		self.saveCurrentMetadata()
 		self.currentFbx = self.fbxlist.currentRow()
 		fbxfile = self.fbxfiles[self.currentFbx]
 		self.metadata = createGetMetaData(fbxfile)
@@ -450,18 +520,24 @@ class ArtToolWindow(QMainWindow):
 	def onTextureSizeChanged(self, state, field):
 		self.metadata[field] = int(TEXTURE_SIZES[state])
 		
+	# called before exit
+	def finalCleanup(self):
+		self.saveCurrentMetadata()
+		metafile = "./.art/config.meta"
+		geo = self.geometry()
+		self.config["x"] = geo.x()
+		self.config["y"] = geo.y()
+		writeMetaData(metafile, self.config)
 
-
-
-
+	# build
+	def onBuild(self):
+		print("BUILD " + self.fbxfiles[self.currentFbx])
+		DateTimeDialog.getDateTime(self)
 
 
 
 		
 if __name__ == '__main__':
-	
-	if svnNeedsCommit() :
-		print("need commit")
 	
 	# We're a Qt App
 	app = QApplication(sys.argv)
@@ -469,8 +545,14 @@ if __name__ == '__main__':
 	# Show the window
 	w = ArtToolWindow()
 	w.show()
-
+	
+	# Run application
+	r = app.exec_()
+	
+	# Final cleanup
+	w.finalCleanup()
+	
 	# Exit properly
-	sys.exit(app.exec_())
+	sys.exit(r)
 	
 	
