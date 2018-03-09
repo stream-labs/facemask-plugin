@@ -225,7 +225,13 @@ int Args::intValue(string key) {
 }
 
 bool Args::boolValue(string v) {
-	return (value(v) == "true");
+	return (value(v) == "true" ||
+		value(v) == "True" ||
+		value(v) == "TRUE" ||
+		value(v) == "yes" ||
+		value(v) == "Yes" ||
+		value(v) == "YES" ||
+		value(v) == "1");
 }
 
 json Args::makeNumberArray(string v, bool isFloat, int sidx) {
@@ -260,12 +266,14 @@ json Args::makeMatrix(string v, int sidx) {
 	return makeNumberArray(v, true, sidx);
 }
 
+
 json Args::getMaterialParams() {
 	json params;
+	vector<string> mat_params = { "name", "type", "effect", "technique",
+		"u-wrap", "v-wrap", "w-wrap", "culling", "depth-test", "depth-only",
+		"filter", "opaque" };
 	for (auto it = kvpairs.begin(); it != kvpairs.end(); it++) {
-		if (it->first != "name" &&
-			it->first != "type" &&
-			it->first != "effect") {
+		if (std::find(mat_params.begin(), mat_params.end(), it->first) == mat_params.end()) {
 
 			json parm;
 			string parmName = it->first;

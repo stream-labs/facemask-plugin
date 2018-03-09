@@ -11,8 +11,10 @@ rem ^
 # IMPORTS
 # ==============================================================================
 import sys, subprocess, os, json, uuid
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QListWidget, QVBoxLayout, QPushButton, QComboBox, QDateTimeEdit, QDialogButtonBox
-from PyQt5.QtWidgets import QScrollArea, QMainWindow, QCheckBox, QHBoxLayout, QTextEdit, QLineEdit, QFrame, QDialog, QFrame, QSplitter
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QListWidget, QVBoxLayout
+from PyQt5.QtWidgets import QPushButton, QComboBox, QDateTimeEdit, QDialogButtonBox
+from PyQt5.QtWidgets import QScrollArea, QMainWindow, QCheckBox, QHBoxLayout, QTextEdit
+from PyQt5.QtWidgets import QLineEdit, QFrame, QDialog, QFrame, QSplitter
 from PyQt5.QtGui import QIcon, QBrush, QColor, QFont, QPixmap, QMovie
 from PyQt5.QtCore import QDateTime, Qt
 
@@ -52,7 +54,7 @@ def execute(cmd):
 	return_code = popen.wait()
 	if return_code:
 		# raise subprocess.CalledProcessError(return_code, cmd)
-		pass
+		yield "ERROR " + cmd.split()[0] + " FAILED EXECUTION."
 
 # Gets a list of files
 def getFileList(folder):
@@ -65,6 +67,9 @@ def getFileList(folder):
 
 	return fileList
 
+def jsonFromFbx(fbxfile):
+	return os.path.abspath(fbxfile).replace(".fbx",".json").replace(".FBX",".json")
+	
 # ==============================================================================
 # SVN
 # ==============================================================================
@@ -122,11 +127,13 @@ def maskmaker(command, kvpairs, files):
 		if type(v) is str:
 			cmd += " " + k + '="' + v + '"'
 		else:
-			cmd += " " + k + '=' + v 
+			cmd += " " + k + '=' + str(v) 
 	
 	for f in files:
 		cmd += " " + f
 	
+	print("----------")
+	print(cmd)
 	for line in execute(cmd):
 		yield line[:-1]
 		
@@ -136,7 +143,7 @@ def mmImport(fbxfile, metadata):
 	for k in CREATEKEYS:
 		d[k] = metadata[k]
 		
-	jsonfile = os.path.abspath(fbxfile).replace(".fbx",".json").replace(".FBX",".json")
+	jsonfile = jsonFromFbx(fbxfile)
 	if metadata["is_morph"]:
 		d["restfile"] = MORPHRESTFILE
 		d["posefile"] = os.path.abspath(fbxfile)
@@ -403,9 +410,41 @@ class ArtToolWindow(QMainWindow):
 		mainSplitter = QSplitter(Qt.Vertical)
 		mainSplitter.addWidget(topSplitter)
 		
+		# bottom pane
+		bottomPane = QWidget()
+		bottomArea = QHBoxLayout(bottomPane)
+		
 		# output window
 		self.outputWindow = QTextEdit()
-		mainSplitter.addWidget(self.outputWindow)
+		self.outputWindow.setMinimumHeight(90)
+		bottomArea.addWidget(self.outputWindow)
+
+		# buttons area
+		buttonArea = QWidget()
+		buttonArea.setMinimumWidth(150)
+		buttonArea.setMinimumHeight(60)
+		b = QPushButton("Refresh")
+		b.setParent(buttonArea)
+		b.setGeometry(0,0,75,30)
+		b = QPushButton("Autobuild")
+		b.setParent(buttonArea)
+		b.setGeometry(0,30,75,30)
+		b = QPushButton("Rebuild All")
+		b.setParent(buttonArea)
+		b.setGeometry(0,60,75,30)
+		b = QPushButton("Make Release")
+		b.setParent(buttonArea)
+		b.setGeometry(75,0,75,30)
+		b = QPushButton("SVN Update")
+		b.setParent(buttonArea)
+		b.setGeometry(75,30,75,30)
+		b = QPushButton("SVN Commit")
+		b.setParent(buttonArea)
+		b.setGeometry(75,60,75,30)
+
+		bottomArea.addWidget(buttonArea)
+		
+		mainSplitter.addWidget(bottomPane)
 			
 		# Show the window
 		self.setCentralWidget(mainSplitter)
@@ -610,6 +649,29 @@ class ArtToolWindow(QMainWindow):
 		
 		for line in mmImport(fbxfile, self.metadata):
 			self.outputWindow.append(line)
+		
+		jsonfile = jsonFromFbx(fbxfile)
+		if self.metadata["depth_head"]:
+			# material
+			kvp = { "type":"material", 
+					"name":"depth_head_mat", 
+					"effect":"effectDefault", 
+					"depth-only":True }			
+			for line in maskmaker("addres", kvp, [jsonfile]):
+				self.outputWindow.append(line)
+			# model
+			kvp = { "type":"model", 
+					"name":"depth_head_mdl", 
+					"mesh":"meshHead", 
+					"material":"depth_head_mat" }			
+			for line in maskmaker("addres", kvp, [jsonfile]):
+				self.outputWindow.append(line)
+			# part
+			kvp = { "type":"model", 
+					"name":"depth_head", 
+					"resource":"depth_head_mdl" }			
+			for line in maskmaker("addpart", kvp, [jsonfile]):
+				self.outputWindow.append(line)
 		
 		# DEPS TEST
 		#deps = mmDepends(fbxfile)
