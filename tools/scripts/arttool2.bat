@@ -7,19 +7,37 @@ exit /b
 rem ^
 '''
 
-
+# ==============================================================================
+# IMPORTS
+# ==============================================================================
 import sys, subprocess, os, json, uuid
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QListWidget, QVBoxLayout, QPushButton, QComboBox, QDateTimeEdit, QDialogButtonBox
-from PyQt5.QtWidgets import QScrollArea, QMainWindow, QCheckBox, QHBoxLayout, QTextEdit, QLineEdit, QFrame, QDialog
+from PyQt5.QtWidgets import QScrollArea, QMainWindow, QCheckBox, QHBoxLayout, QTextEdit, QLineEdit, QFrame, QDialog, QFrame, QSplitter
 from PyQt5.QtGui import QIcon, QBrush, QColor, QFont, QPixmap, QMovie
 from PyQt5.QtCore import QDateTime, Qt
 
-MAKEARTBATFILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),"makeart.bat")
 
-SVNENABLED = True
+# ==============================================================================
+# FILE LOCATIONS
+# ==============================================================================
 SVNBIN = os.path.join("c:\\",'"Program Files"',"TortoiseSVN","bin","svn")
+MASKMAKERBIN = os.path.abspath("./maskmaker/maskmaker.exe")
+MORPHRESTFILE = os.path.abspath("./morphs/morph_rest.fbx")
 
-	
+# ==============================================================================
+# FIELD SEVERITIES
+# ==============================================================================
+def critical(field):
+	return field in ["name", "author", "license"]
+
+def desired(field):
+	return field in ["website"]
+
+
+# ==============================================================================
+# SYSTEM STUFF
+# ==============================================================================
+
 # Executes a shell command
 # usage:
 # 
@@ -47,30 +65,99 @@ def getFileList(folder):
 
 	return fileList
 
+# ==============================================================================
+# SVN
+# ==============================================================================
+	
+def svnFileMissing():
+	cmd = SVNBIN + ' status -uq'
+	for line in execute(cmd):
+		if line.split()[0] in ["!"]:
+			return True
+	return False
+	
 def svnNeedsUpdate():	
 	# have
-	cmd = 'svn info | grep -i "Last Changed Rev"'
+	cmd = SVNBIN + 'info | grep -i "Last Changed Rev"'
 	revHave = 0
 	for line in execute(cmd):
 		revHave = int(line.split()[-1])
 		
 	# head
-	cmd = 'svn info -r HEAD | grep -i "Last Changed Rev"'
+	cmd = SVNBIN + ' info -r HEAD | grep -i "Last Changed Rev"'
 	revHead = 0
 	for line in execute(cmd):
 		revHead = int(line.split()[-1])
 		
-	return revHead > revHave
+	return (revHead > revHave) or svnFileMissing()
 
 def svnNeedsCommit():
-	cmd = 'svn status -uq'
-	needCommit = False
+	cmd = SVNBIN + ' status -uq'
 	for line in execute(cmd):
 		if line.split()[0] in ["A", "M", "D"]:
-			needCommit = True
-	return needCommit
+			return True
+	return False
 
+def svnGetFileStatus(filename):
+	cmd = SVNBIN + ' status ' + os.path.abspath(filename)
+	for line in execute(cmd):
+		return line.split()[0]
+	return ""
 	
+def svnIsFileNew(filename):
+	return svnGetFileStatus(filename) == "?"
+	
+def svnAddFile(filename):
+	if svnIsFileNew(filename):
+		cmd = SVNBIN + " add " + os.path.abspath(filename)
+		for line in execute(cmd):
+			pass
+
+# ==============================================================================
+# MASKMAKER
+# ==============================================================================
+def maskmaker(command, kvpairs, files):
+	cmd = MASKMAKERBIN + " " + command 
+	for k,v in kvpairs.items():
+		if type(v) is str:
+			cmd += " " + k + '="' + v + '"'
+		else:
+			cmd += " " + k + '=' + v 
+	
+	for f in files:
+		cmd += " " + f
+	
+	for line in execute(cmd):
+		yield line[:-1]
+		
+def mmImport(fbxfile, metadata):
+	CREATEKEYS = ["name", "uuid", "description", "author", "tags", "category", "license", "website"]
+	d = dict()
+	for k in CREATEKEYS:
+		d[k] = metadata[k]
+		
+	jsonfile = os.path.abspath(fbxfile).replace(".fbx",".json").replace(".FBX",".json")
+	if metadata["is_morph"]:
+		d["restfile"] = MORPHRESTFILE
+		d["posefile"] = os.path.abspath(fbxfile)
+		for line in maskmaker("morphimport", d, [jsonfile]):
+			yield line
+	else:
+		d["file"] = os.path.abspath(fbxfile)
+		for line in maskmaker("import", d, [jsonfile]):
+			yield line
+	
+def mmDepends(fbxfile):
+	cmd = MASKMAKERBIN + " depends " + '"' + os.path.abspath(fbxfile) + '"'
+	deps = list()
+	for line in execute(cmd):
+		deps.append(line[:-1])
+	return deps
+	
+			
+# ==============================================================================
+# META DATA
+# ==============================================================================
 def getMetaFolderName(fbxfile):
 	dn = os.path.dirname(fbxfile)
 	dn = os.path.join(dn, ".art").replace("\\","/")
@@ -79,9 +166,7 @@ def getMetaFolderName(fbxfile):
 def createMetaFolder(folder):
 	if not os.path.exists(folder):
 		os.makedirs(folder)
-		cmd = SVNBIN + " add " + os.path.abspath(folder)
-		for line in execute(cmd):
-			pass
+		svnAddFile(folder)
 
 def getMetaFileName(fbxfile):
 	metafolder = getMetaFolderName(fbxfile)
@@ -92,9 +177,7 @@ def writeMetaData(metafile, metadata):
 	f = open(metafile,"w")
 	f.write(json.dumps(metadata, indent=4))
 	f.close()
-	cmd = SVNBIN + " add " + os.path.abspath(metafile)
-	for line in execute(cmd):
-		pass
+	svnAddFile(metafile)
 
 def createGetMetaData(fbxfile):
 	metafolder = getMetaFolderName(fbxfile)
@@ -108,10 +191,12 @@ def createGetMetaData(fbxfile):
 		f.close()
 	else:
 		# create new metadata
+		metadata["fbx"] = fbxfile
 		metadata["name"] = ""
 		metadata["description"] = ""
 		metadata["author"] = ""
 		metadata["tags"] = ""
+		metadata["category"] = ""
 		metadata["fbx_modtime"] = os.path.getmtime(fbxfile)
 		metadata["uuid"] = str(uuid.uuid4())
 		metadata["depth_head"] = False
@@ -152,8 +237,14 @@ def checkMetaData(metadata):
 	for field,value in metadata.items():
 		if type(value) is str and critical(field) and len(value) == 0:
 			return CHECKMETA_ERROR,masktype
+		elif type(value) is str and desired(field) and len(value) == 0:
+			return CHECKMETA_WARNING,masktype
 			
-	# todo: check for icons
+	# check for icons
+	fbxfile = metadata["fbx"]
+	pf = os.path.abspath(fbxfile.lower().replace(".fbx",".gif"))
+	if not os.path.exists(pf):
+		return CHECKMETA_WARNING,masktype
 	
 	# good
 	return CHECKMETA_GOOD,masktype
@@ -173,6 +264,10 @@ def checkMetaDataFile(fbxfile):
 	# check it
 	return checkMetaData(metadata)
 	
+# ==============================================================================
+# CONFIG
+# ==============================================================================
+
 def createGetConfig():
 	createMetaFolder("./.art")
 	metafile = "./.art/config.meta"
@@ -187,6 +282,10 @@ def createGetConfig():
 		writeMetaData(metafile, config)
 	return config
 	
+
+# ==============================================================================
+# TEST DIALOG
+# ==============================================================================
 
 class DateTimeDialog(QDialog):
 
@@ -220,33 +319,58 @@ class DateTimeDialog(QDialog):
 		return (date.date(), date.time(), result == QDialog.Accepted)
 
 
-	
+# ==============================================================================
+# MAIN WINDOW : ArtToolWindow class
+# ==============================================================================
 	
 FIELD_WIDTH = 150
 PANE_WIDTH = 690
 TEXTURE_SIZES = ["32","64","128","256","512","1024","2048"]
-	
-def critical(field):
-	return field in ["name", "author", "license"]
+MASK_UI_FIELDS = { "name" : "Pretty Name",
+				   "description" : "Description",
+				   "author" : "Author",
+				   "tags" : "Tags",
+				   "category" : "Category",
+				   "uuid" : "UUID",
+				   "depth_head" : "Depth Head",
+				   "is_morph" : "Morph Mask",
+				   "is_vip" : "V.I.P. Mask",
+				   "do_not_release" : "DO NOT RELEASE",
+				   "texture_max" : "Max Texture Size",
+				   "license" : "License",
+				   "website" : "Website" }
 
 	
 class ArtToolWindow(QMainWindow): 
 
+	# --------------------------------------------------
+	# CONSTRUCTOR
+	# --------------------------------------------------
 	def __init__(self, *args): 
 		super(ArtToolWindow, self).__init__(*args) 
  
 		# Load our config
 		self.config = createGetConfig()
  
-		# Main pane for the window
-		mainPane = QWidget()
-		self.mainLayout = QHBoxLayout(mainPane)
-		 
 		# Get list of fbx files
 		self.fbxfiles = getFileList(".")
 		
-		# Left pane
+		# Left Pane
 		leftPane = QWidget()
+		leftLayout = QVBoxLayout(leftPane)
+
+		# Streamlabs logo
+		slabslogo = QLabel()
+		slabslogo.setPixmap(QPixmap("icons/streamlabs.png"))
+		slabslogo.setScaledContents(True)
+		slabslogo.show()
+		leftLayout.addWidget(slabslogo)
+		slabslogo.setMaximumWidth(300)
+		slabslogo.setMaximumHeight(53)
+		
+		# Filter box
+		self.fbxfilter = QLineEdit()
+		leftLayout.addWidget(self.fbxfilter)
 		
 		# make a list widget
 		self.fbxlist = QListWidget()
@@ -254,118 +378,95 @@ class ArtToolWindow(QMainWindow):
 			self.fbxlist.addItem(fbx[2:])
 		self.fbxlist.itemClicked.connect(lambda: self.onFbxClicked())
 		self.fbxlist.setParent(leftPane)
-		self.fbxlist.setGeometry(0, 0, 300, 600)
+		self.fbxlist.setMinimumHeight(560)
+		leftLayout.addWidget(self.fbxlist)
 
-		# add left pane to main layout
-		self.mainLayout.addWidget(leftPane)
-		leftPane.setGeometry(0, 0, 300, 768)
+		# top splitter
+		topSplitter = QSplitter(Qt.Horizontal)
+		topSplitter.addWidget(leftPane)
+
+		# Layout for edit pane
+		rightPane = QWidget()
+		self.mainLayout = QHBoxLayout(rightPane)
+		topSplitter.addWidget(rightPane)
 		
-		# add a line
-		line = QFrame()
-		line.setFrameShape(QFrame.VLine)
-		line.setFrameShadow(QFrame.Sunken)
-		self.mainLayout.addWidget(line)
+		# Edit pane 
+		self.editPane = None
+		self.createMaskEditPane(None)
 		
-		# color items
+		# color fbxlist items
 		for idx in range(0, len(self.fbxfiles)):
 			self.setFbxColorIcon(idx)
 			self.fbxlist.item(idx).setFont(QFont( "Arial", 12, QFont.Bold ))
 			
+		# crate main splitter
+		mainSplitter = QSplitter(Qt.Vertical)
+		mainSplitter.addWidget(topSplitter)
+		
+		# output window
+		self.outputWindow = QTextEdit()
+		mainSplitter.addWidget(self.outputWindow)
+			
 		# Show the window
-		self.setCentralWidget(mainPane)
+		self.setCentralWidget(mainSplitter)
 		self.setGeometry(self.config["x"], self.config["y"], 1024, 768)
 		self.setWindowTitle('Streamlabs Art Tool')
 		self.setWindowIcon(QIcon('icons/arttoolicon.png'))
 		
-		# Blank pane
-		self.rightPane = None
-		self.createRightPane(None)
-		
-		# test
+		# State
 		self.metadata = None 
 		self.currentFbx = -1
 
-	
-	def createTextUI(self, name, field, y):
+		
+	# --------------------------------------------------
+	# Create generic widget
+	# --------------------------------------------------
+	def createLabelWidget(self, parent, name, field, y, noedit=False):
 		q = QLabel(name)
-		q.setParent(self.rightPane)
+		q.setParent(parent)
 		q.setGeometry(0, y, FIELD_WIDTH, 36)
 		q.setFont(QFont( "Arial", 12, QFont.Bold ))
-		#q.setStyleSheet('color: #FF0000')
 		q.show()
 
-		text = self.metadata[field]
-		q = QLineEdit(text)
-		q.setParent(self.rightPane)
+		value = self.metadata[field]
+		
+		if type(value) is str:
+			if noedit:
+				q = QLabel(value)
+			else:
+				q = QLineEdit(value)
+				q.textChanged.connect(lambda text: self.onTextFieldChanged(text, field))
+			if critical(field) and len(value) == 0:
+				q.setStyleSheet("border: 1px solid #FF0000;")
+			elif desired(field) and len(value) == 0:
+				q.setStyleSheet("border: 1px solid #FF7F50;")
+			else:
+				q.setStyleSheet("border: 0px;")
+		elif type(value) is bool:
+			q = QCheckBox()
+			q.setChecked(value)
+			q.stateChanged.connect(lambda state: self.onCheckboxChanged(state, field))
+		elif type(value) is int:
+			q = QComboBox()
+			idx = 0
+			selidx = 0
+			for s in TEXTURE_SIZES:
+				if int(s) == value:
+					selidx = idx
+				q.addItem(s)
+				idx += 1
+			q.setCurrentIndex(selidx)
+			q.currentIndexChanged.connect(lambda state: self.onTextureSizeChanged(state, field))
+			
+		q.setParent(parent)
 		q.setGeometry(FIELD_WIDTH, y, PANE_WIDTH - FIELD_WIDTH, 30)
 		q.setFont(QFont( "Arial", 12, QFont.Bold ))
-		if critical(field) and len(text) == 0:
-			q.setStyleSheet("border: 1px solid #FF0000;")
-		else:
-			q.setStyleSheet("border: 0px;")
-		q.textChanged.connect(lambda text: self.onTextFieldChanged(text, field))
 		q.show()
+		return q
 	
-		self.paneWidgets[field] = q
-	
-	def createLabelUI(self, name, field, y):
-		q = QLabel(name)
-		q.setParent(self.rightPane)
-		q.setGeometry(0, y, FIELD_WIDTH, 36)
-		q.setFont(QFont( "Arial", 12, QFont.Bold ))
-		q.show()
-
-		text = self.metadata[field]
-		q = QLabel(text)
-		q.setParent(self.rightPane)
-		q.setGeometry(FIELD_WIDTH, y, PANE_WIDTH - FIELD_WIDTH, 30)
-		q.setFont(QFont( "Arial", 12, QFont.Bold ))
-		q.show()
-	
-		self.paneWidgets[field] = q
-
-	def createCheckboxUI(self, name, field, y):
-		q = QLabel(name)
-		q.setParent(self.rightPane)
-		q.setGeometry(0, y, FIELD_WIDTH, 36)
-		q.setFont(QFont( "Arial", 12, QFont.Bold ))
-		q.show()
-
-		isset = self.metadata[field]
-		q = QCheckBox()
-		q.setParent(self.rightPane)
-		q.setChecked(isset)
-		q.setGeometry(FIELD_WIDTH, y, PANE_WIDTH - FIELD_WIDTH, 30)
-		q.setFont(QFont( "Arial", 12, QFont.Bold ))
-		q.stateChanged.connect(lambda state: self.onCheckboxChanged(state, field))
-		q.show()
-	
-		self.paneWidgets[field] = q
-
-	def createTextureSizeUI(self, name, field, y):
-		q = QLabel(name)
-		q.setParent(self.rightPane)
-		q.setGeometry(0, y, FIELD_WIDTH, 36)
-		q.setFont(QFont( "Arial", 12, QFont.Bold ))
-		q.show()
-
-		texsize = self.metadata[field]
-		q = QComboBox()
-		idx = 0
-		selidx = 0
-		for s in TEXTURE_SIZES:
-			if int(s) == texsize:
-				selidx = idx
-			q.addItem(s)
-			idx += 1
-		q.setCurrentIndex(selidx)
-		q.setParent(self.rightPane)
-		q.setGeometry(FIELD_WIDTH, y, 100, 30)
-		q.currentIndexChanged.connect(lambda state: self.onTextureSizeChanged(state, field))
-		q.show()
-	
-		self.paneWidgets[field] = q
-
+	# --------------------------------------------------
+	# Colors and Icons for main FBX list
+	# --------------------------------------------------
 	def setFbxColorIconInternal(self, mdc, mt, idx):
 		if mdc == CHECKMETA_GOOD:
 			self.fbxlist.item(idx).setForeground(QBrush(QColor("#32CD32")))
@@ -391,18 +492,19 @@ class ArtToolWindow(QMainWindow):
 		mdc,mt = checkMetaData(self.metadata)
 		self.setFbxColorIconInternal(mdc, mt, self.currentFbx)
 			
-	# Creates right pane
-	#
-	def createRightPane(self, fbxfile):
-		if self.rightPane:
-			self.mainLayout.removeWidget(self.rightPane)
-			self.rightPane.deleteLater()
+			
+	# --------------------------------------------------
+	# createMaskEditPane
+	# --------------------------------------------------
+	def createMaskEditPane(self, fbxfile):
+		if self.editPane:
+			self.mainLayout.removeWidget(self.editPane)
+			self.editPane.deleteLater()
 	
-		self.rightPane = QWidget()
-		self.mainLayout.addWidget(self.rightPane)
-		self.rightPane.setGeometry(0,0,PANE_WIDTH, 500)
-		self.rightPane.setMinimumWidth(PANE_WIDTH)
-		self.rightPane.show()
+		self.editPane = QWidget()
+		self.mainLayout.addWidget(self.editPane)
+		self.editPane.setMinimumWidth(PANE_WIDTH)
+		self.editPane.show()
 
 		# empty pane
 		if fbxfile == None:
@@ -410,9 +512,12 @@ class ArtToolWindow(QMainWindow):
 		
 		# mask icon png
 		q = QLabel()
-		q.setParent(self.rightPane)
+		q.setParent(self.editPane)
 		pf = os.path.abspath(fbxfile.lower().replace(".fbx",".gif"))
-		m = QMovie(pf)
+		if os.path.exists(pf):
+			m = QMovie(pf)
+		else:
+			m = QMovie("icons/noicon.png")
 		q.setMovie(m)
 		m.start()
 		q.setScaledContents(True)
@@ -421,89 +526,59 @@ class ArtToolWindow(QMainWindow):
 
 		# mask file name
 		q = QLabel(fbxfile[2:])
-		q.setParent(self.rightPane)
+		q.setParent(self.editPane)
 		q.setGeometry(66, 44, 600, 36)
 		q.setFont(QFont( "Arial", 14, QFont.Bold ))
+		q.setToolTip("This is a tip.\nHopefully on two\nlines.")
 		q.show()
 		
 		# buttons
 		b = QPushButton("BUILD")
-		b.setParent(self.rightPane)
+		b.setParent(self.editPane)
 		b.setGeometry(66, 10, 64, 32)
 		q.setFont(QFont( "Arial", 14, QFont.Bold ))
 		b.pressed.connect(lambda: self.onBuild())
 		b.show()
 		
-		# widgets below stored in this dict
-		self.paneWidgets = dict()
-		
-		# name
+		# mask meta data fields
 		y = 100
 		dy = 40
-		self.createTextUI("Pretty Name", "name", y)
-		# description
-		y += dy
-		self.createTextUI("Description", "description", y)
-		# author
-		y += dy
-		self.createTextUI("Author", "author", y)
-		# tags
-		y += dy
-		self.createTextUI("Tags", "tags", y)
-		# uuid
-		y += dy
-		self.createLabelUI("UUID", "uuid", y)
-		# depth_head
-		y += dy
-		self.createCheckboxUI("Depth Head", "depth_head", y)
-		# is_morph
-		y += dy
-		self.createCheckboxUI("Is a Morph", "is_morph", y)
-		# is_vip
-		y += dy
-		self.createCheckboxUI("V.I.P. Mask", "is_vip", y)
-		# do_not_release
-		y += dy
-		self.createCheckboxUI("Do Not Release", "do_not_release", y)
-		# texture_max
-		y += dy
-		self.createTextureSizeUI("Max Texture Size", "texture_max", y)
-		# license
-		y += dy
-		self.createTextUI("License", "license", y)
-		# website
-		y += dy
-		self.createTextUI("Website", "website", y)
+		self.paneWidgets = dict()
+		for field in MASK_UI_FIELDS:
+			w = self.createLabelWidget(self.editPane, MASK_UI_FIELDS[field], field, y, field in ["uuid"])
+			self.paneWidgets[field] = w
+			y += dy
+			
 		
-		# output window
-		self.outputWindow = QTextEdit()
-		self.outputWindow.setParent(self.rightPane)
-		self.outputWindow.setGeometry(0, y, PANE_WIDTH, 200)
-		self.outputWindow.show()
-		
-	
+	# --------------------------------------------------
+	# saveCurrentMetadata
+	# --------------------------------------------------
 	def saveCurrentMetadata(self):
 		if self.metadata:
 			fbxfile = self.fbxfiles[self.currentFbx]
 			metafile = getMetaFileName(fbxfile)
 			writeMetaData(metafile, self.metadata)
 	
+	# --------------------------------------------------
+	# WIDGET SIGNALS CALLBACKS
+	# --------------------------------------------------
+	
 	# FBX file clicked in list
-	#
 	def onFbxClicked(self):
 		self.saveCurrentMetadata()
 		self.currentFbx = self.fbxlist.currentRow()
 		fbxfile = self.fbxfiles[self.currentFbx]
 		self.metadata = createGetMetaData(fbxfile)
 		self.updateFbxColorIcon()
-		self.createRightPane(fbxfile)
-
+		self.createMaskEditPane(fbxfile)
 		
 	# text field changed
 	def onTextFieldChanged(self, text, field):
 		self.metadata[field] = text
 		if critical(field) and len(text) == 0:
 			self.paneWidgets[field].setStyleSheet("border: 1px solid #FF0000;")
+		elif desired(field) and len(text) == 0:
+			self.paneWidgets[field].setStyleSheet("border: 1px solid #FF7F50;")
 		else:
 			self.paneWidgets[field].setStyleSheet("border: 0px;")
 		self.updateFbxColorIcon()
@@ -531,12 +606,23 @@ class ArtToolWindow(QMainWindow):
 
 	# build
 	def onBuild(self):
-		print("BUILD " + self.fbxfiles[self.currentFbx])
-		DateTimeDialog.getDateTime(self)
-
-
-
+		fbxfile = self.fbxfiles[self.currentFbx]
 		
+		for line in mmImport(fbxfile, self.metadata):
+			self.outputWindow.append(line)
+		
+		# DEPS TEST
+		#deps = mmDepends(fbxfile)
+		#dirname = os.path.dirname(fbxfile)
+		#for d in deps:
+		#	print(os.path.abspath(os.path.join(dirname, d)))
+		
+
+
+
+# ==============================================================================
+# MAIN ENTRY POINT
+# ==============================================================================
 if __name__ == '__main__':
 	
 	# We're a Qt App

@@ -56,7 +56,10 @@ Args::Args(int argc, char** argv)
 	else {
 		for (int i = 2; i < (argc - 1); i++) {
 			vector<string> pair = Utils::split(argv[i], '=');
-			kvpairs[pair[0]] = pair[1];
+			if (pair.size() > 1)
+				kvpairs[pair[0]] = pair[1];
+			else
+				kvpairs[pair[0]] = "";
 		}
 	}
 	failed = false;
@@ -102,6 +105,7 @@ void Args::print() {
 string Args::default_value(string key) {
 	if (command == "create" ||
 		command == "merge" ||
+		command == "morphimport" ||
 		command == "import") {
 		if (key == "name")
 			return Utils::get_filename(filename);
@@ -115,6 +119,7 @@ string Args::default_value(string key) {
 			return "http://streamlabs.com/";
 	}
 	if (command == "addres" ||
+		command == "morphimport" ||
 		command == "import") {
 		if (key == "filter")
 			return "min-mag-linear-mip-point";
@@ -331,8 +336,11 @@ json Args::loadJsonFile(string fname) {
 void Args::initJsonNamesAndValues() {
 	vector<string> create_keys = {
 		"name",
+		"uuid",
 		"description",
 		"author",
+		"tags",
+		"category",
 		"license",
 		"website"
 	};
