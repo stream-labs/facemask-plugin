@@ -2,7 +2,16 @@
 '''
 @echo off
 rem https://stackoverflow.com/questions/17467441/how-to-embed-python-code-in-batch-script
-%userprofile%\\AppData\\Local\\Programs\\Python\\Python36-32\\python "%~f0"
+if exist %userprofile%\\AppData\\Local\\Programs\\Python\\Python36\\python.exe goto PYTHON64
+if exist %userprofile%\\AppData\\Local\\Programs\\Python\\Python36-32\\python.exe goto PYTHON32
+echo "I can't find python (3.6). Please install python from https://www.python.org/downloads/windows/"
+pause
+exit /b
+:PYTHON32
+%userprofile%\\AppData\\Local\\Programs\\Python\\Python36-32\\python "%~f0" 
+exit /b
+:PYTHON64
+%userprofile%\\AppData\\Local\\Programs\\Python\\Python36\\python "%~f0" 
 exit /b
 rem ^
 '''
@@ -11,20 +20,36 @@ rem ^
 # IMPORTS
 # ==============================================================================
 import sys, subprocess, os, json, uuid
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QListWidget, QVBoxLayout
-from PyQt5.QtWidgets import QPushButton, QComboBox, QDateTimeEdit, QDialogButtonBox
-from PyQt5.QtWidgets import QScrollArea, QMainWindow, QCheckBox, QHBoxLayout, QTextEdit
-from PyQt5.QtWidgets import QLineEdit, QFrame, QDialog, QFrame, QSplitter
-from PyQt5.QtGui import QIcon, QBrush, QColor, QFont, QPixmap, QMovie
-from PyQt5.QtCore import QDateTime, Qt
-
-
+try:
+	from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QListWidget, QVBoxLayout
+	from PyQt5.QtWidgets import QPushButton, QComboBox, QDateTimeEdit, QDialogButtonBox, QMessageBox
+	from PyQt5.QtWidgets import QScrollArea, QMainWindow, QCheckBox, QHBoxLayout, QTextEdit
+	from PyQt5.QtWidgets import QLineEdit, QFrame, QDialog, QFrame, QSplitter
+	from PyQt5.QtGui import QIcon, QBrush, QColor, QFont, QPixmap, QMovie
+	from PyQt5.QtCore import QDateTime, Qt
+except:
+	print("You don't seem to have PyQt5 installed. I will attempt to install it now.")
+	cmd = os.path.join(os.path.expanduser("~"),"AppData","Local","Programs","Python","Python36","python.exe")
+	if not os.path.exists(cmd):
+		cmd = os.path.join(os.path.expanduser("~"),"AppData","Local","Programs","Python","Python36-32","python.exe")
+	if not os.path.exists(cmd):
+		print("I can't find python. Really odd, since this is python code.")
+	cmd += " -m pip install PyQt5 --user"
+	popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True, shell=True)
+	for stdout_line in iter(popen.stdout.readline, ""):
+		print(stdout_line)
+	popen.wait()
+	print("PyQt5 should be installed now. Try running art tool again.")
+	sys.exit(0)
+	
 # ==============================================================================
 # FILE LOCATIONS
 # ==============================================================================
-SVNBIN = os.path.join("c:\\",'"Program Files"',"TortoiseSVN","bin","svn")
+SVNBIN = os.path.abspath(os.path.join("c:\\",'"Program Files"',"TortoiseSVN","bin","svn.exe"))
 MASKMAKERBIN = os.path.abspath("./maskmaker/maskmaker.exe")
 MORPHRESTFILE = os.path.abspath("./morphs/morph_rest.fbx")
+
+
 
 # ==============================================================================
 # FIELD SEVERITIES
@@ -455,8 +480,38 @@ class ArtToolWindow(QMainWindow):
 		# State
 		self.metadata = None 
 		self.currentFbx = -1
-
 		
+		# Check our binaries
+		self.checkBinaries()
+
+	def checkBinaries(self):
+		gotSVN = os.path.exists(SVNBIN.replace('"',''))
+		gotMM = os.path.exists(MASKMAKERBIN)
+		gotRP = os.path.exists(MORPHRESTFILE)
+		
+		if not gotSVN:
+			msg = QMessageBox()
+			msg.setIcon(QMessageBox.Information)
+			msg.setText("You seem to be missing " + os.path.basename(SVNBIN))
+			msg.setInformativeText("You should (re)install tortoiseSVN, and be sure to install the command line tools.")
+			msg.setWindowTitle("Missing Binary File")
+			msg.setStandardButtons(QMessageBox.Ok)
+			msg.exec_()
+		if not gotMM:
+			msg = QMessageBox()
+			msg.setIcon(QMessageBox.Information)
+			msg.setText("You seem to be missing " + os.path.basename(MASKMAKERBIN))
+			msg.setWindowTitle("Missing Binary File")
+			msg.setStandardButtons(QMessageBox.Ok)
+			msg.exec_()
+		if not gotRP:
+			msg = QMessageBox()
+			msg.setIcon(QMessageBox.Information)
+			msg.setText("You seem to be missing " + os.path.basename(MORPHRESTFILE))
+			msg.setWindowTitle("Missing Binary File")
+			msg.setStandardButtons(QMessageBox.Ok)
+			msg.exec_()
+			
 	# --------------------------------------------------
 	# Create generic widget
 	# --------------------------------------------------
