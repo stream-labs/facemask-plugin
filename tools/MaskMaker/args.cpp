@@ -117,6 +117,8 @@ string Args::default_value(string key) {
 			return "Copyright 2017 - General Working Inc. - All rights reserved.";
 		if (key == "website")
 			return "http://streamlabs.com/";
+		if (key == "version")
+			return "1";
 	}
 	if (command == "addres" ||
 		command == "morphimport" ||
@@ -363,6 +365,8 @@ json Args::createNewJson() {
 		string k = jsonKeys[i];
 		j[k] = value(k);
 	}
+
+	j["version"] = FACEMASK_JSON_VERSION;
 
 	j["resources"] = {};
 	j["parts"] = {};
