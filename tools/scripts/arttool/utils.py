@@ -97,6 +97,17 @@ def getFileList(folder):
 def jsonFromFbx(fbxfile):
 	return os.path.abspath(fbxfile).replace(".fbx",".json").replace(".FBX",".json")
 	
+def collapse_path(p):
+	bits = p.replace("/","\\").split("\\")
+	for i in range(0, len(bits)):
+		if i > 0:
+			if bits[i] == "..":
+				del bits[i]
+				del bits[i-1]
+				break
+	return "/".join(bits)			
+	
+	
 # ==============================================================================
 # SVN
 # ==============================================================================
@@ -231,7 +242,6 @@ def createGetMetaData(fbxfile):
 		metadata["author"] = ""
 		metadata["tags"] = ""
 		metadata["category"] = ""
-		metadata["fbx_modtime"] = os.path.getmtime(fbxfile)
 		metadata["uuid"] = str(uuid.uuid4())
 		metadata["depth_head"] = False
 		metadata["is_morph"] = False

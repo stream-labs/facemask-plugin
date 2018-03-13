@@ -444,9 +444,12 @@ class ArtToolWindow(QMainWindow):
 		# import fbx to json
 		for line in mmImport(fbxfile, self.metadata):
 			self.outputWindow.append(line)
-		
-		# add depth head
+
+		# add json to svn
 		jsonfile = jsonFromFbx(fbxfile)
+		svnAddFile(jsonfile)
+			
+		# add depth head
 		if self.metadata["depth_head"]:
 			# material
 			kvp = { "type":"material", 
@@ -473,11 +476,32 @@ class ArtToolWindow(QMainWindow):
 		for addn in self.metadata["additions"]:
 			perform_addition(addn, jsonfile, self.outputWindow)
 		
-		# DEPS TEST
-		#deps = mmDepends(fbxfile)
-		#dirname = os.path.dirname(fbxfile)
-		#for d in deps:
-		#	print(os.path.abspath(os.path.join(dirname, d)))
+		# save mod times of fbx and dependent pngs
+		self.metadata["fbx_modtime"] = os.path.getmtime(fbxfile)
+		deps = mmDepends(fbxfile)
+		dirname = os.path.dirname(fbxfile)
+		metadeps = list()
+		for d in deps:
+			f = collapse_path(os.path.join(dirname, d))
+			if os.path.exists(os.path.abspath(f)):
+				metadeps.append({ "file" : f, "modtime" : os.path.getmtime(f) })
+			else: 
+				ff = os.path.join(os.path.dirname(fbxfile), os.path.basename(f)).replace("\\","/")
+				if os.path.exists(ff):
+					metadeps.append({ "file" : ff, "modtime" : os.path.getmtime(ff) })
+				else:
+					metadeps.append({ "file" : f, "modtime" : 0 })
+					msg = QMessageBox()
+					msg.setIcon(QMessageBox.Information)
+					msg.setText("This FBX depends on " + f + ", which cannot be found.")
+					msg.setWindowTitle("Missing PNG File")
+					msg.setStandardButtons(QMessageBox.Ok)
+					msg.exec_()
+		self.metadata["dependencies"] = metadeps
+		
+		# save metadata
+		self.saveCurrentMetadata()
+			
 		
 	def onAddAddition(self):
 		addn = NewAdditionDialog.go_modal(self)

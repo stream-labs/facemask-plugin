@@ -20,6 +20,26 @@
 #include "utils.h"
 #include "command_tweak.h"
 
+bool is_int(string v) {
+	char* p;
+	long c = strtol(v.c_str(), &p, 10);
+	if (*p)
+		return false;
+	return true;
+}
+
+bool is_float(string v) {
+	char* p;
+	double c = strtod(v.c_str(), &p);
+	if (*p)
+		return false;
+	return true;
+}
+
+bool is_vector(string v) {
+	vector<string> bits = Utils::split(v, ',');
+	return (bits.size() > 1);
+}
 
 void command_tweak(Args& args) {
 
@@ -30,36 +50,51 @@ void command_tweak(Args& args) {
 	for (auto it = args.kvpairs.begin(); it != args.kvpairs.end(); it++) {
 		vector<string> path = Utils::split(it->first, '.');
 
+		json jval;
+		if (is_int(it->second))
+			jval = atoi(it->second.c_str());
+		else if (is_float(it->second))
+			jval = atof(it->second.c_str());
+		else if (is_vector(it->second)) {
+			vector<string> bits = Utils::split(it->second, ',');
+			vector<string> keys = { "x","y","z","w" };
+			for (int i = 0; i < bits.size(); i++) {
+				jval[keys[i]] = atof(bits[i].c_str());
+			}
+		}
+		else
+			jval = it->second;
+
 		switch (path.size()) {
 		case 1:
-			j[path[0]] = it->second;
+			j[path[0]] = jval;
 			break;
 		case 2:
-			j[path[0]][path[1]] = it->second;
+			j[path[0]][path[1]] = jval;
 			break;
 		case 3:
-			j[path[0]][path[1]][path[2]] = it->second;
+			j[path[0]][path[1]][path[2]] = jval;
 			break;
 		case 4:
-			j[path[0]][path[1]][path[2]][path[3]] = it->second;
+			j[path[0]][path[1]][path[2]][path[3]] = jval;
 			break;
 		case 5:
-			j[path[0]][path[1]][path[2]][path[3]][path[4]] = it->second;
+			j[path[0]][path[1]][path[2]][path[3]][path[4]] = jval;
 			break;
 		case 6:
-			j[path[0]][path[1]][path[2]][path[3]][path[4]][path[5]] = it->second;
+			j[path[0]][path[1]][path[2]][path[3]][path[4]][path[5]] = jval;
 			break;
 		case 7:
-			j[path[0]][path[1]][path[2]][path[3]][path[4]][path[5]][path[6]] = it->second;
+			j[path[0]][path[1]][path[2]][path[3]][path[4]][path[5]][path[6]] = jval;
 			break;
 		case 8:
-			j[path[0]][path[1]][path[2]][path[3]][path[4]][path[5]][path[6]][path[7]] = it->second;
+			j[path[0]][path[1]][path[2]][path[3]][path[4]][path[5]][path[6]][path[7]] = jval;
 			break;
 		case 9:
-			j[path[0]][path[1]][path[2]][path[3]][path[4]][path[5]][path[6]][path[7]][path[8]] = it->second;
+			j[path[0]][path[1]][path[2]][path[3]][path[4]][path[5]][path[6]][path[7]][path[8]] = jval;
 			break;
 		case 10:
-			j[path[0]][path[1]][path[2]][path[3]][path[4]][path[5]][path[6]][path[7]][path[8]][path[9]] = it->second;
+			j[path[0]][path[1]][path[2]][path[3]][path[4]][path[5]][path[6]][path[7]][path[8]][path[9]] = jval;
 			break;
 		default:
 			assert(0);
