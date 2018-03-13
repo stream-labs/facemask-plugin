@@ -441,9 +441,11 @@ class ArtToolWindow(QMainWindow):
 	def onBuild(self):
 		fbxfile = self.fbxfiles[self.currentFbx]
 		
+		# import fbx to json
 		for line in mmImport(fbxfile, self.metadata):
 			self.outputWindow.append(line)
 		
+		# add depth head
 		jsonfile = jsonFromFbx(fbxfile)
 		if self.metadata["depth_head"]:
 			# material
@@ -466,6 +468,10 @@ class ArtToolWindow(QMainWindow):
 					"resource":"depth_head_mdl" }			
 			for line in maskmaker("addpart", kvp, [jsonfile]):
 				self.outputWindow.append(line)
+		
+		# additions
+		for addn in self.metadata["additions"]:
+			perform_addition(addn, jsonfile, self.outputWindow)
 		
 		# DEPS TEST
 		#deps = mmDepends(fbxfile)

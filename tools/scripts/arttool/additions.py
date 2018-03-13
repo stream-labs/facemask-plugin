@@ -20,6 +20,8 @@
 # ==============================================================================
 # IMPORTS
 # ==============================================================================
+from copy import deepcopy
+import os
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QListWidget, QVBoxLayout, QTabWidget
 from PyQt5.QtWidgets import QPushButton, QComboBox, QDateTimeEdit, QDialogButtonBox, QMessageBox
 from PyQt5.QtWidgets import QScrollArea, QMainWindow, QCheckBox, QHBoxLayout, QTextEdit
@@ -27,6 +29,7 @@ from PyQt5.QtWidgets import QLineEdit, QFrame, QDialog, QFrame, QSplitter
 from PyQt5.QtGui import QIcon, QBrush, QColor, QFont, QPixmap, QMovie
 from PyQt5.QtCore import QDateTime, Qt
 
+from arttool.utils import *
 
 ADDITION_TYPES = ["Image","Sequence","Material","Model","Emitter","Tweak"]
 
@@ -34,7 +37,7 @@ ADDITION_IMAGE = { "type" : "image",
 				   "name" : "",
 				   "file" : "" }
 
-ADDITION_SEQUENCE = { "type" : "image", 
+ADDITION_SEQUENCE = { "type" : "sequence", 
 					  "name" : "",
 					  "image" : "",
 					  "rows" : 1,
@@ -53,10 +56,12 @@ ADDITION_MATERIAL = {"type" : "material",
 					 "opaque" : True}
 			
 ADDITION_MODEL = { "type" : "model",
+				   "name" : "",
 				   "mesh" : "",
 				   "material" : "" }
 					  
 ADDITION_EMITTER = { "type" : "emitter",
+					 "name" : "",
 					 "model" : "",
 					 "lifetime" : 1.0,
 					 "scale-start" : 1.0,
@@ -75,13 +80,41 @@ ADDITION_EMITTER = { "type" : "emitter",
 					 "force-max" : [0.0, 10.0, 0.0],
 					 "initial-velocity-min" : [0.0, -40.0, 0.0],
 					 "initial-velocity-max" : [0.0, -40.0, 0.0] }
+					 
+ADDITION_TWEAK = { "type" : "tweak",
+				   "tweak1" : "",
+				   "tweak2" : "",
+				   "tweak3" : "",
+				   "tweak4" : "",
+				   "tweak5" : "",
+				   "tweak6" : "",
+				   "tweak7" : "",
+				   "tweak8" : "",
+				   "tweak9" : "",
+				   "tweak10" : "" }
 					  
 ADDITIONS = { "image" : ADDITION_IMAGE, 
 			  "sequence" : ADDITION_SEQUENCE,
 			  "material" : ADDITION_MATERIAL,
 			  "model" : ADDITION_MODEL,
-			  "emitter" : ADDITION_EMITTER }
+			  "emitter" : ADDITION_EMITTER,
+			  "tweak" : ADDITION_TWEAK}
 
+		
+def perform_image_addition(addition, jsonfile, outputWindow):
+	kvp = dict()
+	for i in ["name", "file"]:
+		kvp[i] = addition[i]
+	kvp["file"] = os.path.abspath(kvp["file"])
+	for line in maskmaker("addres", kvp, [jsonfile]):
+		outputWindow.append(line)
+
+		
+def perform_addition(addition, jsonfile, outputWindow):
+	if addition["type"] == "image":
+		perform_image_addition(addition, jsonfile, outputWindow)
+		
+			  
 # ==============================================================================
 # NEW ADDITION DIALOG
 # ==============================================================================
@@ -111,7 +144,7 @@ class NewAdditionDialog(QDialog):
 		if result == QDialog.Accepted:
 			sel = ADDITION_TYPES[dialog.combo.currentIndex()]
 			addn = ADDITIONS[sel.lower()]
-			return AdditionDialog.go_modal(parent, addn)
+			return AdditionDialog.go_modal(parent, deepcopy(addn))
 		return None
 
 
