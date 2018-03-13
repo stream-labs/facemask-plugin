@@ -31,13 +31,6 @@ from arttool.utils import *
 from arttool.additions import *
 	
 	
-# ==============================================================================
-# FILE LOCATIONS
-# ==============================================================================
-SVNBIN = os.path.abspath(os.path.join("c:\\",'"Program Files"',"TortoiseSVN","bin","svn.exe"))
-MASKMAKERBIN = os.path.abspath("./maskmaker/maskmaker.exe")
-MORPHRESTFILE = os.path.abspath("./morphs/morph_rest.fbx")
-
 
 # ==============================================================================
 # MAIN WINDOW : ArtToolWindow class
@@ -346,8 +339,11 @@ class ArtToolWindow(QMainWindow):
 		self.addslist = QListWidget()
 		if "additions" in self.metadata:
 			additions = self.metadata["additions"]
+			idx = 0
 			for addition in additions:
-				self.fbxlist.addItem(addition["name"])
+				self.addslist.addItem(addition["type"] + " : " + addition["name"])
+				self.addslist.item(idx).setFont(QFont( "Arial", 12, QFont.Bold ))
+				idx += 1
 		#self.addslist.itemClicked.connect(lambda: self.onFbxClicked())
 		self.addslist.setParent(tab2)
 		self.addslist.setGeometry(10,y, PANE_WIDTH - 20, 400)
@@ -359,6 +355,11 @@ class ArtToolWindow(QMainWindow):
 		b.setParent(tab2)
 		b.setGeometry(x, y, 75, 30)
 		b.pressed.connect(lambda: self.onAddAddition())
+		x += 85
+		b = QPushButton("Edit")
+		b.setParent(tab2)
+		b.setGeometry(x, y, 75, 30)
+		b.pressed.connect(lambda: self.onEditAddition())
 		x += 85
 		b = QPushButton("Del")
 		b.setParent(tab2)
@@ -473,13 +474,44 @@ class ArtToolWindow(QMainWindow):
 		#	print(os.path.abspath(os.path.join(dirname, d)))
 		
 	def onAddAddition(self):
-		AdditionDialog.newAddition(self)
+		addn = NewAdditionDialog.go_modal(self)
+		if addn:
+			if "additions" not in self.metadata:
+				self.metadata["additions"] = list()
+			self.metadata["additions"].append(addn)
+			idx = self.addslist.count()
+			self.addslist.addItem(addn["type"] + " : " + addn["name"])
+			self.addslist.item(idx).setFont(QFont( "Arial", 12, QFont.Bold ))
+
+	def onEditAddition(self):
+		idx = self.addslist.currentRow()
+		if idx >= 0:
+			addn = AdditionDialog.go_modal(self, self.metadata["additions"][idx])
+			if addn:
+				self.addslist.item(idx).setText(addn["type"] + " : " + addn["name"])
+				self.metadata["additions"][idx] = addn
 
 	def onDelAddition(self):
-		pass
+		idx = self.addslist.currentRow()
+		if idx >= 0:
+			del self.metadata["additions"][idx]
+			i = self.addslist.takeItem(idx)
+			i = None
 
 	def onMoveUpAddition(self):
-		pass
+		idx = self.addslist.currentRow()
+		if idx > 0:
+			self.addslist.insertItem(idx - 1, self.addslist.takeItem(idx))
+			self.addslist.setCurrentRow(idx - 1)
+			self.metadata["additions"].insert(idx - 1, self.metadata["additions"].pop(idx))
 
 	def onMoveDownAddition(self):
-		pass
+		idx = self.addslist.currentRow()
+		if idx >= 0 and self.addslist.count() > 1 and idx < (self.addslist.count() - 1):
+			self.addslist.insertItem(idx+1, self.addslist.takeItem(idx))
+			self.addslist.setCurrentRow(idx+1)
+			self.metadata["additions"].insert(idx+1, self.metadata["additions"].pop(idx))
+			
+		
+		
+		

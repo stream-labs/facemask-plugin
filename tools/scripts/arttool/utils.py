@@ -23,6 +23,13 @@
 import sys, subprocess, os, json, uuid
 
 
+# ==============================================================================
+# FILE LOCATIONS
+# ==============================================================================
+SVNBIN = os.path.abspath(os.path.join("c:\\",'"Program Files"',"TortoiseSVN","bin","svn.exe"))
+MASKMAKERBIN = os.path.abspath("./maskmaker/maskmaker.exe")
+MORPHRESTFILE = os.path.abspath("./morphs/morph_rest.fbx")
+
 
 # ==============================================================================
 # FIELD SEVERITIES
@@ -212,6 +219,7 @@ def createGetMetaData(fbxfile):
 		metadata["do_not_release"] = False
 		metadata["license"] = "Copyright 2017 - General Working Inc. - All rights reserved."		
 		metadata["website"] = "http://streamlabs.com"
+		metadata["additions"] = list()
 		# write it
 		writeMetaData(metafile, metadata)
 		
