@@ -45,6 +45,8 @@ ADDITION_SEQUENCE = { "type" : "sequence",
 					  "first" : 0,
 					  "last" : 0,
 					  "rate" : 1.0,
+					  "delay" : 0.0,
+					  "random-start": False,
 					  "mode" : "repeat" }
 					  
 ADDITION_MATERIAL = {"type" : "material",
@@ -82,6 +84,7 @@ ADDITION_EMITTER = { "type" : "emitter",
 					 "initial-velocity-max" : [0.0, -40.0, 0.0] }
 					 
 ADDITION_TWEAK = { "type" : "tweak",
+				   "name" : "tweak",
 				   "tweak1" : "",
 				   "tweak2" : "",
 				   "tweak3" : "",
@@ -109,10 +112,68 @@ def perform_image_addition(addition, jsonfile, outputWindow):
 	for line in maskmaker("addres", kvp, [jsonfile]):
 		outputWindow.append(line)
 
+def perform_general_addition(addition, jsonfile, outputWindow):
+	for line in maskmaker("addres", addition, [jsonfile]):
+		outputWindow.append(line)
+
+def perform_material_addition(addition, jsonfile, outputWindow):
+	kvp = addition.copy()
+	kvp["effect"] = "effectDefault"
+	for line in maskmaker("addres", kvp, [jsonfile]):
+		outputWindow.append(line)
+		
+def perform_emitter_addition(addition, jsonfile, outputWindow):
+	kvp = addition.copy()
+	for k,v in kvp.items():
+		if type(v) is list:
+			kvp[k] = str(v[0]) + "," + str(v[1]) + "," + str(v[2])
+			
+	if kvp["rate-min"] == kvp["rate-max"]:
+		kvp["rate"] = kvp["rate-min"]
+		del kvp["rate-min"]
+		del kvp["rate-max"]
+	if kvp["friction-min"] == kvp["friction-max"]:
+		kvp["friction"] = kvp["friction-min"]
+		del kvp["friction-min"]
+		del kvp["friction-max"]
+	if kvp["force-min"] == kvp["force-max"]:
+		kvp["force"] = kvp["force-min"]
+		del kvp["force-min"]
+		del kvp["force-max"]
+	if kvp["initial-velocity-min"] == kvp["initial-velocity-max"]:
+		kvp["initial-velocity"] = kvp["initial-velocity-min"]
+		del kvp["initial-velocity-min"]
+		del kvp["initial-velocity-max"]
+			
+	for line in maskmaker("addres", kvp, [jsonfile]):
+		outputWindow.append(line)
+		
+def perform_tweak_addition(addition, jsonfile, outputWindow):
+	kvp = dict()
+	for i in range(1,11):
+		k = "tweak" + str(i)
+		if k in addition and len(addition[k]) > 0:
+			bits = addition[k].split("=")
+			if str_is_int(bits[1]):
+				kvp[bits[0]] = int(bits[1])
+			elif str_is_float(bits[1]):
+				kvp[bits[0]] = float(bits[1])
+			else:
+				kvp[bits[0]] = bits[1]
+	for line in maskmaker("tweak", kvp, [jsonfile]):
+		outputWindow.append(line)		
 		
 def perform_addition(addition, jsonfile, outputWindow):
 	if addition["type"] == "image":
 		perform_image_addition(addition, jsonfile, outputWindow)
+	elif addition["type"] == "material":
+		perform_material_addition(addition, jsonfile, outputWindow)
+	elif addition["type"] == "emitter":
+		perform_emitter_addition(addition, jsonfile, outputWindow)
+	elif addition["type"] == "tweak":
+		perform_tweak_addition(addition, jsonfile, outputWindow)
+	elif addition["type"] in ["sequence", "model"]:
+		perform_general_addition(addition, jsonfile, outputWindow)
 		
 			  
 # ==============================================================================

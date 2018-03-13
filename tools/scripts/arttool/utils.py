@@ -31,6 +31,27 @@ MASKMAKERBIN = os.path.abspath("./maskmaker/maskmaker.exe")
 MORPHRESTFILE = os.path.abspath("./morphs/morph_rest.fbx")
 
 
+
+
+
+def str_is_float(x):
+    try:
+        a = float(x)
+    except ValueError:
+        return False
+    else:
+        return True
+
+def str_is_int(x):
+    try:
+        a = int(x)
+    except ValueError:
+        return False
+    else:
+        return True
+
+
+
 # ==============================================================================
 # FIELD SEVERITIES
 # ==============================================================================
