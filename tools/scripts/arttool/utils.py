@@ -208,31 +208,34 @@ def getMetaFolderName(fbxfile):
 	dn = os.path.join(dn, ".art").replace("\\","/")
 	return dn
 	
-def createMetaFolder(folder):
+def createMetaFolder(folder, dosvn=False):
 	if not os.path.exists(folder):
 		os.makedirs(folder)
-		svnAddFile(folder)
+		if dosvn:
+			svnAddFile(folder)
 
 def getMetaFileName(fbxfile):
 	metafolder = getMetaFolderName(fbxfile)
 	metafile = os.path.join(metafolder, os.path.basename(fbxfile).lower().replace(".fbx",".meta")).replace("\\","/")
 	return metafile
 			
-def writeMetaData(metafile, metadata):
+def writeMetaData(metafile, metadata, dosvn=False):
 	f = open(metafile,"w")
 	f.write(json.dumps(metadata, indent=4))
 	f.close()
-	svnAddFile(metafile)
+	if dosvn:
+		svnAddFile(metafile)
 
 def createGetMetaData(fbxfile):
 	metafolder = getMetaFolderName(fbxfile)
-	createMetaFolder(metafolder)
+	createMetaFolder(metafolder, True)
 	metafile = getMetaFileName(fbxfile)
 	metadata = dict()
 	if os.path.exists(metafile):
 		# read existing metadata
 		f = open(metafile,"r")
 		metadata = json.loads(f.read())
+		metadata["license"] = "Copyright 2017 - General Workings Inc. - All rights reserved."		
 		f.close()
 	else:
 		# create new metadata
@@ -248,11 +251,11 @@ def createGetMetaData(fbxfile):
 		metadata["is_vip"] = False		
 		metadata["texture_max"] = 256
 		metadata["do_not_release"] = False
-		metadata["license"] = "Copyright 2017 - General Working Inc. - All rights reserved."		
+		metadata["license"] = "Copyright 2017 - General Workings Inc. - All rights reserved."		
 		metadata["website"] = "http://streamlabs.com"
 		metadata["additions"] = list()
 		# write it
-		writeMetaData(metafile, metadata)
+		writeMetaData(metafile, metadata, True)
 		
 	return metadata
 	

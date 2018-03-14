@@ -114,7 +114,7 @@ string Args::default_value(string key) {
 		if (key == "author")
 			return "Streamlabs";
 		if (key == "license")
-			return "Copyright 2017 - General Working Inc. - All rights reserved.";
+			return "Copyright 2017 - General Workings Inc. - All rights reserved.";
 		if (key == "website")
 			return "http://streamlabs.com/";
 		if (key == "version")

@@ -390,7 +390,7 @@ class ArtToolWindow(QMainWindow):
 		if self.metadata:
 			fbxfile = self.fbxfiles[self.currentFbx]
 			metafile = getMetaFileName(fbxfile)
-			writeMetaData(metafile, self.metadata)
+			writeMetaData(metafile, self.metadata, True)
 	
 	# --------------------------------------------------
 	# WIDGET SIGNALS CALLBACKS
