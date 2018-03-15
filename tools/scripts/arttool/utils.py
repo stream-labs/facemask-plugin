@@ -118,10 +118,19 @@ def svnFileMissing():
 		if line.split()[0] in ["!"]:
 			return True
 	return False
+
+def svnUpdate(outputWindow=None):
+	# have
+	cmd = SVNBIN + ' update'
+	for line in execute(cmd):
+		if outputWindow:
+			outputWindow.append(line[:-1])
+		else:
+			print(line)
 	
 def svnNeedsUpdate():	
 	# have
-	cmd = SVNBIN + 'info | grep -i "Last Changed Rev"'
+	cmd = SVNBIN + ' info | grep -i "Last Changed Rev"'
 	revHave = 0
 	for line in execute(cmd):
 		revHave = int(line.split()[-1])
@@ -156,6 +165,7 @@ def svnAddFile(filename):
 		for line in execute(cmd):
 			pass
 
+			
 # ==============================================================================
 # MASKMAKER
 # ==============================================================================
@@ -176,7 +186,7 @@ def maskmaker(command, kvpairs, files):
 		yield line[:-1]
 		
 def mmImport(fbxfile, metadata):
-	CREATEKEYS = ["name", "uuid", "description", "author", "tags", "category", "license", "website"]
+	CREATEKEYS = ["name", "uuid", "tier", "description", "author", "tags", "category", "license", "website"]
 	d = dict()
 	for k in CREATEKEYS:
 		d[k] = metadata[k]
@@ -235,7 +245,9 @@ def createGetMetaData(fbxfile):
 		# read existing metadata
 		f = open(metafile,"r")
 		metadata = json.loads(f.read())
-		metadata["license"] = "Copyright 2017 - General Workings Inc. - All rights reserved."		
+		metadata["license"] = "Copyright 2017 - General Workings Inc. - All rights reserved."
+		if "tier" not in metadata:
+			metadata["tier"] = "1"
 		f.close()
 	else:
 		# create new metadata
@@ -245,6 +257,7 @@ def createGetMetaData(fbxfile):
 		metadata["author"] = ""
 		metadata["tags"] = ""
 		metadata["category"] = ""
+		metadata["tier"] = "1"
 		metadata["uuid"] = str(uuid.uuid4())
 		metadata["depth_head"] = False
 		metadata["is_morph"] = False

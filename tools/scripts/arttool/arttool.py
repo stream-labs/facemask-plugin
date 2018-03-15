@@ -21,6 +21,7 @@
 # IMPORTS
 # ==============================================================================
 import sys, subprocess, os, json, uuid
+from copy import deepcopy
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QListWidget, QVBoxLayout, QTabWidget
 from PyQt5.QtWidgets import QPushButton, QComboBox, QDateTimeEdit, QDialogButtonBox, QMessageBox
 from PyQt5.QtWidgets import QScrollArea, QMainWindow, QCheckBox, QHBoxLayout, QTextEdit
@@ -44,7 +45,7 @@ MASK_UI_FIELDS = { "name" : "Pretty Name",
 				   "author" : "Author",
 				   "tags" : "Tags",
 				   "category" : "Category",
-				   "uuid" : "UUID",
+				   "tier" : "Tier (1,2 or 3)",
 				   "depth_head" : "Depth Head",
 				   "is_morph" : "Morph Mask",
 				   "is_vip" : "V.I.P. Mask",
@@ -52,7 +53,13 @@ MASK_UI_FIELDS = { "name" : "Pretty Name",
 				   "texture_max" : "Max Texture Size",
 				   "license" : "License",
 				   "website" : "Website" }
-
+MASK_FIELD_TOOLTIPS = { "tier" : "The tier of the mask.\nTier 1 is most expensive, 3 is least expensive.",
+						"tags" : "Comma separated list of tags.",
+						"category" : "The area of the face the mask covers.\nCan be: Head,Eyes,Nose,Mouth,Neck,Full,Other,Combo",
+						"depth_head": "Whether this mask needs a depth occlusion head added.",
+						"is_morph": "This FBX is a morph FBX",
+						"is_vip": "VIP mask for a specific streamer.",
+						"do_not_release": "Check this box if the public should never see this."}
 	
 class ArtToolWindow(QMainWindow): 
 
@@ -89,7 +96,7 @@ class ArtToolWindow(QMainWindow):
 		self.fbxlist = QListWidget()
 		for fbx in self.fbxfiles:
 			self.fbxlist.addItem(fbx[2:])
-		self.fbxlist.itemClicked.connect(lambda: self.onFbxClicked())
+		self.fbxlist.itemSelectionChanged.connect(lambda: self.onFbxClicked())
 		self.fbxlist.setParent(leftPane)
 		self.fbxlist.setMinimumHeight(560)
 		leftLayout.addWidget(self.fbxlist)
@@ -150,6 +157,9 @@ class ArtToolWindow(QMainWindow):
 		# State
 		self.metadata = None 
 		self.currentFbx = -1
+		self.focusFlag = False
+		self.additionsClipboard = None
+		self.cancelledSVN = False
 		
 		# Check our binaries
 		self.checkBinaries()
@@ -185,10 +195,10 @@ class ArtToolWindow(QMainWindow):
 	# --------------------------------------------------
 	# Create generic widget
 	# --------------------------------------------------
-	def createLabelWidget(self, parent, name, field, y, noedit=False):
+	def createLabelWidget(self, parent, name, field, x, y, noedit=False):
 		q = QLabel(name)
 		q.setParent(parent)
-		q.setGeometry(10, y, FIELD_WIDTH-10, 36)
+		q.setGeometry(x, y, FIELD_WIDTH-10, 26)
 		q.setFont(QFont( "Arial", 12, QFont.Bold ))
 		q.show()
 
@@ -227,9 +237,9 @@ class ArtToolWindow(QMainWindow):
 			
 		q.setParent(parent)
 		if type(value) is int:
-			q.setGeometry(FIELD_WIDTH, y, FIELD_WIDTH, 30)
+			q.setGeometry(x + FIELD_WIDTH - 10, y, FIELD_WIDTH, 20)
 		else:
-			q.setGeometry(FIELD_WIDTH, y, PANE_WIDTH - FIELD_WIDTH - 10, 30)
+			q.setGeometry(x + FIELD_WIDTH - 10, y, PANE_WIDTH - FIELD_WIDTH - 10, 20)
 		q.setFont(QFont( "Arial", 12, QFont.Bold ))
 		q.show()
 		return q
@@ -291,38 +301,49 @@ class ArtToolWindow(QMainWindow):
 		q.setMovie(m)
 		m.start()
 		q.setScaledContents(True)
-		q.setGeometry(0, 10, 64, 64)
+		q.setGeometry(0, 2, 256, 256)
 		q.show()
 
 		# mask file name
 		q = QLabel(fbxfile[2:])
 		q.setParent(self.editPane)
-		q.setGeometry(66, 44, 600, 36)
+		q.setGeometry(260, 44, 600, 36)
 		q.setFont(QFont( "Arial", 14, QFont.Bold ))
-		q.setToolTip("This is a tip.\nHopefully on two\nlines.")
 		q.show()
+		
+		# uuid
+		q = QLabel(self.metadata["uuid"])
+		q.setParent(self.editPane)
+		q.setGeometry(260, 80, 600, 20)
+		q.setStyleSheet("font: 10pt;")
+		#q.setFont(QFont( "Arial", 6))
+		q.show()
+		
 		
 		# buttons
 		b = QPushButton("BUILD")
 		b.setParent(self.editPane)
-		b.setGeometry(66, 10, 64, 32)
+		b.setGeometry(260, 2, 64, 32)
 		q.setFont(QFont( "Arial", 14, QFont.Bold ))
 		b.pressed.connect(lambda: self.onBuild())
 		b.show()
 		
 		# Tabbed Panel
 		tabs = QTabWidget(self.editPane)
-		tabs.setGeometry(0, 100, PANE_WIDTH, 600)
+		tabs.setGeometry(0, 264, PANE_WIDTH, 600)
 		
 		# mask meta data fields
 		tab1 = QWidget()
-		y = 10
-		dy = 40
+		y = 2
+		dy = 28
 		self.paneWidgets = dict()
 		for field in MASK_UI_FIELDS:
-			w = self.createLabelWidget(tab1, MASK_UI_FIELDS[field], field, y, field in ["uuid"])
-			self.paneWidgets[field] = w
-			y += dy
+			if field != "uuid":
+				w = self.createLabelWidget(tab1, MASK_UI_FIELDS[field], field, 10, y)
+				self.paneWidgets[field] = w
+				if field in MASK_FIELD_TOOLTIPS:
+					w.setToolTip(MASK_FIELD_TOOLTIPS[field])
+				y += dy
 		tab1.setAutoFillBackground(True)
 		tabs.addTab(tab1, "Mask Meta Data")
 		
@@ -332,7 +353,7 @@ class ArtToolWindow(QMainWindow):
 		tab2 = QWidget()
 		y = 10
 		dy = 40
-		self.createLabelWidget(tab2, "Mask Build Additions", None, y)
+		self.createLabelWidget(tab2, "Mask Build Additions", None, 10, y)
 		y += dy
 		
 		# make a list widget
@@ -344,12 +365,12 @@ class ArtToolWindow(QMainWindow):
 				self.addslist.addItem(addition["type"] + " : " + addition["name"])
 				self.addslist.item(idx).setFont(QFont( "Arial", 12, QFont.Bold ))
 				idx += 1
-		#self.addslist.itemClicked.connect(lambda: self.onFbxClicked())
+		self.addslist.itemDoubleClicked.connect(lambda: self.onEditAddition())
 		self.addslist.setParent(tab2)
-		self.addslist.setGeometry(10,y, PANE_WIDTH - 20, 400)
-		y += 410
+		self.addslist.setGeometry(10,y, PANE_WIDTH - 20, 250)
+		y += 260
 		
-		# buttons for additons
+		# bottom buttons for additons
 		x = 10
 		b = QPushButton("Add")
 		b.setParent(tab2)
@@ -366,6 +387,11 @@ class ArtToolWindow(QMainWindow):
 		b.setGeometry(x, y, 75, 30)
 		b.pressed.connect(lambda: self.onDelAddition())
 		x += 85
+		b = QPushButton("Dupe")
+		b.setParent(tab2)
+		b.setGeometry(x, y, 75, 30)
+		b.pressed.connect(lambda: self.onCopyAddition())
+		x += 85
 		b = QPushButton("Up")
 		b.setParent(tab2)
 		b.setGeometry(x, y, 75, 30)
@@ -375,6 +401,19 @@ class ArtToolWindow(QMainWindow):
 		b.setParent(tab2)
 		b.setGeometry(x, y, 75, 30)
 		b.pressed.connect(lambda: self.onMoveDownAddition())
+
+		# top buttons for additions
+		x = 300
+		b = QPushButton("COPY ALL")
+		b.setParent(tab2)
+		b.setGeometry(x, 10, 75, 30)
+		b.pressed.connect(lambda: self.onCopyAllAdditions())
+		x += 85
+		b = QPushButton("PASTE ALL")
+		b.setParent(tab2)
+		b.setGeometry(x, 10, 75, 30)
+		b.pressed.connect(lambda: self.onPasteAllAdditions())
+		
 		
 		tab2.setAutoFillBackground(True)
 		tabs.addTab(tab2, "Additions")
@@ -430,6 +469,19 @@ class ArtToolWindow(QMainWindow):
 		
 	# called before exit
 	def finalCleanup(self):
+		self.cancelledSVN = True
+		#QApplication.setOverrideCursor(Qt.WaitCursor)
+		needcommit = svnNeedsCommit()
+		#QApplication.restoreOverrideCursor()
+		if needcommit:
+			msg = QMessageBox()
+			msg.setIcon(QMessageBox.Information)
+			msg.setText("You have changed files in your depot.")
+			msg.setInformativeText("Be sure to commit your changes to avoid conflicts.")
+			msg.setWindowTitle("Meta Data Changed - SVN Commit Recommended")
+			msg.setStandardButtons(QMessageBox.Ok)
+			msg.exec_()
+			
 		self.saveCurrentMetadata()
 		metafile = "./.art/config.meta"
 		geo = self.geometry()
@@ -437,9 +489,12 @@ class ArtToolWindow(QMainWindow):
 		self.config["y"] = geo.y()
 		writeMetaData(metafile, self.config)
 
+		
 	# build
 	def onBuild(self):
 		fbxfile = self.fbxfiles[self.currentFbx]
+		
+		QApplication.setOverrideCursor(Qt.WaitCursor)
 		
 		# import fbx to json
 		for line in mmImport(fbxfile, self.metadata):
@@ -501,6 +556,8 @@ class ArtToolWindow(QMainWindow):
 		
 		# save metadata
 		self.saveCurrentMetadata()
+		
+		QApplication.restoreOverrideCursor()
 			
 		
 	def onAddAddition(self):
@@ -528,6 +585,15 @@ class ArtToolWindow(QMainWindow):
 			i = self.addslist.takeItem(idx)
 			i = None
 
+	def onCopyAddition(self):
+		idx = self.addslist.currentRow()
+		if idx >= 0:
+			addn = deepcopy(self.metadata["additions"][idx])
+			self.addslist.insertItem(idx + 1, addn["type"] + " : " + addn["name"])
+			self.addslist.item(idx + 1).setFont(QFont( "Arial", 12, QFont.Bold ))
+			self.addslist.setCurrentRow(idx+1)
+			self.metadata["additions"].insert(idx + 1, addn)
+
 	def onMoveUpAddition(self):
 		idx = self.addslist.currentRow()
 		if idx > 0:
@@ -541,7 +607,41 @@ class ArtToolWindow(QMainWindow):
 			self.addslist.insertItem(idx+1, self.addslist.takeItem(idx))
 			self.addslist.setCurrentRow(idx+1)
 			self.metadata["additions"].insert(idx+1, self.metadata["additions"].pop(idx))
-			
 		
+	def onCopyAllAdditions(self):
+		self.additionsClipboard = deepcopy(self.metadata["additions"])
+	
+	def onPasteAllAdditions(self):
+		if self.additionsClipboard:
+			self.metadata["additions"].extend(self.additionsClipboard)
+			for addn in self.additionsClipboard:
+				idx = self.addslist.count()
+				self.addslist.addItem(addn["type"] + " : " + addn["name"])
+				self.addslist.item(idx).setFont(QFont( "Arial", 12, QFont.Bold ))
+
+	def onFocusChanged(self,old,now):
+		if not old and now and not self.cancelledSVN:
+			QApplication.setOverrideCursor(Qt.WaitCursor)
+			needsup = svnNeedsUpdate()
+			QApplication.restoreOverrideCursor()
+			if needsup and not self.focusFlag:
+				msg = QMessageBox()
+				msg.setIcon(QMessageBox.Information)
+				msg.setText("Your SVN repository is out of date.")
+				msg.setInformativeText("Would you like to sync up now?")
+				msg.setWindowTitle("SVN Repository out of date")
+				msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+				msg.buttonClicked.connect(lambda i: self.onSyncOk(i))
+				msg.exec_()
+			self.focusFlag = not self.focusFlag
+		
+	def onSyncOk(self, i):
+		if i.text() == "OK":
+			QApplication.setOverrideCursor(Qt.WaitCursor)
+			svnUpdate(self.outputWindow)
+			QApplication.restoreOverrideCursor()
+		else:
+			# dont check anymore
+			self.cancelledSVN = True
 		
 		

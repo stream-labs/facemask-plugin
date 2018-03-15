@@ -65,6 +65,7 @@ ADDITION_MODEL = { "type" : "model",
 ADDITION_EMITTER = { "type" : "emitter",
 					 "name" : "",
 					 "model" : "",
+					 "part" : "",
 					 "lifetime" : 1.0,
 					 "scale-start" : 1.0,
 					 "scale-end" : 2.0,
@@ -297,16 +298,21 @@ class AdditionDialog(QDialog):
 		if type(v) is str:
 			self.addition[field] = text
 		elif type(v) is int:
-			self.addition[field] = int(text)
+			try:
+				self.addition[field] = int(text)
+			except:
+				self.addition[field] = 0
 		elif type(v) is float:
-			self.addition[field] = float(text)
+			try:
+				self.addition[field] = float(text)
+			except:
+				self.addition[field] = 0.0
 		elif type(v) is list:
-			print(v)
-			print(text)
-			print(field)
-			print(index)
 			# all vectors are floats
-			self.addition[field][index] = float(text)
+			try:
+				self.addition[field][index] = float(text)
+			except:
+				self.addition[field][index] = 0.0
 			
 	# checkbox changed
 	def onCheckboxChanged(self, state, field):

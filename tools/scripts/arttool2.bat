@@ -67,6 +67,7 @@ if __name__ == '__main__':
 		
 	# Show the window
 	w = arttool.ArtToolWindow()
+	app.focusChanged.connect(lambda old,now: w.onFocusChanged(old,now))
 	w.show()
 	
 	# Run application

@@ -119,6 +119,8 @@ string Args::default_value(string key) {
 			return "http://streamlabs.com/";
 		if (key == "version")
 			return "1";
+		if (key == "tier")
+			return "1";
 	}
 	if (command == "addres" ||
 		command == "morphimport" ||
@@ -347,6 +349,7 @@ void Args::initJsonNamesAndValues() {
 	vector<string> create_keys = {
 		"name",
 		"uuid",
+		"tier",
 		"description",
 		"author",
 		"tags",
