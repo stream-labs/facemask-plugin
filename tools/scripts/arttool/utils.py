@@ -113,6 +113,7 @@ def collapse_path(p):
 # ==============================================================================
 	
 def svnFileMissing():
+	# run status and look for ! 
 	cmd = SVNBIN + ' status -uq'
 	for line in execute(cmd):
 		if line.split()[0] in ["!"]:
@@ -120,29 +121,35 @@ def svnFileMissing():
 	return False
 
 def svnUpdate(outputWindow=None):
-	# have
+	# run update
 	cmd = SVNBIN + ' update'
+	arttoolUpdated = False
 	for line in execute(cmd):
 		if outputWindow:
+			if "arttool" in line:
+				arttoolUpdated = True
 			outputWindow.append(line[:-1])
 		else:
 			print(line)
+	return arttoolUpdated
 	
-def svnNeedsUpdate():	
+def svnNeedsUpdate():
 	# have
-	cmd = SVNBIN + ' info | grep -i "Last Changed Rev"'
+	cmd = SVNBIN + ' info'
 	revHave = 0
 	for line in execute(cmd):
-		revHave = int(line.split()[-1])
+		if "Last Changed Rev" in line:
+			revHave = int(line.split()[-1])
 		
 	# head
-	cmd = SVNBIN + ' info -r HEAD | grep -i "Last Changed Rev"'
+	cmd = SVNBIN + ' info -r HEAD'
 	revHead = 0
 	for line in execute(cmd):
-		revHead = int(line.split()[-1])
+		if "Last Changed Rev" in line:
+			revHead = int(line.split()[-1])
 		
 	return (revHead > revHave) or svnFileMissing()
-
+		
 def svnNeedsCommit():
 	cmd = SVNBIN + ' status -uq'
 	for line in execute(cmd):
@@ -172,6 +179,8 @@ def svnAddFile(filename):
 def maskmaker(command, kvpairs, files):
 	cmd = MASKMAKERBIN + " " + command 
 	for k,v in kvpairs.items():
+		if command == "tweak":
+			cmd += ' "' + k + '=' + v + '"'
 		if type(v) is str:
 			cmd += " " + k + '="' + v + '"'
 		else:
@@ -248,6 +257,8 @@ def createGetMetaData(fbxfile):
 		metadata["license"] = "Copyright 2017 - General Workings Inc. - All rights reserved."
 		if "tier" not in metadata:
 			metadata["tier"] = "1"
+		if "is_intro" not in metadata:
+			metadata["is_intro"] = False
 		f.close()
 	else:
 		# create new metadata
@@ -261,7 +272,8 @@ def createGetMetaData(fbxfile):
 		metadata["uuid"] = str(uuid.uuid4())
 		metadata["depth_head"] = False
 		metadata["is_morph"] = False
-		metadata["is_vip"] = False		
+		metadata["is_vip"] = False
+		metadata["is_intro"] = False
 		metadata["texture_max"] = 256
 		metadata["do_not_release"] = False
 		metadata["license"] = "Copyright 2017 - General Workings Inc. - All rights reserved."		

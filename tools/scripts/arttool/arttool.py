@@ -20,7 +20,7 @@
 # ==============================================================================
 # IMPORTS
 # ==============================================================================
-import sys, subprocess, os, json, uuid
+import sys, subprocess, os, json, uuid, time
 from copy import deepcopy
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QListWidget, QVBoxLayout, QTabWidget
 from PyQt5.QtWidgets import QPushButton, QComboBox, QDateTimeEdit, QDialogButtonBox, QMessageBox
@@ -31,8 +31,10 @@ from PyQt5.QtCore import QDateTime, Qt
 from arttool.utils import *
 from arttool.additions import *
 	
-	
 
+# dont check svn more often than this
+SVN_CHECK_TIME = (60 * 5) # 5 mins is lots
+	
 # ==============================================================================
 # MAIN WINDOW : ArtToolWindow class
 # ==============================================================================
@@ -49,16 +51,19 @@ MASK_UI_FIELDS = { "name" : "Pretty Name",
 				   "depth_head" : "Depth Head",
 				   "is_morph" : "Morph Mask",
 				   "is_vip" : "V.I.P. Mask",
+				   "is_intro" : "Intro Animation",
 				   "do_not_release" : "DO NOT RELEASE",
 				   "texture_max" : "Max Texture Size",
 				   "license" : "License",
 				   "website" : "Website" }
+				   
 MASK_FIELD_TOOLTIPS = { "tier" : "The tier of the mask.\nTier 1 is most expensive, 3 is least expensive.",
 						"tags" : "Comma separated list of tags.",
 						"category" : "The area of the face the mask covers.\nCan be: Head,Eyes,Nose,Mouth,Neck,Full,Other,Combo",
 						"depth_head": "Whether this mask needs a depth occlusion head added.",
 						"is_morph": "This FBX is a morph FBX",
 						"is_vip": "VIP mask for a specific streamer.",
+						"is_intro": "This mask is used as an intro/outro animation.",
 						"do_not_release": "Check this box if the public should never see this."}
 	
 class ArtToolWindow(QMainWindow): 
@@ -69,12 +74,20 @@ class ArtToolWindow(QMainWindow):
 	def __init__(self, *args): 
 		super(ArtToolWindow, self).__init__(*args) 
  
+		# State
+		self.metadata = None 
+		self.currentFbx = -1
+		self.ignoreSVN = 0
+		self.additionsClipboard = None
+		self.cancelledSVN = False
+		self.editPane = None
+		self.currentFilter = None
+		self.lastSVNCheck = 0
+		self.dialogUp = False
+		
 		# Load our config
 		self.config = createGetConfig()
  
-		# Get list of fbx files
-		self.fbxfiles = getFileList(".")
-		
 		# Left Pane
 		leftPane = QWidget()
 		leftLayout = QVBoxLayout(leftPane)
@@ -90,12 +103,11 @@ class ArtToolWindow(QMainWindow):
 		
 		# Filter box
 		self.fbxfilter = QLineEdit()
+		self.fbxfilter.editingFinished.connect(lambda: self.onFbxFilterChanged())
 		leftLayout.addWidget(self.fbxfilter)
 		
 		# make a list widget
 		self.fbxlist = QListWidget()
-		for fbx in self.fbxfiles:
-			self.fbxlist.addItem(fbx[2:])
 		self.fbxlist.itemSelectionChanged.connect(lambda: self.onFbxClicked())
 		self.fbxlist.setParent(leftPane)
 		self.fbxlist.setMinimumHeight(560)
@@ -110,14 +122,8 @@ class ArtToolWindow(QMainWindow):
 		self.mainLayout = QHBoxLayout(rightPane)
 		topSplitter.addWidget(rightPane)
 		
-		# Edit pane 
-		self.editPane = None
-		self.createMaskEditPane(None)
-		
-		# color fbxlist items
-		for idx in range(0, len(self.fbxfiles)):
-			self.setFbxColorIcon(idx)
-			self.fbxlist.item(idx).setFont(QFont( "Arial", 12, QFont.Bold ))
+		# Fill in FBX files list
+		self.fillFbxList()
 			
 		# crate main splitter
 		mainSplitter = QSplitter(Qt.Vertical)
@@ -154,16 +160,51 @@ class ArtToolWindow(QMainWindow):
 		self.setWindowTitle('Streamlabs Art Tool')
 		self.setWindowIcon(QIcon('arttool/arttoolicon.png'))
 		
-		# State
-		self.metadata = None 
-		self.currentFbx = -1
-		self.focusFlag = False
-		self.additionsClipboard = None
-		self.cancelledSVN = False
-		
 		# Check our binaries
 		self.checkBinaries()
 
+	# --------------------------------------------------
+	# Fill(refill) in the fbx list
+	# --------------------------------------------------
+	def fillFbxList(self):
+		# Get list of fbx files
+		self.fbxfiles = getFileList(".")
+
+		# Clear list
+		while self.fbxlist.count() > 0:
+			i = self.fbxlist.takeItem(0)
+			i = None
+
+		# Get filter
+		filt = self.fbxfilter.text().lower()
+		if not filt or len(filt) < 1:
+			filt = None
+			
+		# Fill list
+		self.fbxlistMap = dict()
+		self.fbxlistRevMap = dict()
+		fbxidx = 0
+		listidx = 0
+		for fbx in self.fbxfiles:
+			if not filt or filt in fbx.lower():
+				self.fbxlist.addItem(fbx[2:])
+				self.fbxlistMap[listidx] = fbxidx
+				self.fbxlistRevMap[fbxidx] = listidx
+				listidx += 1
+			fbxidx += 1
+		
+		# color fbxlist items
+		for idx in range(0, len(self.fbxfiles)):
+			self.setFbxColorIcon(idx)
+		
+		# selection
+		self.currentFbx = -1
+		self.metadata = None
+		self.createMaskEditPane(None)
+			
+	# --------------------------------------------------
+	# Check binaries
+	# --------------------------------------------------
 	def checkBinaries(self):
 		gotSVN = os.path.exists(SVNBIN.replace('"',''))
 		gotMM = os.path.exists(MASKMAKERBIN)
@@ -171,26 +212,35 @@ class ArtToolWindow(QMainWindow):
 		
 		if not gotSVN:
 			msg = QMessageBox()
-			msg.setIcon(QMessageBox.Information)
+			msg.setIcon(QMessageBox.Warning)
 			msg.setText("You seem to be missing " + os.path.basename(SVNBIN))
 			msg.setInformativeText("You should (re)install tortoiseSVN, and be sure to install the command line tools.")
 			msg.setWindowTitle("Missing Binary File")
 			msg.setStandardButtons(QMessageBox.Ok)
+			self.ignoreSVN += 1
+			self.dialogUp = True
 			msg.exec_()
+			self.dialogUp = False
 		if not gotMM:
 			msg = QMessageBox()
-			msg.setIcon(QMessageBox.Information)
+			msg.setIcon(QMessageBox.Warning)
 			msg.setText("You seem to be missing " + os.path.basename(MASKMAKERBIN))
 			msg.setWindowTitle("Missing Binary File")
 			msg.setStandardButtons(QMessageBox.Ok)
+			self.ignoreSVN += 1
+			self.dialogUp = True
 			msg.exec_()
+			self.dialogUp = False
 		if not gotRP:
 			msg = QMessageBox()
-			msg.setIcon(QMessageBox.Information)
+			msg.setIcon(QMessageBox.Warning)
 			msg.setText("You seem to be missing " + os.path.basename(MORPHRESTFILE))
 			msg.setWindowTitle("Missing Binary File")
 			msg.setStandardButtons(QMessageBox.Ok)
+			self.ignoreSVN += 1
+			self.dialogUp = True
 			msg.exec_()
+			self.dialogUp = False
 			
 	# --------------------------------------------------
 	# Create generic widget
@@ -248,6 +298,8 @@ class ArtToolWindow(QMainWindow):
 	# Colors and Icons for main FBX list
 	# --------------------------------------------------
 	def setFbxColorIconInternal(self, mdc, mt, idx):
+		self.fbxlist.item(idx).setFont(QFont( "Arial", 12, QFont.Bold ))
+	
 		if mdc == CHECKMETA_GOOD:
 			self.fbxlist.item(idx).setForeground(QBrush(QColor("#32CD32")))
 		elif mdc == CHECKMETA_ERROR:
@@ -265,12 +317,13 @@ class ArtToolWindow(QMainWindow):
 			self.fbxlist.item(idx).setIcon(QIcon("arttool/morphicon.png"))
 
 	def setFbxColorIcon(self, idx):
-		mdc,mt = checkMetaDataFile(self.fbxfiles[idx])
-		self.setFbxColorIconInternal(mdc, mt, idx)
+		if idx in self.fbxlistRevMap:
+			mdc,mt = checkMetaDataFile(self.fbxfiles[idx])
+			self.setFbxColorIconInternal(mdc, mt, self.fbxlistRevMap[idx])
 
 	def updateFbxColorIcon(self):
 		mdc,mt = checkMetaData(self.metadata)
-		self.setFbxColorIconInternal(mdc, mt, self.currentFbx)
+		self.setFbxColorIconInternal(mdc, mt, self.fbxlistRevMap[self.currentFbx])
 			
 			
 	# --------------------------------------------------
@@ -437,12 +490,23 @@ class ArtToolWindow(QMainWindow):
 	
 	# FBX file clicked in list
 	def onFbxClicked(self):
-		self.saveCurrentMetadata()
-		self.currentFbx = self.fbxlist.currentRow()
-		fbxfile = self.fbxfiles[self.currentFbx]
-		self.metadata = createGetMetaData(fbxfile)
-		self.updateFbxColorIcon()
-		self.createMaskEditPane(fbxfile)
+		k = self.fbxlist.currentRow()
+		if k >= 0 and k < self.fbxlist.count():
+			self.saveCurrentMetadata()
+			self.currentFbx = self.fbxlistMap[k]
+			fbxfile = self.fbxfiles[self.currentFbx]
+			self.metadata = createGetMetaData(fbxfile)
+			self.updateFbxColorIcon()
+			self.createMaskEditPane(fbxfile)
+		
+	# FBX Filter box changed
+	def onFbxFilterChanged(self):
+		filt = self.fbxfilter.text().lower()
+		if not filt or len(filt) < 1:
+			filt = None
+		if filt != self.currentFilter:
+			self.fillFbxList()
+			self.currentFilter = filt
 		
 	# text field changed
 	def onTextFieldChanged(self, text, field):
@@ -475,12 +539,15 @@ class ArtToolWindow(QMainWindow):
 		#QApplication.restoreOverrideCursor()
 		if needcommit:
 			msg = QMessageBox()
-			msg.setIcon(QMessageBox.Information)
+			msg.setIcon(QMessageBox.Warning)
 			msg.setText("You have changed files in your depot.")
 			msg.setInformativeText("Be sure to commit your changes to avoid conflicts.")
-			msg.setWindowTitle("Meta Data Changed - SVN Commit Recommended")
+			msg.setWindowTitle("Files Changed - SVN Commit Recommended")
 			msg.setStandardButtons(QMessageBox.Ok)
+			self.ignoreSVN += 1
+			self.dialogUp = True
 			msg.exec_()
+			self.dialogUp = False
 			
 		self.saveCurrentMetadata()
 		metafile = "./.art/config.meta"
@@ -547,11 +614,14 @@ class ArtToolWindow(QMainWindow):
 				else:
 					metadeps.append({ "file" : f, "modtime" : 0 })
 					msg = QMessageBox()
-					msg.setIcon(QMessageBox.Information)
+					msg.setIcon(QMessageBox.Warning)
 					msg.setText("This FBX depends on " + f + ", which cannot be found.")
 					msg.setWindowTitle("Missing PNG File")
 					msg.setStandardButtons(QMessageBox.Ok)
+					self.ignoreSVN += 1
+					self.dialogUp = True
 					msg.exec_()
+					self.dialogUp = False
 		self.metadata["dependencies"] = metadeps
 		
 		# save metadata
@@ -559,9 +629,11 @@ class ArtToolWindow(QMainWindow):
 		
 		QApplication.restoreOverrideCursor()
 			
-		
 	def onAddAddition(self):
+		self.ignoreSVN += 1
+		self.dialogUp = True
 		addn = NewAdditionDialog.go_modal(self)
+		self.dialogUp = False
 		if addn:
 			if "additions" not in self.metadata:
 				self.metadata["additions"] = list()
@@ -573,7 +645,10 @@ class ArtToolWindow(QMainWindow):
 	def onEditAddition(self):
 		idx = self.addslist.currentRow()
 		if idx >= 0:
+			self.ignoreSVN += 1
+			self.dialogUp = True
 			addn = AdditionDialog.go_modal(self, self.metadata["additions"][idx])
+			self.dialogUp = False
 			if addn:
 				self.addslist.item(idx).setText(addn["type"] + " : " + addn["name"])
 				self.metadata["additions"][idx] = addn
@@ -613,33 +688,61 @@ class ArtToolWindow(QMainWindow):
 	
 	def onPasteAllAdditions(self):
 		if self.additionsClipboard:
-			self.metadata["additions"].extend(self.additionsClipboard)
+			self.metadata["additions"].extend(deepcopy(self.additionsClipboard))
 			for addn in self.additionsClipboard:
 				idx = self.addslist.count()
 				self.addslist.addItem(addn["type"] + " : " + addn["name"])
 				self.addslist.item(idx).setFont(QFont( "Arial", 12, QFont.Bold ))
 
 	def onFocusChanged(self,old,now):
-		if not old and now and not self.cancelledSVN:
+	
+		if self.cancelledSVN or self.dialogUp:
+			return
+	
+		if not old and now:
+		
+			if self.ignoreSVN > 0:
+				self.ignoreSVN -= 1
+				return
+		
+			if (time.time() - self.lastSVNCheck) < SVN_CHECK_TIME:
+				return
+		
 			QApplication.setOverrideCursor(Qt.WaitCursor)
 			needsup = svnNeedsUpdate()
 			QApplication.restoreOverrideCursor()
-			if needsup and not self.focusFlag:
+			self.lastSVNCheck = time.time()
+			if needsup:
 				msg = QMessageBox()
-				msg.setIcon(QMessageBox.Information)
+				msg.setIcon(QMessageBox.Warning)
 				msg.setText("Your SVN repository is out of date.")
 				msg.setInformativeText("Would you like to sync up now?")
 				msg.setWindowTitle("SVN Repository out of date")
 				msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
 				msg.buttonClicked.connect(lambda i: self.onSyncOk(i))
+				self.ignoreSVN += 1
+				self.dialogUp = True
 				msg.exec_()
-			self.focusFlag = not self.focusFlag
+				self.dialogUp = False
 		
 	def onSyncOk(self, i):
 		if i.text() == "OK":
 			QApplication.setOverrideCursor(Qt.WaitCursor)
-			svnUpdate(self.outputWindow)
+			arttoolUpdated = svnUpdate(self.outputWindow)
+			self.fillFbxList()
 			QApplication.restoreOverrideCursor()
+			
+			if arttoolUpdated:
+				msg = QMessageBox()
+				msg.setIcon(QMessageBox.Warning)
+				msg.setText("File(s) in the Art Tool have changed.")
+				msg.setInformativeText("You should exit the Art Tool now and start it again.")
+				msg.setWindowTitle("Art Tool Changed")
+				msg.setStandardButtons(QMessageBox.Ok)
+				msg.buttonClicked.connect(lambda i: self.onSyncOk(i))
+				self.cancelledSVN = True
+				msg.exec_()
+			
 		else:
 			# dont check anymore
 			self.cancelledSVN = True
