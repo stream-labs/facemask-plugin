@@ -51,6 +51,11 @@
 #define NUM_HULL_POINTS			(28 * 2 * 2 * 2)
 #define NUM_HULL_POINT_DIVS		(3)
 
+static const char* const kFileShapePredictor68 =
+"shape_predictor_68_face_landmarks.dat";
+static const char* const kFileShapePredictor5 =
+"shape_predictor_5_face_landmarks.dat";
+
 
 using namespace dlib;
 using namespace std;
@@ -58,7 +63,7 @@ using namespace std;
 
 namespace smll {
 
-	FaceDetector::FaceDetector(const char* predictorFilename)
+	FaceDetector::FaceDetector()
 		: m_captureStage(nullptr)
 		, m_stageSize(0)
 		, m_timeout(0)
@@ -69,7 +74,13 @@ namespace smll {
 		, m_camera_h(0) {
 		// Load face detection and pose estimation models.
 		m_detector = get_frontal_face_detector();
-		deserialize(predictorFilename) >> m_predictor;
+
+		char *filename = obs_module_file(kFileShapePredictor68);
+		deserialize(filename) >> m_predictor68;
+		bfree(filename);
+		filename = obs_module_file(kFileShapePredictor5);
+		deserialize(filename) >> m_predictor5;
+		bfree(filename);
 	}
 
 	FaceDetector::~FaceDetector() {
@@ -1155,22 +1166,22 @@ namespace smll {
 				if (m_stageWork.type == IMAGETYPE_BGR) {
 					dlib_image_wrapper<bgr_pixel> fcimg(m_stageWork.data, 
 						m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
-					d = m_predictor(fcimg, m_faces[f].GetBounds());
+					d = m_predictor68(fcimg, m_faces[f].GetBounds());
 				}
 				else if (m_stageWork.type == IMAGETYPE_RGB)	{
 					dlib_image_wrapper<rgb_pixel> fcimg(m_stageWork.data,
 						m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
-					d = m_predictor(fcimg, m_faces[f].GetBounds());
+					d = m_predictor68(fcimg, m_faces[f].GetBounds());
 				}
 				else if (m_stageWork.type == IMAGETYPE_RGBA) {
 					dlib_image_wrapper<rgb_alpha_pixel> fcimg(m_stageWork.data,
 						m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
-					d = m_predictor(fcimg, m_faces[f].GetBounds());
+					d = m_predictor68(fcimg, m_faces[f].GetBounds());
 				}
 				else if (m_stageWork.type == IMAGETYPE_LUMA) {
 					dlib_image_wrapper<unsigned char> fcimg(m_stageWork.data, 
 						m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
-					d = m_predictor(fcimg, m_faces[f].GetBounds());
+					d = m_predictor68(fcimg, m_faces[f].GetBounds());
 				}
 				else {
 					throw std::invalid_argument(

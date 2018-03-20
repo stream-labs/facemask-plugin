@@ -158,10 +158,8 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	drawTexRender = gs_texrender_create(GS_RGBA, GS_Z32F); // has depth buffer
 	obs_leave_graphics();
 
-	// The following creates a temporary char* path to the data file.
-	char* landmarksName = obs_module_file(kFileShapePredictor);
-	smllFaceDetector = new smll::FaceDetector(landmarksName);
-	bfree(landmarksName); // We need to free it after it is used.
+	// Make the smll stuff
+	smllFaceDetector = new smll::FaceDetector();
 	smllRenderer = new smll::OBSRenderer(); 
 
 	// set our mm thread task
@@ -1468,9 +1466,15 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 
 	obs_leave_graphics();
 
-	std::string cmd = "c:\\STREAMLABS\\slart\\gifmaker.bat ";
+	char* gifmaker = obs_module_file("test/gifmaker.bat");
+	std::string cmd = gifmaker;
+	Utils::find_and_replace(cmd, "/", "\\");
+	Utils::find_and_replace(cmd, "Program Files", "\"Program Files\"");
+	Utils::find_and_replace(cmd, "Streamlabs OBS", "\"Streamlabs OBS\"");
+	cmd += " ";
 	cmd += outFolder;
 	::system(cmd.c_str());
+	bfree(gifmaker);
 }
 
 

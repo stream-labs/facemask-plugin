@@ -924,13 +924,20 @@ void command_import(Args& args) {
 		SETTEXPARAM(aiTextureType_LIGHTMAP);
 		SETTEXPARAM(aiTextureType_REFLECTION);
 
-		// Opaque flag, set based on diffuse texture
+		// Opaque flag, set based on textures
 		bool opaque = true;
-		imgfile = getMaterialTexture(scene->mMaterials[i], aiTextureType_DIFFUSE);
-		if (imgfile.length() > 0) {
-			string paramName = getTextureName(aiTextureType_DIFFUSE);
-			snprintf(temp, sizeof(temp), "%s-%d", paramName.c_str(), i);
-			opaque = !textureHasAlpha[temp];
+		vector<aiTextureType> ttypes = { aiTextureType_AMBIENT, aiTextureType_DIFFUSE,
+			aiTextureType_SPECULAR, aiTextureType_EMISSIVE, aiTextureType_REFLECTION };
+		for (int tt = 0; tt < ttypes.size(); tt++) {
+			imgfile = getMaterialTexture(scene->mMaterials[i], ttypes[tt]);
+			if (imgfile.length() > 0) {
+				string paramName = getTextureName(ttypes[tt]);
+				snprintf(temp, sizeof(temp), "%s-%d", paramName.c_str(), i);
+				if (textureHasAlpha[temp]) {
+					opaque = false;
+					break;
+				}
+			}
 		}
 
 		// Only set colors if textures aren't set
@@ -952,6 +959,8 @@ void command_import(Args& args) {
 			parm["type"] = "float4";
 			parm["value"] = cc;
 			params["diffuseColor"] = parm;
+			if (dcolor.a < 1.0f) 
+				opaque = false;
 		}
 		aiColor4D scolor = aiColor4D(0.0f, 0.0f, 0.0f, 1.0f);
 		if (AI_SUCCESS == aiGetMaterialColor(mtl, AI_MATKEY_COLOR_SPECULAR, &scolor) &&
@@ -965,6 +974,8 @@ void command_import(Args& args) {
 			parm["type"] = "float4";
 			parm["value"] = cc;
 			params["specularColor"] = parm;
+			if (scolor.a < 1.0f)
+				opaque = false;
 		}
 		aiColor4D acolor = aiColor4D(0.2f, 0.2f, 0.2f, 1.0f);
 		if (AI_SUCCESS == aiGetMaterialColor(mtl, AI_MATKEY_COLOR_AMBIENT, &acolor) &&
@@ -978,6 +989,8 @@ void command_import(Args& args) {
 			parm["type"] = "float4";
 			parm["value"] = cc;
 			params["ambientColor"] = parm;
+			if (acolor.a < 1.0f)
+				opaque = false;
 		}
 		aiColor4D ecolor = aiColor4D(0.0f, 0.0f, 0.0f, 1.0f);
 		if (AI_SUCCESS == aiGetMaterialColor(mtl, AI_MATKEY_COLOR_EMISSIVE, &ecolor) &&
@@ -991,6 +1004,8 @@ void command_import(Args& args) {
 			parm["type"] = "float4";
 			parm["value"] = cc;
 			params["emissiveColor"] = parm;
+			if (ecolor.a < 1.0f)
+				opaque = false;
 		}
 
 		// Culling
@@ -998,6 +1013,11 @@ void command_import(Args& args) {
 		if (AI_SUCCESS == aiGetMaterialInteger(mtl, AI_MATKEY_TWOSIDED, &two_sided) && two_sided) {
 			args.kvpairs["culling"] = "neither";
 		}
+
+		if (opaque)
+			cout << "Material " << count << " is opaque." << endl;
+		else
+			cout << "Material " << count << " is NOT opaque." << endl;
 
 		int mode[10];
 		unsigned int max = 10;

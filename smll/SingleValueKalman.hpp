@@ -34,6 +34,13 @@ namespace smll {
 		void Init(double val);
 		double Update(double val);
 
+		// This is like a smoothing factor
+		// 1.0 is good for normal use, bump up to 4.0 for really smooth
+		// 1.0 is default
+		void SetMeasurementNoiseCovariance(double mnc) {
+			m_kf->set_R(mnc);
+		}
+
 	private:
 		KalmanFilter<double, 1, 3>*	m_kf;
 

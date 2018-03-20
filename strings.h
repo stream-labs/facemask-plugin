@@ -68,7 +68,7 @@ static const char* const kSettingsDemoDelayDesc = "Demo Mode Delay Between Masks
 
 static const char* const kSettingsPixomojoDesc = "Get more face masks from pixomojo.com";
 
-static const char* const kSettingsGreenscreenDesc = "Automatic Green Screen";
+static const char* const kSettingsGreenscreenDesc = "Automatic Background Removal";
 
 static const char* const kSettingsGenPreviewsDesc = "Generate thumbnails (for demo mode)";
 
@@ -76,5 +76,4 @@ static const char* const kSettingsGenPreviewsDesc = "Generate thumbnails (for de
 static const char* const kSettingsEmpty = "";
 
 static const char* const kFileDefaultJson = "masks/Baseball Cap.json";
-static const char* const kFileShapePredictor =
-	"shape_predictor_68_face_landmarks.dat";
+

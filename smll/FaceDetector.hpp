@@ -52,7 +52,7 @@ class FaceDetector
 {
 public:
 
-	FaceDetector(const char* predictorFilename);
+	FaceDetector();
 	~FaceDetector();
 
 	void DetectFaces(const OBSTexture& capture, 
@@ -101,7 +101,8 @@ private:
 
 	// dlib stuff
 	dlib::frontal_face_detector		m_detector;
-	dlib::shape_predictor			m_predictor;
+	dlib::shape_predictor			m_predictor68;
+	dlib::shape_predictor			m_predictor5;
 
 	// openCV camera
 	int			m_camera_w, m_camera_h;

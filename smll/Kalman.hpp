@@ -130,6 +130,12 @@ namespace smll {
 			return t; 
 		}
 
+		// Accessor for Measurement noise covariance (R)
+		// - akin to a smoothing factor
+		void set_R(double r) {
+			R = r;
+		}
+
 	private:
 		// Matrices for computation
 		dlib::matrix<T, N, N>	A; // System dynamics matrix

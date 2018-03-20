@@ -312,4 +312,14 @@ namespace smll {
 	std::vector<FaceArea>&	GetFaceAreas();
 	const FaceArea&			GetFaceArea(FaceAreaID which);
 
+	// 5-point landmarks
+	enum {
+		FIVE_LANDMARK_EYE_LEFT_OUTER,
+		FIVE_LANDMARK_EYE_LEFT_INNER,
+		FIVE_LANDMARK_NOSE_BOTTOM,
+		FIVE_LANDMARK_EYE_RIGHT_INNER,
+		FIVE_LANDMARK_EYE_RIGHT_OUTER,
+
+		FIVE_LANDMARK_NUM_LANDMARKS
+	};
 }

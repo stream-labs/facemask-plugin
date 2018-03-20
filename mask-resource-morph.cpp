@@ -179,6 +179,7 @@ void Mask::Resource::Morph::RenderMorphVideo(gs_texture* vidtex,
 	gs_enable_depth_test(false);
 	gs_set_cull_mode(GS_NEITHER);
 
+	/*
 	// GREEN SCREEN
 	if (trires.autoGreenScreen) {
 		while (gs_effect_loop(solidEffect, "Solid")) {
@@ -193,7 +194,7 @@ void Mask::Resource::Morph::RenderMorphVideo(gs_texture* vidtex,
 			gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_HULL]);
 			gs_draw(GS_TRIS, 0, 0);
 		}
-	}
+	}*/
 
 	while (gs_effect_loop(defaultEffect, "Draw")) {
 //	while (gs_effect_loop(solidEffect, "Solid")) {

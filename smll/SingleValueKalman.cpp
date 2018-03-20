@@ -56,13 +56,7 @@ namespace smll {
 		P =	.1, .1, .1,
 			.1, 10000, 10,
 			.1, 10, 100;
-
-		// R largely determines the "smoothing factor"
-		// Grab from the config. 
-		// This doesn't work. We need to get through an update loop first. boo.
-		double r = Config::singleton().get_double(CONFIG_FLOAT_SMOOTHING_FACTOR);
-		r = 4.0; // hard-code to 4 for thumbs
-		R = r;
+		R = 1.0;
 
 		m_kf = new KalmanFilter<double, m, n>(dt, A, C, Q, R, P);
 	}

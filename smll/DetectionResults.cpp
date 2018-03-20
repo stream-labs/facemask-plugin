@@ -114,6 +114,12 @@ namespace smll {
 		CheckForPoseFlip(nrot, ntx);
 
 		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE)) {
+			
+			// update smoothing factor
+			double smoothing = Config::singleton().get_double(CONFIG_FLOAT_SMOOTHING_FACTOR);
+			for (int i = 0; i < KF_NUM_FILTERS; i++) {
+				kalmanFilters[i].SetMeasurementNoiseCovariance(smoothing);
+			}
 
 			// update the kalman filters
 			ntx[0] = kalmanFilters[KF_TRANS_X].Update(ntx[0]);
