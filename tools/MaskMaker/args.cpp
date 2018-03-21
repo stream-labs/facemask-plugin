@@ -121,6 +121,8 @@ string Args::default_value(string key) {
 			return "1";
 		if (key == "tier")
 			return "1";
+		if (key == "texture_max")
+			return "256";
 	}
 	if (command == "addres" ||
 		command == "morphimport" ||
@@ -496,19 +498,21 @@ json Args::createImageResourceFromFile(string resFile, bool wantMips) {
 	if (lastImageHadAlpha)
 		cout << "IMAGE HAS ALPHA!!!!" << endl;
 
+	int tex_size_limit = intValue("texture_max");
+
 	// limit texture sizes
 	int nWidth = width;
 	int nHeight = height;
 	if (width > height) {
-		if (width > TEXTURE_SIZE_LIMIT) {
-			nHeight = (int)((float)TEXTURE_SIZE_LIMIT * (float)height / (float)width);
-			nWidth = TEXTURE_SIZE_LIMIT;
+		if (width > tex_size_limit) {
+			nHeight = (int)((float)tex_size_limit * (float)height / (float)width);
+			nWidth = tex_size_limit;
 		}
 	}
 	else {
-		if (height > TEXTURE_SIZE_LIMIT) {
-			nWidth = (int)((float)TEXTURE_SIZE_LIMIT * (float)width / (float)height);
-			nHeight = TEXTURE_SIZE_LIMIT;
+		if (height > tex_size_limit) {
+			nWidth = (int)((float)tex_size_limit * (float)width / (float)height);
+			nHeight = tex_size_limit;
 		}
 	}
 	bool imageScaled = false;

@@ -46,6 +46,8 @@ namespace Mask {
 			std::shared_ptr<Image> GetImage() { return m_image; }
 			void SetTextureMatrix(Mask::Part* part, matrix4* texmat);
 
+			void Rewind();
+
 			enum Mode : uint32_t {
 				ONCE,
 				REPEAT,

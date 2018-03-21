@@ -23,9 +23,6 @@
 // Facemask data version
 #define FACEMASK_JSON_VERSION	(1)
 
-// Texture size limit (max in either w/h)
-#define TEXTURE_SIZE_LIMIT		(256)
-
 using namespace std;
 
 class Args {

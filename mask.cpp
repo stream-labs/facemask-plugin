@@ -21,6 +21,7 @@
 #include "mask-resource-model.h"
 #include "mask-resource-material.h"
 #include "mask-resource-animation.h"
+#include "mask-resource-sequence.h"
 #include "exceptions.h"
 #include "strings.h"
 #include "plugin.h"
@@ -272,11 +273,13 @@ size_t Mask::MaskData::GetNumResources(Mask::Resource::Type type) {
 std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::GetResource(Mask::Resource::Type type, int which) {
 	int count = 0;
 	for (auto kv = m_resources.begin(); kv != m_resources.end(); kv++) {
-		if (kv->second->GetType() == type && count == which) {
-			return kv->second;
-		}
-		else {
-			count++;
+		if (kv->second->GetType() == type) {
+			if (count == which) {
+				return kv->second;
+			}
+			else {
+				count++;
+			}
 		}
 	}
 	return nullptr;
@@ -588,6 +591,13 @@ void Mask::MaskData::RewindAnimations() {
 		if (aakv.second) {
 			aakv.second->Rewind();
 		}
+	}
+
+	size_t numSequences = GetNumResources(Mask::Resource::Type::Sequence);
+	for (int i = 0; i < numSequences; i++) {
+		std::shared_ptr<Resource::IBase> seqBase = GetResource(Mask::Resource::Type::Sequence, i);
+		std::shared_ptr<Resource::Sequence> seq = std::dynamic_pointer_cast<Resource::Sequence>(seqBase);
+		seq->Rewind();
 	}
 }
 
