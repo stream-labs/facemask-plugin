@@ -2,16 +2,16 @@
 '''
 @echo off
 rem https://stackoverflow.com/questions/17467441/how-to-embed-python-code-in-batch-script
-if exist %userprofile%\\AppData\\Local\\Programs\\Python\\Python36\\python.exe goto PYTHON64
-if exist %userprofile%\\AppData\\Local\\Programs\\Python\\Python36-32\\python.exe goto PYTHON32
+if exist "%userprofile%"\\AppData\\Local\\Programs\\Python\\Python36\\python.exe goto PYTHON64
+if exist "%userprofile%"\\AppData\\Local\\Programs\\Python\\Python36-32\\python.exe goto PYTHON32
 echo "I can't find python (3.6). Please install python from https://www.python.org/downloads/windows/"
 pause
 exit /b
 :PYTHON32
-%userprofile%\\AppData\\Local\\Programs\\Python\\Python36-32\\python "%~f0" 
+"%userprofile%"\\AppData\\Local\\Programs\\Python\\Python36-32\\python "%~f0" 
 exit /b
 :PYTHON64
-%userprofile%\\AppData\\Local\\Programs\\Python\\Python36\\python "%~f0" 
+"%userprofile%"\\AppData\\Local\\Programs\\Python\\Python36\\python "%~f0" 
 exit /b
 rem ^
 '''
@@ -38,14 +38,15 @@ rem ^
 # ==============================================================================
 # IMPORTS
 # ==============================================================================
-import sys
+import sys, os, subprocess
 try:
 	from PyQt5.QtWidgets import QApplication
 except:
 	print("You don't seem to have PyQt5 installed. I will attempt to install it now.")
-	cmd = os.path.join(os.path.expanduser("~"),"AppData","Local","Programs","Python","Python36","python.exe")
+	luser = '"' + os.path.expanduser("~") + '"'
+	cmd = os.path.join(luser,"AppData","Local","Programs","Python","Python36","python.exe")
 	if not os.path.exists(cmd):
-		cmd = os.path.join(os.path.expanduser("~"),"AppData","Local","Programs","Python","Python36-32","python.exe")
+		cmd = os.path.join(luser,"AppData","Local","Programs","Python","Python36-32","python.exe")
 	if not os.path.exists(cmd):
 		print("I can't find python. Really odd, since this is python code.")
 	cmd += " -m pip install PyQt5 --user"
@@ -55,6 +56,8 @@ except:
 	popen.wait()
 	print("PyQt5 should be installed now. Try running art tool again.")
 	sys.exit(0)
+	
+	
 from arttool import arttool
 
 # ==============================================================================

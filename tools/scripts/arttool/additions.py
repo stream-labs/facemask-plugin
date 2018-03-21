@@ -25,7 +25,7 @@ import os
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QListWidget, QVBoxLayout, QTabWidget
 from PyQt5.QtWidgets import QPushButton, QComboBox, QDateTimeEdit, QDialogButtonBox, QMessageBox
 from PyQt5.QtWidgets import QScrollArea, QMainWindow, QCheckBox, QHBoxLayout, QTextEdit
-from PyQt5.QtWidgets import QLineEdit, QFrame, QDialog, QFrame, QSplitter
+from PyQt5.QtWidgets import QLineEdit, QFrame, QDialog, QFrame, QSplitter, QFileDialog
 from PyQt5.QtGui import QIcon, QBrush, QColor, QFont, QPixmap, QMovie
 from PyQt5.QtCore import QDateTime, Qt
 
@@ -286,10 +286,25 @@ class AdditionDialog(QDialog):
 						
 		if type(value) is not list:
 			q.setParent(parent)
-			q.setGeometry(x + FW, y, PW - FW - 10, 30)
+			if field == "file":
+				q.setGeometry(x + FW, y, PW - FW - 60, 30)
+				b = QPushButton("BROWSE")
+				b.setParent(parent)
+				b.setGeometry(x + PW - 60, y, 50, 30)
+				b.pressed.connect(lambda: self.onFileBrowser(field))
+				
+			else:
+				q.setGeometry(x + FW, y, PW - FW - 10, 30)
 			q.show()
 			q.setFont(QFont( "Arial", 12, QFont.Bold ))
 
+			
+	# file browser button
+	def onFileBrowser(self, field):
+		fname = QFileDialog.getOpenFileName(self, 'Open file', 
+			os.path.abspath("."), "Image files (*.png *.gif *.jpg *.tiff *.tga)")
+		
+		
 			
 	# text field changed
 	def onTextFieldChanged(self, text, field, index=0):

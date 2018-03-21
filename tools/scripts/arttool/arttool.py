@@ -21,6 +21,7 @@
 # IMPORTS
 # ==============================================================================
 import sys, subprocess, os, json, uuid, time
+from shutil import copyfile
 from copy import deepcopy
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QListWidget, QVBoxLayout, QTabWidget
 from PyQt5.QtWidgets import QPushButton, QComboBox, QDateTimeEdit, QDialogButtonBox, QMessageBox
@@ -30,7 +31,7 @@ from PyQt5.QtGui import QIcon, QBrush, QColor, QFont, QPixmap, QMovie
 from PyQt5.QtCore import QDateTime, Qt
 from arttool.utils import *
 from arttool.additions import *
-	
+from arttool.releases import *	
 
 # dont check svn more often than this
 SVN_CHECK_TIME = (60 * 5) # 5 mins is lots
@@ -41,7 +42,7 @@ SVN_CHECK_TIME = (60 * 5) # 5 mins is lots
 	
 FIELD_WIDTH = 180
 PANE_WIDTH = 690
-TEXTURE_SIZES = ["32","64","128","256","512","1024","2048"]
+TEXTURE_SIZES = ["32","64","128","256","512","1024","2048", "4096", "8192", "16384"]
 MASK_UI_FIELDS = { "name" : "Pretty Name",
 				   "description" : "Description",
 				   "author" : "Author",
@@ -150,6 +151,7 @@ class ArtToolWindow(QMainWindow):
 			(x,y) = locs[c]
 			c += 1
 			b.setGeometry(x,y,75,30)
+			b.pressed.connect(lambda nn=nn:self.onMainButton(nn))
 		bottomArea.addWidget(buttonArea)
 		
 		mainSplitter.addWidget(bottomPane)
@@ -487,6 +489,34 @@ class ArtToolWindow(QMainWindow):
 	# --------------------------------------------------
 	# WIDGET SIGNALS CALLBACKS
 	# --------------------------------------------------
+	
+	# Main buttons
+	def onMainButton(self, button):
+		# ["Refresh", "Autobuild", "Rebuild All", "Make Release", "SVN Update", "SVN Commit"]
+		if button == "Make Release":
+			#self.ignoreSVN += 1
+			#self.dialogUp = True
+			#addn = ReleasesDialog.go_modal(self)
+			#self.dialogUp = False
+
+			# quick hack for fun
+			framenum = 1
+			for fbx in self.fbxfiles:
+				src = os.path.abspath(fbx.replace(".fbx",".png").replace(".FBX",".png"))
+				#dst = "c:\\Temp\\masks\\frame%04d.png" % framenum
+				dst = "c:\\Temp\\masks\\" + os.path.basename(src)
+				
+				fileOkay = True
+				if "frogHead" in src:
+					fileOkay = False
+				if "joshog" in src:
+					fileOkay = False
+				
+				if os.path.exists(src) and fileOkay:
+					print("copy",src,dst)
+					framenum += 1
+					copyfile(src, dst)
+			
 	
 	# FBX file clicked in list
 	def onFbxClicked(self):

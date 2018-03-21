@@ -23,12 +23,21 @@
 import sys, subprocess, os, json, uuid
 
 
+def fixpath(p):
+  p = p.replace("\\","/")
+  b = p.split("/")
+  for i in range(0,len(b)):
+    if " " in b[i]:
+      b[i] = '"' + b[i] + '"'
+  return "\\".join(b)
+	
+
 # ==============================================================================
 # FILE LOCATIONS
 # ==============================================================================
 SVNBIN = os.path.abspath(os.path.join("c:\\",'"Program Files"',"TortoiseSVN","bin","svn.exe"))
-MASKMAKERBIN = os.path.abspath("./maskmaker/maskmaker.exe")
-MORPHRESTFILE = os.path.abspath("./morphs/morph_rest.fbx")
+MASKMAKERBIN = fixpath(os.path.abspath("./maskmaker/maskmaker.exe"))
+MORPHRESTFILE = fixpath(os.path.abspath("./morphs/morph_rest.fbx"))
 
 
 
@@ -107,6 +116,15 @@ def collapse_path(p):
 				break
 	return "/".join(bits)			
 	
+def make_path_relative(base, path):
+	basebits = base.replace("/","\\").split("\\")
+	pathbits = path.replace("/","\\").split("\\")
+	print(basebits,pathbits)
+	while True and len(basebits) > 0 and len(pathbits) > 0:
+		if basebits[0] == pathbits[0]:
+			del basebits[0]
+			del pathbits[0]
+	return "\\".join(pathbits)
 	
 # ==============================================================================
 # SVN
@@ -195,7 +213,8 @@ def maskmaker(command, kvpairs, files):
 		yield line[:-1]
 		
 def mmImport(fbxfile, metadata):
-	CREATEKEYS = ["name", "uuid", "tier", "description", "author", "tags", "category", "license", "website"]
+	CREATEKEYS = ["name", "uuid", "tier", "description", "author", 
+		"tags", "category", "license", "website", "texture_max"]
 	d = dict()
 	for k in CREATEKEYS:
 		d[k] = metadata[k]
@@ -224,8 +243,8 @@ def mmDepends(fbxfile):
 # ==============================================================================
 def getMetaFolderName(fbxfile):
 	dn = os.path.dirname(fbxfile)
-	dn = os.path.join(dn, ".art").replace("\\","/")
-	return dn
+	dn = os.path.join(dn, ".art")
+	return fixpath(dn)
 	
 def createMetaFolder(folder, dosvn=False):
 	if not os.path.exists(folder):
@@ -235,8 +254,8 @@ def createMetaFolder(folder, dosvn=False):
 
 def getMetaFileName(fbxfile):
 	metafolder = getMetaFolderName(fbxfile)
-	metafile = os.path.join(metafolder, os.path.basename(fbxfile).lower().replace(".fbx",".meta")).replace("\\","/")
-	return metafile
+	metafile = os.path.join(metafolder, os.path.basename(fbxfile).lower().replace(".fbx",".meta"))
+	return fixpath(metafile)
 			
 def writeMetaData(metafile, metadata, dosvn=False):
 	f = open(metafile,"w")
