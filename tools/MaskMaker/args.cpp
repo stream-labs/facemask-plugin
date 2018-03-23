@@ -123,6 +123,17 @@ string Args::default_value(string key) {
 			return "1";
 		if (key == "texture_max")
 			return "256";
+		if (key == "intro_fade_time")
+			return "10";
+		if (key == "intro_duration")
+			return "2.13";
+		if (key == "modtime") {
+			long long modtime = std::chrono::duration_cast<std::chrono::seconds>
+				(std::chrono::system_clock::now().time_since_epoch()).count();
+			char temp[256];
+			snprintf(temp, sizeof(temp), "%lld", modtime);
+			return temp;
+		}
 	}
 	if (command == "addres" ||
 		command == "morphimport" ||
@@ -228,6 +239,14 @@ float Args::floatValue(string key) {
 
 int Args::intValue(string key) {
 	return atoi(value(key).c_str());
+}
+
+long Args::longValue(string key) {
+	return atol(value(key).c_str());
+}
+
+long long Args::longlongValue(string key) {
+	return atoll(value(key).c_str());
 }
 
 bool Args::boolValue(string v) {
@@ -357,7 +376,10 @@ void Args::initJsonNamesAndValues() {
 		"tags",
 		"category",
 		"license",
-		"website"
+		"website",
+		"intro_fade_time",
+		"intro_duration",
+		"modtime"
 	};
 	jsonKeyNames["create"] = create_keys;
 }
@@ -368,7 +390,14 @@ json Args::createNewJson() {
 	vector<string>& jsonKeys = jsonKeyNames["create"];
 	for (int i = 0; i < jsonKeys.size(); i++) {
 		string k = jsonKeys[i];
-		j[k] = value(k);
+		if (k == "intro_fade_time" || k == "intro_duration")
+			j[k] = floatValue(k);
+		else if (k == "tier")
+			j[k] = intValue(k);
+		else if (k == "modtime")
+			j[k] = longlongValue(k);
+		else
+			j[k] = value(k);
 	}
 
 	j["version"] = FACEMASK_JSON_VERSION;

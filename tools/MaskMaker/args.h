@@ -48,6 +48,8 @@ public:
 	float floatValue(string key);
 	int intValue(string key);
 	bool boolValue(string v);
+	long longValue(string key);
+	long long longlongValue(string key);
 	json makeNumberArray(string v, bool isFloat, int sidx = 0);
 	json makeFloatArray(string v, int sidx = 0);
 	json makeIntArray(string v, int sidx = 0);

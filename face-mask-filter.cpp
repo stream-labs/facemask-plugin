@@ -31,6 +31,9 @@
 #include <memory>
 #include <string>
 #include <map>
+#include <locale>
+#include <codecvt>
+#include <tchar.h>
 
 // Windows AV run time stuff
 #include <avrt.h>
@@ -69,6 +72,28 @@ static float FOVA(float aspect) {
 static const float_t NEAR_Z = 1.0f;
 static const float_t FAR_Z = 15000.0f;
 
+/*
+BOOL CALLBACK speichereFenster(HWND hwnd, LPARAM lParam) {
+	const DWORD TITLE_SIZE = 1024;
+	WCHAR windowTitle[TITLE_SIZE];
+
+	GetWindowTextW(hwnd, windowTitle, TITLE_SIZE);
+
+	int length = ::GetWindowTextLength(hwnd);
+	wstring title(&windowTitle[0]);
+	if (!IsWindowVisible(hwnd) || length == 0 || title == L"Program Manager") {
+		return TRUE;
+	}
+
+	// Retrieve the pointer passed into this callback, and re-'type' it.
+	// The only way for a C API to pass arbitrary data is by means of a void*.
+	std::vector<std::wstring>& titles =
+		*reinterpret_cast<std::vector<std::wstring>*>(lParam);
+	titles.push_back(title);
+
+	return TRUE;
+}*/
+
 
 // Filter Wrapper
 Plugin::FaceMaskFilter::FaceMaskFilter() {
@@ -91,6 +116,42 @@ Plugin::FaceMaskFilter::FaceMaskFilter() {
 	filter.hide = Instance::hide;
 	filter.video_tick = Instance::video_tick;
 	filter.video_render = Instance::video_render;
+
+	//setup converter
+	using convert_type = std::codecvt_utf8<wchar_t>;
+	std::wstring_convert<convert_type, wchar_t> converter;
+
+	/*
+	std::vector<std::wstring> titles;
+	EnumWindows(speichereFenster, reinterpret_cast<LPARAM>(&titles));
+	// At this point, titles if fully populated and could be displayed, e.g.:
+	for (const auto& title : titles) {
+		std::string window_title = converter.to_bytes(title);
+		blog(LOG_DEBUG, "window: %s", window_title.c_str());
+	}	
+
+	HWND notepad = FindWindow(_T("Notepad"), NULL);
+
+	//HWND edit = FindWindowEx(notepad, NULL, _T("Edit"), NULL);
+	//SendMessage(edit, WM_SETTEXT, NULL, (LPARAM)_T("hello"));
+
+	INPUT keys[2];
+	keys[0].type = INPUT_KEYBOARD;
+	keys[0].ki.wVk = 0;
+	keys[0].ki.wScan = 'K';
+	keys[0].ki.dwFlags = KEYEVENTF_UNICODE;
+	keys[0].ki.time = 0;
+	keys[0].ki.dwExtraInfo = GetMessageExtraInfo();
+	//keys[1].type = INPUT_KEYBOARD;
+	//keys[1].ki.wVk = 0;
+	//keys[1].ki.wScan = 'K';
+	//keys[1].ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
+	//keys[1].ki.time = 0;
+	//keys[1].ki.dwExtraInfo = GetMessageExtraInfo();
+
+	SetForegroundWindow(notepad);
+	SendInput(1, keys, sizeof(INPUT));
+	*/
 
 	obs_register_source(&filter);
 }
@@ -513,6 +574,8 @@ void Plugin::FaceMaskFilter::Instance::video_tick(void *ptr, float timeDelta) {
 	reinterpret_cast<Instance*>(ptr)->video_tick(timeDelta);
 }
 
+static float g_alpha = 0.0f;
+
 void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 
 
@@ -553,6 +616,11 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 		}
 		if (mdat) {
 			mdat->Tick(timeDelta);
+
+			std::shared_ptr<Mask::AlphaInstanceData> aid =
+				mdat->instanceDatas.GetData<Mask::AlphaInstanceData>(Mask::AlphaInstanceDataId);
+			aid->alpha = sinf(g_alpha);
+			g_alpha += timeDelta;
 
 			// ask mask for a morph resource
 			Mask::Resource::Morph* morph = mdat->GetMorph();

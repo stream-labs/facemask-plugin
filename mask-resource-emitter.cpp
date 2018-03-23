@@ -423,6 +423,7 @@ void Mask::Resource::Particle::SortedRender() {
 	float s = lambda * (emitter->m_scaleEnd - emitter->m_scaleStart) + emitter->m_scaleStart;
 	gs_matrix_scale3f(s, s, s);
 	aid->alpha = lambda * (emitter->m_alphaEnd - emitter->m_alphaStart) + emitter->m_alphaStart;
+	aid->alpha *= saved_alpha;
 
 	emitter->m_model->DirectRender(sortDrawPart);
 
