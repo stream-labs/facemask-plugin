@@ -31,36 +31,27 @@ from PyQt5.QtCore import QDateTime, Qt
 
 from arttool.utils import *
 
-			  
+
 # ==============================================================================
 # RELEASES DIALOG
 # ==============================================================================
 
 class ReleasesDialog(QDialog):
 
-	def __init__(self, parent):
-		super(ReleasesDialog, self).__init__(parent)
+    def __init__(self, parent):
+        super(ReleasesDialog, self).__init__(parent)
 
-		# OK and Cancel buttons
-		buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, Qt.Horizontal, self)
-		buttons.accepted.connect(self.accept)
-		buttons.rejected.connect(self.reject)
-		buttons.setParent(self)
-		buttons.setGeometry(10, 40, 200, 30)
-		
-	@staticmethod
-	def go_modal(parent = None):
-		dialog = ReleasesDialog(parent)
-		result = dialog.exec_()
-		if result == QDialog.Accepted:
-			return True
-		return False
+        # OK and Cancel buttons
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, Qt.Horizontal, self)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        buttons.setParent(self)
+        buttons.setGeometry(10, 40, 200, 30)
 
-
-		
-		
-		
-		
-		
-		
-		
+    @staticmethod
+    def go_modal(parent=None):
+        dialog = ReleasesDialog(parent)
+        result = dialog.exec_()
+        if result == QDialog.Accepted:
+            return True
+        return False
