@@ -44,23 +44,32 @@ FIELD_WIDTH = 180
 PANE_WIDTH = 690
 TEXTURE_SIZES = ["32", "64", "128", "256", "512", "1024", "2048", "4096", "8192", "16384"]
 CATEGORIES = ["Top", "Eyes", "Ears", "Nose", "Mouth", "Neck", "Full", "Combo", "Other"]
-MASK_UI_FIELDS = {"name": "Pretty Name",
-                  "description": "Description",
-                  "author": "Author",
-                  "tags": "Tags",
-                  "category": "Category",
-                  "tier": "Tier (1,2 or 3)",
-                  "depth_head": "Depth Head",
-                  "is_morph": "Morph Mask",
-                  "is_vip": "V.I.P. Mask",
-                  "is_intro": "Intro Animation",
-                  "release_with_plugin": "Release With Plugin",
-                  "do_not_release": "DO NOT RELEASE",
-                  "texture_max": "Max Texture Size",
-                  "intro_fade_time": "Intro Fade Time",
-                  "intro_duration": "Intro Duration",
-                  "license": "License",
-                  "website": "Website"}
+MASK_UI_NAMES = {"name": "Pretty Name",
+                 "description": "Description",
+                 "author": "Author",
+                 "tags": "Tags",
+                 "category": "Category",
+                 "tier": "Tier (1,2 or 3)",
+                 "depth_head": "Depth Head",
+                 "is_morph": "Morph Mask",
+                 "is_vip": "V.I.P. Mask",
+                 "is_intro": "Intro Animation",
+                 "release_with_plugin": "Release With Plugin",
+                 "do_not_release": "DO NOT RELEASE",
+                 "texture_max": "Max Texture Size",
+                 "intro_fade_time": "Intro Fade Time",
+                 "intro_duration": "Intro Duration",
+                 "license": "License",
+                 "website": "Website"}
+
+MASK_UI_FIELDS = ["name", "description", "author", "tags", "category", "tier", "depth_head",
+                  "is_morph", "is_vip", "is_intro", "release_with_plugin", "do_not_release",
+                  "texture_max", "intro_fade_time", "intro_duration", "license", "website"]
+COMBO_UI_FIELDS = ["name", "description", "author", "tags", "tier", "is_vip", "is_intro",
+                   "release_with_plugin", "do_not_release", "texture_max", "intro_fade_time",
+                   "intro_duration", "license", "website"]
+UI_FIELDS = [MASK_UI_FIELDS, COMBO_UI_FIELDS]
+
 
 MASK_FIELD_TOOLTIPS = {"tier": "The tier of the mask.\nTier 1 is most expensive, 3 is least expensive.",
                        "tags": "Comma separated list of tags.",
@@ -125,6 +134,7 @@ class ArtToolWindow(QMainWindow):
 
         # make the combo tab
         combotab = QWidget()
+        combotab.setAutoFillBackground(True)
 
         # combo buttons
         b = QPushButton("Add")
@@ -148,6 +158,7 @@ class ArtToolWindow(QMainWindow):
         tabs.setGeometry(0,0,300, 640)
         tabs.addTab(self.fbxlist, "FBX")
         tabs.addTab(combotab, "COMBOS")
+
         leftLayout.addWidget(tabs)
 
         # top splitter
@@ -463,9 +474,9 @@ class ArtToolWindow(QMainWindow):
         y = 2
         dy = 28
         self.paneWidgets = dict()
-        for field in MASK_UI_FIELDS:
+        for field in UI_FIELDS[self.comboTabIdx]:
             if field != "uuid":
-                w = self.createLabelWidget(tab1, MASK_UI_FIELDS[field], field, 10, y)
+                w = self.createLabelWidget(tab1, MASK_UI_NAMES[field], field, 10, y)
                 self.paneWidgets[field] = w
                 if field in MASK_FIELD_TOOLTIPS:
                     w.setToolTip(MASK_FIELD_TOOLTIPS[field])
@@ -473,7 +484,54 @@ class ArtToolWindow(QMainWindow):
         tab1.setAutoFillBackground(True)
         tabs.addTab(tab1, "Mask Meta Data")
 
-        # additions
+        if self.comboTabIdx == 0:
+            tab2 = self.createAdditionsTab()
+            tabs.addTab(tab2, "Additions")
+        else:
+            tab2 = self.createCombosTab()
+            tabs.addTab(tab2, "Combinations")
+
+        tabs.show()
+
+
+    def createCombosTab(self):
+        # combos tab
+        tab2 = QWidget()
+        y = 10
+        dy = 40
+        self.createLabelWidget(tab2, "Combo Files", None, 10, y)
+        y += dy
+
+        self.comboWidgets = list()
+
+        for cidx in range(0,10):
+            q = QComboBox()
+            idx = 1
+            selidx = -1
+            value = self.metadata["additions"][cidx]
+            q.addItem(" None ")
+            for f in self.fbxfiles:
+                if f == str(value):
+                    selidx = idx
+                q.addItem(f[2:])
+                idx += 1
+            if selidx < 0:
+                selidx = 0
+            q.setCurrentIndex(selidx)
+            q.setParent(tab2)
+            q.setGeometry(10, y, 600, 30)
+            y += dy
+            q.setFont(QFont("Arial", 12, QFont.Bold))
+            q.show()
+            q.currentIndexChanged.connect(lambda state, cidx=cidx: self.onComboFileChanged(state,cidx))
+            self.comboWidgets.append(q)
+
+        tab2.setAutoFillBackground(True)
+        return tab2
+
+
+    def createAdditionsTab(self):
+        # additions tab
         tab2 = QWidget()
         y = 10
         dy = 40
@@ -539,9 +597,8 @@ class ArtToolWindow(QMainWindow):
         b.pressed.connect(lambda: self.onPasteAllAdditions())
 
         tab2.setAutoFillBackground(True)
-        tabs.addTab(tab2, "Additions")
+        return tab2
 
-        tabs.show()
 
     # --------------------------------------------------
     # saveCurrentMetadata
@@ -593,9 +650,16 @@ class ArtToolWindow(QMainWindow):
         self.comboTabIdx = tab
         self.resetEditPane()
 
+    def onComboFileChanged(self, state, which):
+        if state == 0:
+            self.metadata["additions"][which] = ""
+        else:
+            self.metadata["additions"][which] = self.fbxfiles[state - 1]
 
     # FBX file clicked in list
     def onFbxClicked(self):
+        if self.comboTabIdx != 0:
+            return
         k = self.fbxlist.currentRow()
         if k >= 0 and k < self.fbxlist.count():
             self.saveCurrentMetadata()
@@ -617,6 +681,8 @@ class ArtToolWindow(QMainWindow):
 
     # FBX file clicked in list
     def onComboClicked(self):
+        if self.comboTabIdx != 1:
+            return
         k = self.combolist.currentRow()
         if k >= 0 and k < self.combolist.count():
             self.saveCurrentMetadata()
@@ -641,10 +707,6 @@ class ArtToolWindow(QMainWindow):
                     break
             if self.currentCombo >= 0:
                 self.combolist.setCurrentRow(self.currentCombo)
-
-                #self.metadata = metadata
-                #combofile = self.combofiles[self.currentCombo]
-                #self.createMaskEditPane(combofile)
 
 
     def onDelCombo(self):
@@ -713,6 +775,14 @@ class ArtToolWindow(QMainWindow):
     # build
     def onBuild(self):
         self.saveCurrentMetadata()
+
+        # building a combo?
+        if self.currentCombo >= 0:
+            combofile = self.combofiles[self.currentCombo]
+            for line in mmMerge(combofile, self.metadata):
+                self.outputWindow.append(line)
+            svnAddFile(combofile)
+            return
 
         fbxfile = self.fbxfiles[self.currentFbx]
 

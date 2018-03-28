@@ -34,6 +34,24 @@ rem ^
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 # ==============================================================================
 
+def installPipModule(modname):
+	print("You don't seem to have " + modname + " installed. I will attempt to install it now.")
+	luser = os.path.expanduser("~")
+	cmd = os.path.join(luser,"AppData","Local","Programs","Python","Python36","python.exe")
+	if not os.path.exists(cmd):
+		print("Can't find 64 bit python. Trying 32 bit.")
+		cmd = os.path.join(luser,"AppData","Local","Programs","Python","Python36-32","python.exe")
+	if not os.path.exists(cmd):
+		print("I can't find python. Really odd, since this is python code.")
+	cmd += " -m pip install "+modname+" --user"
+	popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True, shell=True)
+	for stdout_line in iter(popen.stdout.readline, ""):
+		print(stdout_line)
+	popen.wait()
+	print(modname + " should be installed now. Try running art tool again.")
+	sys.exit(0)
+
+
 
 # ==============================================================================
 # IMPORTS
@@ -42,20 +60,12 @@ import sys, os, subprocess
 try:
 	from PyQt5.QtWidgets import QApplication
 except:
-	print("You don't seem to have PyQt5 installed. I will attempt to install it now.")
-	luser = '"' + os.path.expanduser("~") + '"'
-	cmd = os.path.join(luser,"AppData","Local","Programs","Python","Python36","python.exe")
-	if not os.path.exists(cmd):
-		cmd = os.path.join(luser,"AppData","Local","Programs","Python","Python36-32","python.exe")
-	if not os.path.exists(cmd):
-		print("I can't find python. Really odd, since this is python code.")
-	cmd += " -m pip install PyQt5 --user"
-	popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True, shell=True)
-	for stdout_line in iter(popen.stdout.readline, ""):
-		print(stdout_line)
-	popen.wait()
-	print("PyQt5 should be installed now. Try running art tool again.")
-	sys.exit(0)
+	installPipModule("PyQt5")
+
+try:
+	import boto3
+except:
+	installPipModule("boto3")
 	
 	
 from arttool import arttool

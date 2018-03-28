@@ -50,7 +50,17 @@ Args::Args(int argc, char** argv)
 	filename = argv[argc - 1];
 	if (command == "merge") {
 		for (int i = 2; i < (argc - 1); i++) {
-			files.push_back(argv[i]);
+			string s = argv[i];
+			if (s.find("=") != string::npos) {
+				vector<string> pair = Utils::split(argv[i], '=');
+				if (pair.size() > 1)
+					kvpairs[pair[0]] = pair[1];
+				else
+					kvpairs[pair[0]] = "";
+			}
+			else {
+				files.push_back(argv[i]);
+			}
 		}
 	}
 	else {

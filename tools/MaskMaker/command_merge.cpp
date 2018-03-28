@@ -38,7 +38,8 @@ void command_merge(Args& args) {
 		for (auto it = res.begin(); it != res.end(); it++) {
 			string k = it.key();
 			// don't prefix lights. they must be named light0, light1, ...
-			if (k.find("light") == std::string::npos) {
+			if (k.substr(0, 5) != "light" &&
+				k != "depth_head_mat" && k != "depth_head_mdl") {
 				k = n + k;
 			}
 			// add the resource to the new json
@@ -53,7 +54,7 @@ void command_merge(Args& args) {
 				string mat = j["resources"][k]["material"];
 				if (!Utils::is_default_resource(msh))
 					j["resources"][k]["mesh"] = n + msh;
-				if (!Utils::is_default_resource(mat))
+				if (!Utils::is_default_resource(mat) && mat != "depth_head_mat")
 					j["resources"][k]["material"] = n + mat;
 			}
 			// fix skinned model references
@@ -112,7 +113,13 @@ void command_merge(Args& args) {
 		// merge parts
 		json pts = jm["parts"];
 		for (auto it = pts.begin(); it != pts.end(); it++) {
-			string k = n + it.key();
+			string k = it.key();
+			if (it.key().find("directionalLight") == string::npos &&
+				it.key().find("pointLight") == string::npos &&
+				it.key() != "depth_head") {
+				k = n + k;
+			}
+
 			j["parts"][k] = it.value();
 			json rezs;
 			int rezIdx = 0;
@@ -127,7 +134,8 @@ void command_merge(Args& args) {
 			// old single resource
 			if (j["parts"][k].find("resource") != j["parts"][k].end()) {
 				string r = j["parts"][k]["resource"];
-				if (r.find("light") == std::string::npos) {
+				if (r.substr(0, 5) != "light" &&
+					r != "depth_head_mat" && r != "depth_head_mdl") {
 					r = n + r;
 				}
 				j["parts"][k]["resource"] = r;
@@ -139,7 +147,8 @@ void command_merge(Args& args) {
 					string rrr = rit.value();
 					char temp[128];
 					snprintf(temp, sizeof(temp), "%d", rezIdx++);
-					if (rrr.find("light") == std::string::npos) {
+					if (rrr.substr(0, 5) != "light" &&
+						rrr != "depth_head_mat" && rrr != "depth_head_mdl") {
 						rrr = n + rrr;
 					}
 					j["parts"][k]["resources"][rit.key()] = rrr;

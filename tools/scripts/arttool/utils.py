@@ -20,7 +20,7 @@
 # ==============================================================================
 # IMPORTS
 # ==============================================================================
-import sys, subprocess, os, json, uuid
+import sys, subprocess, os, json, uuid, boto3
 
 
 def fixpath(p):
@@ -53,6 +53,25 @@ MORPHRESTFILE = fixpath(os.path.abspath("./morphs/morph_rest.fbx"))
 
 
 
+# ==============================================================================
+# AMAZON S3 SERVER
+# ==============================================================================
+S3_BUCKET = "facemasks-cdn.streamlabs.com"
+
+def s3_upload(filename):
+    f = open(fixpath(os.path.abspath(filename)), "rb")
+    s3 = boto3.resource("s3")
+    cunt_type = "application/octet-stream"
+    if filename.endswith(".gif"):
+        cunt_type = "image/gif"
+    elif filename.endswith(".png"):
+        cunt_type = "image/png"
+    elif filename.endswith(".mp4"):
+        cunt_type = "video/mp4"
+    elif filename.endswith(".json"):
+        cunt_type = "application/json"
+    s3.Bucket(S3_BUCKET).put_object(Key=os.path.basename(filename), Body=f, ACL='public-read', ContentType=cunt_type)
+
 def str_is_float(x):
     try:
         a = float(x)
@@ -80,6 +99,15 @@ def critical(field):
 
 def desired(field):
     return field in ["website"]
+
+
+import os
+for root,subdir,files in os.walk("."):
+    for file in files:
+        f = os.path.abspath(os.path.join(root, file))
+        if f.lower().endswith(".json"):
+            if not os.path.exists(f.lower().replace(".json",".fbx")):
+                print(os.path.join(root,file))
 
 
 # ==============================================================================
@@ -233,13 +261,17 @@ def maskmaker(command, kvpairs, files):
         yield line[:-1]
 
 
-def mmImport(fbxfile, metadata):
+def mmGetCreateKeys(metadata):
     CREATEKEYS = ["name", "uuid", "tier", "description", "author",
                   "tags", "category", "license", "website", "texture_max",
                   "is_intro", "intro_fade_time", "intro_duration"]
     d = dict()
     for k in CREATEKEYS:
         d[k] = metadata[k]
+    return d
+
+def mmImport(fbxfile, metadata):
+    d = mmGetCreateKeys(metadata)
 
     jsonfile = jsonFromFbx(fbxfile)
     if metadata["is_morph"]:
@@ -251,6 +283,17 @@ def mmImport(fbxfile, metadata):
         d["file"] = os.path.abspath(fbxfile)
         for line in maskmaker("import", d, [jsonfile]):
             yield line
+
+def mmMerge(jsonfile, metadata):
+    files = list()
+    for f in metadata["additions"]:
+        if len(f) > 0:
+            files.append(fixpath(os.path.abspath(f.lower().replace(".fbx",".json"))))
+    files.append(fixpath(os.path.abspath(jsonfile)))
+    d = mmGetCreateKeys(metadata)
+    for line in maskmaker("merge", d, files):
+        yield line
+
 
 
 def mmDepends(fbxfile):
@@ -357,6 +400,12 @@ def createGetMetaData(fbxfile):
         # make new metadata and write it
         metadata = newMetaData(fbxfile)
         writeMetaData(metafile, metadata, True)
+
+    if metadata["fbx"].endswith(".json"):
+        metadata["category"] = "Combo"
+        if len(metadata["additions"]) == 0:
+            for i in range(0, 10):
+                metadata["additions"].append("")
 
     return metadata
 
