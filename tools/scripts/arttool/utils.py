@@ -35,9 +35,22 @@ def fixpath(p):
 # ==============================================================================
 # FILE LOCATIONS
 # ==============================================================================
+
+# Make sure we are in the right place. Clyde has issues.
+CLYDE_HOME = "F:\\\\Work\\StreamLabs\\SLOBS\\SLART"
+if os.path.exists(CLYDE_HOME):
+    os.chdir(CLYDE_HOME)
+JAKE_HOME = "G:\\\\STREAMLABS\\slart"
+if os.path.exists(JAKE_HOME):
+    os.chdir(JAKE_HOME)
+ROSS_HOME = "C:\\\\STREAMLABS\\slart"
+if os.path.exists(ROSS_HOME):
+    os.chdir(ROSS_HOME)
+
 SVNBIN = os.path.abspath(os.path.join("c:\\", '"Program Files"', "TortoiseSVN", "bin", "svn.exe"))
 MASKMAKERBIN = fixpath(os.path.abspath("./maskmaker/maskmaker.exe"))
 MORPHRESTFILE = fixpath(os.path.abspath("./morphs/morph_rest.fbx"))
+
 
 
 def str_is_float(x):
@@ -90,8 +103,8 @@ def execute(cmd):
         yield "ERROR " + cmd.split()[0] + " FAILED EXECUTION."
 
 
-# Gets a list of files
-def getFileList(folder):
+# Gets a list of fbx files
+def getFbxFileList(folder):
     fileList = list()
     for root, subdir, files in os.walk(folder):
         for file in files:
@@ -123,7 +136,8 @@ def make_path_relative(base, path):
         if basebits[0] == pathbits[0]:
             del basebits[0]
             del pathbits[0]
-    return "\\".join(pathbits)
+    pathbits.insert(0,".")
+    return "/".join(pathbits)
 
 
 # ==============================================================================
@@ -222,7 +236,7 @@ def maskmaker(command, kvpairs, files):
 def mmImport(fbxfile, metadata):
     CREATEKEYS = ["name", "uuid", "tier", "description", "author",
                   "tags", "category", "license", "website", "texture_max",
-                  "intro_fade_time", "intro_duration"]
+                  "is_intro", "intro_fade_time", "intro_duration"]
     d = dict()
     for k in CREATEKEYS:
         d[k] = metadata[k]
@@ -250,6 +264,33 @@ def mmDepends(fbxfile):
 # ==============================================================================
 # META DATA
 # ==============================================================================
+
+def newMetaData(fbxfile):
+    # create new metadata
+    metadata = dict()
+    metadata["fbx"] = fbxfile
+    metadata["name"] = ""
+    metadata["description"] = ""
+    metadata["author"] = ""
+    metadata["tags"] = ""
+    metadata["category"] = ""
+    metadata["tier"] = "1"
+    metadata["uuid"] = str(uuid.uuid4())
+    metadata["depth_head"] = False
+    metadata["is_morph"] = False
+    metadata["is_vip"] = False
+    metadata["is_intro"] = False
+    metadata["texture_max"] = 256
+    metadata["release_with_plugin"] = False
+    metadata["do_not_release"] = False
+    metadata["intro_fade_time"] = 0.333333
+    metadata["intro_duration"] = 2.13333
+    metadata["license"] = "Copyright 2017 - General Workings Inc. - All rights reserved."
+    metadata["website"] = "http://streamlabs.com"
+    metadata["additions"] = list()
+    return metadata
+
+
 def getMetaFolderName(fbxfile):
     dn = os.path.dirname(fbxfile)
     dn = os.path.join(dn, ".art")
@@ -265,7 +306,8 @@ def createMetaFolder(folder, dosvn=False):
 
 def getMetaFileName(fbxfile):
     metafolder = getMetaFolderName(fbxfile)
-    metafile = os.path.join(metafolder, os.path.basename(fbxfile).lower().replace(".fbx", ".meta"))
+    fn = os.path.basename(fbxfile).lower().replace(".fbx", ".meta").replace(".json", ".combo")
+    metafile = os.path.join(metafolder, fn)
     return fixpath(metafile)
 
 
@@ -293,7 +335,11 @@ def createGetMetaData(fbxfile):
         contents = f.read()
         f.close()
         if len(contents) < 1:
-            print("EMPTY META DATA FOUND", fbxfile)
+            print("EMPTY META FILE:", metafile)
+            # make new metadata and write it
+            metadata = newMetaData(fbxfile)
+            writeMetaData(metafile, metadata, True)
+
         else:
             metadata = json.loads(contents)
             metadata["license"] = "Copyright 2017 - General Workings Inc. - All rights reserved."
@@ -302,34 +348,14 @@ def createGetMetaData(fbxfile):
             if "is_intro" not in metadata:
                 metadata["is_intro"] = False
             if "intro_fade_time" not in metadata:
-                metadata["intro_fade_time"] = 10.0
+                metadata["intro_fade_time"] = 0.3333
             if "intro_duration" not in metadata:
                 metadata["intro_duration"] = 2.13333
             if "release_with_plugin" not in metadata:
                 metadata["release_with_plugin"] = False
     else:
-        # create new metadata
-        metadata["fbx"] = fbxfile
-        metadata["name"] = ""
-        metadata["description"] = ""
-        metadata["author"] = ""
-        metadata["tags"] = ""
-        metadata["category"] = ""
-        metadata["tier"] = "1"
-        metadata["uuid"] = str(uuid.uuid4())
-        metadata["depth_head"] = False
-        metadata["is_morph"] = False
-        metadata["is_vip"] = False
-        metadata["is_intro"] = False
-        metadata["texture_max"] = 256
-        metadata["release_with_plugin"] = False
-        metadata["do_not_release"] = False
-        metadata["intro_fade_time"] = 10.0
-        metadata["intro_duration"] = 2.13333
-        metadata["license"] = "Copyright 2017 - General Workings Inc. - All rights reserved."
-        metadata["website"] = "http://streamlabs.com"
-        metadata["additions"] = list()
-        # write it
+        # make new metadata and write it
+        metadata = newMetaData(fbxfile)
         writeMetaData(metafile, metadata, True)
 
     return metadata
@@ -348,6 +374,9 @@ MASK_MORPH = 1
 
 
 def checkMetaData(metadata):
+    if "is_morph" not in metadata:
+        return CHECKMETA_ERROR, MASK_UNKNOWN
+
     masktype = MASK_UNKNOWN
 
     # is morph
@@ -359,8 +388,6 @@ def checkMetaData(metadata):
     # not for release
     if metadata["do_not_release"]:
         return CHECKMETA_NORELEASE, masktype
-    elif "release_with_plugin" in metadata and metadata["release_with_plugin"]:
-        return CHECKMETA_WITHPLUGIN, masktype
 
     # check for errors
     for field, value in metadata.items():
@@ -374,6 +401,9 @@ def checkMetaData(metadata):
     pf = os.path.abspath(fbxfile.lower().replace(".fbx", ".gif"))
     if not os.path.exists(pf):
         return CHECKMETA_WARNING, masktype
+
+    if "release_with_plugin" in metadata and metadata["release_with_plugin"]:
+        return CHECKMETA_WITHPLUGIN, masktype
 
     # good
     return CHECKMETA_GOOD, masktype
@@ -392,7 +422,11 @@ def checkMetaDataFile(fbxfile):
     f.close()
 
     if len(fc) > 0:
-        metadata = json.loads(fc)
+        try:
+            metadata = json.loads(fc)
+        except:
+            print("FUCKED UP META DATA!", metafile)
+            return CHECKMETA_ERROR, MASK_UNKNOWN
     else:
         print("EMPTY META DATA FILE", metafile)
         return CHECKMETA_ERROR, MASK_UNKNOWN
@@ -401,20 +435,48 @@ def checkMetaDataFile(fbxfile):
     return checkMetaData(metadata)
 
 
+
+
+# ==============================================================================
+# COMBOS
+# ==============================================================================
+
+# Gets a list of combos
+# - entries are the json files
+#
+def getComboFileList(folder):
+    fileList = list()
+    for root, subdir, files in os.walk(folder):
+        for file in files:
+            if file.lower().endswith(".combo"):
+                f = os.path.join(root, file).replace("\\","/").replace("/.art/","/").replace(".combo",".json")
+                fileList.append(f)
+
+    return fileList
+
+
+
+
 # ==============================================================================
 # CONFIG
 # ==============================================================================
 
 def createGetConfig():
-    createMetaFolder("./.art")
-    metafile = "./.art/config.meta"
-    config = dict()
-    if os.path.exists(metafile):
-        f = open(metafile, "r")
-        config = json.loads(f.read())
-        f.close()
-    else:
+    try:
+        createMetaFolder("./.art")
+        metafile = "./.art/config.meta"
+        config = dict()
+        if os.path.exists(metafile):
+            f = open(metafile, "r")
+            config = json.loads(f.read())
+            f.close()
+        else:
+            config["x"] = 50
+            config["y"] = 50
+        writeMetaData(metafile, config)
+    except:
+        config = dict()
         config["x"] = 50
         config["y"] = 50
-        writeMetaData(metafile, config)
+
     return config

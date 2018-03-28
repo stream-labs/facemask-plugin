@@ -64,22 +64,22 @@ from arttool import arttool
 # MAIN ENTRY POINT
 # ==============================================================================
 if __name__ == '__main__':
-	
-	# We're a Qt App
-	app = QApplication(sys.argv)
-		
-	# Show the window
-	w = arttool.ArtToolWindow()
-	app.focusChanged.connect(lambda old,now: w.onFocusChanged(old,now))
-	w.show()
-	
-	# Run application
-	r = app.exec_()
-	
-	# Final cleanup
-	w.finalCleanup()
-	
-	# Exit properly
-	sys.exit(r)
-	
-	
+
+    # We're a Qt App
+    app = QApplication(sys.argv)
+
+    # Show the window
+    w = arttool.ArtToolWindow()
+    app.focusChanged.connect(lambda old,now: w.onFocusChanged(old,now))
+    w.show()
+
+    # Run application
+    r = app.exec_()
+
+    # Final cleanup
+    w.finalCleanup()
+
+    # Exit properly
+    sys.exit(r)
+
+

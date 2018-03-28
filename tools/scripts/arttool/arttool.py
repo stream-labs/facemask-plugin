@@ -25,7 +25,7 @@ from shutil import copyfile
 from copy import deepcopy
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QListWidget, QVBoxLayout, QTabWidget
 from PyQt5.QtWidgets import QPushButton, QComboBox, QDateTimeEdit, QDialogButtonBox, QMessageBox
-from PyQt5.QtWidgets import QScrollArea, QMainWindow, QCheckBox, QHBoxLayout, QTextEdit
+from PyQt5.QtWidgets import QScrollArea, QMainWindow, QCheckBox, QHBoxLayout, QTextEdit, QFileDialog
 from PyQt5.QtWidgets import QLineEdit, QFrame, QDialog, QFrame, QSplitter
 from PyQt5.QtGui import QIcon, QBrush, QColor, QFont, QPixmap, QMovie
 from PyQt5.QtCore import QDateTime, Qt
@@ -85,7 +85,9 @@ class ArtToolWindow(QMainWindow):
 
         # State
         self.metadata = None
+        self.comboTabIdx = -1
         self.currentFbx = -1
+        self.currentCombo = -1
         self.ignoreSVN = 0
         self.additionsClipboard = None
         self.cancelledSVN = False
@@ -93,6 +95,7 @@ class ArtToolWindow(QMainWindow):
         self.currentFilter = None
         self.lastSVNCheck = 0
         self.dialogUp = False
+        self.mainLayout = None
 
         # Load our config
         self.config = createGetConfig()
@@ -115,12 +118,37 @@ class ArtToolWindow(QMainWindow):
         self.fbxfilter.editingFinished.connect(lambda: self.onFbxFilterChanged())
         leftLayout.addWidget(self.fbxfilter)
 
-        # make a list widget
+        # make a list widget for fbx's
         self.fbxlist = QListWidget()
         self.fbxlist.itemSelectionChanged.connect(lambda: self.onFbxClicked())
-        self.fbxlist.setParent(leftPane)
         self.fbxlist.setMinimumHeight(640)
-        leftLayout.addWidget(self.fbxlist)
+
+        # make the combo tab
+        combotab = QWidget()
+
+        # combo buttons
+        b = QPushButton("Add")
+        b.setParent(combotab)
+        b.setGeometry(5,5, 75, 30)
+        b.pressed.connect(lambda: self.onAddCombo())
+        b = QPushButton("Del")
+        b.setParent(combotab)
+        b.setGeometry(85, 5, 75, 30)
+        b.pressed.connect(lambda: self.onDelCombo())
+
+        # make alist widget for combos
+        self.combolist = QListWidget()
+        self.combolist.itemSelectionChanged.connect(lambda: self.onComboClicked())
+        self.combolist.setParent(combotab)
+        self.combolist.setGeometry(0, 40, 294, 600)
+
+        # make fbx/combo tabs
+        tabs = QTabWidget()
+        tabs.currentChanged.connect(lambda i: self.onComboTabChanged(i))
+        tabs.setGeometry(0,0,300, 640)
+        tabs.addTab(self.fbxlist, "FBX")
+        tabs.addTab(combotab, "COMBOS")
+        leftLayout.addWidget(tabs)
 
         # top splitter
         topSplitter = QSplitter(Qt.Horizontal)
@@ -131,8 +159,9 @@ class ArtToolWindow(QMainWindow):
         self.mainLayout = QHBoxLayout(rightPane)
         topSplitter.addWidget(rightPane)
 
-        # Fill in FBX files list
+        # Fill in files lists
         self.fillFbxList()
+        self.fillComboList()
 
         # crate main splitter
         mainSplitter = QSplitter(Qt.Vertical)
@@ -178,7 +207,7 @@ class ArtToolWindow(QMainWindow):
     # --------------------------------------------------
     def fillFbxList(self):
         # Get list of fbx files
-        self.fbxfiles = getFileList(".")
+        self.fbxfiles = getFbxFileList(".")
 
         # Clear list
         while self.fbxlist.count() > 0:
@@ -207,10 +236,39 @@ class ArtToolWindow(QMainWindow):
         for idx in range(0, len(self.fbxfiles)):
             self.setFbxColorIcon(idx)
 
-        # selection
+        self.resetEditPane()
+
+
+    # --------------------------------------------------
+    # Fill(refill) in the combos list
+    # --------------------------------------------------
+    def fillComboList(self):
+        # Get list of fbx files
+        self.combofiles = getComboFileList(".")
+
+        # Clear list
+        while self.combolist.count() > 0:
+            i = self.combolist.takeItem(0)
+            i = None
+
+        # Fill list
+        for combo in self.combofiles:
+            self.combolist.addItem(combo[2:])
+            idx = self.combolist.count() - 1
+            self.combolist.item(idx).setFont(QFont("Arial", 12, QFont.Bold))
+            self.combolist.item(idx).setIcon(QIcon("arttool/comboicon.png"))
+
+        self.resetEditPane()
+
+
+    def resetEditPane(self):
+        self.currentCombo = -1
         self.currentFbx = -1
         self.metadata = None
-        self.createMaskEditPane(None)
+        self.fbxlist.clearSelection()
+        self.combolist.clearSelection()
+        if self.mainLayout is not None:
+            self.createMaskEditPane(None)
 
     # --------------------------------------------------
     # Check binaries
@@ -323,7 +381,7 @@ class ArtToolWindow(QMainWindow):
         elif mdc == CHECKMETA_NORELEASE:
             self.fbxlist.item(idx).setForeground(QBrush(QColor("#000000")))
         elif mdc == CHECKMETA_WITHPLUGIN:
-            self.fbxlist.item(idx).setForeground(QBrush(QColor("#0000FF")))
+            self.fbxlist.item(idx).setForeground(QBrush(QColor("#5070FF")))
 
         if mt == MASK_UNKNOWN:
             self.fbxlist.item(idx).setIcon(QIcon("arttool/unknownicon.png"))
@@ -338,8 +396,9 @@ class ArtToolWindow(QMainWindow):
             self.setFbxColorIconInternal(mdc, mt, self.fbxlistRevMap[idx])
 
     def updateFbxColorIcon(self):
-        mdc, mt = checkMetaData(self.metadata)
-        self.setFbxColorIconInternal(mdc, mt, self.fbxlistRevMap[self.currentFbx])
+        if self.comboTabIdx == 0:
+            mdc, mt = checkMetaData(self.metadata)
+            self.setFbxColorIconInternal(mdc, mt, self.fbxlistRevMap[self.currentFbx])
 
     # --------------------------------------------------
     # createMaskEditPane
@@ -361,7 +420,7 @@ class ArtToolWindow(QMainWindow):
         # mask icon png
         q = QLabel()
         q.setParent(self.editPane)
-        pf = os.path.abspath(fbxfile.lower().replace(".fbx", ".gif"))
+        pf = os.path.abspath(fbxfile.lower().replace(".fbx", ".gif").replace(".json", ".gif"))
         if os.path.exists(pf):
             m = QMovie(pf)
         else:
@@ -489,9 +548,15 @@ class ArtToolWindow(QMainWindow):
     # --------------------------------------------------
     def saveCurrentMetadata(self):
         if self.metadata:
-            fbxfile = self.fbxfiles[self.currentFbx]
-            metafile = getMetaFileName(fbxfile)
-            writeMetaData(metafile, self.metadata, True)
+            fbxfile = None
+            if self.currentFbx >= 0:
+                fbxfile = self.fbxfiles[self.currentFbx]
+            elif self.currentCombo >= 0:
+                fbxfile = self.combofiles[self.currentCombo]
+
+            if fbxfile:
+                metafile = getMetaFileName(fbxfile)
+                writeMetaData(metafile, self.metadata, True)
 
     # --------------------------------------------------
     # WIDGET SIGNALS CALLBACKS
@@ -524,11 +589,17 @@ class ArtToolWindow(QMainWindow):
                     framenum += 1
                     copyfile(src, dst)
 
+    def onComboTabChanged(self, tab):
+        self.comboTabIdx = tab
+        self.resetEditPane()
+
+
     # FBX file clicked in list
     def onFbxClicked(self):
         k = self.fbxlist.currentRow()
         if k >= 0 and k < self.fbxlist.count():
             self.saveCurrentMetadata()
+            self.currentCombo = -1
             self.currentFbx = self.fbxlistMap[k]
             fbxfile = self.fbxfiles[self.currentFbx]
             self.metadata = createGetMetaData(fbxfile)
@@ -543,6 +614,41 @@ class ArtToolWindow(QMainWindow):
         if filt != self.currentFilter:
             self.fillFbxList()
             self.currentFilter = filt
+
+    # FBX file clicked in list
+    def onComboClicked(self):
+        k = self.combolist.currentRow()
+        if k >= 0 and k < self.combolist.count():
+            self.saveCurrentMetadata()
+            self.currentCombo = k
+            self.currentFbx = -1
+            combofile = self.combofiles[self.currentCombo]
+            self.metadata = createGetMetaData(combofile)
+            self.createMaskEditPane(combofile)
+
+    def onAddCombo(self):
+        file, filter = QFileDialog.getSaveFileName(self, 'Save file', os.path.abspath("."),
+                                                   "Mask files (*.json)")
+        if file is not None and len(file) > 0:
+            combofile = make_path_relative(os.path.abspath("."), file)
+            self.saveCurrentMetadata()
+            metadata = createGetMetaData(combofile)
+            self.fillComboList()
+            for idx in range(0, len(self.combofiles)):
+                print("checking",combofile,"and",self.combofiles[idx])
+                if combofile == self.combofiles[idx]:
+                    self.currentCombo = idx
+                    break
+            if self.currentCombo >= 0:
+                self.combolist.setCurrentRow(self.currentCombo)
+
+                #self.metadata = metadata
+                #combofile = self.combofiles[self.currentCombo]
+                #self.createMaskEditPane(combofile)
+
+
+    def onDelCombo(self):
+        pass
 
     # text field changed
     def onTextFieldChanged(self, text, field):
@@ -581,6 +687,8 @@ class ArtToolWindow(QMainWindow):
     # called before exit
     def finalCleanup(self):
         self.cancelledSVN = True
+        self.saveCurrentMetadata()
+
         # QApplication.setOverrideCursor(Qt.WaitCursor)
         needcommit = svnNeedsCommit()
         # QApplication.restoreOverrideCursor()
@@ -596,7 +704,6 @@ class ArtToolWindow(QMainWindow):
             msg.exec_()
             self.dialogUp = False
 
-        self.saveCurrentMetadata()
         metafile = "./.art/config.meta"
         geo = self.geometry()
         self.config["x"] = geo.x()
@@ -605,6 +712,8 @@ class ArtToolWindow(QMainWindow):
 
     # build
     def onBuild(self):
+        self.saveCurrentMetadata()
+
         fbxfile = self.fbxfiles[self.currentFbx]
 
         QApplication.setOverrideCursor(Qt.WaitCursor)
