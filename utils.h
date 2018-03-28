@@ -45,4 +45,5 @@ namespace Utils {
 	extern std::vector<std::string> split(const std::string &s, char delim);
 	extern std::string dirname(const std::string &p);
 	extern void find_and_replace(std::string& source, std::string const& find, std::string const& replace);
+	extern float hermite(float t, float p1, float p2, float t1 = 0.0f, float t2 = 0.0f);
 }

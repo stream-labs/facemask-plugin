@@ -51,6 +51,7 @@ static const char* const kSettingsGreenscreen = "greenscreen";
 
 static const char* const kSettingsGenPreviews = "genpreviews";
 
+static const char* const kSettingsRewind = "rewindanims";
 
 // setting descriptions
 static const char* const kSettingsDeactivatedDesc = "Deactivate the filter";
@@ -71,6 +72,7 @@ static const char* const kSettingsPixomojoDesc = "Get more face masks from pixom
 static const char* const kSettingsGreenscreenDesc = "Automatic Background Removal";
 
 static const char* const kSettingsGenPreviewsDesc = "Generate thumbnails (for demo mode)";
+static const char* const kSettingsRewindDesc = "Rewind Animations";
 
 
 static const char* const kSettingsEmpty = "";

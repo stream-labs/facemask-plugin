@@ -97,12 +97,16 @@ static const char* const JSON_RESOURCES = "resources";
 static const char* const JSON_PARTS = "parts";
 static const char* const JSON_TYPE = "type";
 static const char* const JSON_ANIMATION = "animation";
+static const char* const JSON_IS_INTRO = "is_intro";
+static const char* const JSON_INTRO_FADE_TIME = "intro_fade_time";
+static const char* const JSON_INTRO_DURATION = "intro_duration";
+
 
 static const int NUM_DRAW_BUCKETS = 1024;
 static const float BUCKETS_MAX_Z = 10.0f;
 static const float BUCKETS_MIN_Z = -100.0f;
 
-Mask::MaskData::MaskData() : m_data(nullptr), m_morph(nullptr) {
+Mask::MaskData::MaskData() : m_data(nullptr), m_morph(nullptr), m_elapsedTime(0.0f) {
 	m_drawBuckets = new Mask::SortedDrawObject*[NUM_DRAW_BUCKETS];
 	ClearSortedDrawObjects();
 }
@@ -158,6 +162,22 @@ void Mask::MaskData::Load(const std::string& file) {
 		m_metaData.website = obs_data_get_string(m_data, JSON_METADATA_WEBSITE);
 	else
 		m_metaData.website = "";
+
+	// Intro Animation Fade Values
+	if (obs_data_has_user_value(m_data, JSON_IS_INTRO))
+		m_isIntroAnim = obs_data_get_bool(m_data, JSON_IS_INTRO);
+	else
+		m_isIntroAnim = false;
+
+	if (obs_data_has_user_value(m_data, JSON_INTRO_FADE_TIME))
+		m_introFadeTime = (float)obs_data_get_double(m_data, JSON_INTRO_FADE_TIME);
+	else
+		m_introFadeTime = 10.0f;
+
+	if (obs_data_has_user_value(m_data, JSON_INTRO_DURATION))
+		m_introDuration = (float)obs_data_get_double(m_data, JSON_INTRO_DURATION);
+	else
+		m_introDuration = 10.0f;
 
 	// Loading is implemented through lazy loading. Only things that are used by
 	// parts and referenced resources will be available, which should improve
@@ -440,6 +460,34 @@ void Mask::MaskData::Tick(float time) {
 		}
 		instanceDatas.Pop();
 	}
+
+	// intro animation?
+	if (m_isIntroAnim) {
+		std::shared_ptr<Mask::AlphaInstanceData> aid =
+			instanceDatas.GetData<Mask::AlphaInstanceData>(Mask::AlphaInstanceDataId);
+
+		float DF = m_introDuration - m_introFadeTime;
+		float t = 1.0f;
+
+		// fading in?
+		if (m_elapsedTime < m_introFadeTime) {
+			t = m_elapsedTime / m_introFadeTime;
+		}
+		// drawing?
+		else if (m_elapsedTime < DF) {
+			t = 1.0f;
+		}
+		// fading out?
+		else if (m_elapsedTime < m_introDuration) {
+			t = 1.0f - ((m_elapsedTime - DF) / m_introFadeTime);
+		}
+		else {
+			t = 0.0f;
+		}
+		aid->alpha = Utils::hermite(t, 0.0f, 1.0f);
+	}
+
+	m_elapsedTime += time;
 }
 
 void Mask::MaskData::Render(bool depthOnly) {
@@ -587,18 +635,15 @@ bool Mask::MaskData::RenderMorphVideo(gs_texture* vidtex, uint32_t width, uint32
 }
 
 void Mask::MaskData::RewindAnimations() {
-	for (auto aakv : m_animations) {
-		if (aakv.second) {
-			aakv.second->Rewind();
-		}
+
+	// reset instance datas
+	std::vector<std::shared_ptr<InstanceData>> idatas = instanceDatas.GetInstances();
+	for (auto const& id : idatas) {
+		id->Reset();
 	}
 
-	size_t numSequences = GetNumResources(Mask::Resource::Type::Sequence);
-	for (int i = 0; i < numSequences; i++) {
-		std::shared_ptr<Resource::IBase> seqBase = GetResource(Mask::Resource::Type::Sequence, i);
-		std::shared_ptr<Resource::Sequence> seq = std::dynamic_pointer_cast<Resource::Sequence>(seqBase);
-		seq->Rewind();
-	}
+	// reset our time
+	m_elapsedTime = 0.0f;
 }
 
 

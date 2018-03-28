@@ -51,13 +51,15 @@ namespace Mask {
 
 		struct EmitterInstanceData : public InstanceData {
 			Particle*	particles;
+			int			numParticles;
 			float		elapsed;
 			float		delta_time;
 
 			EmitterInstanceData() : particles(nullptr), 
-				elapsed(0.0f), delta_time(0.0f) {}
+				numParticles(0), elapsed(0.0f), delta_time(0.0f) {}
 
-			inline void Init(int numParticles, Emitter* e) {
+			inline void Init(int num_particles, Emitter* e) {
+				numParticles = num_particles;
 				// only init once
 				if (particles != nullptr)
 					return;
@@ -67,6 +69,16 @@ namespace Mask {
 				for (int i = 0; i < numParticles; i++,p++) {
 					p->id = hasher(i);
 					p->emitter = e;
+				}
+			}
+
+			void Reset() override {
+				elapsed = 0.0f;
+				if (particles == nullptr)
+					return;
+				Particle* p = particles;
+				for (int i = 0; i < numParticles; i++, p++) {
+					p->state = Particle::DEAD;
 				}
 			}
 

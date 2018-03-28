@@ -164,4 +164,11 @@ namespace Utils {
 			i += replace.length();
 		}
 	}
+
+	float hermite(float t, float p1, float p2, float t1, float t2) {
+		return  (2.0f * p1 - 2.0f * p2 + t1 + t2) * t*t*t +
+				(-3.0f * p1 + 3.0f * p2 - 2.0f * t1 - t2) * t*t +
+				t1 * t +
+				p1;
+	}
 }

@@ -123,10 +123,12 @@ string Args::default_value(string key) {
 			return "1";
 		if (key == "texture_max")
 			return "256";
+		if (key == "is_intro")
+			return "false";
 		if (key == "intro_fade_time")
-			return "10";
+			return "0.3333";
 		if (key == "intro_duration")
-			return "2.13";
+			return "2.1333";
 		if (key == "modtime") {
 			long long modtime = std::chrono::duration_cast<std::chrono::seconds>
 				(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -377,6 +379,7 @@ void Args::initJsonNamesAndValues() {
 		"category",
 		"license",
 		"website",
+		"is_intro",
 		"intro_fade_time",
 		"intro_duration",
 		"modtime"
@@ -396,6 +399,8 @@ json Args::createNewJson() {
 			j[k] = intValue(k);
 		else if (k == "modtime")
 			j[k] = longlongValue(k);
+		else if (k == "is_intro")
+			j[k] = boolValue(k);
 		else
 			j[k] = value(k);
 	}

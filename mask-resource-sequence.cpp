@@ -121,12 +121,11 @@ void Mask::Resource::Sequence::Update(Mask::Part* part, float time) {
 	std::shared_ptr<SequenceInstanceData> instData =
 		m_parent->instanceDatas.GetData<SequenceInstanceData>();
 	if (instData->current < 0) {
-		instData->current = 0;
 		if (m_randomStart) {
-			float a = (float)rand() / (float)RAND_MAX;
-			float max = (float)m_last;
-			float min = (float)m_first;
-			instData->current = (int)(a * (max - min) + min);
+			instData->Reset(m_first, m_last);
+		}
+		else {
+			instData->Reset();
 		}
 	}
 
@@ -208,24 +207,6 @@ void Mask::Resource::Sequence::Render(Mask::Part* part) {
 	UNUSED_PARAMETER(part);
 }
 
-void Mask::Resource::Sequence::Rewind() {
-	m_parent->instanceDatas.Push(m_id);
-
-	// get our instance data
-	std::shared_ptr<SequenceInstanceData> instData =
-	m_parent->instanceDatas.GetData<SequenceInstanceData>();
-
-	// reset inst data
-	instData->current = 0;
-	if (m_randomStart) {
-		float a = (float)rand() / (float)RAND_MAX;
-		float max = (float)m_last;
-		float min = (float)m_first;
-		instData->current = (int)(a * (max - min) + min);
-	}
-
-	m_parent->instanceDatas.Pop();
-}
 
 void Mask::Resource::Sequence::SetTextureMatrix(Mask::Part* part, matrix4* texmat) {
 	UNUSED_PARAMETER(part);

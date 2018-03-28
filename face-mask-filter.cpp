@@ -72,6 +72,9 @@ static float FOVA(float aspect) {
 static const float_t NEAR_Z = 1.0f;
 static const float_t FAR_Z = 15000.0f;
 
+// for rewind button
+bool Plugin::FaceMaskFilter::Instance::request_rewind = false;
+
 /*
 BOOL CALLBACK speichereFenster(HWND hwnd, LPARAM lParam) {
 	const DWORD TITLE_SIZE = 1024;
@@ -425,6 +428,10 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 	obs_properties_add_bool(props, kSettingsDeactivated,
 		kSettingsDeactivatedDesc);
 
+	// rewind button
+	obs_properties_add_button(props, kSettingsRewind,
+		kSettingsRewindDesc, rewind_clicked);
+
 	// Demo mode
 	obs_properties_add_bool(props, kSettingsDemoMode,
 		kSettingsDemoModeDesc);
@@ -452,6 +459,16 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 	smll::Config::singleton().get_properties(props);
 
 #endif
+}
+
+bool Plugin::FaceMaskFilter::Instance::rewind_clicked(obs_properties_t *pr, obs_property_t *p, void *data) {
+	UNUSED_PARAMETER(p);
+	UNUSED_PARAMETER(pr);
+	UNUSED_PARAMETER(data);
+
+	Plugin::FaceMaskFilter::Instance::request_rewind = true;
+
+	return true;
 }
 
 bool Plugin::FaceMaskFilter::Instance::properties_modified(obs_properties_t *pr, obs_property_t *p, obs_data_t *data) {
@@ -574,8 +591,6 @@ void Plugin::FaceMaskFilter::Instance::video_tick(void *ptr, float timeDelta) {
 	reinterpret_cast<Instance*>(ptr)->video_tick(timeDelta);
 }
 
-static float g_alpha = 0.0f;
-
 void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 
 
@@ -615,12 +630,12 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 				mdat = demoMaskDatas[demoCurrentMask].get();
 		}
 		if (mdat) {
-			mdat->Tick(timeDelta);
+			if (Plugin::FaceMaskFilter::Instance::request_rewind) {
+				mdat->RewindAnimations();
+				Plugin::FaceMaskFilter::Instance::request_rewind = false;
+			}
 
-			std::shared_ptr<Mask::AlphaInstanceData> aid =
-				mdat->instanceDatas.GetData<Mask::AlphaInstanceData>(Mask::AlphaInstanceDataId);
-			aid->alpha = sinf(g_alpha);
-			g_alpha += timeDelta;
+			mdat->Tick(timeDelta);
 
 			// ask mask for a morph resource
 			Mask::Resource::Morph* morph = mdat->GetMorph();
@@ -1073,9 +1088,10 @@ void Plugin::FaceMaskFilter::Instance::drawMaskData(const smll::DetectionResult&
 	gs_matrix_identity();
 	gs_matrix_translate3f((float)face.translation[0],
  		(float)face.translation[1], (float)-face.translation[2]);
-	gs_matrix_rotaa4f((float)face.rotation[0], (float)face.rotation[1],
-		(float)-face.rotation[2], (float)-face.rotation[3]);
-
+	if (!_maskData->IsIntroAnimation()) {
+		gs_matrix_rotaa4f((float)face.rotation[0], (float)face.rotation[1],
+			(float)-face.rotation[2], (float)-face.rotation[3]);
+	}
 	_maskData->Render(depthOnly);
 
 	gs_matrix_pop();

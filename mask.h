@@ -123,6 +123,7 @@ namespace Mask {
 
 		// animation
 		void	RewindAnimations();
+		bool	IsIntroAnimation() { return m_isIntroAnim; }
 
 		// global instance datas
 		MaskInstanceDatas	instanceDatas;
@@ -144,5 +145,11 @@ namespace Mask {
 		std::shared_ptr<Mask::Part> m_partWorld;
 		SortedDrawObject**	m_drawBuckets;
 		Resource::Morph*	m_morph;
+
+		// for intro animation fading
+		bool				m_isIntroAnim;
+		float				m_introFadeTime;
+		float				m_introDuration;
+		float				m_elapsedTime;
 	};
 }

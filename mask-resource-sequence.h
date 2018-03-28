@@ -32,6 +32,18 @@ namespace Mask {
 			float   delay;
 			SequenceInstanceData() : current(-1), delta(1), 
 				elapsed(0.0f), delay(0.0f) {}
+
+			void Reset() override {
+				current = 0;
+				elapsed = 0.0f;
+			}
+			void Reset(int first, int last) {
+				float a = (float)rand() / (float)RAND_MAX;
+				float max = (float)last;
+				float min = (float)first;
+				current = (int)(a * (max - min) + min);
+				elapsed = 0.0f;
+			}
 		};
 
 		class Sequence : public IBase {
@@ -45,8 +57,6 @@ namespace Mask {
 
 			std::shared_ptr<Image> GetImage() { return m_image; }
 			void SetTextureMatrix(Mask::Part* part, matrix4* texmat);
-
-			void Rewind();
 
 			enum Mode : uint32_t {
 				ONCE,

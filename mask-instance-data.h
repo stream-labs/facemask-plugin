@@ -39,6 +39,7 @@ namespace Mask {
 	// instanceDatas map 
 	struct InstanceData {
 		virtual ~InstanceData() {}
+		virtual void Reset() {}
 	};
 
 	// instance datas found in mask's instanceDatas
@@ -126,6 +127,14 @@ namespace Mask {
 			return m_currentId;
 		}
 
+		std::vector<std::shared_ptr<InstanceData>> GetInstances() {
+			std::vector<std::shared_ptr<InstanceData>> r;
+			r.reserve(m_instanceDatas.size());
+			for (auto const& kv : m_instanceDatas) {
+				r.push_back(kv.second);
+			}
+			return r;
+		}
 
 	protected:
 		std::size_t m_currentId;

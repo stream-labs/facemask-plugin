@@ -85,6 +85,9 @@ namespace Plugin {
 			static void video_render(void *, gs_effect_t *);
 			void video_render(gs_effect_t *);
 
+			static bool rewind_clicked(obs_properties_t *pr, obs_property_t *p, void *data);
+			static bool request_rewind;
+
 		protected:
 			static int32_t StaticThreadMain(Instance*);
 			int32_t LocalThreadMain();

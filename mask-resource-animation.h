@@ -67,6 +67,7 @@ namespace Mask {
 		struct AnimationInstanceData : public InstanceData {
 			float	elapsed;
 			AnimationInstanceData() : elapsed(0.0f) {}
+			void Reset() override { elapsed = 0.0f; }
 		};
 
 		struct AnimationChannel {
