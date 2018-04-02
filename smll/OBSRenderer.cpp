@@ -194,7 +194,7 @@ namespace smll {
 			SetDrawColor(255, 255, 0);
 			DrawRect(faces[i].bounds);
 
-			DrawLandmarks(faces[i].landmarks, 0, 255, 0);
+			DrawLandmarks(faces[i].landmarks68, 0, 255, 0);
 
 			// set up projection
 			gs_projection_push();

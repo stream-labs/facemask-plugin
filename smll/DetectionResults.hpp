@@ -44,10 +44,14 @@ namespace smll {
 	class DetectionResult
 	{
 	public:
-		// 2D
+		// face detection/tracking
 		dlib::rectangle		bounds;
-		dlib::point			landmarks[NUM_FACIAL_LANDMARKS];
-		// 3D
+
+		// facial landmarks (5 and 68)
+		dlib::point			landmarks5[FIVE_LANDMARK_NUM_LANDMARKS];
+		dlib::point			landmarks68[NUM_FACIAL_LANDMARKS];
+
+		// 3D pose estimation
 		double		translation[3];
 		double		rotation[4];
 

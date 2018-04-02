@@ -47,8 +47,11 @@ namespace smll {
 		translation[0] = r.translation[0];
 		translation[1] = r.translation[1];
 		translation[2] = r.translation[2];
+		for (int i = 0; i < FIVE_LANDMARK_NUM_LANDMARKS; i++) {
+			landmarks5[i] = r.landmarks5[i];
+		}
 		for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
-			landmarks[i] = r.landmarks[i];
+			landmarks68[i] = r.landmarks68[i];
 		}
 		CheckForPoseFlip(rotation, translation);
 		InitKalmanFilters();
@@ -63,7 +66,7 @@ namespace smll {
 		// landmarks
 		const dlib::point* fp = f.GetPoints();
 		for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
-			landmarks[i] = fp[i];
+			landmarks68[i] = fp[i];
 		}
 
 		// rotation
@@ -113,6 +116,7 @@ namespace smll {
 
 		CheckForPoseFlip(nrot, ntx);
 
+		// kalman filtering enabled?
 		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE)) {
 			
 			// update smoothing factor
@@ -131,7 +135,14 @@ namespace smll {
 			nrot[3] = kalmanFilters[KF_ROT_A].Update(nrot[3]);
 		}
 
-		// just copy values
+		// copy values
+		bounds = bnd;
+		for (int i = 0; i < FIVE_LANDMARK_NUM_LANDMARKS; i++) {
+			landmarks5[i] = r.landmarks5[i];
+		}
+		for (int i = 0; i < smll::NUM_FACIAL_LANDMARKS; i++) {
+			landmarks68[i] = r.landmarks68[i];
+		}
 		translation[0] = ntx[0];
 		translation[1] = ntx[1];
 		translation[2] = ntx[2];
@@ -139,10 +150,6 @@ namespace smll {
 		rotation[1] = nrot[1];
 		rotation[2] = nrot[2];
 		rotation[3] = nrot[3];
-		bounds = bnd;
-		for (int i = 0; i < smll::NUM_FACIAL_LANDMARKS; i++) {
-			landmarks[i] = r.landmarks[i];
-		}
 	}
 
 	void DetectionResult::CheckForPoseFlip(double* r, double* t) {

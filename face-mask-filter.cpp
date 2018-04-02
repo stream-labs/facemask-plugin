@@ -752,14 +752,21 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	//   the frame of video that matches the timestamp of the
 	//   current detection data.
 	gs_texture_t* vidTex = sourceTexture;
+	bool found = false;
 	for (int i = 0; i < ThreadData::BUFFER_SIZE; i++) {
 		if (detection.frames[i].timestamp == timestamp &&
 			detection.frames[i].capture.texture != nullptr &&
 			detection.frames[i].capture.width == m_baseWidth &&
 			detection.frames[i].capture.height == m_baseHeight) {
 			vidTex = detection.frames[i].capture.texture;
+			found = true;
 			break;
 		}
+	}
+
+	if (!found) {
+		// debug
+		//blog(LOG_DEBUG, "timestamp not found!");
 	}
 
 	// Draw the source video

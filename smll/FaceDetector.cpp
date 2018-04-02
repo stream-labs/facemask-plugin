@@ -184,12 +184,8 @@ namespace smll {
 		m_detect = detect;
         
         // what are we doing here
-        bool doTracking = (m_faces.length > 0) &&
-			Config::singleton().get_bool(CONFIG_BOOL_TRACKING_ENABLE) &&
-			(m_trackingTimeout == 0);
-        bool doFaceDetection = 
-			Config::singleton().get_bool(CONFIG_BOOL_FACE_DETECT_ENABLE) && 
-			(m_detectionTimeout == 0);
+        bool doTracking = (m_faces.length > 0) && (m_trackingTimeout == 0);
+        bool doFaceDetection = (m_detectionTimeout == 0);
         
 		// TRACK faces 
 		//
@@ -228,40 +224,12 @@ namespace smll {
         if (doFaceDetection) {
             DoFaceDetection();
             m_detectionTimeout = 
-				Config::singleton().get_int(
-					CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY);
+				Config::singleton().get_int(CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY);
             startTracking = true;
-        } else {
-            // if face detection is disabled, we'll never have any faces to
-            // track or predict on unless we make a fixed rect to start with
-            //
-			if (m_faces.length == 0 &&
-				!Config::singleton().get_int(CONFIG_BOOL_FACE_DETECT_ENABLE)) {
-                // set up a rect we assume the face is in
-				m_faces.length = 1;
-                int halfwidth = (int)((float)m_capture.width * 
-					Config::singleton().get_double(
-						CONFIG_DOUBLE_FIXED_RECT_WIDTH)) / 2;
-                int x = (m_capture.width / 2) + 
-					(int)((float)(m_capture.width / 2) * 
-						Config::singleton().get_double(
-							CONFIG_DOUBLE_FIXED_RECT_X));
-                int y = (m_capture.height / 2) + 
-					(int)((float)(m_capture.height / 2) * 
-						Config::singleton().get_double(
-							CONFIG_DOUBLE_FIXED_RECT_Y));
-                
-                m_faces[0].m_bounds.set_left(x - halfwidth);
-                m_faces[0].m_bounds.set_right(x + halfwidth);
-                m_faces[0].m_bounds.set_bottom(y + halfwidth);
-                m_faces[0].m_bounds.set_top(y - halfwidth);
-                startTracking = true;
-            }
         }
         
 		// Start Object Tracking
-        if (startTracking && 
-			Config::singleton().get_bool(CONFIG_BOOL_TRACKING_ENABLE)) {
+        if (startTracking) {
             StartObjectTracking();
         }
         
@@ -271,8 +239,7 @@ namespace smll {
 		if (m_faces.length == 0) {
             // no faces found...set the do nothing timeout and 
 			// ensure face detection next frame
-            m_timeout = Config::singleton().get_int(
-				CONFIG_INT_FACE_DETECT_FREQUENCY);
+            m_timeout = Config::singleton().get_int(CONFIG_INT_FACE_DETECT_FREQUENCY);
             m_detectionTimeout = 0;
 		}
 	}
@@ -1005,8 +972,7 @@ namespace smll {
         // otherwise, we are tracking faces, and the tracking is still trusted, so don't trust
         // the FD results
         //
-        if (!Config::singleton().get_bool(CONFIG_BOOL_TRACKING_ENABLE) ||
-			(m_faces.length == 0) || (faces.size() > 0)) {
+        if ((m_faces.length == 0) || (faces.size() > 0)) {
             // clamp to max faces
 			m_faces.length = (int)faces.size();
             if (m_faces.length > MAX_FACES)
@@ -1154,67 +1120,57 @@ namespace smll {
     
     void FaceDetector::DetectLandmarks()
     {
+		// detect landmarks
+		obs_enter_graphics();
+		for (int f = 0; f < m_faces.length; f++) {
+			StageCaptureTexture();
 
-		if (Config::singleton().get_bool(CONFIG_BOOL_LANDMARKS_ENABLE)) {
-			// detect landmarks
-			obs_enter_graphics();
-			for (int f = 0; f < m_faces.length; f++) {
-				StageCaptureTexture();
-
-				// Detect features on full-size frame
-				full_object_detection d;
-				if (m_stageWork.type == IMAGETYPE_BGR) {
-					dlib_image_wrapper<bgr_pixel> fcimg(m_stageWork.data, 
-						m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
-					d = m_predictor68(fcimg, m_faces[f].GetBounds());
-				}
-				else if (m_stageWork.type == IMAGETYPE_RGB)	{
-					dlib_image_wrapper<rgb_pixel> fcimg(m_stageWork.data,
-						m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
-					d = m_predictor68(fcimg, m_faces[f].GetBounds());
-				}
-				else if (m_stageWork.type == IMAGETYPE_RGBA) {
-					dlib_image_wrapper<rgb_alpha_pixel> fcimg(m_stageWork.data,
-						m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
-					d = m_predictor68(fcimg, m_faces[f].GetBounds());
-				}
-				else if (m_stageWork.type == IMAGETYPE_LUMA) {
-					dlib_image_wrapper<unsigned char> fcimg(m_stageWork.data, 
-						m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
-					d = m_predictor68(fcimg, m_faces[f].GetBounds());
-				}
-				else {
-					throw std::invalid_argument(
-						"bad image type for face detection - handle better");
-				}
-
-				UnstageCaptureTexture();
-
-				// Save the face
-				if (d.num_parts() != NUM_FACIAL_LANDMARKS)
-					throw std::invalid_argument(
-						"shape predictor got wrong number of landmarks");
-
-				for (int j = 0; j < NUM_FACIAL_LANDMARKS; j++) {
-					m_faces[f].m_points[j] = point(d.part(j).x(), d.part(j).y());
-				}
+			// Detect features on full-size frame
+			full_object_detection d;
+			if (m_stageWork.type == IMAGETYPE_BGR) {
+				dlib_image_wrapper<bgr_pixel> fcimg(m_stageWork.data, 
+					m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
+				d = m_predictor68(fcimg, m_faces[f].GetBounds());
 			}
-			obs_leave_graphics();
+			else if (m_stageWork.type == IMAGETYPE_RGB)	{
+				dlib_image_wrapper<rgb_pixel> fcimg(m_stageWork.data,
+					m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
+				d = m_predictor68(fcimg, m_faces[f].GetBounds());
+			}
+			else if (m_stageWork.type == IMAGETYPE_RGBA) {
+				dlib_image_wrapper<rgb_alpha_pixel> fcimg(m_stageWork.data,
+					m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
+				d = m_predictor68(fcimg, m_faces[f].GetBounds());
+			}
+			else if (m_stageWork.type == IMAGETYPE_LUMA) {
+				dlib_image_wrapper<unsigned char> fcimg(m_stageWork.data, 
+					m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
+				d = m_predictor68(fcimg, m_faces[f].GetBounds());
+			}
+			else {
+				throw std::invalid_argument(
+					"bad image type for face detection - handle better");
+			}
 
-			// Do 3D Pose Estimation
-			if (Config::singleton().get_bool(CONFIG_BOOL_POSES_ENALBLE))
-				DoPoseEstimation();
+			UnstageCaptureTexture();
+
+			// Save the face
+			if (d.num_parts() != NUM_FACIAL_LANDMARKS)
+				throw std::invalid_argument(
+					"shape predictor got wrong number of landmarks");
+
+			for (int j = 0; j < NUM_FACIAL_LANDMARKS; j++) {
+				m_faces[f].m_points[j] = point(d.part(j).x(), d.part(j).y());
+			}
 		}
+		obs_leave_graphics();
 
+		// Do 3D Pose Estimation
+		DoPoseEstimation();
 	}
-
 
 	void FaceDetector::DoPoseEstimation()
 	{
-		// get config vars
-		int pnpMethod = Config::singleton().get_int(
-			CONFIG_INT_SOLVEPNP_ALGORITHM);
-
 		// build set of model points to use for solving 3D pose
 		// note: we use these points because they move the least
 		std::vector<int> model_indices;
@@ -1222,16 +1178,9 @@ namespace smll {
 		model_indices.push_back(LEFT_INNER_EYE_CORNER);
 		model_indices.push_back(RIGHT_INNER_EYE_CORNER);
 		model_indices.push_back(NOSE_TIP);
-		if (pnpMethod != cv::SOLVEPNP_P3P &&
-			pnpMethod != cv::SOLVEPNP_AP3P)
-		{
-			model_indices.push_back(NOSE_2);
-			model_indices.push_back(NOSE_3);
-		}
+		model_indices.push_back(NOSE_2);
+		model_indices.push_back(NOSE_3);
 		std::vector<cv::Point3f> model_points = GetLandmarkPoints(model_indices);
-
-		int numIterations = Config::singleton().get_int(
-			CONFIG_INT_SOLVEPNP_ITERATIONS);
 
 		for (int i = 0; i < m_faces.length; i++) {
 			point* p = m_faces[i].m_points;
@@ -1248,20 +1197,11 @@ namespace smll {
 			}
 
 			// Solve for pose
-			if (pnpMethod == PNP_RANSAC) {
-				cv::solvePnPRansac(model_points, image_points,
-					GetCVCamMatrix(), GetCVDistCoeffs(),
-					m_faces[i].m_cvRotation, m_faces[i].m_cvTranslation,
-					m_faces[i].m_poseInitialized,
-					numIterations);
-			}
-			else {
-				cv::solvePnP(model_points, image_points,
-					GetCVCamMatrix(), GetCVDistCoeffs(),
-					m_faces[i].m_cvRotation, m_faces[i].m_cvTranslation,
-					m_faces[i].m_poseInitialized,
-					pnpMethod);
-			}
+			cv::solvePnP(model_points, image_points,
+				GetCVCamMatrix(), GetCVDistCoeffs(),
+				m_faces[i].m_cvRotation, m_faces[i].m_cvTranslation,
+				m_faces[i].m_poseInitialized,
+				cv::SOLVEPNP_ITERATIVE);
 			m_faces[i].m_poseInitialized = true;
 
 			// check for solvePnp result flip

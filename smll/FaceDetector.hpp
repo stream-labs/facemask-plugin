@@ -86,8 +86,8 @@ private:
 	OBSTexture		m_capture;
 	ImageWrapper	m_detect;
 
+	// For staging the capture texture
 	gs_stagesurf_t* m_captureStage;
-
 	int				m_stageSize;
 	ImageWrapper	m_stageWork;
 
@@ -99,31 +99,36 @@ private:
 	// Tracking time-slicer
 	int				m_trackingFaceIndex;
 
-	// dlib stuff
+	// dlib HOG face detector
 	dlib::frontal_face_detector		m_detector;
-	dlib::shape_predictor			m_predictor68;
-	dlib::shape_predictor			m_predictor5;
 
-	// openCV camera
+	// dlib landmark predictors (5 and 68 point)
+	dlib::shape_predictor			m_predictor5;
+	dlib::shape_predictor			m_predictor68;
+
+	// openCV camera (saved for convenience)
 	int			m_camera_w, m_camera_h;
 	cv::Mat		m_camera_matrix;
 	cv::Mat		m_dist_coeffs;
 	void		SetCVCamera();
 
+	// lookup table for morph triangulation
 	std::vector<LandmarkBitmask>	m_vtxBitmaskLookup;
 	void	MakeVtxBitmaskLookup();
 
-	void	InvalidatePoses();
-
+	// Main methods
     void    DoFaceDetection();
     void    StartObjectTracking();
     void    UpdateObjectTracking();
     void    DetectLandmarks();
 	void    DoPoseEstimation();
+	void	InvalidatePoses();
 
+	// Staging the capture texture
 	void 	StageCaptureTexture();
 	void 	UnstageCaptureTexture();
 
+	// Morph Triangulation Helpers
 	void	Subdivide(std::vector<cv::Point2f>& points);
 	void	CatmullRomSmooth(std::vector<cv::Point2f>& points, 
 		const std::vector<int>& indices, int steps);

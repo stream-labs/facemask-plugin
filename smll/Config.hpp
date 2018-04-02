@@ -65,16 +65,6 @@ namespace smll {
 	static const char* const CONFIG_FLOAT_SMOOTHING_FACTOR =
 		"smoothingFactor";
 
-	// Enable Flags ----------
-	static const char* const CONFIG_BOOL_FACE_DETECT_ENABLE = 
-		"faceDetectEnable";
-	static const char* const CONFIG_BOOL_TRACKING_ENABLE = 
-		"trackingEnable"; 
-	static const char* const CONFIG_BOOL_LANDMARKS_ENABLE = 
-		"landmarksEnable";
-	static const char* const CONFIG_BOOL_POSES_ENALBLE =
-		"posesEnable";
-
 	// Face Detection Vars ----------
 
 	// Scale Width
@@ -97,14 +87,6 @@ namespace smll {
 	static const char* const CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY = 
 		"faceDetectRecheckFrequency";
 
-	// Fixed area in case face detection is disabled
-	static const char* const CONFIG_DOUBLE_FIXED_RECT_WIDTH = 
-		"fixedRectWidth";
-	static const char* const CONFIG_DOUBLE_FIXED_RECT_X = 
-		"fixedRectX";
-	static const char* const CONFIG_DOUBLE_FIXED_RECT_Y = 
-		"fixedRectY";
-
 	// Tracking Vars ----------
 
 	// NOTE: tracking now uses same image dimensions as face
@@ -118,16 +100,7 @@ namespace smll {
 	static const char* const CONFIG_DOUBLE_TRACKING_THRESHOLD =
 		"trackingThreshold";
 
-	// Pose Vars -----------
-
-	// Algorithm for solvePNP function
-	static const char* const CONFIG_INT_SOLVEPNP_ALGORITHM =
-		"solvePNPmethod";
-
-	// Number of times to run the solvepnp 
-	static const char* const CONFIG_INT_SOLVEPNP_ITERATIONS = 
-		"solvePNPiterations";
-
+	// Speed Limit
 	static const char* const CONFIG_INT_SPEED_LIMIT = 
 		"detectSpeedLimit";
 
@@ -138,10 +111,6 @@ namespace smll {
 	// Testing
 	static const char* const CONFIG_BOOL_IN_TEST_MODE = 
 		"inTestMode";
-
-	// not a mode of solvePnp, it's a different method
-	// (solvePnpRansac)
-	#define PNP_RANSAC			(cv::SOLVEPNP_AP3P + 1)
 
 	class Config
 	{

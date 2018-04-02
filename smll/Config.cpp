@@ -29,14 +29,6 @@ namespace smll {
 		"Show Advanced Settings";
 	static const char* const CONFIG_FLOAT_SMOOTHING_FACTOR_DESC =
 		"Smoothing Factor";
-	static const char* const CONFIG_BOOL_FACE_DETECT_ENABLE_DESC = 
-		"faceDetectEnable";
-	static const char* const CONFIG_BOOL_TRACKING_ENABLE_DESC = 
-		"trackingEnable";
-	static const char* const CONFIG_BOOL_LANDMARKS_ENABLE_DESC =
-		"landmarksEnable";
-	static const char* const CONFIG_BOOL_POSES_ENALBLE_DESC = 
-		"posesEnable";
 	static const char* const CONFIG_INT_FACE_DETECT_WIDTH_DESC = 
 		"Face Detect Frame Width";
 	static const char* const CONFIG_DOUBLE_FACE_DETECT_CROP_WIDTH_DESC =
@@ -51,32 +43,10 @@ namespace smll {
 		"Face Detection Frequency";
 	static const char* const CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY_DESC =
 		"Face Detection Recheck Frequency";
-	static const char* const CONFIG_DOUBLE_FIXED_RECT_WIDTH_DESC =
-		"Fixed Rect Width";
-	static const char* const CONFIG_DOUBLE_FIXED_RECT_X_DESC = 
-		"Fixed Rect X";
-	static const char* const CONFIG_DOUBLE_FIXED_RECT_Y_DESC = 
-		"Fixed Rect Y";
-	static const char* const CONFIG_INT_TRACKING_WIDTH_DESC =
-		"Tracking Frame Width";
-	static const char* const CONFIG_DOUBLE_TRACKING_CROP_WIDTH_DESC =
-		"Tracking Crop Width";
-	static const char* const CONFIG_DOUBLE_TRACKING_CROP_HEIGHT_DESC =
-		"Tracking Crop Height";
-	static const char* const CONFIG_DOUBLE_TRACKING_CROP_X_DESC =
-		"Tracking Crop X";
-	static const char* const CONFIG_DOUBLE_TRACKING_CROP_Y_DESC =
-		"Tracking Crop Y";
 	static const char* const CONFIG_INT_TRACKING_FREQUNCY_DESC = 
 		"Tracking Frequency";
 	static const char* const CONFIG_DOUBLE_TRACKING_THRESHOLD_DESC =
 		"Tracking Confidence Threshold";
-	static const char* const CONFIG_INT_SOLVEPNP_ALGORITHM_DESC =
-		"Solve PNP Algorithm";
-	static const char* const CONFIG_INT_SOLVEPNP_ITERATIONS_DESC =
-		"Solve PNP Number of Itertations";
-	static const char* const CONFIG_BOOL_USE_THREADED_MEMCPY_DESC = 
-		"Use multi-threaded memcpy";
 	static const char* const CONFIG_BOOL_MAKE_CAPTURE_COPY_DESC =
 		"Make copy of capture texture";
 	static const char* const CONFIG_BOOL_MAKE_DETECT_COPY_DESC = 
@@ -87,21 +57,7 @@ namespace smll {
 		"Enable Kalman Filtering";
 	static const char* const CONFIG_INT_SPEED_LIMIT_DESC =
 		"Face Detection Speed Limit (in ms)";
-	// solvepnp algorithm enum
-	static const char* const CONFIG_INT_SOLVEPNP_ALGORITHM_ITERATIVE =
-		"Iterative";
-	static const char* const CONFIG_INT_SOLVEPNP_ALGORITHM_RANSAC = 
-		"Ransac";
-	static const char* const CONFIG_INT_SOLVEPNP_ALGORITHM_EPNP = 
-		"Efficient Perspective-n-Point";
-	static const char* const CONFIG_INT_SOLVEPNP_ALGORITHM_P3P = 
-		"Perspective-Three-Point";
-	static const char* const CONFIG_INT_SOLVEPNP_ALGORITHM_DLS =
-		"Direct Least-Squares";
-	static const char* const CONFIG_INT_SOLVEPNP_ALGORITHM_UPNP =
-		"Exhaustive Linearization (SLOW!!)";
-	static const char* const CONFIG_INT_SOLVEPNP_ALGORITHM_AP3P =
-		"Algebraic Perspective-Three-Point";
+
 	static const char* const CONFIG_BOOL_IN_TEST_MODE_DESC =
 		"Enable Testing Mode";
 
@@ -158,53 +114,10 @@ namespace smll {
 		AddParam(CONFIG_DOUBLE_TRACKING_THRESHOLD,
 			CONFIG_DOUBLE_TRACKING_THRESHOLD_DESC, 8.0, 1.0, 100.0, 1.0);
 
-		/*
-		enum {
-		SOLVEPNP_ITERATIVE = 0, // default iterative algroithm
-		SOLVEPNP_EPNP      = 1, //!< EPnP: Efficient Perspective-n-Point Camera Pose Estimation @cite lepetit2009epnp
-		SOLVEPNP_P3P       = 2, //!< Complete Solution Classification for the Perspective-Three-Point Problem @cite gao2003complete
-		SOLVEPNP_DLS       = 3, //!< A Direct Least-Squares (DLS) Method for PnP  @cite hesch2011direct
-		SOLVEPNP_UPNP      = 4  //!< Exhaustive Linearization for Robust Camera Pose and Focal Length Estimation @cite penate2013exhaustive
-
-		note: we add in PNP_RANSAC = 5
-
-		};
-		*/
-		AddParam(CONFIG_INT_SOLVEPNP_ALGORITHM, 
-			CONFIG_INT_SOLVEPNP_ALGORITHM_DESC, cv::SOLVEPNP_ITERATIVE,
-			cv::SOLVEPNP_ITERATIVE, PNP_RANSAC, 1);
-		AddParam(CONFIG_INT_SOLVEPNP_ITERATIONS, 
-			CONFIG_INT_SOLVEPNP_ITERATIONS_DESC, 100, 50, 500, 10);
-
 		AddParam(CONFIG_INT_SPEED_LIMIT,
 			CONFIG_INT_SPEED_LIMIT_DESC, 24, 0, 33 * 16, 1);
 
-		AddParam(CONFIG_BOOL_FACE_DETECT_ENABLE, 
-			CONFIG_BOOL_FACE_DETECT_ENABLE_DESC, true);
-		AddParam(CONFIG_BOOL_TRACKING_ENABLE,
-			CONFIG_BOOL_TRACKING_ENABLE_DESC, true);
-		AddParam(CONFIG_BOOL_LANDMARKS_ENABLE,
-			CONFIG_BOOL_LANDMARKS_ENABLE_DESC, true);
-		AddParam(CONFIG_BOOL_POSES_ENALBLE, 
-			CONFIG_BOOL_POSES_ENALBLE_DESC, true);
-		
-		AddParam(CONFIG_DOUBLE_FIXED_RECT_WIDTH,
-			CONFIG_DOUBLE_FIXED_RECT_WIDTH_DESC, 0.2, 0.0, 1.0, 0.01);
-		AddParam(CONFIG_DOUBLE_FIXED_RECT_X, 
-			CONFIG_DOUBLE_FIXED_RECT_X_DESC, 0.0, -1.0, 1.0, 0.01);
-		AddParam(CONFIG_DOUBLE_FIXED_RECT_Y, 
-			CONFIG_DOUBLE_FIXED_RECT_Y_DESC, 0.0, -1.0, 1.0, 0.01);
-
 		AddParam(CONFIG_BOOL_IN_TEST_MODE, CONFIG_BOOL_IN_TEST_MODE_DESC, false);
-
-		// Hide these params
-		m_hiddenParams.push_back(CONFIG_BOOL_FACE_DETECT_ENABLE);
-		m_hiddenParams.push_back(CONFIG_BOOL_TRACKING_ENABLE);
-		m_hiddenParams.push_back(CONFIG_BOOL_LANDMARKS_ENABLE);
-		m_hiddenParams.push_back(CONFIG_BOOL_POSES_ENALBLE);
-		m_hiddenParams.push_back(CONFIG_DOUBLE_FIXED_RECT_WIDTH);
-		m_hiddenParams.push_back(CONFIG_DOUBLE_FIXED_RECT_X); 
-		m_hiddenParams.push_back(CONFIG_DOUBLE_FIXED_RECT_Y);
 
 		m_data = obs_data_create();
 		set_defaults(m_data);
@@ -262,39 +175,6 @@ namespace smll {
 				break; 
 			}
 			case PARAM_TYPE_INT:
-				if (*it == CONFIG_INT_SOLVEPNP_ALGORITHM) {
-					/*
-					enum {
-					SOLVEPNP_ITERATIVE = 0, // default iterative algroithm
-					SOLVEPNP_EPNP      = 1, //!< EPnP: Efficient Perspective-n-Point Camera Pose Estimation @cite lepetit2009epnp
-					SOLVEPNP_P3P       = 2, //!< Complete Solution Classification for the Perspective-Three-Point Problem @cite gao2003complete
-					SOLVEPNP_DLS       = 3, //!< A Direct Least-Squares (DLS) Method for PnP  @cite hesch2011direct
-					SOLVEPNP_UPNP      = 4  //!< Exhaustive Linearization for Robust Camera Pose and Focal Length Estimation @cite penate2013exhaustive
-
-					note: we add in PNP_RANSAC = 5
-
-					};
-					*/
-					obs_property_t* p = obs_properties_add_list(props,
-						it->c_str(), pinfo.description,
-						OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
-					obs_property_list_add_int(p, 
-						CONFIG_INT_SOLVEPNP_ALGORITHM_ITERATIVE,
-						cv::SOLVEPNP_ITERATIVE);
-					obs_property_list_add_int(p, 
-						CONFIG_INT_SOLVEPNP_ALGORITHM_RANSAC, PNP_RANSAC);
-					obs_property_list_add_int(p, 
-						CONFIG_INT_SOLVEPNP_ALGORITHM_EPNP, cv::SOLVEPNP_EPNP);
-					obs_property_list_add_int(p,
-						CONFIG_INT_SOLVEPNP_ALGORITHM_P3P, cv::SOLVEPNP_P3P);
-					obs_property_list_add_int(p,
-						CONFIG_INT_SOLVEPNP_ALGORITHM_DLS, cv::SOLVEPNP_DLS);
-					obs_property_list_add_int(p,
-						CONFIG_INT_SOLVEPNP_ALGORITHM_UPNP, cv::SOLVEPNP_UPNP);
-					obs_property_list_add_int(p,
-						CONFIG_INT_SOLVEPNP_ALGORITHM_AP3P, cv::SOLVEPNP_AP3P);
-					break;
-				}
 				obs_properties_add_int_slider(props, it->c_str(), 
 					pinfo.description, (int)pinfo.min, (int)pinfo.max, 
 					(int)pinfo.step);
