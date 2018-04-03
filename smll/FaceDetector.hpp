@@ -25,6 +25,7 @@
 #include "Config.hpp"
 #include "OBSTexture.hpp"
 #include "ImageWrapper.hpp"
+#include "DetectionResults.hpp"
 #include "TriangulationResult.hpp"
 #include "MorphData.hpp"
 
@@ -131,7 +132,7 @@ private:
 		std::vector<cv::Point2f>& hullpoints);
 	void	MakeAreaIndices(TriangulationResult& result,
 		const std::vector<cv::Vec3i>& triangles);
-	void	AddHeadPoints(std::vector<cv::Point2f>& points, const Face& face);
+	void	AddHeadPoints(std::vector<cv::Point2f>& points, const DetectionResult& face);
 	void    AddSelectivePoints(cv::Subdiv2D& subdiv, const std::vector<cv::Point2f>& points,
 		const std::vector<cv::Point2f>& warpedpoints, std::map<int, int>& vtxMap);
 	void	AddContourSelective(cv::Subdiv2D& subdiv, const FaceContour& fc,

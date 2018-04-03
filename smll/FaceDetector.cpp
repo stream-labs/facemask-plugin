@@ -42,7 +42,6 @@
 #pragma warning( pop )
 
 #define FOCAL_LENGTH_FACTOR		(1.0f)
-#define POSE_RESET_INTERVAL		(30)
 #define HULL_POINTS_SCALE		(1.25f)
 // border points = 4 corners + subdivide
 #define NUM_BORDER_POINTS		(4 * 2 * 2 * 2) 
@@ -197,6 +196,12 @@ namespace smll {
                 m_detectionTimeout = 0;
                 m_trackingFaceIndex = 0;
             }
+
+			// copy faces to results
+			for (int i = 0; i < m_faces.length; i++) {
+				results[i] = m_faces[i];
+			}
+			results.length = m_faces.length;
             
             // If tracking is good, we're done
             //
@@ -218,6 +223,12 @@ namespace smll {
         if (startTracking) {
             StartObjectTracking();
         }
+
+		// copy faces to results
+		for (int i = 0; i < m_faces.length; i++) {
+			results[i] = m_faces[i];
+		}
+		results.length = m_faces.length;
 
 		// Still no faces?
 		if (m_faces.length == 0) {
@@ -244,9 +255,9 @@ namespace smll {
 		MakeVtxBitmaskLookup();
 
 		// only 1 face supported (for now)
-		if (m_faces.length == 0)
+		if (results.length == 0)
 			return;
-		Face& face = m_faces[0];
+		DetectionResult& face = results[0];
 
 		// get angle of face pose
 		const cv::Mat& m = face.GetCVRotation();
@@ -276,7 +287,7 @@ namespace smll {
 		std::vector<cv::Point2f> points;
 
 		// add facial landmark points
-		dlib::point* facePoints = face.m_points;
+		dlib::point* facePoints = face.landmarks68;
 		for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
 			points.push_back(cv::Point2f((float)facePoints[i].x(),
 				(float)facePoints[i].y()));
@@ -569,7 +580,7 @@ namespace smll {
 	}
 
 
-	void FaceDetector::AddHeadPoints(std::vector<cv::Point2f>& points, const Face& face) {
+	void FaceDetector::AddHeadPoints(std::vector<cv::Point2f>& points, const DetectionResult& face) {
 
 		points.reserve(points.size() + HP_NUM_HEAD_POINTS);
 
@@ -885,12 +896,6 @@ namespace smll {
 			points[i].y = (points[i].y - center.y) * scale.y + center.y;
 		}
 	}
-    
-	void FaceDetector::InvalidatePoses() {
-		for (int i = 0; i < m_faces.length; i++) {
-			m_faces[i].ResetPose();
-		}
-	}
 
     void FaceDetector::DoFaceDetection() {
 
@@ -1103,8 +1108,11 @@ namespace smll {
 	}
     
     
-    void FaceDetector::DetectLandmarks()
+    void FaceDetector::DetectLandmarks(const OBSTexture& capture, DetectionResults& results)
     {
+		// convenience
+		m_capture = capture;
+
 		// detect landmarks
 		obs_enter_graphics();
 		for (int f = 0; f < m_faces.length; f++) {
@@ -1115,22 +1123,22 @@ namespace smll {
 			if (m_stageWork.type == IMAGETYPE_BGR) {
 				dlib_image_wrapper<bgr_pixel> fcimg(m_stageWork.data, 
 					m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
-				d = m_predictor68(fcimg, m_faces[f].GetBounds());
+				d = m_predictor68(fcimg, m_faces[f].m_bounds);
 			}
 			else if (m_stageWork.type == IMAGETYPE_RGB)	{
 				dlib_image_wrapper<rgb_pixel> fcimg(m_stageWork.data,
 					m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
-				d = m_predictor68(fcimg, m_faces[f].GetBounds());
+				d = m_predictor68(fcimg, m_faces[f].m_bounds);
 			}
 			else if (m_stageWork.type == IMAGETYPE_RGBA) {
 				dlib_image_wrapper<rgb_alpha_pixel> fcimg(m_stageWork.data,
 					m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
-				d = m_predictor68(fcimg, m_faces[f].GetBounds());
+				d = m_predictor68(fcimg, m_faces[f].m_bounds);
 			}
 			else if (m_stageWork.type == IMAGETYPE_LUMA) {
 				dlib_image_wrapper<unsigned char> fcimg(m_stageWork.data, 
 					m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
-				d = m_predictor68(fcimg, m_faces[f].GetBounds());
+				d = m_predictor68(fcimg, m_faces[f].m_bounds);
 			}
 			else {
 				throw std::invalid_argument(
@@ -1145,16 +1153,14 @@ namespace smll {
 					"shape predictor got wrong number of landmarks");
 
 			for (int j = 0; j < NUM_FACIAL_LANDMARKS; j++) {
-				m_faces[f].m_points[j] = point(d.part(j).x(), d.part(j).y());
+				results[f].landmarks68[j] = point(d.part(j).x(), d.part(j).y());
 			}
 		}
 		obs_leave_graphics();
-
-		// Do 3D Pose Estimation
-		DoPoseEstimation();
+		results.length = m_faces.length;
 	}
 
-	void FaceDetector::DoPoseEstimation()
+	void FaceDetector::DoPoseEstimation(DetectionResults& results)
 	{
 		// build set of model points to use for solving 3D pose
 		// note: we use these points because they move the least
@@ -1168,39 +1174,24 @@ namespace smll {
 		model_indices.push_back(NOSE_7);
 		std::vector<cv::Point3f> model_points = GetLandmarkPoints(model_indices);
 
-		for (int i = 0; i < m_faces.length; i++) {
-			point* p = m_faces[i].m_points;
-
-			cv::Mat translation = cv::Mat::zeros(3, 1, CV_64F);
-			cv::Mat rotation = cv::Mat::zeros(3, 1, CV_64F);
-
-			// 2D image points. 
+		for (int i = 0; i < results.length; i++) {
+			// copy 2D image points. 
 			std::vector<cv::Point2f> image_points;
+			point* p = results[i].landmarks68;
 			for (int j = 0; j < model_indices.size(); j++) {
 				int idx = model_indices[j];
 				image_points.push_back(cv::Point2f((float)p[idx].x(), (float)p[idx].y()));
 			}
 
-			if (m_faces[i].IncPoseResetCounter() > POSE_RESET_INTERVAL) {
-				m_faces[i].ResetPose();
-			}
-
 			// Solve for pose
+			cv::Mat translation = cv::Mat::zeros(3, 1, CV_64F);
+			cv::Mat rotation = cv::Mat::zeros(3, 1, CV_64F);
 			cv::solvePnP(model_points, image_points,
 				GetCVCamMatrix(), GetCVDistCoeffs(),
 				rotation, translation);
 
-			m_faces[i].m_cvRotation = rotation;
-			m_faces[i].m_cvTranslation = translation;
-			m_faces[i].m_poseInitialized = true;
-
-			// check for solvePnp result flip
-			// - make sure it doesn't use these results for next iteration
-			bool flipped = (m_faces[i].m_cvTranslation.at<double>(2, 0) < 0.0);
-			if (flipped) {
-				// this will ensure it gets reset before next calculation
-				m_faces[i].SetPoseResetCounter(POSE_RESET_INTERVAL+1);
-			}
+			// Save it
+			results[i].SetPose(rotation, translation);
 		}
 	}
 

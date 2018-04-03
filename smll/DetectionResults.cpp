@@ -67,7 +67,7 @@ namespace smll {
 		return *this;
 	}
 
-	void DetectionResult::SetPose(const cv::Mat& cvRot, const cv::Mat& cvTrs) {
+	void DetectionResult::SetPose(cv::Mat cvRot, cv::Mat cvTrs) {
 		// rotation
 		// - openCV uses a scaled vector for rotation, so
 		//   we convert it to an axis-angle rotation for
@@ -95,7 +95,7 @@ namespace smll {
 		InitKalmanFilters();
 	}
 
-	cv::Mat DetectionResult::GetCVRotation() {
+	cv::Mat DetectionResult::GetCVRotation() const {
 		cv::Mat m = cv::Mat::zeros(3, 1, CV_64F);
 		m.at<double>(0, 0) = rotation[0] * rotation[4];
 		m.at<double>(1, 0) = rotation[1] * rotation[4];
@@ -103,7 +103,7 @@ namespace smll {
 		return m;
 	}
 
-	cv::Mat DetectionResult::GetCVTranslation() {
+	cv::Mat DetectionResult::GetCVTranslation() const {
 		cv::Mat m = cv::Mat::zeros(3, 1, CV_64F);
 		m.at<double>(0, 0) = translation[0];
 		m.at<double>(1, 0) = translation[1];

@@ -1142,6 +1142,8 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 		// the read index is always right behind the write
 		fidx = (fidx + ThreadData::BUFFER_SIZE - 1) % ThreadData::BUFFER_SIZE;
 
+		smll::DetectionResults detect_results;
+
 		bool skip = false;
 		{
 			std::unique_lock<std::mutex> lock(detection.frames[fidx].mutex);
@@ -1153,8 +1155,9 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			}
 			else {
 				// new frame - do the face detection
-				smllFaceDetector->DetectFaces(detection.frames[fidx].capture,
-					detection.frames[fidx].detect);
+				smllFaceDetector->DetectFaces(detection.frames[fidx].detect, detect_results);
+				smllFaceDetector->DetectLandmarks(detection.frames[fidx].capture, detect_results);
+				smllFaceDetector->DoPoseEstimation(detect_results);
 				lastTimestamp = detection.frames[fidx].timestamp;
 			}
 		}
@@ -1183,19 +1186,18 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			// pass on timestamp to results
 			detection.faces[fidx].timestamp = lastTimestamp;
 
-			// Copy faces into our detection results
-			const smll::Faces& smllFaces = smllFaceDetector->GetFaces();
-			for (int i = 0; i < smllFaces.length; i++) {
-				detection.faces[fidx].detectionResults[i] = smllFaces[i];
+			// Copy our detection results
+			for (int i = 0; i < detect_results.length; i++) {
+				detection.faces[fidx].detectionResults[i] = detect_results[i];
 			}
-			detection.faces[fidx].detectionResults.length = smllFaces.length;
+			detection.faces[fidx].detectionResults.length = detect_results.length;
 
 			// Make triangulation for face morphing
 			{
 				std::unique_lock<std::mutex> morphlock(detection.morphs[midx].mutex);
 				detection.faces[fidx].triangulationResults.buildLines = drawMorphTris;
 				smllFaceDetector->MakeTriangulation(detection.morphs[midx].morphData,
-					detection.faces[fidx].triangulationResults);
+					detect_results, detection.faces[fidx].triangulationResults);
 			}
 		}
 

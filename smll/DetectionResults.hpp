@@ -61,9 +61,9 @@ namespace smll {
 		DetectionResult& operator=(const DetectionResult& r);
 		DetectionResult& operator=(const Face& f);
 
-		void SetPose(const cv::Mat& cvRot, const cv::Mat& cvTrs);
-		cv::Mat GetCVRotation();
-		cv::Mat GetCVTranslation();
+		void SetPose(cv::Mat cvRot, cv::Mat cvTrs);
+		cv::Mat GetCVRotation() const;
+		cv::Mat GetCVTranslation() const;
 
 		void UpdateResults(const DetectionResult& r);
 
