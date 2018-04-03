@@ -61,20 +61,18 @@ namespace smll {
 
 	DetectionResult& DetectionResult::operator=(const Face& f) {
 		// bounds
-		bounds = f.GetBounds();
+		// TODO: TRACKING SCALE???!!!
+		bounds = f.m_bounds;
 
-		// landmarks
-		const dlib::point* fp = f.GetPoints();
-		for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
-			landmarks68[i] = fp[i];
-		}
+		return *this;
+	}
 
+	void DetectionResult::SetPose(const cv::Mat& cvRot, const cv::Mat& cvTrs) {
 		// rotation
 		// - openCV uses a scaled vector for rotation, so
 		//   we convert it to an axis-angle rotation for
 		//   easy use with obs/opengl/whatever
-		const cv::Mat& m = f.GetCVRotation();
-		double angle = sqrt(m.dot(m));
+		double angle = sqrt(cvRot.dot(cvRot));
 		if (angle < 0.0001) {
 			rotation[0] = 0.0;
 			rotation[1] = 1.0;
@@ -82,22 +80,35 @@ namespace smll {
 			rotation[3] = 0.0;
 		}
 		else {
-			rotation[0] = m.at<double>(0, 0) / angle;
-			rotation[1] = m.at<double>(1, 0) / angle;
-			rotation[2] = m.at<double>(2, 0) / angle;
+			rotation[0] = cvRot.at<double>(0, 0) / angle;
+			rotation[1] = cvRot.at<double>(1, 0) / angle;
+			rotation[2] = cvRot.at<double>(2, 0) / angle;
 			rotation[3] = angle;
 		}
 
 		// translation
-		const cv::Mat& t = f.GetCVTranslation();
-		translation[0] = t.at<double>(0, 0);
-		translation[1] = t.at<double>(1, 0);
-		translation[2] = t.at<double>(2, 0);
+		translation[0] = cvTrs.at<double>(0, 0);
+		translation[1] = cvTrs.at<double>(1, 0);
+		translation[2] = cvTrs.at<double>(2, 0);
 
 		CheckForPoseFlip(rotation, translation);
 		InitKalmanFilters();
+	}
 
-		return *this;
+	cv::Mat DetectionResult::GetCVRotation() {
+		cv::Mat m = cv::Mat::zeros(3, 1, CV_64F);
+		m.at<double>(0, 0) = rotation[0] * rotation[4];
+		m.at<double>(1, 0) = rotation[1] * rotation[4];
+		m.at<double>(2, 0) = rotation[2] * rotation[4];
+		return m;
+	}
+
+	cv::Mat DetectionResult::GetCVTranslation() {
+		cv::Mat m = cv::Mat::zeros(3, 1, CV_64F);
+		m.at<double>(0, 0) = translation[0];
+		m.at<double>(1, 0) = translation[1];
+		m.at<double>(2, 0) = translation[2];
+		return m;
 	}
 
 	double DetectionResult::DistanceTo(const DetectionResult& r) const

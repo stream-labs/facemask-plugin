@@ -45,63 +45,16 @@ namespace smll {
 	class Face
 	{
 	public:
-
 		Face();
 		Face(const Face& f) { *this = f; }
 		~Face();
 		Face& operator=(const Face& f);
 
-		void copy2DDataTo(Face& f);
-
-		inline dlib::rectangle&	GetBounds() { return m_bounds; }
-		inline dlib::point*		GetPoints() { return m_points; }
-		inline dlib::point&		GetPoint(uint32_t i) {
-			if (i >= NUM_FACIAL_LANDMARKS)
-				throw std::invalid_argument("face point index out of range");
-			return m_points[i];
-		}
-		inline const dlib::rectangle&	GetBounds() const { return m_bounds; }
-		inline const dlib::point*		GetPoints() const { return m_points; }
-		inline const dlib::point&		GetPoint(uint32_t i) const {
-			if (i >= NUM_FACIAL_LANDMARKS)
-				throw std::invalid_argument("face point index out of range");
-			return m_points[i];
-		}
-
-		inline bool PoseInitialized() const { return m_poseInitialized; }
-
-		inline dlib::point GetPosition() {
-			long x = (int)(m_bounds.right() + m_bounds.left()) / 2;
-			long y = (int)(m_bounds.top() + m_bounds.bottom()) / 2;
-			return dlib::point(x, y);
-		}
-
-		const cv::Mat&	GetCVRotation() const { return m_cvRotation; }
-		const cv::Mat&	GetCVTranslation() const { return m_cvTranslation; }
-
-		int IncPoseResetCounter() { return ++m_poseResetCounter; }
-		int GetPoseResetCounter() { return m_poseResetCounter; }
-		void ResetPoseResetCounter() { m_poseResetCounter = 0; }
-		void SetPoseResetCounter(int c) { m_poseResetCounter = c; }
-
-	private:
 		dlib::rectangle				m_bounds;
 		int							m_trackingX;
 		int							m_trackingY;
-		int							m_poseResetCounter;
 		double						m_trackingScale;
-		dlib::point					m_points[NUM_FACIAL_LANDMARKS];
 		dlib::correlation_tracker	m_tracker;
-
-		// 3d pose estimation (cv::solvePnP)
-		bool						m_poseInitialized;
-		cv::Mat						m_cvTranslation;
-		cv::Mat						m_cvRotation;
-
-		// allow private access to the Face Detector class
-		friend class FaceDetector;
-
-		void					ResetPose();
 
 		template <typename image_type> void
 			StartTracking(const image_type& image, float scale, int x, int y) {

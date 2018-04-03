@@ -37,10 +37,7 @@ namespace smll {
 Face::Face() 
 	: m_trackingX(0)
 	, m_trackingY(0)
-	, m_poseResetCounter(0)
-	, m_trackingScale(1.0)
-	, m_poseInitialized(false) {
-	ResetPose();
+	, m_trackingScale(1.0) {
 }
 
 
@@ -52,30 +49,8 @@ Face& Face::operator=(const Face& f) {
 	m_trackingX = f.m_trackingX;
 	m_trackingY = f.m_trackingY;
 	m_trackingScale = f.m_trackingScale;
-	for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
-		m_points[i] = f.m_points[i];
-	}
-	m_poseInitialized = f.m_poseInitialized;
-	f.m_cvTranslation.copyTo(m_cvTranslation);
-	f.m_cvRotation.copyTo(m_cvRotation);
-
 	return *this;
 }
-
-void Face::copy2DDataTo(Face& f) {
-	f.m_bounds = m_bounds;
-	for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
-		f.m_points[i] = m_points[i];
-	}
-}
-
-void Face::ResetPose() {
-	m_poseResetCounter = 0;
-	m_poseInitialized = false;
-	m_cvTranslation = cv::Mat::zeros(3, 1, CV_64F);
-	m_cvRotation = cv::Mat::zeros(3, 1, CV_64F);
-}
-
 
 
 } // smll namespace

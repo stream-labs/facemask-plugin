@@ -170,6 +170,7 @@ namespace smll {
 
 		// for convenience
 		NOSE_TIP = NOSE_4,
+		NOSE_BOTTOM = NOSE_7,
 		EYE_CENTER = NOSE_1,
 		CHIN = JAW_9,
 		LEFT_TEMPLE = JAW_1,

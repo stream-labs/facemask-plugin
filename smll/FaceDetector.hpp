@@ -55,28 +55,20 @@ public:
 	FaceDetector();
 	~FaceDetector();
 
-	void DetectFaces(const OBSTexture& capture, 
-					 const ImageWrapper& detect);
+	void DetectFaces(const ImageWrapper& detect, DetectionResults& results);
+	void DetectLandmarks(const OBSTexture& capture, DetectionResults& results);
+	void DoPoseEstimation(DetectionResults& results);
 
-	void MakeTriangulation(MorphData& morphData, TriangulationResult& result);
+	void MakeTriangulation(MorphData& morphData, DetectionResults& results, 
+		TriangulationResult& result);
 
-	const Face& GetFace(int i) const {
-		if (i < 0 || i >= m_faces.length)
-			throw std::invalid_argument("face point index out of range");
-		return m_faces[i];
-	}
-	const Faces& GetFaces() const {
-		return m_faces;
-	}
 	int CaptureWidth() const {
 		return m_capture.width;
 	}
 	int CaptureHeight() const {
 		return m_capture.height;
 	}
-	const cv::Mat& GetCVCamMatrix();
-	const cv::Mat& GetCVDistCoeffs();
-    
+
 private:
 
 	// Faces
@@ -107,26 +99,26 @@ private:
 	dlib::shape_predictor			m_predictor68;
 
 	// openCV camera (saved for convenience)
-	int			m_camera_w, m_camera_h;
-	cv::Mat		m_camera_matrix;
-	cv::Mat		m_dist_coeffs;
-	void		SetCVCamera();
+	int				m_camera_w, m_camera_h;
+	cv::Mat			m_camera_matrix;
+	cv::Mat			m_dist_coeffs;
+	void			SetCVCamera();
+	const cv::Mat&	GetCVCamMatrix();
+	const cv::Mat&	GetCVDistCoeffs();
 
 	// lookup table for morph triangulation
 	std::vector<LandmarkBitmask>	m_vtxBitmaskLookup;
-	void	MakeVtxBitmaskLookup();
+	void							MakeVtxBitmaskLookup();
 
 	// Main methods
     void    DoFaceDetection();
     void    StartObjectTracking();
     void    UpdateObjectTracking();
-    void    DetectLandmarks();
-	void    DoPoseEstimation();
-	void	InvalidatePoses();
 
 	// Staging the capture texture
 	void 	StageCaptureTexture();
 	void 	UnstageCaptureTexture();
+
 
 	// Morph Triangulation Helpers
 	void	Subdivide(std::vector<cv::Point2f>& points);

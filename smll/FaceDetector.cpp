@@ -147,13 +147,7 @@ namespace smll {
 		}
 	}
 
-
-	void FaceDetector::DetectFaces(const OBSTexture& capture, 
-		const ImageWrapper& detect) {
-
-		// paranoid
-		if (m_faces.length == 0)
-			InvalidatePoses();
+	void FaceDetector::DetectFaces(const ImageWrapper& detect, DetectionResults& results) {
 
 		// do nothing at all timeout
 		if (m_timeout > 0) {
@@ -170,17 +164,13 @@ namespace smll {
         }
 
         // better check if the camera res has changed on us
-        if ((capture.width != m_capture.width) || 
-			(capture.height != m_capture.height) ||
-			(detect.w != m_detect.w) ||
+        if ((detect.w != m_detect.w) ||
 			(detect.h != m_detect.h)) {
             // forget whatever we thought were faces
             m_faces.length = 0;
-			InvalidatePoses();
         }
 
-		// save frames
-		m_capture = capture;
+		// save detect for convenience
 		m_detect = detect;
         
         // what are we doing here
@@ -193,9 +183,6 @@ namespace smll {
 
             UpdateObjectTracking();
 
-            // Detect landmarks
-            DetectLandmarks();
-            
             // Is Tracking is still good?
             if (m_faces.length > 0) {
 				// next face for tracking time-slicing
@@ -206,7 +193,6 @@ namespace smll {
 					Config::singleton().get_int(CONFIG_INT_TRACKING_FREQUNCY);
 			} else {
                 // Tracking is bum, do face detect next time
-				InvalidatePoses();
 				m_timeout = 0;
                 m_detectionTimeout = 0;
                 m_trackingFaceIndex = 0;
@@ -232,10 +218,8 @@ namespace smll {
         if (startTracking) {
             StartObjectTracking();
         }
-        
-        // detect landmarks
-        DetectLandmarks();
 
+		// Still no faces?
 		if (m_faces.length == 0) {
             // no faces found...set the do nothing timeout and 
 			// ensure face detection next frame
@@ -246,6 +230,7 @@ namespace smll {
 
 
 	void FaceDetector::MakeTriangulation(MorphData& morphData, 
+		DetectionResults& results,
 		TriangulationResult& result) {
 
 		// clear buffers
@@ -1174,16 +1159,20 @@ namespace smll {
 		// build set of model points to use for solving 3D pose
 		// note: we use these points because they move the least
 		std::vector<int> model_indices;
-		model_indices.push_back(EYE_CENTER);
 		model_indices.push_back(LEFT_INNER_EYE_CORNER);
 		model_indices.push_back(RIGHT_INNER_EYE_CORNER);
-		model_indices.push_back(NOSE_TIP);
+		model_indices.push_back(NOSE_1);
 		model_indices.push_back(NOSE_2);
 		model_indices.push_back(NOSE_3);
+		model_indices.push_back(NOSE_4);
+		model_indices.push_back(NOSE_7);
 		std::vector<cv::Point3f> model_points = GetLandmarkPoints(model_indices);
 
 		for (int i = 0; i < m_faces.length; i++) {
 			point* p = m_faces[i].m_points;
+
+			cv::Mat translation = cv::Mat::zeros(3, 1, CV_64F);
+			cv::Mat rotation = cv::Mat::zeros(3, 1, CV_64F);
 
 			// 2D image points. 
 			std::vector<cv::Point2f> image_points;
@@ -1199,9 +1188,10 @@ namespace smll {
 			// Solve for pose
 			cv::solvePnP(model_points, image_points,
 				GetCVCamMatrix(), GetCVDistCoeffs(),
-				m_faces[i].m_cvRotation, m_faces[i].m_cvTranslation,
-				m_faces[i].m_poseInitialized,
-				cv::SOLVEPNP_ITERATIVE);
+				rotation, translation);
+
+			m_faces[i].m_cvRotation = rotation;
+			m_faces[i].m_cvTranslation = translation;
 			m_faces[i].m_poseInitialized = true;
 
 			// check for solvePnp result flip
