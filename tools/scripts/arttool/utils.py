@@ -21,7 +21,7 @@
 # IMPORTS
 # ==============================================================================
 import sys, subprocess, os, json, uuid, boto3
-
+from copy import deepcopy
 
 def fixpath(p):
     p = p.replace("\\", "/")
@@ -58,7 +58,7 @@ MORPHRESTFILE = fixpath(os.path.abspath("./morphs/morph_rest.fbx"))
 # ==============================================================================
 S3_BUCKET = "facemasks-cdn.streamlabs.com"
 
-def s3_upload(filename):
+def s3_upload(filename, key):
     f = open(fixpath(os.path.abspath(filename)), "rb")
     s3 = boto3.resource("s3")
     cunt_type = "application/octet-stream"
@@ -70,7 +70,7 @@ def s3_upload(filename):
         cunt_type = "video/mp4"
     elif filename.endswith(".json"):
         cunt_type = "application/json"
-    s3.Bucket(S3_BUCKET).put_object(Key=os.path.basename(filename), Body=f, ACL='public-read', ContentType=cunt_type)
+    s3.Bucket(S3_BUCKET).put_object(Key=key, Body=f, ACL='public-read', ContentType=cunt_type)
 
 def str_is_float(x):
     try:
@@ -100,14 +100,6 @@ def critical(field):
 def desired(field):
     return field in ["website"]
 
-
-import os
-for root,subdir,files in os.walk("."):
-    for file in files:
-        f = os.path.abspath(os.path.join(root, file))
-        if f.lower().endswith(".json"):
-            if not os.path.exists(f.lower().replace(".json",".fbx")):
-                print(os.path.join(root,file))
 
 
 # ==============================================================================
@@ -158,12 +150,17 @@ def collapse_path(p):
 
 
 def make_path_relative(base, path):
-    basebits = base.replace("/", "\\").split("\\")
-    pathbits = path.replace("/", "\\").split("\\")
-    while True and len(basebits) > 0 and len(pathbits) > 0:
+    basebits = base.lower().replace("/", "\\").split("\\")
+    pathbits = path.lower().replace("/", "\\").split("\\")
+    while len(basebits) > 0 and len(pathbits) > 0:
         if basebits[0] == pathbits[0]:
             del basebits[0]
             del pathbits[0]
+        else:
+            print("WTF MAN")
+            print(basebits)
+            print(pathbits)
+            break
     pathbits.insert(0,".")
     return "/".join(pathbits)
 
@@ -247,7 +244,7 @@ def maskmaker(command, kvpairs, files):
     for k, v in kvpairs.items():
         if command == "tweak":
             cmd += ' "' + k + '=' + v + '"'
-        if type(v) is str:
+        elif type(v) is str:
             cmd += " " + k + '="' + v + '"'
         else:
             cmd += " " + k + '=' + str(v)
@@ -255,11 +252,11 @@ def maskmaker(command, kvpairs, files):
     for f in files:
         cmd += " " + f
 
-    print("----------")
+    print("---maskmaker-------")
     print(cmd)
     for line in execute(cmd):
         yield line[:-1]
-
+    print(" ")
 
 def mmGetCreateKeys(metadata):
     CREATEKEYS = ["name", "uuid", "tier", "description", "author",
@@ -385,7 +382,11 @@ def createGetMetaData(fbxfile):
 
         else:
             metadata = json.loads(contents)
-            metadata["license"] = "Copyright 2017 - General Workings Inc. - All rights reserved."
+
+            # Fix missing/incorrect fields
+            #
+            if "General Working Inc" in metadata["license"]:
+                metadata["license"] = "Copyright 2017 - General Workings Inc. - All rights reserved."
             if "tier" not in metadata:
                 metadata["tier"] = "1"
             if "is_intro" not in metadata:
@@ -407,7 +408,7 @@ def createGetMetaData(fbxfile):
             for i in range(0, 10):
                 metadata["additions"].append("")
 
-    return metadata
+    return deepcopy(metadata)
 
 
 # checks status of meta data 
@@ -447,7 +448,13 @@ def checkMetaData(metadata):
 
     # check for icons
     fbxfile = metadata["fbx"]
-    pf = os.path.abspath(fbxfile.lower().replace(".fbx", ".gif"))
+    pf = os.path.abspath(fbxfile.lower().replace(".fbx", ".gif").replace(".json", ".gif"))
+    if not os.path.exists(pf):
+        return CHECKMETA_WARNING, masktype
+    pf = os.path.abspath(fbxfile.lower().replace(".fbx", ".png").replace(".json", ".gif"))
+    if not os.path.exists(pf):
+        return CHECKMETA_WARNING, masktype
+    pf = os.path.abspath(fbxfile.lower().replace(".fbx", ".mp4").replace(".json", ".gif"))
     if not os.path.exists(pf):
         return CHECKMETA_WARNING, masktype
 
@@ -484,6 +491,26 @@ def checkMetaDataFile(fbxfile):
     return checkMetaData(metadata)
 
 
+# No error checking
+def loadMetadataFile(fbxfile):
+    metafile = getMetaFileName(fbxfile)
+    if not os.path.exists(metafile):
+        return None
+
+    # read metafile
+    f = open(metafile, "r")
+    fc = f.read()
+    f.close()
+
+    metadata = None
+    if len(fc) > 0:
+        try:
+            metadata = json.loads(fc)
+        except:
+            metadata = None
+
+    return metadata
+
 
 
 # ==============================================================================
@@ -510,10 +537,20 @@ def getComboFileList(folder):
 # CONFIG
 # ==============================================================================
 
+def getConfigFolder():
+    return fixpath(os.path.join(os.path.expanduser("~"), ".art"))
+
+
+def getConfigFile():
+    fldr = getConfigFolder()
+    return os.path.join(fldr, "config.json")
+
+
 def createGetConfig():
     try:
-        createMetaFolder("./.art")
-        metafile = "./.art/config.meta"
+        fldr = getConfigFolder()
+        createMetaFolder(fldr)
+        metafile = getConfigFile()
         config = dict()
         if os.path.exists(metafile):
             f = open(metafile, "r")

@@ -83,6 +83,8 @@ MASK_FIELD_TOOLTIPS = {"tier": "The tier of the mask.\nTier 1 is most expensive,
 DROP_DOWNS = {"texture_max": TEXTURE_SIZES,
               "category": CATEGORIES}
 
+RELEASE_FIELDS = ["name", "uuid", "description", "author", "tags", "category", "tier", "is_vip", "is_intro"]
+
 
 class ArtToolWindow(QMainWindow):
 
@@ -623,38 +625,46 @@ class ArtToolWindow(QMainWindow):
     def onMainButton(self, button):
         # ["Refresh", "Autobuild", "Rebuild All", "Make Release", "SVN Update", "SVN Commit"]
         if button == "Make Release":
-            # self.ignoreSVN += 1
-            # self.dialogUp = True
-            # addn = ReleasesDialog.go_modal(self)
-            # self.dialogUp = False
+            self.makeRelease()
 
-            # quick hack for fun
-            framenum = 1
-            for fbx in self.fbxfiles:
-                src = os.path.abspath(fbx.replace(".fbx", ".png").replace(".FBX", ".png"))
-                # dst = "c:\\Temp\\masks\\frame%04d.png" % framenum
-                dst = "c:\\Temp\\masks\\" + os.path.basename(src)
 
-                fileOkay = True
-                if "frogHead" in src:
-                    fileOkay = False
-                if "joshog" in src:
-                    fileOkay = False
+    # TODO : hook up to a button
+    def onMakeThumbsMovie(self):
+        # self.ignoreSVN += 1
+        # self.dialogUp = True
+        # addn = ReleasesDialog.go_modal(self)
+        # self.dialogUp = False
 
-                if os.path.exists(src) and fileOkay:
-                    print("copy", src, dst)
-                    framenum += 1
-                    copyfile(src, dst)
+        # quick hack for fun
+        framenum = 1
+        for fbx in self.fbxfiles:
+            src = os.path.abspath(fbx.replace(".fbx", ".png").replace(".FBX", ".png"))
+            # dst = "c:\\Temp\\masks\\frame%04d.png" % framenum
+            dst = "c:\\Temp\\masks\\" + os.path.basename(src)
+
+            fileOkay = True
+            if "frogHead" in src:
+                fileOkay = False
+            if "joshog" in src:
+                fileOkay = False
+
+            if os.path.exists(src) and fileOkay:
+                print("copy", src, dst)
+                framenum += 1
+                copyfile(src, dst)
+
 
     def onComboTabChanged(self, tab):
         self.comboTabIdx = tab
         self.resetEditPane()
+
 
     def onComboFileChanged(self, state, which):
         if state == 0:
             self.metadata["additions"][which] = ""
         else:
             self.metadata["additions"][which] = self.fbxfiles[state - 1]
+
 
     # FBX file clicked in list
     def onFbxClicked(self):
@@ -670,6 +680,7 @@ class ArtToolWindow(QMainWindow):
             self.updateFbxColorIcon()
             self.createMaskEditPane(fbxfile)
 
+
     # FBX Filter box changed
     def onFbxFilterChanged(self):
         filt = self.fbxfilter.text().lower()
@@ -678,6 +689,7 @@ class ArtToolWindow(QMainWindow):
         if filt != self.currentFilter:
             self.fillFbxList()
             self.currentFilter = filt
+
 
     # FBX file clicked in list
     def onComboClicked(self):
@@ -692,16 +704,17 @@ class ArtToolWindow(QMainWindow):
             self.metadata = createGetMetaData(combofile)
             self.createMaskEditPane(combofile)
 
+
     def onAddCombo(self):
         file, filter = QFileDialog.getSaveFileName(self, 'Save file', os.path.abspath("."),
                                                    "Mask files (*.json)")
         if file is not None and len(file) > 0:
-            combofile = make_path_relative(os.path.abspath("."), file)
+            combofile = make_path_relative(os.path.abspath("."), os.path.abspath(file))
+            print("adding combo", combofile)
             self.saveCurrentMetadata()
             metadata = createGetMetaData(combofile)
             self.fillComboList()
             for idx in range(0, len(self.combofiles)):
-                print("checking",combofile,"and",self.combofiles[idx])
                 if combofile == self.combofiles[idx]:
                     self.currentCombo = idx
                     break
@@ -711,6 +724,7 @@ class ArtToolWindow(QMainWindow):
 
     def onDelCombo(self):
         pass
+
 
     # text field changed
     def onTextFieldChanged(self, text, field):
@@ -729,6 +743,7 @@ class ArtToolWindow(QMainWindow):
             self.paneWidgets[field].setStyleSheet("border: 0px;")
         self.updateFbxColorIcon()
 
+
     # checkbox changed
     def onCheckboxChanged(self, state, field):
         if state == 0:
@@ -736,6 +751,7 @@ class ArtToolWindow(QMainWindow):
         else:
             self.metadata[field] = True
         self.updateFbxColorIcon()
+
 
     # texsize changed
     def onDropdownChanged(self, state, field):
@@ -746,31 +762,37 @@ class ArtToolWindow(QMainWindow):
         else:
             self.metadata[field] = DROP_DOWNS[field][state]
 
+
     # called before exit
     def finalCleanup(self):
         self.cancelledSVN = True
         self.saveCurrentMetadata()
 
+        # This is just getting annoying
+        #
         # QApplication.setOverrideCursor(Qt.WaitCursor)
-        needcommit = svnNeedsCommit()
+        #needcommit = svnNeedsCommit()
         # QApplication.restoreOverrideCursor()
-        if needcommit:
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Warning)
-            msg.setText("You have changed files in your depot.")
-            msg.setInformativeText("Be sure to commit your changes to avoid conflicts.")
-            msg.setWindowTitle("Files Changed - SVN Commit Recommended")
-            msg.setStandardButtons(QMessageBox.Ok)
-            self.ignoreSVN += 1
-            self.dialogUp = True
-            msg.exec_()
-            self.dialogUp = False
+        #if needcommit:
+        #    msg = QMessageBox()
+        #    msg.setIcon(QMessageBox.Warning)
+        #    msg.setText("You have changed files in your depot.")
+        #    msg.setInformativeText("Be sure to commit your changes to avoid conflicts.")
+        #    msg.setWindowTitle("Files Changed - SVN Commit Recommended")
+        #    msg.setStandardButtons(QMessageBox.Ok)
+        #    self.ignoreSVN += 1
+        #    self.dialogUp = True
+        #    msg.exec_()
+        #    self.dialogUp = False
 
-        metafile = "./.art/config.meta"
+        #
+        # WRITE CONFIG
+        #
         geo = self.geometry()
         self.config["x"] = geo.x()
         self.config["y"] = geo.y()
-        writeMetaData(metafile, self.config)
+        writeMetaData(getConfigFile(), self.config)
+
 
     # build
     def onBuild(self):
@@ -778,10 +800,40 @@ class ArtToolWindow(QMainWindow):
 
         # building a combo?
         if self.currentCombo >= 0:
+
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+
+            # run maskmaker merge, add json to svn
             combofile = self.combofiles[self.currentCombo]
             for line in mmMerge(combofile, self.metadata):
                 self.outputWindow.append(line)
             svnAddFile(combofile)
+
+            # save mod times of dependent jsons
+            combodeps = list()
+            for fbxfile in self.metadata["additions"]:
+                if len(fbxfile) > 0:
+                    f = fbxfile.lower().replace(".fbx", ".json")
+                    if os.path.exists(os.path.abspath(f)):
+                        combodeps.append({"file": f, "modtime": os.path.getmtime(f)})
+                    else:
+                        combodeps.append({"file": f, "modtime": 0})
+                        msg = QMessageBox()
+                        msg.setIcon(QMessageBox.Warning)
+                        msg.setText("This FBX depends on " + f + ", which cannot be found.")
+                        msg.setWindowTitle("Missing PNG File")
+                        msg.setStandardButtons(QMessageBox.Ok)
+                        self.ignoreSVN += 1
+                        self.dialogUp = True
+                        msg.exec_()
+                    self.dialogUp = False
+            self.metadata["dependencies"] = combodeps
+
+            # save metadata
+            self.saveCurrentMetadata()
+
+            QApplication.restoreOverrideCursor()
+
             return
 
         fbxfile = self.fbxfiles[self.currentFbx]
@@ -854,6 +906,7 @@ class ArtToolWindow(QMainWindow):
 
         QApplication.restoreOverrideCursor()
 
+
     def onAddAddition(self):
         self.ignoreSVN += 1
         self.dialogUp = True
@@ -867,6 +920,7 @@ class ArtToolWindow(QMainWindow):
             self.addslist.addItem(addn["type"] + " : " + addn["name"])
             self.addslist.item(idx).setFont(QFont("Arial", 12, QFont.Bold))
 
+
     def onEditAddition(self):
         idx = self.addslist.currentRow()
         if idx >= 0:
@@ -878,12 +932,14 @@ class ArtToolWindow(QMainWindow):
                 self.addslist.item(idx).setText(addn["type"] + " : " + addn["name"])
                 self.metadata["additions"][idx] = addn
 
+
     def onDelAddition(self):
         idx = self.addslist.currentRow()
         if idx >= 0:
             del self.metadata["additions"][idx]
             i = self.addslist.takeItem(idx)
             i = None
+
 
     def onCopyAddition(self):
         idx = self.addslist.currentRow()
@@ -894,12 +950,14 @@ class ArtToolWindow(QMainWindow):
             self.addslist.setCurrentRow(idx + 1)
             self.metadata["additions"].insert(idx + 1, addn)
 
+
     def onMoveUpAddition(self):
         idx = self.addslist.currentRow()
         if idx > 0:
             self.addslist.insertItem(idx - 1, self.addslist.takeItem(idx))
             self.addslist.setCurrentRow(idx - 1)
             self.metadata["additions"].insert(idx - 1, self.metadata["additions"].pop(idx))
+
 
     def onMoveDownAddition(self):
         idx = self.addslist.currentRow()
@@ -908,8 +966,10 @@ class ArtToolWindow(QMainWindow):
             self.addslist.setCurrentRow(idx + 1)
             self.metadata["additions"].insert(idx + 1, self.metadata["additions"].pop(idx))
 
+
     def onCopyAllAdditions(self):
         self.additionsClipboard = deepcopy(self.metadata["additions"])
+
 
     def onPasteAllAdditions(self):
         if self.additionsClipboard:
@@ -918,6 +978,7 @@ class ArtToolWindow(QMainWindow):
                 idx = self.addslist.count()
                 self.addslist.addItem(addn["type"] + " : " + addn["name"])
                 self.addslist.item(idx).setFont(QFont("Arial", 12, QFont.Bold))
+
 
     def onFocusChanged(self, old, now):
 
@@ -950,6 +1011,7 @@ class ArtToolWindow(QMainWindow):
                 msg.exec_()
                 self.dialogUp = False
 
+
     def onSyncOk(self, i):
         if i.text() == "OK":
             QApplication.setOverrideCursor(Qt.WaitCursor)
@@ -971,3 +1033,55 @@ class ArtToolWindow(QMainWindow):
         else:
             # dont check anymore
             self.cancelledSVN = True
+
+
+    def makeRelease(self):
+
+        metalist = list()
+        jsonlist = list()
+        for fbxfile in self.fbxfiles:
+            mdc, mt = checkMetaDataFile(fbxfile)
+            if mdc == CHECKMETA_GOOD:
+                metadata = loadMetadataFile(fbxfile)
+                d = dict()
+                for k in RELEASE_FIELDS:
+                    d[k] = metadata[k]
+                metalist.append(d)
+                jsonlist.append(jsonFromFbx(fbxfile))
+
+        for combofile in self.combofiles:
+            mdc, mt = checkMetaDataFile(combofile)
+            if mdc == CHECKMETA_GOOD:
+                metadata = loadMetadataFile(combofile)
+                d = dict()
+                for k in RELEASE_FIELDS:
+                    d[k] = metadata[k]
+                    if type(d[k]) is str:
+                        d[k] = d[k].replace("\n", "").replace("\r", "")
+
+                metalist.append(d)
+                jsonlist.append(combofile)
+
+        for i in range(0,len(metalist)):
+            metalist[i]["category"] = metalist[i]["category"].lower()
+            metalist[i]["tags"] = metalist[i]["tags"].lower().replace(" ","")
+            metalist[i]["modtime"] = int(os.path.getmtime(jsonlist[i]))
+            metalist[i]["author"] = metalist[i]["author"].replace(", ",",")
+
+            print("Uploading",jsonlist[i])
+
+            uuid = metalist[i]["uuid"]
+            print("  json...")
+            s3_upload(jsonlist[i], uuid + ".json")
+            print("  png...")
+            s3_upload(jsonlist[i].replace(".json",".png"), uuid + ".png")
+            print("  gif...")
+            s3_upload(jsonlist[i].replace(".json",".gif"), uuid + ".gif")
+            print("  mp4...")
+            s3_upload(jsonlist[i].replace(".json",".mp4"), uuid + ".mp4")
+
+
+        file, filter = QFileDialog.getSaveFileName(self, 'Save file', os.path.abspath("."),
+                                                   "Mask files (*.json)")
+        if file is not None and len(file) > 0:
+            writeMetaData(os.path.abspath(file), metalist)

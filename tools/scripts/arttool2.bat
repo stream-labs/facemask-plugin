@@ -34,15 +34,25 @@ rem ^
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 # ==============================================================================
 
+def fixpath(p):
+    p = p.replace("\\", "/")
+    b = p.split("/")
+    for i in range(0, len(b)):
+        if " " in b[i]:
+            b[i] = '"' + b[i] + '"'
+    return "\\".join(b)
+
 def installPipModule(modname):
 	print("You don't seem to have " + modname + " installed. I will attempt to install it now.")
 	luser = os.path.expanduser("~")
+	fuser = fixpath(luser)
 	cmd = os.path.join(luser,"AppData","Local","Programs","Python","Python36","python.exe")
 	if not os.path.exists(cmd):
 		print("Can't find 64 bit python. Trying 32 bit.")
 		cmd = os.path.join(luser,"AppData","Local","Programs","Python","Python36-32","python.exe")
 	if not os.path.exists(cmd):
 		print("I can't find python. Really odd, since this is python code.")
+	cmd = os.path.join(fuser,"AppData","Local","Programs","Python","Python36","python.exe")
 	cmd += " -m pip install "+modname+" --user"
 	popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True, shell=True)
 	for stdout_line in iter(popen.stdout.readline, ""):

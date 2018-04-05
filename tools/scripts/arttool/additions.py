@@ -172,6 +172,7 @@ def perform_tweak_addition(addition, jsonfile, outputWindow):
                 kvp[bits[0]] = float(bits[1])
             else:
                 kvp[bits[0]] = bits[1]
+
     for line in maskmaker("tweak", kvp, [jsonfile]):
         outputWindow.append(line)
 
