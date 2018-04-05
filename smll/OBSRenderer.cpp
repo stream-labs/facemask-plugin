@@ -196,6 +196,13 @@ namespace smll {
 
 			DrawLandmarks(faces[i].landmarks68, 0, 255, 0);
 
+			SetDrawColor(255, 0, 255);
+			drawLines(faces[i].landmarks5, FIVE_LANDMARK_EYE_RIGHT_OUTER, FIVE_LANDMARK_EYE_RIGHT_INNER);
+			SetDrawColor(255, 0, 255);
+			drawLines(faces[i].landmarks5, FIVE_LANDMARK_EYE_LEFT_OUTER, FIVE_LANDMARK_NOSE_BOTTOM);
+			SetDrawColor(255, 0, 255);
+			drawLine(faces[i].landmarks5, FIVE_LANDMARK_EYE_RIGHT_INNER, FIVE_LANDMARK_NOSE_BOTTOM);
+
 			// set up projection
 			gs_projection_push();
 			float aspect = (float)m_viewportWidth / (float)m_viewportHeight;
@@ -232,23 +239,23 @@ namespace smll {
 		uint8_t r, uint8_t g, uint8_t b) {
 		// landmarks
 		SetDrawColor(r, g, b);
-		drawLine(points, JAW_1, JAW_17);
+		drawLines(points, JAW_1, JAW_17);
 		SetDrawColor(r, g, b);
-		drawLine(points, EYEBROW_LEFT_1, EYEBROW_LEFT_5);
+		drawLines(points, EYEBROW_LEFT_1, EYEBROW_LEFT_5);
 		SetDrawColor(r, g, b);
-		drawLine(points, EYEBROW_RIGHT_1, EYEBROW_RIGHT_5);
+		drawLines(points, EYEBROW_RIGHT_1, EYEBROW_RIGHT_5);
 		SetDrawColor(r, g, b);
-		drawLine(points, NOSE_1, NOSE_TIP);
+		drawLines(points, NOSE_1, NOSE_TIP);
 		SetDrawColor(r, g, b);
-		drawLine(points, NOSE_TIP, NOSE_9, true);
+		drawLines(points, NOSE_TIP, NOSE_9, true);
 		SetDrawColor(r, g, b);
-		drawLine(points, EYE_LEFT_1, EYE_LEFT_6, true);
+		drawLines(points, EYE_LEFT_1, EYE_LEFT_6, true);
 		SetDrawColor(r, g, b);
-		drawLine(points, EYE_RIGHT_1, EYE_RIGHT_6, true);
+		drawLines(points, EYE_RIGHT_1, EYE_RIGHT_6, true);
 		SetDrawColor(r, g, b);
-		drawLine(points, MOUTH_OUTER_1, MOUTH_OUTER_12, true);
+		drawLines(points, MOUTH_OUTER_1, MOUTH_OUTER_12, true);
 		SetDrawColor(r, g, b);
-		drawLine(points, MOUTH_INNER_1, MOUTH_INNER_8, true);
+		drawLines(points, MOUTH_INNER_1, MOUTH_INNER_8, true);
 	}
 
 	void OBSRenderer::DrawRect(const dlib::rectangle& r) {
@@ -258,7 +265,7 @@ namespace smll {
 		p[1] = dlib::point(r.right(), r.top());
 		p[2] = dlib::point(r.right(), r.bottom());
 		p[3] = dlib::point(r.left(), r.bottom());
-		drawLine(p, 0, 3, true);
+		drawLines(p, 0, 3, true);
 	}
 
 	void   OBSRenderer::DrawGlasses(const DetectionResult& face, int texture) {
@@ -745,7 +752,7 @@ namespace smll {
 		EndVertexBuffer();
 	}
 
-	void	OBSRenderer::drawLine(const dlib::point* points, int start,
+	void	OBSRenderer::drawLines(const dlib::point* points, int start,
 		int end, bool closed) {
 		// make vb
 		gs_render_start(true);
@@ -753,9 +760,26 @@ namespace smll {
 		for (int i = start; i <= end; i++) {
 			gs_vertex2f((float)points[i].x(), (float)points[i].y());
 		}
-		if (closed)	{
+		if (closed) {
 			gs_vertex2f((float)points[start].x(), (float)points[start].y());
 		}
+		gs_vertbuffer_t *vertbuff = gs_render_save();
+
+		while (gs_effect_loop(obs_get_base_effect(OBS_EFFECT_SOLID), "Solid")) {
+			gs_load_vertexbuffer(vertbuff);
+			gs_load_indexbuffer(nullptr);
+			gs_draw(GS_LINESTRIP, 0, 0);
+		}
+		gs_vertexbuffer_destroy(vertbuff);
+	}
+
+	void	OBSRenderer::drawLine(const dlib::point* points, int start,
+		int end) {
+		// make vb
+		gs_render_start(true);
+		// verts
+		gs_vertex2f((float)points[start].x(), (float)points[start].y());
+		gs_vertex2f((float)points[end].x(), (float)points[end].y());
 		gs_vertbuffer_t *vertbuff = gs_render_save();
 
 		while (gs_effect_loop(obs_get_base_effect(OBS_EFFECT_SOLID), "Solid")) {

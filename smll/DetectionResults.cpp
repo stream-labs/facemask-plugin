@@ -121,6 +121,7 @@ namespace smll {
 	void DetectionResult::UpdateResults(const DetectionResult& r) {
 
 		if (!kalmanFiltersInitialized) {
+			*this = r;
 			InitKalmanFilters();
 		}
 

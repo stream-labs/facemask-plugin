@@ -99,8 +99,10 @@ namespace smll {
 		std::vector<gs_vertbuffer_t*>	m_vertexBuffers;
 		gs_effect_t*				m_colorConversion;
 
+		void						drawLines(const dlib::point* points,
+			int start, int end, bool closed = false);
 		void						drawLine(const dlib::point* points,
-			int start, int end, bool closed=false);
+			int start, int end);
 
 		void						makeGlasses();
 		void						makeMask();
