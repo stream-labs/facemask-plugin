@@ -25,7 +25,7 @@
 namespace smll {
 
 	DetectionResult::DetectionResult() 
-		: matched(false), numFramesLost(0) {
+		: matched(false), numFramesLost(0), kalmanFiltersInitialized(false) {
 		rotation[0] = 0.0;
 		rotation[1] = 1.0;
 		rotation[2] = 0.0;
@@ -54,16 +54,14 @@ namespace smll {
 			landmarks68[i] = r.landmarks68[i];
 		}
 		CheckForPoseFlip(rotation, translation);
-		InitKalmanFilters();
+
+		kalmanFiltersInitialized = false;
 
 		return *this;
 	}
 
 	DetectionResult& DetectionResult::operator=(const Face& f) {
-		// bounds
-		// TODO: TRACKING SCALE???!!!
 		bounds = f.m_bounds;
-
 		return *this;
 	}
 
@@ -92,7 +90,8 @@ namespace smll {
 		translation[2] = cvTrs.at<double>(2, 0);
 
 		CheckForPoseFlip(rotation, translation);
-		InitKalmanFilters();
+
+		kalmanFiltersInitialized = false;
 	}
 
 	cv::Mat DetectionResult::GetCVRotation() const {
@@ -120,6 +119,10 @@ namespace smll {
 	}
 
 	void DetectionResult::UpdateResults(const DetectionResult& r) {
+
+		if (!kalmanFiltersInitialized) {
+			InitKalmanFilters();
+		}
 
 		double ntx[3] = { r.translation[0], r.translation[1], r.translation[2] };
 		double nrot[4] = { r.rotation[0], r.rotation[1], r.rotation[2], r.rotation[3] };
@@ -171,7 +174,7 @@ namespace smll {
 			t[0] = -t[0];
 			t[1] = -t[1];
 			t[2] = -t[2];
-
+			
 			// flip rotation
 			// this is odd, but works...
 
@@ -213,6 +216,7 @@ namespace smll {
 			kalmanFilters[KF_ROT_Y].Init(rotation[1]);
 			kalmanFilters[KF_ROT_Z].Init(rotation[2]);
 			kalmanFilters[KF_ROT_A].Init(rotation[3]);
+			kalmanFiltersInitialized = true;
 		}
 	}
 

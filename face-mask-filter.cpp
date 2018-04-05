@@ -62,7 +62,7 @@
 #define MM_THREAD_TASK_NAME				"DisplayPostProcessing"
 
 // Maximum for number of masks loaded in demo mode
-#define DEMO_MODE_MAX_MASKS				(100)
+#define DEMO_MODE_MAX_MASKS				(400)
 
 static float FOVA(float aspect) {
 	// field of view angle matched to focal length for solvePNP
@@ -939,11 +939,6 @@ bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sou
 
 	// timestamp for this frame
 	TimeStamp sourceTimestamp = NEW_TIMESTAMP;
-
-
-	// Note: Yeah, I know, this is a big and gross section of code. I may
-	//       or may not clean it up some day.
-	//
 	bool frameSent = false;
 
 	// Get the index
@@ -1022,6 +1017,7 @@ bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sou
 		}
 	}
 
+	// Advance frame index if we copied a frame
 	if (frameSent) {
 		std::unique_lock<std::mutex> lock(detection.mutex);
 		detection.frameIndex = (fidx + 1) % ThreadData::BUFFER_SIZE;
@@ -1296,6 +1292,12 @@ void Plugin::FaceMaskFilter::Instance::LoadDemo() {
 		if (demoModeGenPreviews) {
 			std::string gifname = fn.substr(0, fn.length() - 4) + "gif";
 			addMask = (::PathFileExists(gifname.c_str()) != TRUE);
+
+			// don't do thumbs on these folders
+			if (fn.find("\\heads\\") != std::string::npos)
+				addMask = false;
+			if (fn.find("\\facemask-plugin\\") != std::string::npos)
+				addMask = false;
 		}
 		if (addMask) {
 			demoMaskDatas.push_back(std::unique_ptr<Mask::MaskData>(LoadMask(fn)));

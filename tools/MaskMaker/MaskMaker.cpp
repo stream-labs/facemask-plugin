@@ -56,6 +56,7 @@ int main(int argc, char** argv) {
 	else if (args.command == "depends")
 		command_depends(args);
 
+	
 	//getchar();
     return 0;
 }

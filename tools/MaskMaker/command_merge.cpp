@@ -37,11 +37,17 @@ void command_merge(Args& args) {
 		json res = jm["resources"];
 		for (auto it = res.begin(); it != res.end(); it++) {
 			string k = it.key();
+
+			cout << "key before " << k << endl;
+
 			// don't prefix lights. they must be named light0, light1, ...
 			if (k.substr(0, 5) != "light" &&
 				k != "depth_head_mat" && k != "depth_head_mdl") {
 				k = n + k;
 			}
+
+			cout << "key after " << k << endl;
+
 			// add the resource to the new json
 			j["resources"][k] = it.value();
 

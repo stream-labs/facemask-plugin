@@ -98,6 +98,7 @@ namespace smll {
 		};
 		std::array<SingleValueKalman, KF_NUM_FILTERS> kalmanFilters;
 
+		bool	kalmanFiltersInitialized;
 		void InitKalmanFilters();
 
 		// cv::solvePnp returns totally flipped results at times. 
