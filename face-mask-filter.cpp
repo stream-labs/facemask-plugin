@@ -751,22 +751,9 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	//   face detection thread to consume, we can likely find
 	//   the frame of video that matches the timestamp of the
 	//   current detection data.
-	gs_texture_t* vidTex = sourceTexture;
-	bool found = false;
-	for (int i = 0; i < ThreadData::BUFFER_SIZE; i++) {
-		if (detection.frames[i].timestamp == timestamp &&
-			detection.frames[i].capture.texture != nullptr &&
-			detection.frames[i].capture.width == m_baseWidth &&
-			detection.frames[i].capture.height == m_baseHeight) {
-			vidTex = detection.frames[i].capture.texture;
-			found = true;
-			break;
-		}
-	}
-
-	if (!found) {
-		// debug
-		//blog(LOG_DEBUG, "timestamp not found!");
+	gs_texture_t* vidTex = FindCachedFrame(timestamp);
+	if (vidTex == nullptr) {
+		vidTex = sourceTexture;
 	}
 
 	// Draw the source video
@@ -810,8 +797,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		if (gs_texrender_begin(drawTexRender, m_baseWidth, m_baseHeight)) {
 
 			// clear
-			vec4 black;
+			vec4 black, thumbbg;
 			vec4_zero(&black);
+			float vv = (float)0x9a / 255.0f;
+			vec4_set(&thumbbg, vv, vv, vv, 1.0f);
 			gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
 
 			if (drawMask && mdat) {
@@ -826,11 +815,17 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					for (int i = 0; i < faces.length; i++) {
 						drawMaskData(faces[i], mdat, true);
 					}
+
 					// clear the color buffer (leaving depth info there)
 					gs_clear(GS_CLEAR_COLOR, &black, 1.0f, 0);
 
-					// if we are generating thumbs, add video to this texture
+					// if we are generating thumbs
 					if (mdat && demoModeOn && demoModeMaskChanged && demoModeGenPreviews && demoModeSavingFrames) {
+
+						// clear the color buffer (leaving depth info there)
+						gs_clear(GS_CLEAR_COLOR, &thumbbg, 1.0f, 0);
+
+						// draw the video
 						mdat->RenderMorphVideo(vidTex, m_baseWidth, m_baseHeight, triangulation);
 					}
 
@@ -934,6 +929,47 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		}
 	}
 }
+
+gs_texture_t* Plugin::FaceMaskFilter::Instance::FindCachedFrame(const TimeStamp& ts) {
+	// Look for a cached video frame with the closest timestamp
+
+	// Return one that matches first
+	for (int i = 0; i < ThreadData::BUFFER_SIZE; i++) {
+		if (detection.frames[i].timestamp == ts &&
+			detection.frames[i].capture.texture != nullptr &&
+			detection.frames[i].capture.width == m_baseWidth &&
+			detection.frames[i].capture.height == m_baseHeight) {
+			return detection.frames[i].capture.texture;
+		}
+	}
+	
+	// Now look for a valid frame with the closest timestamp
+	long long tst = TIMESTAMP_AS_LL(ts);
+	long long diff = 0;
+	gs_texture_t* nearest = nullptr;
+	for (int i = 0; i < ThreadData::BUFFER_SIZE; i++) {
+		if (detection.frames[i].capture.texture != nullptr &&
+			detection.frames[i].capture.width > 0 &&
+			detection.frames[i].capture.height > 0) {
+			if (diff == 0) {
+				nearest = detection.frames[i].capture.texture;
+				diff = UNSIGNED_DIFF(TIMESTAMP_AS_LL(detection.frames[i].timestamp), tst);
+			}
+			else {
+				long long d = UNSIGNED_DIFF(TIMESTAMP_AS_LL(detection.frames[i].timestamp), tst);
+				if (d < diff) {
+					diff = d;
+					nearest = detection.frames[i].capture.texture;
+				}
+			}
+		}
+	}
+
+	// Return what we got
+	return nearest;
+}
+
+
 
 bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sourceTexture) {
 
@@ -1514,7 +1550,8 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 		const PreviewFrame& frame = previewFrames[i];
 
 		// skip first frame for more seamless loop
-		if (i > 0 && i < (previewFrames.size() - 1)) {
+		size_t last = previewFrames.size() - 2;
+		if (i > 0 && i <= last) {
 			cv::Mat vidf(m_baseWidth, m_baseHeight, CV_8UC4);
 
 			if (!testingStage) {
@@ -1551,6 +1588,12 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 			snprintf(temp, sizeof(temp), "frame%04d.png", i);
 			std::string outFile = outFolder + "/" + temp;
 			cv::imwrite(outFile.c_str(), cropf);
+
+			// write out last frame again for thumbnail
+			if (i == last) {
+				outFile = outFolder + "/last_frame.png";
+				cv::imwrite(outFile.c_str(), cropf);
+			}
 		}
 
 		// kill frame data

@@ -1182,7 +1182,7 @@ namespace smll {
 		model_indices.push_back(NOSE_2);
 		model_indices.push_back(NOSE_3);
 		model_indices.push_back(NOSE_4);
-		//model_indices.push_back(NOSE_7);
+		model_indices.push_back(NOSE_7);
 		std::vector<cv::Point3f> model_points = GetLandmarkPoints(model_indices);
 
 		for (int i = 0; i < results.length; i++) {

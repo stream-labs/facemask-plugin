@@ -613,6 +613,15 @@ bool Mask::MaskData::RenderMorphVideo(gs_texture* vidtex, uint32_t width, uint32
 		AddResource(n, r);
 	}
 
+	// make sure blending is on
+	gs_enable_blending(true);
+	gs_blend_function_separate(
+		gs_blend_type::GS_BLEND_SRCALPHA,
+		gs_blend_type::GS_BLEND_INVSRCALPHA,
+		gs_blend_type::GS_BLEND_SRCALPHA,
+		gs_blend_type::GS_BLEND_INVSRCALPHA
+	);
+
 	if (m_morph && trires.vertexBuffer) {
 		didMorph = true;
 		m_morph->RenderMorphVideo(vidtex, trires);

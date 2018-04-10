@@ -183,6 +183,9 @@ namespace Plugin {
 			// for testing
 			gs_stagesurf_t*		testingStage;
 
+			// find a cached video frame
+			gs_texture_t*		FindCachedFrame(const TimeStamp& ts);
+
 			// Detection
 			struct ThreadData {
 

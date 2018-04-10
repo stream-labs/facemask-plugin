@@ -24,11 +24,36 @@
 
 void command_merge(Args& args) {
 
-	// merge all files into new json
+	vector<string> all_authors;
+	vector<string> all_tags;
+
+	// create new json with args
 	json j = args.createNewJson();
+
+	// save meta
+	vector<string> az = Utils::split(j["author"], ',');
+	for (int i = 0; i < az.size(); i++) {
+		Utils::add_no_dupe(az[i], all_authors);
+	}
+	vector<string> tz = Utils::split(j["tags"], ',');
+	for (int i = 0; i < tz.size(); i++) {
+		Utils::add_no_dupe(tz[i], all_tags);
+	}
+
+	// merge all files into new json
 	for (int i = 0; i < args.files.size(); i++) {
 		// load json file
 		json jm = args.loadJsonFile(args.files[i]);
+
+		// save meta
+		vector<string> authors = Utils::split(jm["author"], ',');
+		for (int i = 0; i < authors.size(); i++) {
+			Utils::add_no_dupe(authors[i], all_authors);
+		}
+		vector<string> tags = Utils::split(jm["tags"], ',');
+		for (int i = 0; i < tags.size(); i++) {
+			Utils::add_no_dupe(tags[i], all_tags);
+		}
 
 		// prefix
 		string n = Utils::get_filename(args.files[i]) + "_";
@@ -38,15 +63,11 @@ void command_merge(Args& args) {
 		for (auto it = res.begin(); it != res.end(); it++) {
 			string k = it.key();
 
-			cout << "key before " << k << endl;
-
 			// don't prefix lights. they must be named light0, light1, ...
 			if (k.substr(0, 5) != "light" &&
 				k != "depth_head_mat" && k != "depth_head_mdl") {
 				k = n + k;
 			}
-
-			cout << "key after " << k << endl;
 
 			// add the resource to the new json
 			j["resources"][k] = it.value();
@@ -120,9 +141,9 @@ void command_merge(Args& args) {
 		json pts = jm["parts"];
 		for (auto it = pts.begin(); it != pts.end(); it++) {
 			string k = it.key();
-			if (it.key().find("directionalLight") == string::npos &&
-				it.key().find("pointLight") == string::npos &&
-				it.key() != "depth_head") {
+			if (k.find("directionalLight") == string::npos &&
+				k.find("pointLight") == string::npos &&
+				k != "depth_head") {
 				k = n + k;
 			}
 
@@ -133,7 +154,10 @@ void command_merge(Args& args) {
 			string parent = j["parts"][k]["parent"];
 			if (parent.length() > 0 &&
 				parent != "root" &&
-				parent != "world") {
+				parent != "world" &&
+				parent.find("directionalLight") == string::npos &&
+				parent.find("pointLight") == string::npos &&
+				parent != "depth_head") {
 				j["parts"][k]["parent"] = n + parent;
 			}
 
@@ -162,6 +186,10 @@ void command_merge(Args& args) {
 			}
 		}
 	}
+
+	// set meta
+	j["author"] = Utils::join(all_authors, ",");
+	j["tags"] = Utils::join(all_tags, ",");
 
 	string outfilename = "";
 	if (args.filename == "auto") {

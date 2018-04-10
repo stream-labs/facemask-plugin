@@ -29,10 +29,11 @@ namespace Utils {
 
 	extern const char* GetTempPath();
 	extern const char* GetTempFileName();
-	extern const char* Base64ToTempFile(std::string base64String);
-	extern void DeleteTempFile(std::string filename);
+	extern const char* Base64ToTempFile(string base64String);
+	extern void DeleteTempFile(string filename);
 
-	extern std::vector<std::string> split(const std::string &s, char delim);
+	extern vector<string> split(const string &s, char delim);
+	extern string join(const vector<string>& a, string j);
 	extern string get_extension(string filename);
 	extern string get_filename(string filename);
 	extern string get_filename_ext(string filename);
@@ -43,5 +44,5 @@ namespace Utils {
 	extern bool resource_exists(const json& j, string name, string type);
 	extern bool resource_exists(const json& j, string name);
 	extern bool part_exists(const json& j, string name);
-
+	extern void add_no_dupe(const string& s, vector<string>& a);
 }

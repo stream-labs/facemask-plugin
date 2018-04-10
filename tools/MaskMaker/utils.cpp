@@ -196,5 +196,20 @@ namespace Utils {
 		return false;
 	}
 
+	void add_no_dupe(const string& s, vector<string>& a) {
+		if (std::find(a.begin(), a.end(), s) == a.end())
+			a.push_back(s);
+	}
+
+	string join(const vector<string>& a, string j) {
+		string r;
+		for (int i = 0; i < a.size(); i++) {
+			if (i > 0)
+				r += j;
+			r += a[i];
+		}
+		return r;
+	}
+
 
 }
