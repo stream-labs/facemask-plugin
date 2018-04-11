@@ -21,7 +21,7 @@
 # IMPORTS
 # ==============================================================================
 from copy import deepcopy
-import os
+import os, subprocess, json, uuid
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QListWidget, QVBoxLayout, QTabWidget
 from PyQt5.QtWidgets import QPushButton, QComboBox, QDateTimeEdit, QDialogButtonBox, QMessageBox
 from PyQt5.QtWidgets import QScrollArea, QMainWindow, QCheckBox, QHBoxLayout, QTextEdit
@@ -29,7 +29,8 @@ from PyQt5.QtWidgets import QLineEdit, QFrame, QDialog, QFrame, QSplitter, QFile
 from PyQt5.QtGui import QIcon, QBrush, QColor, QFont, QPixmap, QMovie
 from PyQt5.QtCore import QDateTime, Qt
 
-from arttool.utils import *
+
+
 
 ADDITION_TYPES = ["Image", "Sequence", "Material", "Model", "Emitter", "Tweak"]
 
@@ -112,6 +113,72 @@ DROP_DOWNS = {("sequence", "mode"): ["once", "bounce", "repeat", "bounce-delay",
                                            "greater", "not-equal", "never"]}
 
 
+# ==============================================================================
+# MASKMAKER
+# ==============================================================================
+
+# Executes a shell command
+# usage:
+#
+# for line in execute(cmd):
+#   print(line)
+#
+def execute(cmd):
+    popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True, shell=True)
+    for stdout_line in iter(popen.stdout.readline, ""):
+        yield stdout_line
+    popen.stdout.close()
+    return_code = popen.wait()
+    if return_code:
+        # raise subprocess.CalledProcessError(return_code, cmd)
+        yield "ERROR " + cmd.split()[0] + " FAILED EXECUTION."
+
+def fixpath(p):
+    p = p.replace("\\", "/")
+    b = p.split("/")
+    for i in range(0, len(b)):
+        if " " in b[i]:
+            b[i] = '"' + b[i] + '"'
+    return "\\".join(b)
+
+MASKMAKERBIN = fixpath(os.path.abspath("./maskmaker/maskmaker.exe"))
+def maskmaker(command, kvpairs, files):
+    cmd = MASKMAKERBIN + " " + command
+    for k, v in kvpairs.items():
+        if command == "tweak":
+            cmd += ' "' + k + '=' + v + '"'
+        elif type(v) is str:
+            cmd += " " + k + '="' + v + '"'
+        else:
+            cmd += " " + k + '=' + str(v)
+
+    for f in files:
+        cmd += " " + f
+
+    print("---maskmaker-------")
+    print(cmd)
+    for line in execute(cmd):
+        yield line[:-1]
+    print(" ")
+
+
+def str_is_float(x):
+    try:
+        a = float(x)
+    except ValueError:
+        return False
+    else:
+        return True
+
+
+def str_is_int(x):
+    try:
+        a = int(x)
+    except ValueError:
+        return False
+    else:
+        return True
+
 def perform_image_addition(addition, jsonfile, outputWindow):
     kvp = dict()
     for i in ["name", "file"]:
@@ -172,6 +239,7 @@ def perform_tweak_addition(addition, jsonfile, outputWindow):
                 kvp[bits[0]] = float(bits[1])
             else:
                 kvp[bits[0]] = bits[1]
+
     for line in maskmaker("tweak", kvp, [jsonfile]):
         outputWindow.append(line)
 

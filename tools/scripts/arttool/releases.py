@@ -29,7 +29,7 @@ from PyQt5.QtWidgets import QLineEdit, QFrame, QDialog, QFrame, QSplitter
 from PyQt5.QtGui import QIcon, QBrush, QColor, QFont, QPixmap, QMovie
 from PyQt5.QtCore import QDateTime, Qt
 
-from arttool.utils import *
+from .utils import *
 
 
 # ==============================================================================
