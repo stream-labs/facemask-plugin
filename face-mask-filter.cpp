@@ -1187,7 +1187,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			}
 			else {
 				// new frame - do the face detection
-				smllFaceDetector->DetectFaces(detection.frames[fidx].detect, detect_results);
+				smllFaceDetector->DetectFaces(detection.frames[fidx].detect, detection.frames[fidx].capture, detect_results);
 				smllFaceDetector->DetectLandmarks(detection.frames[fidx].capture, detect_results);
 				smllFaceDetector->DoPoseEstimation(detect_results);
 				lastTimestamp = detection.frames[fidx].timestamp;

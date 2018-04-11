@@ -146,7 +146,7 @@ namespace smll {
 		}
 	}
 
-	void FaceDetector::DetectFaces(const ImageWrapper& detect, DetectionResults& results) {
+	void FaceDetector::DetectFaces(const ImageWrapper& detect, const OBSTexture& capture, DetectionResults& results) {
 
 		// do nothing at all timeout
 		if (m_timeout > 0) {
@@ -171,6 +171,7 @@ namespace smll {
 
 		// save detect for convenience
 		m_detect = detect;
+		m_capture = capture;
         
         // what are we doing here
         bool doTracking = (m_faces.length > 0) && (m_trackingTimeout == 0);
@@ -1185,6 +1186,7 @@ namespace smll {
 		model_indices.push_back(NOSE_7);
 		std::vector<cv::Point3f> model_points = GetLandmarkPoints(model_indices);
 
+		bool resultsBad = false;
 		for (int i = 0; i < results.length; i++) {
 			// copy 2D image points. 
 			std::vector<cv::Point2f> image_points;
@@ -1201,16 +1203,20 @@ namespace smll {
 				GetCVCamMatrix(), GetCVDistCoeffs(),
 				rotation, translation);
 
-			// wtf...sometimes we get complete crap
+			// sometimes we get crap
 			if (translation.at<double>(2, 0) > 1000.0 ||
 				translation.at<double>(2, 0) < -1000.0) {
-				translation = cv::Mat::zeros(3, 1, CV_64F);
-				translation.at<double>(2, 0) = 40.0;
-				rotation = cv::Mat::zeros(3, 1, CV_64F);
+				resultsBad = true;
+				break;
 			}
 
 			// Save it
 			results[i].SetPose(rotation, translation);
+		}
+
+		if (resultsBad) {
+			// discard results
+			results.length = 0;
 		}
 	}
 

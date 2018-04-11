@@ -56,7 +56,7 @@ public:
 	FaceDetector();
 	~FaceDetector();
 
-	void DetectFaces(const ImageWrapper& detect, DetectionResults& results);
+	void DetectFaces(const ImageWrapper& detect, const OBSTexture& capture, DetectionResults& results);
 	void DetectLandmarks(const OBSTexture& capture, DetectionResults& results);
 	void DoPoseEstimation(DetectionResults& results);
 
