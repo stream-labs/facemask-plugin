@@ -34,25 +34,15 @@ rem ^
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 # ==============================================================================
 
-def fixpath(p):
-    p = p.replace("\\", "/")
-    b = p.split("/")
-    for i in range(0, len(b)):
-        if " " in b[i]:
-            b[i] = '"' + b[i] + '"'
-    return "\\".join(b)
-
 def installPipModule(modname):
 	print("You don't seem to have " + modname + " installed. I will attempt to install it now.")
 	luser = os.path.expanduser("~")
-	fuser = fixpath(luser)
 	cmd = os.path.join(luser,"AppData","Local","Programs","Python","Python36","python.exe")
 	if not os.path.exists(cmd):
 		print("Can't find 64 bit python. Trying 32 bit.")
 		cmd = os.path.join(luser,"AppData","Local","Programs","Python","Python36-32","python.exe")
 	if not os.path.exists(cmd):
 		print("I can't find python. Really odd, since this is python code.")
-	cmd = os.path.join(fuser,"AppData","Local","Programs","Python","Python36","python.exe")
 	cmd += " -m pip install "+modname+" --user"
 	popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True, shell=True)
 	for stdout_line in iter(popen.stdout.readline, ""):
@@ -71,43 +61,35 @@ try:
 	from PyQt5.QtWidgets import QApplication
 except:
 	installPipModule("PyQt5")
-try:
-	import boto3
-except:
-	installPipModule("boto3")
+	
+	
 try:
 	from PIL import Image
 except:
 	installPipModule("Pillow")
-try:
-	from openpyxl import Workbook
-except:
-	installPipModule("openpyxl")
-
-
-
-from arttool import arttool
+	
+	
+from arttool import tilemaker
 
 # ==============================================================================
 # MAIN ENTRY POINT
 # ==============================================================================
 if __name__ == '__main__':
-
-    # We're a Qt App
-    app = QApplication(sys.argv)
-
-    # Show the window
-    w = arttool.ArtToolWindow()
-    app.focusChanged.connect(lambda old,now: w.onFocusChanged(old,now))
-    w.show()
-
-    # Run application
-    r = app.exec_()
-
-    # Final cleanup
-    w.finalCleanup()
-
-    # Exit properly
-    sys.exit(r)
-
-
+	
+	# We're a Qt App
+	app = QApplication(sys.argv)
+		
+	# Show the window
+	w = tilemaker.TileMakerWindow()
+	w.show()
+	
+	# Run application
+	r = app.exec_()
+	
+	# Final cleanup
+	w.finalCleanup()
+	
+	# Exit properly
+	sys.exit(r)
+	
+	

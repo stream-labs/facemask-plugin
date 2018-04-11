@@ -23,12 +23,20 @@
 import sys, subprocess, os, json, uuid, time
 from shutil import copyfile
 from copy import deepcopy
+import tempfile
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QListWidget, QVBoxLayout, QTabWidget
 from PyQt5.QtWidgets import QPushButton, QComboBox, QDateTimeEdit, QDialogButtonBox, QMessageBox
 from PyQt5.QtWidgets import QScrollArea, QMainWindow, QCheckBox, QHBoxLayout, QTextEdit, QFileDialog
 from PyQt5.QtWidgets import QLineEdit, QFrame, QDialog, QFrame, QSplitter
 from PyQt5.QtGui import QIcon, QBrush, QColor, QFont, QPixmap, QMovie
 from PyQt5.QtCore import QDateTime, Qt
+
+from PIL import Image as PILImage
+
+from openpyxl import Workbook
+from openpyxl.drawing.image import Image
+from openpyxl.styles import Alignment, Font
+
 from .utils import *
 from .releases import *
 from .additions import *
@@ -197,7 +205,7 @@ class ArtToolWindow(QMainWindow):
         buttonArea.setMinimumHeight(60)
         locs = [(0, 0), (0, 30), (0, 60), (75, 0), (75, 30), (75, 60)]
         c = 0
-        for nn in ["Refresh", "Autobuild", "Rebuild All", "S3 Upload", "SVN Update", "Release Masks"]:
+        for nn in ["Refresh", "Autobuild", "Rebuild All", "S3 Upload", "XLS Export", "Release Masks"]:
             b = QPushButton(nn)
             b.setParent(buttonArea)
             (x, y) = locs[c]
@@ -677,8 +685,8 @@ class ArtToolWindow(QMainWindow):
             self.doAutobuild()
         elif button == "Rebuild All":
             self.doRebuildAll()
-        elif button == "SVN Update":
-            self.doSVNUpdate()
+        elif button == "XLS Export":
+            self.onWriteMetadataExcel()
         elif button == "Release Masks":
             self.doReleaseMasks()
 
@@ -1188,3 +1196,90 @@ class ArtToolWindow(QMainWindow):
                                                    "Mask files (*.json)")
         if file is not None and len(file) > 0:
             writeMetaData(os.path.abspath(file), metalist)
+
+
+    def onWriteMetadataExcel(self):
+
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+
+        file, filter = QFileDialog.getSaveFileName(self, 'Save file', os.path.abspath("."),
+                                                   "Excel (*.xlsx)")
+        if file is not None and len(file) > 0:
+            outfile = os.path.abspath(file)
+        else:
+            return
+
+        wb = Workbook()
+        ws = wb.active
+
+        HEADER_VALS = { "A1": "Icon",
+                        "B1": "Flags",
+                        "C1": "Name",
+                        "D1": "Description",
+                        "E1": "Tags",
+                        "F1": "Category",
+                        "G1": "Tier",
+                        "H1": "UUID",
+                        "I1": "Author"}
+
+        for c,v in HEADER_VALS.items():
+            ws[c] = v
+            ws[c].font = Font(bold=True, size=16)
+        ws.row_dimensions[1].height = 50
+
+        row = 2
+        allfiles = self.fbxfiles
+        allfiles.extend(self.combofiles)
+        for fbxfile in self.fbxfiles:
+
+            pngfile = fixpath(fbxfile.lower().replace(".fbx",".png").replace(".json",".png"))
+            metadata = loadMetadataFile(fbxfile)
+            if metadata:
+                mdc, mt = checkMetaData(metadata)
+            else:
+                mdc = CHECKMETA_ERROR
+
+            if mdc == CHECKMETA_GOOD:
+                pimg = PILImage.open(pngfile).resize((64, 64), PILImage.LANCZOS)
+                tf = tempfile.NamedTemporaryFile(suffix=".png")
+                pimg.save(tf)
+                img = Image(tf)
+                ws.add_image(img, "A"+str(row))
+                ws.row_dimensions[row].height = 50
+
+                ff = ""
+                if metadata["is_morph"]:
+                    ff += " MORPH "
+                if metadata["is_intro"]:
+                    ff += " INTRO "
+                if metadata["is_vip"]:
+                    ff += " VIP "
+                if metadata["category"] == "Combo":
+                    ff += " COMBO "
+                ws['B'+str(row)] = ff
+
+                ws['C'+str(row)] = metadata["name"]
+                ws['D'+str(row)] = metadata["description"]
+                ws['E'+str(row)] = metadata["tags"]
+                ws['F'+str(row)] = metadata["category"]
+                ws['G'+str(row)] = metadata["tier"]
+                ws['H'+str(row)] = metadata["uuid"]
+                ws['I'+str(row)] = metadata["author"]
+
+                row += 1
+
+        ws.column_dimensions["A"].width = 15
+        ws.column_dimensions["B"].width = 10
+        ws.column_dimensions["C"].width = 30
+        ws.column_dimensions["D"].width = 45
+        ws.column_dimensions["E"].width = 45
+        ws.column_dimensions["F"].width = 15
+        ws.column_dimensions["G"].width = 8
+        ws.column_dimensions["H"].width = 38
+        ws.column_dimensions["I"].width = 35
+
+        wb.save(outfile)
+        tf.close()
+        wb.close()
+
+        QApplication.restoreOverrideCursor()
