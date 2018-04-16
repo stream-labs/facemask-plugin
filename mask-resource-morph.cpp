@@ -179,23 +179,6 @@ void Mask::Resource::Morph::RenderMorphVideo(gs_texture* vidtex,
 	gs_enable_depth_test(false);
 	gs_set_cull_mode(GS_NEITHER);
 
-	/*
-	// GREEN SCREEN
-	if (trires.autoGreenScreen) {
-		while (gs_effect_loop(solidEffect, "Solid")) {
-			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
-				"image"), vidtex);
-			gs_load_vertexbuffer(trires.vertexBuffer);
-
-			vec4_from_rgba(&veccol, MAKE32COLOR(0, 255, 0, 255));
-			gs_effect_set_vec4(solidcolor, &veccol);
-			gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_BACKGROUND]);
-			gs_draw(GS_TRIS, 0, 0);
-			gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_HULL]);
-			gs_draw(GS_TRIS, 0, 0);
-		}
-	}*/
-
 	while (gs_effect_loop(defaultEffect, "Draw")) {
 //	while (gs_effect_loop(solidEffect, "Solid")) {
 			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
