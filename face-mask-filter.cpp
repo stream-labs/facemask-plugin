@@ -598,6 +598,7 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 	updateFaces();
 
 	// demo mode : switch masks/delay
+	bool forceMorphUpdate = false;
 	if (demoModeOn && demoMaskDatas.size()) {
 		demoModeElapsed += timeDelta;
 		if (demoModeInDelay && (demoModeElapsed > demoModeDelay)) {
@@ -610,6 +611,7 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 			demoModeSavingFrames = false;
 			demoModeElapsed -= demoModeInterval;
 			demoModeInDelay = true;
+			forceMorphUpdate = true;
 		}
 	}
 
@@ -646,17 +648,16 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 				if (morph) {
 					// Only add new morph data if it is newer than the last one
 					// note: any valid morph data is newer than invalid morph data
-					if (morph->GetMorphData().IsNewerThan(detection.morphs[lastmidx].morphData)) {
+					if (forceMorphUpdate || 
+						morph->GetMorphData().IsNewerThan(detection.morphs[lastmidx].morphData)) {
 						detection.morphs[midx].morphData = morph->GetMorphData();
 						morphUpdated = true;
 					}
 				}
 				else {
 					// Make sure current is invalid
-					if (detection.morphs[lastmidx].morphData.IsValid()) {
-						detection.morphs[midx].morphData.Invalidate();
-						morphUpdated = true;
-					}
+					detection.morphs[midx].morphData.Invalidate();
+					morphUpdated = true;
 				}
 			}
 		}
@@ -1333,6 +1334,10 @@ void Plugin::FaceMaskFilter::Instance::LoadDemo() {
 			if (fn.find("\\heads\\") != std::string::npos)
 				addMask = false;
 			if (fn.find("\\facemask-plugin\\") != std::string::npos)
+				addMask = false;
+			if (fn.find("\\Releases\\") != std::string::npos)
+				addMask = false;
+			if (fn.find("\\releases\\") != std::string::npos)
 				addMask = false;
 		}
 		if (addMask) {

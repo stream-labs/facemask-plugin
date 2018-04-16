@@ -88,6 +88,8 @@ namespace smll {
 	}
 
 	bool MorphData::IsNewerThan(const MorphData&other) const {
+		if (!other.IsValid())
+			return true;
 		return (m_timestamp > other.m_timestamp);
 	}
 

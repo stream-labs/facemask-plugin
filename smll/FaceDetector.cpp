@@ -1185,6 +1185,8 @@ namespace smll {
 		model_indices.push_back(NOSE_4);
 		model_indices.push_back(NOSE_7);
 		std::vector<cv::Point3f> model_points = GetLandmarkPoints(model_indices);
+		//std::vector<cv::Point3f>& mp5 = GetFiveLandmarkPoints();
+		//model_points.insert(model_points.end(), mp5.begin(), mp5.end());
 
 		bool resultsBad = false;
 		for (int i = 0; i < results.length; i++) {
@@ -1195,6 +1197,13 @@ namespace smll {
 				int idx = model_indices[j];
 				image_points.push_back(cv::Point2f((float)p[idx].x(), (float)p[idx].y()));
 			}
+
+			//p = results[i].landmarks5;
+			//for (int j = 0; j < FIVE_LANDMARK_NUM_LANDMARKS; j++) {
+			//	image_points.push_back(cv::Point2f((float)p->x(), (float)p->y()));
+			//	p++;
+			//}
+			
 
 			// Solve for pose
 			cv::Mat translation = cv::Mat::zeros(3, 1, CV_64F);

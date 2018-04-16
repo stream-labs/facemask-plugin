@@ -323,4 +323,6 @@ namespace smll {
 
 		FIVE_LANDMARK_NUM_LANDMARKS
 	};
+
+	std::vector<cv::Point3f>&	GetFiveLandmarkPoints();
 }

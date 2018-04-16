@@ -38,6 +38,20 @@ namespace smll {
 	static std::vector<cv::Point3f>	g_head_points;
 	static std::vector<FaceContour>	g_face_contours;
 	static std::vector<FaceArea>	g_face_areas;
+	static std::vector<cv::Point3f>	g_5_landmark_points;
+
+	std::vector<cv::Point3f>&	GetFiveLandmarkPoints() {
+		if (g_5_landmark_points.size() == 0) {
+			// flipped in y/z from maya points
+
+			g_5_landmark_points.push_back(cv::Point3f(2.379f, -1.76f, 2.1f));  // r outer
+			g_5_landmark_points.push_back(cv::Point3f(0.932f, -1.76f, 1.9f));  // r inner
+			g_5_landmark_points.push_back(cv::Point3f(-2.379f, -1.76f, 2.1f));  // l outer
+			g_5_landmark_points.push_back(cv::Point3f(-0.932f, -1.76f, 1.9f));  // l inner
+			g_5_landmark_points.push_back(cv::Point3f(0.0f, 0.72f, 0.864f));  // bottom
+		}
+		return g_5_landmark_points;
+	}
 
 	std::vector<cv::Point3f>&	GetLandmarkPoints() {
 		if (g_landmark_points.size() == 0) {
