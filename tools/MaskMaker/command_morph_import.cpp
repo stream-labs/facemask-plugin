@@ -26,8 +26,7 @@ static string g_locator_name = "landmark";
 
 extern void RemovePostRotationNodes(aiNode* node);
 
-// 68 detected points + 11 head points = 79
-#define NUM_LANDMARK_POINTS		(79)
+
 
 
 void GetLandmarkPoints(const aiScene* scene, aiNode* node, aiVector3D* points) {

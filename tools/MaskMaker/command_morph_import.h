@@ -20,5 +20,9 @@
 
 #include "args.h"
 
+// 68 detected points + 11 head points = 79
+#define NUM_LANDMARK_POINTS		(79)
+
+
 extern void command_morph_import(Args& args);
 

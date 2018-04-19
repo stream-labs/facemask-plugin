@@ -591,15 +591,19 @@ namespace smll {
 		// project all the head points
 		const cv::Mat& rot = face.GetCVRotation();
 		cv::Mat trx = face.GetCVTranslation();
+
+		blog(LOG_DEBUG, "HEADPOINTS-----------------------");
+		blog(LOG_DEBUG, " trans: %5.2f, %5.2f, %5.2f",
+			(float)trx.at<double>(0, 0),
+			(float)trx.at<double>(1, 0),
+			(float)trx.at<double>(2, 0));
+		blog(LOG_DEBUG, "   rot: %5.2f, %5.2f, %5.2f",
+			(float)rot.at<double>(0, 0),
+			(float)rot.at<double>(1, 0),
+			(float)rot.at<double>(2, 0));
+
 		std::vector<cv::Point2f> projheadpoints;
 		cv::projectPoints(headpoints, rot, trx, GetCVCamMatrix(), GetCVDistCoeffs(), projheadpoints);
-
-		// debug: add all points
-		//
-		//for (auto p : projheadpoints) {
-		//	points.push_back(p);
-		//}
-		//return;
 
 		// select the correct points
 
@@ -1172,6 +1176,7 @@ namespace smll {
 		results.length = m_faces.length;
 	}
 
+
 	void FaceDetector::DoPoseEstimation(DetectionResults& results)
 	{
 		// build set of model points to use for solving 3D pose
@@ -1185,25 +1190,25 @@ namespace smll {
 		model_indices.push_back(NOSE_4);
 		model_indices.push_back(NOSE_7);
 		std::vector<cv::Point3f> model_points = GetLandmarkPoints(model_indices);
-		//std::vector<cv::Point3f>& mp5 = GetFiveLandmarkPoints();
+
+		std::vector<cv::Point3f>& mp5 = GetFiveLandmarkPoints();
 		//model_points.insert(model_points.end(), mp5.begin(), mp5.end());
 
 		bool resultsBad = false;
 		for (int i = 0; i < results.length; i++) {
-			// copy 2D image points. 
 			std::vector<cv::Point2f> image_points;
+			// copy 2D image points. 
 			point* p = results[i].landmarks68;
 			for (int j = 0; j < model_indices.size(); j++) {
 				int idx = model_indices[j];
 				image_points.push_back(cv::Point2f((float)p[idx].x(), (float)p[idx].y()));
 			}
-
-			//p = results[i].landmarks5;
-			//for (int j = 0; j < FIVE_LANDMARK_NUM_LANDMARKS; j++) {
-			//	image_points.push_back(cv::Point2f((float)p->x(), (float)p->y()));
-			//	p++;
-			//}
-			
+			std::vector<cv::Point2f> image_points2;
+			p = results[i].landmarks5;
+			for (int j = 0; j < FIVE_LANDMARK_NUM_LANDMARKS; j++) {
+				image_points2.push_back(cv::Point2f((float)p->x(), (float)p->y()));
+				p++;
+			}
 
 			// Solve for pose
 			cv::Mat translation = cv::Mat::zeros(3, 1, CV_64F);
@@ -1211,6 +1216,46 @@ namespace smll {
 			cv::solvePnP(model_points, image_points,
 				GetCVCamMatrix(), GetCVDistCoeffs(),
 				rotation, translation);
+
+			// solve again
+			//cv::solvePnP(mp5, image_points2,
+				//GetCVCamMatrix(), GetCVDistCoeffs(),
+				//rotation, translation, true);
+
+			// DEBUG: reproject to check error
+			std::vector<cv::Point2f> projectedPoints;
+			cv::projectPoints(model_points, rotation, translation, GetCVCamMatrix(), GetCVDistCoeffs(), projectedPoints);
+
+			float tterr = 0.0f;
+			blog(LOG_DEBUG, "_");
+			blog(LOG_DEBUG, "_");
+			blog(LOG_DEBUG, "SOLVEPNP----------------------");
+			for (int j = 0; j < model_points.size(); j++) {
+
+				float xerr = fabs(image_points[j].x - projectedPoints[j].x);
+				float yerr = fabs(image_points[j].y - projectedPoints[j].y);
+				float terr = xerr + yerr;
+				tterr += terr;
+
+				blog(LOG_DEBUG, "%d : %5.0f, %5.0f   |   %5.2f, %5.2f, %5.2f   |  %2.1f, %2.1f  |  %2.1f", j,
+					image_points[j].x, image_points[j].y, 
+					model_points[j].x, model_points[j].y, model_points[j].z,
+					xerr, yerr, terr);
+			}
+			blog(LOG_DEBUG, "--------------------");
+			if (tterr > 20.0f) 
+				blog(LOG_DEBUG, "TOTAL ERROR   %3.2f <------------------- BAD -------", tterr);
+			else
+				blog(LOG_DEBUG, "TOTAL ERROR   %3.2f", tterr);
+			blog(LOG_DEBUG, "--------------------");
+			blog(LOG_DEBUG, " trans: %5.2f, %5.2f, %5.2f",
+				(float)translation.at<double>(0, 0),
+				(float)translation.at<double>(1, 0),
+				(float)translation.at<double>(2, 0));
+			blog(LOG_DEBUG, "   rot: %5.2f, %5.2f, %5.2f",
+				(float)rotation.at<double>(0, 0),
+				(float)rotation.at<double>(1, 0),
+				(float)rotation.at<double>(2, 0));
 
 			// sometimes we get crap
 			if (translation.at<double>(2, 0) > 1000.0 ||

@@ -19,6 +19,7 @@
 #include "stdafx.h"
 #include "utils.h"
 #include "command_import.h"
+#include "command_morph_import.h"
 
 #define MAX_BONES_PER_SKIN		(8)
 
@@ -1198,7 +1199,7 @@ string GetChannelName(string nodeName, string varName) {
 	if (nodeName.substr(0, g_locator_name.size()) == g_locator_name) {
 		// get point index
 		int idx = atoi(nodeName.substr(g_locator_name.size()).c_str());
-		if (idx >= 0 && idx < 68) {
+		if (idx >= 0 && idx < NUM_LANDMARK_POINTS) {
 			char temp[256];
 			snprintf(temp, sizeof(temp), "%s-%d-%s", g_morph_channel_name.c_str(), idx, varName.c_str());
 			return temp;

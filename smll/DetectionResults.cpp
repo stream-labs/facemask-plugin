@@ -96,9 +96,9 @@ namespace smll {
 
 	cv::Mat DetectionResult::GetCVRotation() const {
 		cv::Mat m = cv::Mat::zeros(3, 1, CV_64F);
-		m.at<double>(0, 0) = rotation[0] * rotation[4];
-		m.at<double>(1, 0) = rotation[1] * rotation[4];
-		m.at<double>(2, 0) = rotation[2] * rotation[4];
+		m.at<double>(0, 0) = rotation[0] * rotation[3];
+		m.at<double>(1, 0) = rotation[1] * rotation[3];
+		m.at<double>(2, 0) = rotation[2] * rotation[3];
 		return m;
 	}
 
@@ -171,6 +171,8 @@ namespace smll {
 		// check for pose flip
 		if (t[2] < 0.0)
 		{
+			blog(LOG_DEBUG, "***** POSE FLIP *****");
+
 			// flip translation
 			t[0] = -t[0];
 			t[1] = -t[1];
