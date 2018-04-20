@@ -51,7 +51,7 @@
 
 // use threaded memcpy (not sure if this actually helps
 // due to windows thread priorities)
-#define USE_THREADED_MEMCPY				(true)
+#define USE_THREADED_MEMCPY				(false)
 
 
 // Windows MMCSS thread task name
@@ -224,7 +224,9 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	// Make the smll stuff
 	smllFaceDetector = new smll::FaceDetector();
 	smllRenderer = new smll::OBSRenderer(); 
-	smllFont = new smll::OBSFont("c:/Windows/Fonts/graffonti.3d.drop.[fontvir.us].ttf", 100);
+	smllFont1 = new smll::OBSFont("c:/Windows/Fonts/graffonti.3d.drop.[fontvir.us].ttf", 100);
+	smllFont2 = new smll::OBSFont("c:/Windows/Fonts/ROGFontsv1.6-Regular.ttf", 100);
+	smllFont3 = new smll::OBSFont("c:/Windows/Fonts/segoescb.ttf", 100);
 
 	// set our mm thread task
 	if (!m_taskHandle) {
@@ -302,7 +304,9 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 
 	delete smllFaceDetector;
 	delete smllRenderer;
-	delete smllFont;
+	delete smllFont1;
+	delete smllFont2;
+	delete smllFont3;
 
 	if (m_memcpyEnv)
 		destroy_threaded_memcpy_pool(m_memcpyEnv);
@@ -843,7 +847,13 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		}
 	}
 
-	smllFont->RenderText("this is a test of FreeType", 150, 150);
+	smllFont1->RenderText("this is a test of FreeType", 150, 150);
+	smllFont2->RenderText("Any true type font can be loaded &", 150, 300);
+	smllFont2->RenderText("created and drawn on the fly.", 150, 400);
+	smllFont3->RenderText("a bitmap font is rendered out", 150, 550);
+	smllFont3->RenderText("And is then drawn with texture", 150, 700);
+	smllFont3->RenderText("mapped polygons in 3D.  :-P", 150, 850);
+
 
 	// end
 	smllRenderer->DrawEnd();

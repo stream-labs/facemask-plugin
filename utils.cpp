@@ -26,6 +26,9 @@
 #include <iterator>
 #include "base64.h"
 
+#include <immintrin.h>
+#include <cstdint>
+#include <assert.h>
 
 namespace Utils {
 
@@ -170,5 +173,24 @@ namespace Utils {
 				(-3.0f * p1 + 3.0f * p2 - 2.0f * t1 - t2) * t*t +
 				t1 * t +
 				p1;
+	}
+
+	// AVX2 optimized memcpy
+	//
+	// https://stackoverflow.com/questions/2963898/faster-alternative-to-memcpy
+	//
+	void fastMemcpy(void *pvDest, void *pvSrc, size_t nBytes) {
+		// must be 32-byte aligned, and multiple of 32 bytes in size
+		assert(nBytes % 32 == 0);
+		assert((intptr_t(pvDest) & 31) == 0);
+		assert((intptr_t(pvSrc) & 31) == 0);
+		const __m256i *pSrc = reinterpret_cast<const __m256i*>(pvSrc);
+		__m256i *pDest = reinterpret_cast<__m256i*>(pvDest);
+		int64_t nVects = nBytes / sizeof(*pSrc);
+		for (; nVects > 0; nVects--, pSrc++, pDest++) {
+			const __m256i loaded = _mm256_stream_load_si256(pSrc);
+			_mm256_stream_si256(pDest, loaded);
+		}
+		_mm_sfence();
 	}
 }
