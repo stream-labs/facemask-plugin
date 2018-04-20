@@ -102,8 +102,6 @@ namespace smll {
 		"Exhaustive Linearization (SLOW!!)";
 	static const char* const CONFIG_INT_SOLVEPNP_ALGORITHM_AP3P =
 		"Algebraic Perspective-Three-Point";
-	static const char* const CONFIG_BOOL_IN_TEST_MODE_DESC =
-		"Enable Testing Mode";
 
 	// show our "advanced" settings
 	static bool g_showSettings = false;
@@ -194,8 +192,6 @@ namespace smll {
 			CONFIG_DOUBLE_FIXED_RECT_X_DESC, 0.0, -1.0, 1.0, 0.01);
 		AddParam(CONFIG_DOUBLE_FIXED_RECT_Y, 
 			CONFIG_DOUBLE_FIXED_RECT_Y_DESC, 0.0, -1.0, 1.0, 0.01);
-
-		AddParam(CONFIG_BOOL_IN_TEST_MODE, CONFIG_BOOL_IN_TEST_MODE_DESC, false);
 
 		// Hide these params
 		m_hiddenParams.push_back(CONFIG_BOOL_FACE_DETECT_ENABLE);
