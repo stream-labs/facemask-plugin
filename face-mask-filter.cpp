@@ -1168,7 +1168,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 		}
 		if (shutdown) break;
 		if (fidx < 0) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(33));
+			std::this_thread::sleep_for(std::chrono::milliseconds(16));
 			continue;
 		}
 
@@ -1266,6 +1266,8 @@ int32_t Plugin::FaceMaskFilter::Instance::StaticMaskDataThreadMain(Instance *ptr
 
 int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 
+	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_IDLE);
+
 	bool lastDemoMode = false; 
 	while (!maskDataShutdown) {
 		{
@@ -1276,6 +1278,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 				if ((maskData == nullptr) &&
 					maskJsonFilename && maskJsonFilename[0]) {
 
+					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);
 					std::string maskFilename = maskJsonFilename;
 #ifdef PUBLIC_RELEASE
 					char* maskname = obs_module_file(kFileDefaultJson);
@@ -1287,6 +1290,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 					// load mask
 					maskData = std::unique_ptr<Mask::MaskData>(LoadMask(maskFilename));
 					currentMaskJsonFilename = maskJsonFilename;
+					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_END);
 				}
 
 				// mask filename changed?
@@ -1301,13 +1305,22 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 
 				// demo mode
 				if (demoModeOn && !lastDemoMode) {
+					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);
 					LoadDemo();
+					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_END);
+				}
+				else if (!demoModeOn && lastDemoMode) {
+					obs_enter_graphics();
+					demoMaskDatas.clear();
+					demoMaskFilenames.clear();
+					obs_leave_graphics();
 				}
 				lastDemoMode = demoModeOn;
 			}
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(33));
 	}
+
 
 	return 0;
 }
@@ -1318,8 +1331,13 @@ void Plugin::FaceMaskFilter::Instance::LoadDemo() {
 
 	std::vector<std::string> files = Utils::ListFolderRecursive(demoModeFolder, "*.json");
 
+	obs_enter_graphics();
 	demoMaskDatas.clear();
 	demoMaskFilenames.clear();
+	obs_leave_graphics();
+
+	std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
 	for (int i = 0; i < files.size(); i++) {
 		if (demoMaskDatas.size() == DEMO_MODE_MAX_MASKS)
 			break;

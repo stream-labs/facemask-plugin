@@ -27,6 +27,7 @@
 #include "plugin.h"
 #include "utils.h"
 #include <queue>
+#include <thread>
 extern "C" {
 	#pragma warning( push )
 	#pragma warning( disable: 4201 )
@@ -179,6 +180,8 @@ void Mask::MaskData::Load(const std::string& file) {
 	else
 		m_introDuration = 10.0f;
 
+	std::this_thread::sleep_for(std::chrono::microseconds(1000));
+
 	// Loading is implemented through lazy loading. Only things that are used by
 	// parts and referenced resources will be available, which should improve
 	// load speed and also reduce memory footprint.
@@ -203,6 +206,8 @@ void Mask::MaskData::Load(const std::string& file) {
 		std::string name = obs_data_item_get_name(itm);
 		GetPart(name);
 	}
+
+	std::this_thread::sleep_for(std::chrono::microseconds(1000));
 
 	// Except for animations. 
 	obs_data_t* resources = obs_data_get_obj(m_data, JSON_RESOURCES);
@@ -246,6 +251,8 @@ std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::GetResource(const std::st
 		this->AddResource(name, p);
 		return p;
 	}
+
+	std::this_thread::sleep_for(std::chrono::microseconds(1000));
 
 	// Lazy Loaded
 	obs_data_item_t* resources = obs_data_item_byname(m_data, JSON_RESOURCES);
