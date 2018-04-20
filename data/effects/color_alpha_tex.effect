@@ -1,0 +1,38 @@
+uniform float4x4 ViewProj;
+uniform texture2d image;
+uniform float4 color;
+
+sampler_state defaultSampler {
+	Filter = Anisotropic;
+	AddressU = Clamp;
+	AddressV = Clamp;
+};
+
+struct VertDataIn {
+	float4 pos : POSITION;
+	float2 uv  : TEXCOORD0;
+};
+
+struct VertDataOut {
+	float4 pos : POSITION;
+	float2 uv  : TEXCOORD0;
+};
+
+VertDataOut VSDefault(VertDataIn v_in) {
+	VertDataOut vert_out;
+	vert_out.pos = mul(float4(v_in.pos.xyz, 1.0), ViewProj);
+	vert_out.uv = v_in.uv;
+	return vert_out;
+}
+
+float4 PSDefault(VertDataOut v_in) : TARGET {
+	float4 samp = image.Sample(defaultSampler, v_in.uv);
+	return float4(color.rgb, samp.r * color.a);
+}
+
+technique Draw {
+	pass {
+		vertex_shader = VSDefault(v_in);
+		pixel_shader = PSDefault(v_in);
+	}
+}

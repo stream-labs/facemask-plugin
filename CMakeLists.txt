@@ -241,6 +241,7 @@ SET(facemask-plugin_SOURCES
 	"${freetype_SOURCES}"
 )
 SET(facemask-plugin_DATA
+	"${PROJECT_SOURCE_DIR}/data/effects/color_alpha_tex.effect"
 	"${PROJECT_SOURCE_DIR}/data/effects/color_conversion.effect"
 	"${PROJECT_SOURCE_DIR}/data/effects/default.effect"
 	"${PROJECT_SOURCE_DIR}/data/effects/denoise.effect"

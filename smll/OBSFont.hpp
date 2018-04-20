@@ -49,9 +49,11 @@ namespace smll {
 			float			advance;
 		};
 
+		gs_effect_t*			m_effect;
 		std::vector<FontInfo>	m_fontInfos;
 
 		void SetFont(const std::string& filename, int size);
+		void DestroyFontInfo();
 	};
 
 }

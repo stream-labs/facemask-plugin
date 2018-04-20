@@ -51,10 +51,39 @@
 namespace smll {
 
 	OBSFont::OBSFont(const std::string& filename, int size) {
+		
+		obs_enter_graphics();
+		char* f = obs_module_file("effects/color_alpha_tex.effect");
+		char* errorMessage = nullptr;
+		m_effect = gs_effect_create_from_file(f, &errorMessage);
+		if (!m_effect || errorMessage) {
+			std::string error(errorMessage);
+			bfree((void*)errorMessage);
+			obs_leave_graphics();
+			throw std::runtime_error(error);
+		}
+		bfree(f);
+		obs_leave_graphics();
+
 		SetFont(filename, size);
 	}
 
 	OBSFont::~OBSFont() {
+		DestroyFontInfo();
+		obs_enter_graphics();
+		gs_effect_destroy(m_effect);
+		obs_leave_graphics();
+	}
+
+	void OBSFont::DestroyFontInfo() {
+		obs_enter_graphics();
+		for (int i = 0; i < m_fontInfos.size(); i++) {
+			if (m_fontInfos[i].texture) {
+				gs_texture_destroy(m_fontInfos[i].texture);
+			}
+		}
+		obs_leave_graphics();
+		m_fontInfos.clear();
 	}
 
 	void OBSFont::SetFont(const std::string& filename, int size) {
@@ -72,10 +101,11 @@ namespace smll {
 		// Set size to load glyphs as
 		FT_Set_Pixel_Sizes(face, 0, size);
 
+		DestroyFontInfo();
+
 		obs_enter_graphics();
 
 		// Let's do ascii 32 - 126
-		m_fontInfos.clear();
 		for (char c = 32; c < 127; c++)
 		{
 			// Load character glyph 
@@ -89,9 +119,12 @@ namespace smll {
 			vec2_set(&(fi.size), (float)face->glyph->bitmap.width, (float)face->glyph->bitmap.rows);
 			vec2_set(&(fi.bearing), (float)face->glyph->bitmap_left, (float)-face->glyph->bitmap_top);
 			fi.advance = (float)face->glyph->advance.x;
-			fi.texture = gs_texture_create(face->glyph->bitmap.width, 
-				face->glyph->bitmap.rows, GS_R8, 1, 
-				(const uint8_t**)&(face->glyph->bitmap.buffer), 0);
+			fi.texture = nullptr;
+			if (face->glyph->bitmap.rows > 0 && face->glyph->bitmap.width > 0) {
+				fi.texture = gs_texture_create(face->glyph->bitmap.width,
+					face->glyph->bitmap.rows, GS_R8, 1,
+					(const uint8_t**)&(face->glyph->bitmap.buffer), 0);
+			}
 
 			m_fontInfos.emplace_back(fi);
 		}
@@ -104,7 +137,27 @@ namespace smll {
 	}
 
 	void OBSFont::RenderText(const std::string& text, float xx, float y) {
-		gs_effect_t* defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
+
+		//gs_effect_t* defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
+
+		/*
+		gs_enable_color(true, true, true, true);
+		gs_enable_depth_test(true);
+		gs_depth_function(GS_LESS);
+		gs_set_cull_mode(gs_cull_mode::GS_BACK);
+		gs_enable_stencil_test(false);
+		*/
+
+		vec4 color;
+		vec4_set(&color, 210.0f / 255.0f, 180.0f / 255.0f, 222.0f / 255.0f, 1.0f);
+
+		gs_enable_blending(true);
+		gs_blend_function_separate(
+			gs_blend_type::GS_BLEND_SRCALPHA,
+			gs_blend_type::GS_BLEND_INVSRCALPHA,
+			gs_blend_type::GS_BLEND_SRCALPHA,
+			gs_blend_type::GS_BLEND_INVSRCALPHA
+		);
 
 		std::string::const_iterator c;
 		float x = xx;
@@ -112,14 +165,18 @@ namespace smll {
 			int idx = (int)*c - 32;
 			FontInfo& fi = m_fontInfos[idx];
 
-			gs_matrix_push();
-			gs_matrix_translate3f(xx + fi.bearing.x, y + fi.bearing.y, 0.0f);
-			while (gs_effect_loop(defaultEffect, "Draw")) {
-				gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
-					"image"), fi.texture);
-				gs_draw_sprite(fi.texture, 0, fi.size.x, fi.size.y);
+			if (fi.texture) {
+				gs_matrix_push();
+				gs_matrix_translate3f(xx + fi.bearing.x, y + fi.bearing.y, 0.0f);
+				while (gs_effect_loop(m_effect, "Draw")) {
+					gs_effect_set_vec4(gs_effect_get_param_by_name(m_effect,
+						"color"), &color);
+					gs_effect_set_texture(gs_effect_get_param_by_name(m_effect,
+						"image"), fi.texture);
+					gs_draw_sprite(fi.texture, 0, fi.size.x, fi.size.y);
+				}
+				gs_matrix_pop();
 			}
-			gs_matrix_pop();
 			xx += (fi.advance / 64.0f); // advance is 1/64 pixels
 		}
 	}
