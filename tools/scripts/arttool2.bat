@@ -71,13 +71,23 @@ try:
 	from PyQt5.QtWidgets import QApplication
 except:
 	installPipModule("PyQt5")
-
 try:
 	import boto3
 except:
 	installPipModule("boto3")
-	
-	
+
+"""
+try:
+	from PIL import Image
+except:
+	installPipModule("Pillow")
+try:
+	from openpyxl import Workbook
+except:
+	installPipModule("openpyxl")
+"""
+
+
 from arttool import arttool
 
 # ==============================================================================
