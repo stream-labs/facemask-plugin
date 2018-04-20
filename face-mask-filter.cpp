@@ -224,6 +224,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	// Make the smll stuff
 	smllFaceDetector = new smll::FaceDetector();
 	smllRenderer = new smll::OBSRenderer(); 
+	smllFont = new smll::OBSFont("c:/Windows/Fonts/graffonti.3d.drop.[fontvir.us].ttf", 100);
 
 	// set our mm thread task
 	if (!m_taskHandle) {
@@ -301,6 +302,7 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 
 	delete smllFaceDetector;
 	delete smllRenderer;
+	delete smllFont;
 
 	if (m_memcpyEnv)
 		destroy_threaded_memcpy_pool(m_memcpyEnv);
@@ -840,6 +842,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			gs_draw_sprite(tex2, 0, m_baseWidth, m_baseHeight);
 		}
 	}
+
+	smllFont->RenderText("this is a test of FreeType", 150, 150);
 
 	// end
 	smllRenderer->DrawEnd();

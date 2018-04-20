@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "smll/FaceDetector.hpp"
+#include "smll/OBSFont.hpp"
 #include "smll/OBSRenderer.hpp"
 #include "smll/DetectionResults.hpp"
 #include "smll/TriangulationResult.hpp"
@@ -125,6 +126,7 @@ namespace Plugin {
 			// Face detector
 			smll::FaceDetector*		smllFaceDetector;
 			smll::OBSRenderer*		smllRenderer;
+			smll::OBSFont*			smllFont;
 
 			gs_texrender_t*		m_sourceRenderTarget;
 			gs_texrender_t*		drawTexRender;
