@@ -22,10 +22,7 @@
 # ==============================================================================
 import sys, subprocess, os, json, uuid, boto3
 from copy import deepcopy
-<<<<<<< HEAD
 from .additions import perform_addition
-=======
->>>>>>> master
 
 def fixpath(p):
     p = p.replace("\\", "/")
@@ -75,41 +72,8 @@ def s3_upload(filename, key):
     elif filename.endswith(".json"):
         cunt_type = "application/json"
     s3.Bucket(S3_BUCKET).put_object(Key=key, Body=f, ACL='public-read', ContentType=cunt_type)
-<<<<<<< HEAD
 
 
-=======
-
-def str_is_float(x):
-    try:
-        a = float(x)
-    except ValueError:
-        return False
-    else:
-        return True
-
-
-def str_is_int(x):
-    try:
-        a = int(x)
-    except ValueError:
-        return False
-    else:
-        return True
-
-
-# ==============================================================================
-# FIELD SEVERITIES
-# ==============================================================================
-def critical(field):
-    return field in ["name", "author", "license", "copyright"]
-
-
-def desired(field):
-    return field in ["website"]
-
-
->>>>>>> master
 
 # ==============================================================================
 # SYSTEM STUFF
@@ -266,10 +230,7 @@ def maskmaker(command, kvpairs, files):
     for line in execute(cmd):
         yield line[:-1]
     print(" ")
-<<<<<<< HEAD
 
-=======
->>>>>>> master
 
 def mmGetCreateKeys(metadata):
     CREATEKEYS = ["name", "uuid", "tier", "description", "author",
@@ -480,31 +441,25 @@ def checkMetaData(metadata):
     # check for errors
     for field, value in metadata.items():
         if type(value) is str and critical(field) and len(value) == 0:
-            print(metadata["fbx"], " missing ", field)
+            #print(metadata["fbx"], " missing ", field)
             return CHECKMETA_ERROR, masktype
         elif type(value) is str and desired(field) and len(value) == 0:
-            print(metadata["fbx"], " missing ", field)
+            #print(metadata["fbx"], " missing ", field)
             return CHECKMETA_WARNING, masktype
 
     # check for icons
     fbxfile = metadata["fbx"]
     pf = os.path.abspath(fbxfile.lower().replace(".fbx", ".gif").replace(".json", ".gif"))
     if not os.path.exists(pf):
-<<<<<<< HEAD
-        print(fbxfile, " missing ", pf)
+        #print(fbxfile, " missing ", pf)
         return CHECKMETA_WARNING, masktype
     pf = os.path.abspath(fbxfile.lower().replace(".fbx", ".png").replace(".json", ".gif"))
     if not os.path.exists(pf):
-        print(fbxfile, " missing ", pf)
-=======
-        return CHECKMETA_WARNING, masktype
-    pf = os.path.abspath(fbxfile.lower().replace(".fbx", ".png").replace(".json", ".gif"))
-    if not os.path.exists(pf):
->>>>>>> master
+        #print(fbxfile, " missing ", pf)
         return CHECKMETA_WARNING, masktype
     pf = os.path.abspath(fbxfile.lower().replace(".fbx", ".mp4").replace(".json", ".gif"))
     if not os.path.exists(pf):
-        print(fbxfile, " missing ", pf)
+        #print(fbxfile, " missing ", pf)
         return CHECKMETA_WARNING, masktype
 
     if "release_with_plugin" in metadata and metadata["release_with_plugin"]:
@@ -560,7 +515,6 @@ def loadMetadataFile(fbxfile):
 
     return metadata
 
-<<<<<<< HEAD
 
 
 # Combine author & tags for a combo
@@ -759,8 +713,6 @@ def buildMask(fbxfile, outputWindow, metadata=None):
 
     return deps,missing
 
-=======
->>>>>>> master
 
 
 # ==============================================================================

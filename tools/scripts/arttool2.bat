@@ -75,6 +75,8 @@ try:
 	import boto3
 except:
 	installPipModule("boto3")
+
+"""
 try:
 	from PIL import Image
 except:
@@ -83,7 +85,7 @@ try:
 	from openpyxl import Workbook
 except:
 	installPipModule("openpyxl")
-
+"""
 
 
 from arttool import arttool
