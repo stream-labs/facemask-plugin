@@ -95,6 +95,8 @@ DROP_DOWNS = {"texture_max": TEXTURE_SIZES,
 
 RELEASE_FIELDS = ["name", "uuid", "description", "author", "tags", "category", "tier", "is_vip", "is_intro"]
 
+RELEASE_FIELDS = ["name", "uuid", "description", "author", "tags", "category", "tier", "is_vip", "is_intro"]
+
 
 class ArtToolWindow(QMainWindow):
 
@@ -676,6 +678,7 @@ class ArtToolWindow(QMainWindow):
 
     # Main buttons
     def onMainButton(self, button):
+<<<<<<< HEAD
         if button == "S3 Upload":
             self.uploadToS3()
         elif button == "Refresh":
@@ -689,6 +692,12 @@ class ArtToolWindow(QMainWindow):
             self.onWriteMetadataExcel()
         elif button == "Release Masks":
             self.doReleaseMasks()
+=======
+        # ["Refresh", "Autobuild", "Rebuild All", "Make Release", "SVN Update", "SVN Commit"]
+        if button == "Make Release":
+            self.makeRelease()
+
+>>>>>>> master
 
     # TODO : hook up to a button
     def onMakeThumbsMovie(self):
@@ -811,6 +820,7 @@ class ArtToolWindow(QMainWindow):
         self.updateListColorIcon()
 
 
+
     # checkbox changed
     def onCheckboxChanged(self, state, field):
         if state == 0:
@@ -818,6 +828,7 @@ class ArtToolWindow(QMainWindow):
         else:
             self.metadata[field] = True
         self.updateListColorIcon()
+
 
 
     # texsize changed
@@ -867,10 +878,48 @@ class ArtToolWindow(QMainWindow):
         QApplication.setOverrideCursor(Qt.WaitCursor)
 
         if self.currentCombo >= 0:
+<<<<<<< HEAD
             # build combo
             combofile = self.combofiles[self.currentCombo]
             buildCombo(combofile, self.outputWindow, self.metadata)
             filetype = "Combo Json"
+=======
+
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+
+            # run maskmaker merge, add json to svn
+            combofile = self.combofiles[self.currentCombo]
+            for line in mmMerge(combofile, self.metadata):
+                self.outputWindow.append(line)
+            svnAddFile(combofile)
+
+            # save mod times of dependent jsons
+            combodeps = list()
+            for fbxfile in self.metadata["additions"]:
+                if len(fbxfile) > 0:
+                    f = fbxfile.lower().replace(".fbx", ".json")
+                    if os.path.exists(os.path.abspath(f)):
+                        combodeps.append({"file": f, "modtime": os.path.getmtime(f)})
+                    else:
+                        combodeps.append({"file": f, "modtime": 0})
+                        msg = QMessageBox()
+                        msg.setIcon(QMessageBox.Warning)
+                        msg.setText("This FBX depends on " + f + ", which cannot be found.")
+                        msg.setWindowTitle("Missing PNG File")
+                        msg.setStandardButtons(QMessageBox.Ok)
+                        self.ignoreSVN += 1
+                        self.dialogUp = True
+                        msg.exec_()
+                    self.dialogUp = False
+            self.metadata["dependencies"] = combodeps
+
+            # save metadata
+            self.saveCurrentMetadata()
+
+            QApplication.restoreOverrideCursor()
+
+            return
+>>>>>>> master
 
         else:
             # build mask
@@ -897,8 +946,11 @@ class ArtToolWindow(QMainWindow):
 
         QApplication.restoreOverrideCursor()
 
+<<<<<<< HEAD
         self.updateListColorIcon()
 
+=======
+>>>>>>> master
 
     def onAddAddition(self):
         self.ignoreSVN += 1
@@ -1005,6 +1057,7 @@ class ArtToolWindow(QMainWindow):
                 self.dialogUp = False
 
 
+<<<<<<< HEAD
     def doSVNUpdate(self):
         QApplication.setOverrideCursor(Qt.WaitCursor)
         arttoolUpdated = svnUpdate(self.outputWindow)
@@ -1022,6 +1075,8 @@ class ArtToolWindow(QMainWindow):
             self.cancelledSVN = True
             msg.exec_()
 
+=======
+>>>>>>> master
     def onSyncOk(self, i):
         if i.text() == "OK":
             self.doSVNUpdate()
@@ -1115,6 +1170,7 @@ class ArtToolWindow(QMainWindow):
             # dont check anymore
             self.cancelledSVN = True
 
+<<<<<<< HEAD
     def doReleaseMasks(self):
         print("todo release masks")
 
@@ -1136,6 +1192,10 @@ class ArtToolWindow(QMainWindow):
     def onUploadToS3Confirm(self, item):
 
         do_upload = item.text() == "OK"
+=======
+
+    def makeRelease(self):
+>>>>>>> master
 
         metalist = list()
         jsonlist = list()
@@ -1146,8 +1206,11 @@ class ArtToolWindow(QMainWindow):
                 d = dict()
                 for k in RELEASE_FIELDS:
                     d[k] = metadata[k]
+<<<<<<< HEAD
                     if type(d[k]) is str:
                         d[k] = d[k].replace("\n", "").replace("\r", "")
+=======
+>>>>>>> master
                 metalist.append(d)
                 jsonlist.append(jsonFromFbx(fbxfile))
 
@@ -1160,15 +1223,19 @@ class ArtToolWindow(QMainWindow):
                     d[k] = metadata[k]
                     if type(d[k]) is str:
                         d[k] = d[k].replace("\n", "").replace("\r", "")
+<<<<<<< HEAD
                 md = getCombinedComboMeta(metadata)
                 d["tags"] = md["tags"]
                 d["author"] = md["author"]
+=======
+>>>>>>> master
 
                 metalist.append(d)
                 jsonlist.append(combofile)
 
         for i in range(0,len(metalist)):
             metalist[i]["category"] = metalist[i]["category"].lower()
+<<<<<<< HEAD
             metalist[i]["tags"] = metalist[i]["tags"].lower().replace(", ",",")
             metalist[i]["modtime"] = int(os.path.getmtime(jsonlist[i]))
             metalist[i]["author"] = metalist[i]["author"].replace(", ",",")
@@ -1190,11 +1257,29 @@ class ArtToolWindow(QMainWindow):
                 s3_upload(jsonlist[i].replace(".json",".gif"), uuid + ".gif")
                 print("  mp4...")
                 s3_upload(jsonlist[i].replace(".json",".mp4"), uuid + ".mp4")
+=======
+            metalist[i]["tags"] = metalist[i]["tags"].lower().replace(" ","")
+            metalist[i]["modtime"] = int(os.path.getmtime(jsonlist[i]))
+            metalist[i]["author"] = metalist[i]["author"].replace(", ",",")
+
+            print("Uploading",jsonlist[i])
+
+            uuid = metalist[i]["uuid"]
+            print("  json...")
+            s3_upload(jsonlist[i], uuid + ".json")
+            print("  png...")
+            s3_upload(jsonlist[i].replace(".json",".png"), uuid + ".png")
+            print("  gif...")
+            s3_upload(jsonlist[i].replace(".json",".gif"), uuid + ".gif")
+            print("  mp4...")
+            s3_upload(jsonlist[i].replace(".json",".mp4"), uuid + ".mp4")
+>>>>>>> master
 
 
         file, filter = QFileDialog.getSaveFileName(self, 'Save file', os.path.abspath("."),
                                                    "Mask files (*.json)")
         if file is not None and len(file) > 0:
+<<<<<<< HEAD
             writeMetaData(os.path.abspath(file), metalist)
 
 
@@ -1283,3 +1368,6 @@ class ArtToolWindow(QMainWindow):
         wb.close()
 
         QApplication.restoreOverrideCursor()
+=======
+            writeMetaData(os.path.abspath(file), metalist)
+>>>>>>> master

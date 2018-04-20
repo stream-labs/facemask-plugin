@@ -126,7 +126,7 @@ class ArtToolWindow(QMainWindow):
 		self.setCentralWidget(mainPane)
 		self.setGeometry(100,100, 500, 470)
 		self.setWindowTitle('Mask Merge Tool')
-		self.setWindowIcon(QIcon('icons/mergeicon.png'))
+		self.setWindowIcon(QIcon('arttool/mergeicon.png'))
 
 		
 	def onMerge(self):

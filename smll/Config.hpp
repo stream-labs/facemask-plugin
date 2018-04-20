@@ -108,10 +108,6 @@ namespace smll {
 	static const char* const CONFIG_BOOL_KALMAN_ENABLE =
 		"kalmanFilteringEnable";
 
-	// Testing
-	static const char* const CONFIG_BOOL_IN_TEST_MODE = 
-		"inTestMode";
-
 	class Config
 	{
 	public:

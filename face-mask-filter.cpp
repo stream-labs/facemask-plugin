@@ -24,7 +24,6 @@
 
 #include <smll/Face.hpp>
 #include <smll/Config.hpp>
-#include <smll/TestingPipe.hpp>
 #include <smll/landmarks.hpp>
 
 #include <Shlwapi.h>
@@ -269,10 +268,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 Plugin::FaceMaskFilter::Instance::~Instance() {
 	PLOG_DEBUG("<%" PRIXPTR "> Finalizing...", this);
 
-	smll::TestingPipe& T = smll::TestingPipe::singleton();
-
 	// kill the thread
-	T.SendString("stopping threads");
 	maskDataShutdown = true;
 	PLOG_DEBUG("<%" PRIXPTR "> Stopping worker Threads...", this);
 	{
@@ -282,7 +278,6 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 	// wait for them to die
 	detection.thread.join();
 	maskDataThread.join();
-	T.SendString("threads stopped");
 	PLOG_DEBUG("<%" PRIXPTR "> Worker Thread stopped.", this);
 
 	obs_enter_graphics();
@@ -314,11 +309,7 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 		AvRevertMmThreadCharacteristics(m_taskHandle);
 	}
 
-	T.SendString("filter destroyed");
 	PLOG_DEBUG("<%" PRIXPTR "> Finalized.", this);
-
-	// VERY LAST THING WE DO!!
-	T.ClosePipe();
 }
 
 uint32_t Plugin::FaceMaskFilter::Instance::get_width(void *ptr) {
@@ -842,36 +833,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		texRenderEnd();
 		tex2 = gs_texrender_get_texture(drawTexRender);
 	}
-
-	// TEST MODE RENDERING
-	if (smll::Config::singleton().get_bool(smll::CONFIG_BOOL_IN_TEST_MODE))	{
-		if (faces.length > 0) {
-
-			dlib::point pos = faces[0].GetPosition();
-
-			if (!testingStage) {
-				testingStage = gs_stagesurface_create(m_baseWidth, m_baseHeight, GS_RGBA);
-			}
-			gs_stage_texture(testingStage, tex2);
-			uint8_t *data; uint32_t linesize;
-			if (gs_stagesurface_map(testingStage, &data, &linesize)) {
-
-				uint8_t* pixel = data + (pos.y() * linesize) + (pos.x() * 4);
-				uint8_t red = *pixel++;
-				uint8_t green = *pixel++;
-				uint8_t blue = *pixel++;
-				uint8_t alpha = *pixel++;
-
-				char buf[128];
-				snprintf(buf, sizeof(buf), "detected pixel %d,%d,%d,%d",
-					(int)red, (int)green, (int)blue, (int)alpha);
-				smll::TestingPipe::singleton().SendString(buf);
-
-				gs_stagesurface_unmap(testingStage);
-			}
-		}
-	}
-
 
 	if (tex2) {
 		// draw the rendering on top of the video
@@ -1467,19 +1428,6 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 
 			// new timestamp
 			timestamp = detection.faces[fidx].timestamp;
-
-			// TEST MODE ONLY : output for testing
-			if (smll::Config::singleton().get_bool(smll::CONFIG_BOOL_IN_TEST_MODE)) {
-				char b[128];
-				snprintf(b, sizeof(b), "%d faces detected", newFaces.length);
-				smll::TestingPipe::singleton().SendString(b);
-				for (int i = 0; i < newFaces.length; i++) {
-
-					dlib::point pos = newFaces[i].GetPosition();
-					snprintf(b, sizeof(b), "face detected at %ld,%ld", pos.x(), pos.y());
-					smll::TestingPipe::singleton().SendString(b);
-				}
-			}
 
 			// no faces lost, maybe some gained
 			if (faces.length <= newFaces.length) {

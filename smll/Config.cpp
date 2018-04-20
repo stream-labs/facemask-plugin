@@ -58,9 +58,6 @@ namespace smll {
 	static const char* const CONFIG_INT_SPEED_LIMIT_DESC =
 		"Face Detection Speed Limit (in ms)";
 
-	static const char* const CONFIG_BOOL_IN_TEST_MODE_DESC =
-		"Enable Testing Mode";
-
 	// show our "advanced" settings
 	static bool g_showSettings = false;
     
@@ -116,8 +113,6 @@ namespace smll {
 
 		AddParam(CONFIG_INT_SPEED_LIMIT,
 			CONFIG_INT_SPEED_LIMIT_DESC, 24, 0, 33 * 16, 1);
-
-		AddParam(CONFIG_BOOL_IN_TEST_MODE, CONFIG_BOOL_IN_TEST_MODE_DESC, false);
 
 		m_data = obs_data_create();
 		set_defaults(m_data);
