@@ -39,6 +39,9 @@ typedef enum ImageType
 
 } ImageType;
 
+// NOTE: destructor does not delete this->data
+//       (only unaligned data if AlignedAlloc() is used)
+//
 class ImageWrapper
 {
 public:
@@ -50,6 +53,7 @@ public:
 
 	ImageWrapper();
 	ImageWrapper(int _w, int _h, int _s, ImageType _t, char* d);
+	~ImageWrapper();
 
 	int		getStride() const;
 	int		getSize() const;
@@ -57,6 +61,10 @@ public:
 
 	void	ResizeTo(ImageWrapper& other) const;
 	void	ColorConvertTo(ImageWrapper& other) const;
+
+	void    AlignedAlloc();
+private:
+	char*	unalignedData;
 };
 
 

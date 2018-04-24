@@ -59,7 +59,7 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 		// add extra to buffer size to allow for alignment
 		size_t vertBuffSize = zlib_size(decodedVertices) + 16;
 		uint8_t* vtxbuffer = new uint8_t[vertBuffSize];
-		zlib_decode(decodedVertices, (uint8_t*)ALIGNED(vtxbuffer));
+		zlib_decode(decodedVertices, (uint8_t*)ALIGN_16(vtxbuffer));
 
 		// Index Buffer
 		if (!obs_data_has_user_value(data, S_INDEX_BUFFER)) {
@@ -77,7 +77,7 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 		size_t numIndices = idxBuffSize / sizeof(uint32_t);
 		// add extra to buffer size to allow for alignment
 		uint8_t* idxbuffer = new uint8_t[idxBuffSize + 16];
-		zlib_decode(decodedIndices, (uint8_t*)ALIGNED(idxbuffer));
+		zlib_decode(decodedIndices, (uint8_t*)ALIGN_16(idxbuffer));
 
 		// Make Buffers
 		m_VertexBuffer = std::make_shared<GS::VertexBuffer>(vtxbuffer);

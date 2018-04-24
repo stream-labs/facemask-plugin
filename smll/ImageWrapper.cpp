@@ -19,6 +19,7 @@
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "ImageWrapper.hpp"
+#include "utils.h"
 
 #define ICV_BASE  (1)
 
@@ -34,11 +35,16 @@ namespace smll {
 
 	ImageWrapper::ImageWrapper() 
 		: w(0), h(0), stride(0), type(IMAGETYPE_INVALID),
-		data(nullptr) {
+		data(nullptr), unalignedData(nullptr) {
 	}
 
 	ImageWrapper::ImageWrapper(int _w, int _h, int _s, ImageType _t, char* d)
-		: w(_w), h(_h), stride(_s), type(_t), data(d) {
+		: w(_w), h(_h), stride(_s), type(_t), data(d), unalignedData(nullptr) {
+	}
+
+	ImageWrapper::~ImageWrapper() {
+		if (unalignedData)
+			delete[] unalignedData;
 	}
 
 	int	ImageWrapper::getStride() const {
@@ -113,4 +119,11 @@ namespace smll {
 		iwiColorConvert(srcList, src_colorfmt, destList, dest_colorfmt, 1.0f, NULL, NULL);
 	}
 
+	void    ImageWrapper::AlignedAlloc() {
+		if (unalignedData)
+			delete[] unalignedData;
+		size_t sz = getSize();
+		unalignedData = new char[sz + 32];
+		data = (char*)ALIGN_32(unalignedData);
+	}
 }

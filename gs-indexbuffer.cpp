@@ -27,7 +27,7 @@ extern "C" {
 }
 
 GS::IndexBuffer::IndexBuffer(const uint8_t* raw, size_t len)
- : IndexBuffer((uint32_t*)ALIGNED(raw), len) {
+ : IndexBuffer((uint32_t*)ALIGN_16(raw), len) {
 	m_raw = raw;
 }
 

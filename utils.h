@@ -24,8 +24,10 @@
 #include <vector>
 #include "base64.h"
 
-// ALIGNED : macro to align a memory address to 16b boundary
-#define ALIGNED(XXX) (((size_t)(XXX) & 0xF) ? (((size_t)(XXX) + 0x10) & 0xFFFFFFFFFFFFFFF0ULL) : (size_t)(XXX))
+// ALIGNED : macro to align a memory address
+#define ALIGN_16(XXX) (((size_t)(XXX) & 0xF) ? (((size_t)(XXX) + 0x10) & 0xFFFFFFFFFFFFFFF0ULL) : (size_t)(XXX))
+#define ALIGN_32(XXX) (((size_t)(XXX) & 0x1F) ? (((size_t)(XXX) + 0x20) & 0xFFFFFFFFFFFFFFE0ULL) : (size_t)(XXX))
+
 
 #define MAKE32COLOR(r,g,b,a) \
 ((((uint32_t)(a) << 24) & 0xFF000000) |\
@@ -46,4 +48,5 @@ namespace Utils {
 	extern std::string dirname(const std::string &p);
 	extern void find_and_replace(std::string& source, std::string const& find, std::string const& replace);
 	extern float hermite(float t, float p1, float p2, float t1 = 0.0f, float t2 = 0.0f);
+	extern void fastMemcpy(void *pvDest, void *pvSrc, size_t nBytes);
 }

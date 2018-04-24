@@ -30,7 +30,7 @@ extern "C" {
 GS::VertexBuffer::VertexBuffer(uint8_t* raw)
  : m_vb_data(nullptr), m_vertexbuffer(nullptr), m_raw(nullptr) {
 	m_raw = raw;
-	gs_vb_data* vbdata = (gs_vb_data*)ALIGNED(raw);
+	gs_vb_data* vbdata = (gs_vb_data*)ALIGN_16(raw);
 
 	// sanity check
 	if (vbdata->num_tex < 0 || vbdata->num_tex > 8) {

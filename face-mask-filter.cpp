@@ -971,18 +971,17 @@ bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sou
 					if (detect.w != detectTex.width ||
 						detect.h != detectTex.height ||
 						detect.stride != (int)linesize) {
-						if (detect.data)
-							delete[] detect.data;
 						detect.w = detectTex.width;
 						detect.h = detectTex.height;
 						detect.stride = linesize;
 						detect.type = smll::OBSRenderer::OBSToSMLL(gs_texture_get_color_format(detectTex.texture));
-						detect.data = new char[detect.getSize()];
+						detect.AlignedAlloc();
 					}
+
 					if (m_memcpyEnv)
 						threaded_memcpy(detect.data, data, detect.getSize(), m_memcpyEnv);
 					else
-						memcpy(detect.data, data, detect.getSize());
+						Utils::fastMemcpy(detect.data, data, detect.getSize());
 					gs_stagesurface_unmap(detectStage);
 				}
 			}

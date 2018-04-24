@@ -171,7 +171,7 @@ namespace smll {
 		// check for pose flip
 		if (t[2] < 0.0)
 		{
-			blog(LOG_DEBUG, "***** POSE FLIP *****");
+			//blog(LOG_DEBUG, "***** POSE FLIP *****");
 
 			// flip translation
 			t[0] = -t[0];

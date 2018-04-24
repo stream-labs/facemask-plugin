@@ -592,6 +592,7 @@ namespace smll {
 		const cv::Mat& rot = face.GetCVRotation();
 		cv::Mat trx = face.GetCVTranslation();
 
+		/*
 		blog(LOG_DEBUG, "HEADPOINTS-----------------------");
 		blog(LOG_DEBUG, " trans: %5.2f, %5.2f, %5.2f",
 			(float)trx.at<double>(0, 0),
@@ -601,6 +602,7 @@ namespace smll {
 			(float)rot.at<double>(0, 0),
 			(float)rot.at<double>(1, 0),
 			(float)rot.at<double>(2, 0));
+			*/
 
 		std::vector<cv::Point2f> projheadpoints;
 		cv::projectPoints(headpoints, rot, trx, GetCVCamMatrix(), GetCVDistCoeffs(), projheadpoints);
@@ -1227,9 +1229,9 @@ namespace smll {
 			cv::projectPoints(model_points, rotation, translation, GetCVCamMatrix(), GetCVDistCoeffs(), projectedPoints);
 
 			float tterr = 0.0f;
-			blog(LOG_DEBUG, "_");
-			blog(LOG_DEBUG, "_");
-			blog(LOG_DEBUG, "SOLVEPNP----------------------");
+			//blog(LOG_DEBUG, "_");
+			//blog(LOG_DEBUG, "_");
+			//blog(LOG_DEBUG, "SOLVEPNP----------------------");
 			for (int j = 0; j < model_points.size(); j++) {
 
 				float xerr = fabs(image_points[j].x - projectedPoints[j].x);
@@ -1237,11 +1239,12 @@ namespace smll {
 				float terr = xerr + yerr;
 				tterr += terr;
 
-				blog(LOG_DEBUG, "%d : %5.0f, %5.0f   |   %5.2f, %5.2f, %5.2f   |  %2.1f, %2.1f  |  %2.1f", j,
-					image_points[j].x, image_points[j].y, 
-					model_points[j].x, model_points[j].y, model_points[j].z,
-					xerr, yerr, terr);
+				//blog(LOG_DEBUG, "%d : %5.0f, %5.0f   |   %5.2f, %5.2f, %5.2f   |  %2.1f, %2.1f  |  %2.1f", j,
+				//	image_points[j].x, image_points[j].y, 
+				//	model_points[j].x, model_points[j].y, model_points[j].z,
+				//	xerr, yerr, terr);
 			}
+			/*
 			blog(LOG_DEBUG, "--------------------");
 			if (tterr > 20.0f) 
 				blog(LOG_DEBUG, "TOTAL ERROR   %3.2f <------------------- BAD -------", tterr);
@@ -1256,6 +1259,7 @@ namespace smll {
 				(float)rotation.at<double>(0, 0),
 				(float)rotation.at<double>(1, 0),
 				(float)rotation.at<double>(2, 0));
+				*/
 
 			// sometimes we get crap
 			if (translation.at<double>(2, 0) > 1000.0 ||
