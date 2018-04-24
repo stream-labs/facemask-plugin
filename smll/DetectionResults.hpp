@@ -27,6 +27,7 @@
 #pragma warning( disable: 4459 )
 #pragma warning( disable: 4505 )
 #pragma warning( disable: 4267 )
+#pragma warning( disable: 4100 )
 #include <dlib/image_processing.h>
 #include <dlib/filtering.h>
 #include <dlib/matrix.h>

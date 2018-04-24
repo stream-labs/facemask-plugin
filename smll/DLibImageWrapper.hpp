@@ -3,9 +3,20 @@
 #ifndef DLIB_IMAGE_WRAPPER_H_
 #define DLIB_IMAGE_WRAPPER_H_
 
+#pragma warning( push )
+#pragma warning( disable: 4127 )
+#pragma warning( disable: 4201 )
+#pragma warning( disable: 4456 )
+#pragma warning( disable: 4458 )
+#pragma warning( disable: 4459 )
+#pragma warning( disable: 4505 )
+#pragma warning( disable: 4267 )
+#pragma warning( disable: 4100 )
 #include <dlib/algs.h>
 #include <dlib/pixel.h>
 #include <dlib/image_processing/generic_image.h>
+#pragma warning( pop )
+
 
 // ---------------------------------------------------------------------------
 // This code copied and modified from dlib's internal image wrapper

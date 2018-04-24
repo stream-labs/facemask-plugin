@@ -40,6 +40,7 @@
 #pragma warning( disable: 4459 )
 #pragma warning( disable: 4505 )
 #pragma warning( disable: 4267 )
+#pragma warning( disable: 4100 )
 #include <dlib/image_processing/frontal_face_detector.h>
 #include <dlib/image_processing.h>
 #include <libobs/graphics/graphics.h>

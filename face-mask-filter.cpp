@@ -51,7 +51,10 @@
 
 // use threaded memcpy (not sure if this actually helps
 // due to windows thread priorities)
-#define USE_THREADED_MEMCPY				(true)
+#define USE_THREADED_MEMCPY				(false)
+
+// if we aren't using threaded memcpy, use fast memcpy?
+#define USE_FAST_MEMCPY					(true)
 
 
 // Windows MMCSS thread task name
@@ -287,9 +290,6 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 	for (int i = 0; i < ThreadData::BUFFER_SIZE; i++) {
 		if (detection.frames[i].capture.texture) {
 			gs_texture_destroy(detection.frames[i].capture.texture);
-		}
-		if (detection.frames[i].detect.data) {
-			delete[] detection.frames[i].detect.data;
 		}
 	}
 	if (testingStage)
@@ -980,8 +980,10 @@ bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sou
 
 					if (m_memcpyEnv)
 						threaded_memcpy(detect.data, data, detect.getSize(), m_memcpyEnv);
-					else
+					else if (USE_FAST_MEMCPY)
 						Utils::fastMemcpy(detect.data, data, detect.getSize());
+					else
+						memcpy(detect.data, data, detect.getSize());
 					gs_stagesurface_unmap(detectStage);
 				}
 			}
