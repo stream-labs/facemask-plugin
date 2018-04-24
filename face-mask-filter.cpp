@@ -837,11 +837,14 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	if (tex2) {
 		// draw the rendering on top of the video
 		gs_set_cull_mode(GS_NEITHER);
+//		gs_matrix_push();
+//		gs_matrix_identity();
 		while (gs_effect_loop(defaultEffect, "Draw")) {
 			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
 				"image"), tex2);
 			gs_draw_sprite(tex2, 0, m_baseWidth, m_baseHeight);
 		}
+//		gs_matrix_pop();
 	}
 
 	// end
@@ -1575,7 +1578,7 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 
 	obs_leave_graphics();
 
-	char* gifmaker = obs_module_file("test/gifmaker.bat");
+	char* gifmaker = obs_module_file("gifmaker.bat");
 	std::string cmd = gifmaker;
 	Utils::find_and_replace(cmd, "/", "\\");
 	Utils::find_and_replace(cmd, "Program Files", "\"Program Files\"");

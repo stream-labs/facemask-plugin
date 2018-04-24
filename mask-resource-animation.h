@@ -48,14 +48,14 @@ namespace Mask {
 			PART_SCALE_Z,
 			PART_CHANNEL_LAST,
 
-			// morph channels (there are 68 xyz channels)
+			// morph channels (there are 68 + 11 = 79 xyz channels)
 			MORPH_CHANNEL_FIRST,
 			MORPH_LANDMARK_0_X = MORPH_CHANNEL_FIRST,
 			MORPH_LANDMARK_0_Y,
 			MORPH_LANDMARK_0_Z,
-			MORPH_LANDMARK_67_X = MORPH_LANDMARK_0_X + (67 * 3),
-			MORPH_LANDMARK_67_Y = MORPH_LANDMARK_0_Y + (67 * 3),
-			MORPH_LANDMARK_67_Z = MORPH_LANDMARK_0_Z + (67 * 3),
+			MORPH_LANDMARK_78_X = MORPH_LANDMARK_0_X + (78 * 3),
+			MORPH_LANDMARK_78_Y = MORPH_LANDMARK_0_Y + (78 * 3),
+			MORPH_LANDMARK_78_Z = MORPH_LANDMARK_0_Z + (78 * 3),
 			MORPH_CHANNEL_LAST,
 		};
 
