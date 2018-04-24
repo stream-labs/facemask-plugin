@@ -30,12 +30,6 @@ extern "C" {
 #include <iw/iw_image_color.h>
 }
 
-#pragma warning( push )
-#pragma warning( disable: 4201 )
-#include <libobs/obs-module.h>
-#pragma warning( pop )
-
-
 namespace smll {
 
 
@@ -54,10 +48,8 @@ namespace smll {
 
 	ImageWrapper::~ImageWrapper() {
 		if (unalignedData) {
-			blog(LOG_DEBUG, "data is %x     deleting %x", intptr_t(data), intptr_t(unalignedData));
 			delete[] unalignedData;
 		}
-		unalignedData = nullptr;
 	}
 
 	ImageWrapper& ImageWrapper::operator=(const ImageWrapper& other) {
@@ -150,6 +142,5 @@ namespace smll {
 		size_t sz = getSize();
 		unalignedData = new char[sz + 32];
 		data = (char*)ALIGN_32(unalignedData);
-		blog(LOG_DEBUG, "allocated %d bytes at %x     aligned: %x", (int)sz, intptr_t(unalignedData), intptr_t(data));
 	}
 }
