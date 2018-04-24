@@ -144,6 +144,7 @@ namespace Plugin {
 
 			// demo mode
 			bool				demoModeOn;
+			bool				demoModeMaskJustChanged;
 			bool				demoModeMaskChanged;
 			std::string			demoModeFolder;
 			int					demoCurrentMask;
@@ -184,6 +185,7 @@ namespace Plugin {
 			gs_stagesurf_t*		testingStage;
 
 			// find a cached video frame
+			int					FindCachedFrameIndex(const TimeStamp& ts);
 			gs_texture_t*		FindCachedFrame(const TimeStamp& ts);
 
 			// Detection
@@ -199,19 +201,12 @@ namespace Plugin {
 				struct CachedFrame {
 					smll::OBSTexture	capture;
 					smll::ImageWrapper	detect;
+					smll::MorphData     morphData;
 					std::mutex			mutex;
 					TimeStamp			timestamp;
 				};
 				int frameIndex;
 				std::array<struct CachedFrame, BUFFER_SIZE> frames;
-
-				// morph data circular buffer (video_update()'s thread -> detection thread)
-				struct CachedMorph {
-					smll::MorphData     morphData;
-					std::mutex			mutex;
-				};
-				int morphIndex;
-				std::array<struct CachedMorph, BUFFER_SIZE> morphs;
 
 				// faces circular buffer (detection thread -> video_tick()'s thread)
 				struct CachedResult {

@@ -205,7 +205,8 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	: m_source(source), m_baseWidth(640), m_baseHeight(480), m_isActive(true), m_isVisible(true),
 	m_isDisabled(false), m_taskHandle(NULL), m_memcpyEnv(nullptr), detectStage(nullptr), 
 	maskDataShutdown(false), maskJsonFilename(nullptr), maskData(nullptr),
-	demoModeOn(false), demoModeMaskChanged(false), demoCurrentMask(0), demoModeInterval(0.0f), 
+	demoModeOn(false), demoModeMaskJustChanged(false), demoModeMaskChanged(false), 
+	demoCurrentMask(0), demoModeInterval(0.0f),
 	demoModeDelay(0.0f), demoModeElapsed(0.0f), demoModeInDelay(false), demoModeGenPreviews(false),
 	demoModeSavingFrames(false), drawMask(true),	drawFaces(false), drawMorphTris(false), 
 	drawFDRect(false), filterPreviewMode(false), autoGreenScreen(false), testingStage(nullptr) {
@@ -246,7 +247,6 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 		detection.shutdown = false;
 		detection.frameIndex = -1;
 		detection.facesIndex = -1;
-		detection.morphIndex = -1;
 		detection.thread = std::thread(StaticThreadMain, this);
 	}
 	
@@ -589,7 +589,6 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 	updateFaces();
 
 	// demo mode : switch masks/delay
-	bool forceMorphUpdate = false;
 	if (demoModeOn && demoMaskDatas.size()) {
 		demoModeElapsed += timeDelta;
 		if (demoModeInDelay && (demoModeElapsed > demoModeDelay)) {
@@ -599,21 +598,14 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 		else if (!demoModeInDelay && (demoModeElapsed > demoModeInterval)) {
 			demoCurrentMask = (demoCurrentMask + 1) % demoMaskDatas.size();
 			demoModeMaskChanged = true;
+			demoModeMaskJustChanged = true;
 			demoModeSavingFrames = false;
 			demoModeElapsed -= demoModeInterval;
 			demoModeInDelay = true;
-			forceMorphUpdate = true;
 		}
 	}
 
-	// current morph buffer indices
-	int midx = detection.morphIndex;
-	if (midx < 0)
-		midx = 0;
-	int lastmidx = (midx + ThreadData::BUFFER_SIZE - 1) % ThreadData::BUFFER_SIZE;
-
 	// Tick the mask data
-	bool morphUpdated = false;
 	std::unique_lock<std::mutex> masklock(maskDataMutex, std::try_to_lock);
 	if (masklock.owns_lock()) {
 		// get the right mask data
@@ -629,35 +621,7 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 			}
 
 			mdat->Tick(timeDelta);
-
-			// ask mask for a morph resource
-			Mask::Resource::Morph* morph = mdat->GetMorph();
-
-			// (possibly) update morph buffer
-			std::unique_lock<std::mutex> morphlock(detection.morphs[midx].mutex, std::try_to_lock);
-			if (morphlock.owns_lock()) {
-				if (morph) {
-					// Only add new morph data if it is newer than the last one
-					// note: any valid morph data is newer than invalid morph data
-					if (forceMorphUpdate || 
-						morph->GetMorphData().IsNewerThan(detection.morphs[lastmidx].morphData)) {
-						detection.morphs[midx].morphData = morph->GetMorphData();
-						morphUpdated = true;
-					}
-				}
-				else {
-					// Make sure current is invalid
-					detection.morphs[midx].morphData.Invalidate();
-					morphUpdated = true;
-				}
-			}
 		}
-	}
-
-	if (morphUpdated) {
-		// advance morph buffer index
-		std::unique_lock<std::mutex> lock(detection.mutex);
-		detection.morphIndex = (midx + 1) % ThreadData::BUFFER_SIZE;
 	}
 }
 
@@ -837,14 +801,11 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	if (tex2) {
 		// draw the rendering on top of the video
 		gs_set_cull_mode(GS_NEITHER);
-//		gs_matrix_push();
-//		gs_matrix_identity();
 		while (gs_effect_loop(defaultEffect, "Draw")) {
 			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
 				"image"), tex2);
 			gs_draw_sprite(tex2, 0, m_baseWidth, m_baseHeight);
 		}
-//		gs_matrix_pop();
 	}
 
 	// end
@@ -893,9 +854,19 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			demoModeSavingFrames = true;
 		}
 	}
+
+	// 1 frame only
+	demoModeMaskJustChanged = false;
 }
 
 gs_texture_t* Plugin::FaceMaskFilter::Instance::FindCachedFrame(const TimeStamp& ts) {
+	int i = FindCachedFrameIndex(ts);
+	if (i > 1)
+		return detection.frames[i].capture.texture;
+	return nullptr;
+}
+
+int Plugin::FaceMaskFilter::Instance::FindCachedFrameIndex(const TimeStamp& ts) {
 	// Look for a cached video frame with the closest timestamp
 
 	// Return one that matches first
@@ -904,27 +875,27 @@ gs_texture_t* Plugin::FaceMaskFilter::Instance::FindCachedFrame(const TimeStamp&
 			detection.frames[i].capture.texture != nullptr &&
 			detection.frames[i].capture.width == m_baseWidth &&
 			detection.frames[i].capture.height == m_baseHeight) {
-			return detection.frames[i].capture.texture;
+			return i;
 		}
 	}
 	
 	// Now look for a valid frame with the closest timestamp
 	long long tst = TIMESTAMP_AS_LL(ts);
 	long long diff = 0;
-	gs_texture_t* nearest = nullptr;
+	int nearest = -1;
 	for (int i = 0; i < ThreadData::BUFFER_SIZE; i++) {
 		if (detection.frames[i].capture.texture != nullptr &&
 			detection.frames[i].capture.width > 0 &&
 			detection.frames[i].capture.height > 0) {
 			if (diff == 0) {
-				nearest = detection.frames[i].capture.texture;
+				nearest = i;
 				diff = UNSIGNED_DIFF(TIMESTAMP_AS_LL(detection.frames[i].timestamp), tst);
 			}
 			else {
 				long long d = UNSIGNED_DIFF(TIMESTAMP_AS_LL(detection.frames[i].timestamp), tst);
 				if (d < diff) {
 					diff = d;
-					nearest = detection.frames[i].capture.texture;
+					nearest = i;
 				}
 			}
 		}
@@ -1014,6 +985,25 @@ bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sou
 						memcpy(detect.data, data, detect.getSize());
 					gs_stagesurface_unmap(detectStage);
 				}
+			}
+
+			// get the right mask data
+			Mask::MaskData* mdat = maskData.get();
+			if (demoModeOn && !demoModeInDelay) {
+				if (demoCurrentMask >= 0 && demoCurrentMask < demoMaskDatas.size())
+					mdat = demoMaskDatas[demoCurrentMask].get();
+			}
+
+			// ask mask for a morph resource
+			Mask::Resource::Morph* morph = mdat->GetMorph();
+
+			// (possibly) update morph buffer
+			if (morph) {
+				detection.frames[fidx].morphData = morph->GetMorphData();
+			}
+			else {
+				// Make sure current is invalid
+				detection.frames[fidx].morphData.Invalidate();
 			}
 		}
 	}
@@ -1153,8 +1143,6 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			else {
 				// new frame - do the face detection
 				smllFaceDetector->DetectFaces(detection.frames[fidx].detect, detection.frames[fidx].capture, detect_results);
-				smllFaceDetector->DetectLandmarks(detection.frames[fidx].capture, detect_results);
-				smllFaceDetector->DoPoseEstimation(detect_results);
 				lastTimestamp = detection.frames[fidx].timestamp;
 			}
 		}
@@ -1166,16 +1154,13 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			continue;
 		}
 
-		// get the index into the faces/morphs buffers
-		int midx;
+		// get the index into the faces buffer
 		{
 			std::unique_lock<std::mutex> lock(detection.mutex);
 			fidx = detection.facesIndex;
-			midx = detection.morphIndex;
 		}
 		if (fidx < 0)
 			fidx = 0;
-		midx = (midx + ThreadData::BUFFER_SIZE - 1) % ThreadData::BUFFER_SIZE;
 
 		{
 			std::unique_lock<std::mutex> facelock(detection.faces[fidx].mutex);
@@ -1188,19 +1173,12 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 				detection.faces[fidx].detectionResults[i] = detect_results[i];
 			}
 			detection.faces[fidx].detectionResults.length = detect_results.length;
-
-			// Make triangulation for face morphing
-			{
-				std::unique_lock<std::mutex> morphlock(detection.morphs[midx].mutex);
-				detection.faces[fidx].triangulationResults.buildLines = drawMorphTris;
-				smllFaceDetector->MakeTriangulation(detection.morphs[midx].morphData,
-					detect_results, detection.faces[fidx].triangulationResults);
-			}
 		}
 
-		// increment face buffer index
 		{
 			std::unique_lock<std::mutex> lock(detection.mutex);
+
+			// increment face buffer index
 			detection.facesIndex = (fidx + 1) % ThreadData::BUFFER_SIZE;
 		}
 
@@ -1404,6 +1382,8 @@ void Plugin::FaceMaskFilter::Instance::drawCropRects(int width, int height) {
 }
 
 void Plugin::FaceMaskFilter::Instance::updateFaces() {
+
+
 	// get the faces index from the other thread
 	int fidx = -1;
 	{
@@ -1420,6 +1400,21 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 
 		std::unique_lock<std::mutex> lock(detection.faces[fidx].mutex, std::try_to_lock);
 		if (lock.owns_lock()) {
+
+			// Find the cached frame for these results
+			int cfi = FindCachedFrameIndex(detection.faces[fidx].timestamp);
+			if (cfi >= 0) {
+
+				// Now do the landmark detection & pose estimation
+				smllFaceDetector->DetectLandmarks(detection.frames[cfi].capture, detection.faces[fidx].detectionResults);
+				smllFaceDetector->DoPoseEstimation(detection.faces[fidx].detectionResults);
+
+				// Make the triangulation
+				detection.faces[fidx].triangulationResults.buildLines = drawMorphTris;
+				smllFaceDetector->MakeTriangulation(detection.frames[cfi].morphData,
+					detection.faces[fidx].detectionResults, detection.faces[fidx].triangulationResults);
+			}
+
 			// new detected faces
 			smll::DetectionResults& newFaces = detection.faces[fidx].detectionResults;
 
