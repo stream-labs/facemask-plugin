@@ -52,7 +52,9 @@ public:
 
 	ImageWrapper();
 	ImageWrapper(int _w, int _h, int _s, ImageType _t, char* d);
+	ImageWrapper(const ImageWrapper& other);
 	~ImageWrapper();
+	ImageWrapper& operator=(const ImageWrapper& other);
 
 	int		getStride() const;
 	int		getSize() const;

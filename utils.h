@@ -25,8 +25,8 @@
 #include "base64.h"
 
 // ALIGNED : macro to align a memory address
-#define ALIGN_16(XXX) (((size_t)(XXX) & 0xF) ? (((size_t)(XXX) + 0x10) & 0xFFFFFFFFFFFFFFF0ULL) : (size_t)(XXX))
-#define ALIGN_32(XXX) (((size_t)(XXX) & 0x1F) ? (((size_t)(XXX) + 0x20) & 0xFFFFFFFFFFFFFFE0ULL) : (size_t)(XXX))
+#define ALIGN_16(XXX) ((intptr_t(XXX) & 0xF)  ? ((intptr_t(XXX) + 0x10) & ~0xF)  : intptr_t(XXX))
+#define ALIGN_32(XXX) ((intptr_t(XXX) & 0x1F) ? ((intptr_t(XXX) + 0x20) & ~0x1F) : intptr_t(XXX))
 
 
 #define MAKE32COLOR(r,g,b,a) \

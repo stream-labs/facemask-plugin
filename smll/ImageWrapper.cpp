@@ -48,12 +48,28 @@ namespace smll {
 		: w(_w), h(_h), stride(_s), type(_t), data(d), unalignedData(nullptr) {
 	}
 
+	ImageWrapper::ImageWrapper(const ImageWrapper& other) {
+		*this = other;
+	}
+
 	ImageWrapper::~ImageWrapper() {
 		if (unalignedData) {
-			blog(LOG_DEBUG, "deleting %x", intptr_t(unalignedData));
+			blog(LOG_DEBUG, "data is %x     deleting %x", intptr_t(data), intptr_t(unalignedData));
 			delete[] unalignedData;
 		}
 		unalignedData = nullptr;
+	}
+
+	ImageWrapper& ImageWrapper::operator=(const ImageWrapper& other) {
+		// NOTE: since we are merely a wrapper, we don't want to copy the
+		//       allocated unalignedData member.
+		w = other.w;
+		h = other.h;
+		stride = other.stride;
+		type = other.type;
+		data = other.data;
+
+		return *this;
 	}
 
 	int	ImageWrapper::getStride() const {
@@ -133,7 +149,7 @@ namespace smll {
 			delete[] unalignedData;
 		size_t sz = getSize();
 		unalignedData = new char[sz + 32];
-		blog(LOG_DEBUG, "allocated %x", intptr_t(unalignedData));
 		data = (char*)ALIGN_32(unalignedData);
+		blog(LOG_DEBUG, "allocated %d bytes at %x     aligned: %x", (int)sz, intptr_t(unalignedData), intptr_t(data));
 	}
 }

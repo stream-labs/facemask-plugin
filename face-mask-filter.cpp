@@ -936,7 +936,9 @@ bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sou
 				if (capture.texture)
 					gs_texture_destroy(capture.texture);
 				gs_color_format fmt = gs_texture_get_color_format(sourceTexture);
+				blog(LOG_DEBUG, "--------------------");
 				capture.texture = gs_texture_create(m_baseWidth, m_baseHeight, fmt, 0, 0, 0);
+				blog(LOG_DEBUG, "--------------------");
 			}
 
 			// copy capture texture
