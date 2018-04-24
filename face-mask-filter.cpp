@@ -54,7 +54,7 @@
 #define USE_THREADED_MEMCPY				(false)
 
 // if we aren't using threaded memcpy, use fast memcpy?
-#define USE_FAST_MEMCPY					(true)
+#define USE_FAST_MEMCPY					(false)
 
 
 // Windows MMCSS thread task name
@@ -971,6 +971,7 @@ bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sou
 					if (detect.w != detectTex.width ||
 						detect.h != detectTex.height ||
 						detect.stride != (int)linesize) {
+
 						detect.w = detectTex.width;
 						detect.h = detectTex.height;
 						detect.stride = linesize;
