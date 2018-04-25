@@ -51,11 +51,13 @@
 
 // use threaded memcpy (not sure if this actually helps
 // due to windows thread priorities)
-#define USE_THREADED_MEMCPY				(false)
+#define USE_THREADED_MEMCPY				(true)
 
 // if we aren't using threaded memcpy, use fast memcpy?
 #define USE_FAST_MEMCPY					(false)
 
+// whether to run landmark detection/solvepnp/morph on main thread
+#define STUFF_ON_MAIN_THREAD			(false)
 
 // Windows MMCSS thread task name
 //
@@ -76,29 +78,6 @@ static const float_t FAR_Z = 15000.0f;
 
 // for rewind button
 bool Plugin::FaceMaskFilter::Instance::request_rewind = false;
-
-/*
-BOOL CALLBACK speichereFenster(HWND hwnd, LPARAM lParam) {
-	const DWORD TITLE_SIZE = 1024;
-	WCHAR windowTitle[TITLE_SIZE];
-
-	GetWindowTextW(hwnd, windowTitle, TITLE_SIZE);
-
-	int length = ::GetWindowTextLength(hwnd);
-	wstring title(&windowTitle[0]);
-	if (!IsWindowVisible(hwnd) || length == 0 || title == L"Program Manager") {
-		return TRUE;
-	}
-
-	// Retrieve the pointer passed into this callback, and re-'type' it.
-	// The only way for a C API to pass arbitrary data is by means of a void*.
-	std::vector<std::wstring>& titles =
-		*reinterpret_cast<std::vector<std::wstring>*>(lParam);
-	titles.push_back(title);
-
-	return TRUE;
-}*/
-
 
 // Filter Wrapper
 Plugin::FaceMaskFilter::FaceMaskFilter() {
@@ -125,38 +104,6 @@ Plugin::FaceMaskFilter::FaceMaskFilter() {
 	//setup converter
 	using convert_type = std::codecvt_utf8<wchar_t>;
 	std::wstring_convert<convert_type, wchar_t> converter;
-
-	/*
-	std::vector<std::wstring> titles;
-	EnumWindows(speichereFenster, reinterpret_cast<LPARAM>(&titles));
-	// At this point, titles if fully populated and could be displayed, e.g.:
-	for (const auto& title : titles) {
-		std::string window_title = converter.to_bytes(title);
-		blog(LOG_DEBUG, "window: %s", window_title.c_str());
-	}	
-
-	HWND notepad = FindWindow(_T("Notepad"), NULL);
-
-	//HWND edit = FindWindowEx(notepad, NULL, _T("Edit"), NULL);
-	//SendMessage(edit, WM_SETTEXT, NULL, (LPARAM)_T("hello"));
-
-	INPUT keys[2];
-	keys[0].type = INPUT_KEYBOARD;
-	keys[0].ki.wVk = 0;
-	keys[0].ki.wScan = 'K';
-	keys[0].ki.dwFlags = KEYEVENTF_UNICODE;
-	keys[0].ki.time = 0;
-	keys[0].ki.dwExtraInfo = GetMessageExtraInfo();
-	//keys[1].type = INPUT_KEYBOARD;
-	//keys[1].ki.wVk = 0;
-	//keys[1].ki.wScan = 'K';
-	//keys[1].ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
-	//keys[1].ki.time = 0;
-	//keys[1].ki.dwExtraInfo = GetMessageExtraInfo();
-
-	SetForegroundWindow(notepad);
-	SendInput(1, keys, sizeof(INPUT));
-	*/
 
 	obs_register_source(&filter);
 }
@@ -988,7 +935,9 @@ bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sou
 
 			// (possibly) update morph buffer
 			if (morph) {
-				detection.frames[fidx].morphData = morph->GetMorphData();
+				if (morph->GetMorphData().IsNewerThan(detection.frames[fidx].morphData)) {
+					detection.frames[fidx].morphData = morph->GetMorphData();
+				}
 			}
 			else {
 				// Make sure current is invalid
@@ -1103,72 +1052,87 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 
 		// get the frame index
 		bool shutdown;
-		int fidx;
+		int frame_idx;
 		{
 			std::unique_lock<std::mutex> lock(detection.mutex);
-			fidx = detection.frameIndex;
+			frame_idx = detection.frameIndex;
 			shutdown = detection.shutdown;
 		}
 		if (shutdown) break;
-		if (fidx < 0) {
+		if (frame_idx < 0) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(16));
 			continue;
 		}
 
 		// the read index is always right behind the write
-		fidx = (fidx + ThreadData::BUFFER_SIZE - 1) % ThreadData::BUFFER_SIZE;
+		frame_idx = (frame_idx + ThreadData::BUFFER_SIZE - 1) % ThreadData::BUFFER_SIZE;
 
 		smll::DetectionResults detect_results;
 
-		bool skip = false;
+		bool skipped = false;
 		{
-			std::unique_lock<std::mutex> lock(detection.frames[fidx].mutex);
+			std::unique_lock<std::mutex> lock(detection.frames[frame_idx].mutex);
 
 			// check to see if we are detecting the same frame as last time
-			if (lastTimestamp == detection.frames[fidx].timestamp) {
-				// we are
-				skip = true;
+			if (lastTimestamp == detection.frames[frame_idx].timestamp) {
+				// same frame, skip
+				skipped = true;
 			}
 			else {
 				// new frame - do the face detection
-				smllFaceDetector->DetectFaces(detection.frames[fidx].detect, detection.frames[fidx].capture, detect_results);
-				lastTimestamp = detection.frames[fidx].timestamp;
+				smllFaceDetector->DetectFaces(detection.frames[frame_idx].detect, detection.frames[frame_idx].capture, detect_results);
+				if (!STUFF_ON_MAIN_THREAD) {
+					// Now do the landmark detection & pose estimation
+					smllFaceDetector->DetectLandmarks(detection.frames[frame_idx].capture, detect_results);
+					smllFaceDetector->DoPoseEstimation(detect_results);
+				}
+
+				lastTimestamp = detection.frames[frame_idx].timestamp;
 			}
 		}
 
-		if (skip)
-		{
+		if (skipped) {
 			// sleep for 1ms and continue
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			continue;
 		}
 
 		// get the index into the faces buffer
+		int face_idx;
 		{
 			std::unique_lock<std::mutex> lock(detection.mutex);
-			fidx = detection.facesIndex;
+			face_idx = detection.facesIndex;
 		}
-		if (fidx < 0)
-			fidx = 0;
+		if (face_idx < 0)
+			face_idx = 0;
 
 		{
-			std::unique_lock<std::mutex> facelock(detection.faces[fidx].mutex);
+			std::unique_lock<std::mutex> facelock(detection.faces[face_idx].mutex);
 
 			// pass on timestamp to results
-			detection.faces[fidx].timestamp = lastTimestamp;
+			detection.faces[face_idx].timestamp = lastTimestamp;
+
+			if (!STUFF_ON_MAIN_THREAD) {
+				std::unique_lock<std::mutex> framelock(detection.frames[frame_idx].mutex);
+
+				// Make the triangulation
+				detection.faces[face_idx].triangulationResults.buildLines = drawMorphTris;
+				smllFaceDetector->MakeTriangulation(detection.frames[frame_idx].morphData,
+					detect_results, detection.faces[face_idx].triangulationResults);
+			}
 
 			// Copy our detection results
 			for (int i = 0; i < detect_results.length; i++) {
-				detection.faces[fidx].detectionResults[i] = detect_results[i];
+				detection.faces[face_idx].detectionResults[i] = detect_results[i];
 			}
-			detection.faces[fidx].detectionResults.length = detect_results.length;
+			detection.faces[face_idx].detectionResults.length = detect_results.length;
 		}
 
 		{
 			std::unique_lock<std::mutex> lock(detection.mutex);
 
 			// increment face buffer index
-			detection.facesIndex = (fidx + 1) % ThreadData::BUFFER_SIZE;
+			detection.facesIndex = (face_idx + 1) % ThreadData::BUFFER_SIZE;
 		}
 
 		// don't go too fast and eat up all the cpu
@@ -1390,22 +1354,24 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 		std::unique_lock<std::mutex> lock(detection.faces[fidx].mutex, std::try_to_lock);
 		if (lock.owns_lock()) {
 
-			// Find the cached frame for these results
-			int cfi = FindCachedFrameIndex(detection.faces[fidx].timestamp);
-			if (cfi >= 0) {
-
-				// Now do the landmark detection & pose estimation
-				smllFaceDetector->DetectLandmarks(detection.frames[cfi].capture, detection.faces[fidx].detectionResults);
-				smllFaceDetector->DoPoseEstimation(detection.faces[fidx].detectionResults);
-
-				// Make the triangulation
-				detection.faces[fidx].triangulationResults.buildLines = drawMorphTris;
-				smllFaceDetector->MakeTriangulation(detection.frames[cfi].morphData,
-					detection.faces[fidx].detectionResults, detection.faces[fidx].triangulationResults);
-			}
-
 			// new detected faces
 			smll::DetectionResults& newFaces = detection.faces[fidx].detectionResults;
+
+			if (STUFF_ON_MAIN_THREAD) {
+				// Find the cached frame for these results
+				int cfi = FindCachedFrameIndex(detection.faces[fidx].timestamp);
+				if (cfi >= 0) {
+
+					// Now do the landmark detection & pose estimation
+					smllFaceDetector->DetectLandmarks(detection.frames[cfi].capture, detection.faces[fidx].detectionResults);
+					smllFaceDetector->DoPoseEstimation(detection.faces[fidx].detectionResults);
+
+					// Make the triangulation
+					detection.faces[fidx].triangulationResults.buildLines = drawMorphTris;
+					smllFaceDetector->MakeTriangulation(detection.frames[cfi].morphData,
+						detection.faces[fidx].detectionResults, detection.faces[fidx].triangulationResults);
+				}
+			}
 
 			// new triangulation
 			triangulation.TakeBuffersFrom(detection.faces[fidx].triangulationResults);
