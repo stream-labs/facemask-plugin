@@ -127,29 +127,6 @@ void Plugin::FaceMaskFilter::destroy(void *ptr) {
 // ------------------------------------------------------------------------- //
 // Filter Instance
 // ------------------------------------------------------------------------- //
-enum DrawMode {
-	DRAW_MODE_DISABLED,
-	DRAW_MODE_2D_MASK,
-	DRAW_MODE_3D_MASK,
-	DRAW_MODE_GLASSES,
-	DRAW_MODE_MASK_JSON,
-};
-
-int findClosest(const smll::DetectionResult& result, const smll::DetectionResults& results) {
-	// find closest
-	int closest = -1;
-	double min = DBL_MAX;
-	for (int j = 0; j < results.length; j++) {
-		if (!results[j].matched) {
-			double d = result.DistanceTo(results[j]);
-			if (d < min) {
-				closest = j;
-				min = d;
-			}
-		}
-	}
-	return closest;
-}
 
 Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *source)
 	: m_source(source), m_baseWidth(640), m_baseHeight(480), m_isActive(true), m_isVisible(true),
@@ -1332,6 +1309,22 @@ void Plugin::FaceMaskFilter::Instance::drawCropRects(int width, int height) {
 		smllRenderer->SetDrawColor(255, 0, 255);
 		smllRenderer->DrawRect(r);
 	}
+}
+
+int findClosest(const smll::DetectionResult& result, const smll::DetectionResults& results) {
+	// find closest
+	int closest = -1;
+	double min = DBL_MAX;
+	for (int j = 0; j < results.length; j++) {
+		if (!results[j].matched) {
+			double d = result.DistanceTo(results[j]);
+			if (d < min) {
+				closest = j;
+				min = d;
+			}
+		}
+	}
+	return closest;
 }
 
 void Plugin::FaceMaskFilter::Instance::updateFaces() {
