@@ -52,7 +52,7 @@
 #define CONFIG_GET(TYPE) 		{	lock();  \
 TYPE v = (TYPE)obs_data_get_##TYPE(m_data, name); unlock(); return v; }
 #define CONFIG_SET(TYPE,VALUE)	{	lock();  \
-obs_data_set_##TYPE(m_data, name, VALUE); obs_data_set_default_##TYPE(m_data, name, VALUE); unlock(); }
+obs_data_set_##TYPE(m_data, name, VALUE); unlock(); }
 
 
 namespace smll {
@@ -146,7 +146,6 @@ namespace smll {
 		struct ParamInfo
 		{
 			const char* name;
-			const char* description;
 			double		defaultValue;
 			double		min;
 			double		max;
@@ -154,12 +153,9 @@ namespace smll {
 			int			type;
 		};
 
-		void AddParam(const char* name, 
-			const char* description, bool defaultValue);
-		void AddParam(const char* name, const char* description, 
-			int defaultValue, int min, int max, int step);
-		void AddParam(const char* name, const char* description, 
-			double defaultValue, double min, double max, double step);
+		void AddParam(const char* name, bool defaultValue);
+		void AddParam(const char* name, int defaultValue, int min, int max, int step);
+		void AddParam(const char* name, double defaultValue, double min, double max, double step);
 
 		std::vector<std::string> m_paramNames; //  need this to preserve order
 		std::map<std::string, ParamInfo> m_params;

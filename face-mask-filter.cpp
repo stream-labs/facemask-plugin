@@ -335,7 +335,7 @@ uint32_t Plugin::FaceMaskFilter::Instance::get_height() {
 void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	// default params
 
-	obs_data_set_default_bool(data, kSettingsDeactivated, false);
+	obs_data_set_default_bool(data, P_DEACTIVATE, false);
 
 #ifdef PUBLIC_RELEASE	
 	obs_data_set_default_int(data, P_MASK, 0);
@@ -345,18 +345,18 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	bfree(jsonName);
 #endif
 
-	obs_data_set_default_bool(data, kSettingsGreenscreen, false);
+	obs_data_set_default_bool(data, P_BGREMOVAL, false);
 
-	obs_data_set_default_bool(data, kSettingsGenPreviews, false);
+	obs_data_set_default_bool(data, P_GENTHUMBS, false);
 
-	obs_data_set_default_bool(data, kSettingsDrawMask, true);
-	obs_data_set_default_bool(data, kSettingsDrawFaces, false);
-	obs_data_set_default_bool(data, kSettingsDrawMorphTris, false);
-	obs_data_set_default_bool(data, kSettingsDrawFDCropRect, false);
+	obs_data_set_default_bool(data, P_DRAWMASK, true);
+	obs_data_set_default_bool(data, P_DRAWFACEDATA, false);
+	obs_data_set_default_bool(data, P_DRAWMORPHTRIS, false);
+	obs_data_set_default_bool(data, P_DRAWCROPRECT, false);
 
-	obs_data_set_default_bool(data, kSettingsDemoMode, false);
-	obs_data_set_default_double(data, kSettingsDemoInterval, 5.0f);
-	obs_data_set_default_double(data, kSettingsDemoDelay, 3.0f);
+	obs_data_set_default_bool(data, P_DEMOMODEON, false);
+	obs_data_set_default_double(data, P_DEMOINTERVAL, 5.0f);
+	obs_data_set_default_double(data, P_DEMODELAY, 3.0f);
 
 #if !defined(PUBLIC_RELEASE)
 	// default advanced params
@@ -398,7 +398,6 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 		Utils::find_and_replace(n, "+", " + ");
 		obs_property_list_add_int(p, n.c_str(), i);
 	}
-	obs_property_set_modified_callback(p, properties_modified);
 
 #else
 	// mask
@@ -406,45 +405,41 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 		obs_path_type::OBS_PATH_FILE,
 		"Face Mask JSON (*.json)", maskDir.c_str());
 	obs_property_set_long_description(p, P_TRANSLATE(P_DESC(P_MASK)));
-	obs_property_set_modified_callback(p, properties_modified);
 
 #endif
 
-	obs_properties_add_bool(props, kSettingsGreenscreen,
-		kSettingsGreenscreenDesc);
+	p = obs_properties_add_bool(props, P_BGREMOVAL, P_TRANSLATE(P_BGREMOVAL));
+	obs_property_set_long_description(p, P_TRANSLATE(P_DESC(P_BGREMOVAL)));
 
 #if !defined(PUBLIC_RELEASE)
 
 	// disable the plugin
-	obs_properties_add_bool(props, kSettingsDeactivated,
-		kSettingsDeactivatedDesc);
+	obs_properties_add_bool(props, P_DEACTIVATE, P_TRANSLATE(P_DEACTIVATE));
 
 	// rewind button
-	obs_properties_add_button(props, kSettingsRewind,
-		kSettingsRewindDesc, rewind_clicked);
+	obs_properties_add_button(props, P_REWIND, P_TRANSLATE(P_REWIND), 
+		rewind_clicked);
 
 	// Demo mode
-	obs_properties_add_bool(props, kSettingsDemoMode,
-		kSettingsDemoModeDesc);
-	obs_properties_add_text(props, kSettingsDemoFolder,
-		kSettingsDemoFolderDesc, obs_text_type::OBS_TEXT_DEFAULT);
-	obs_properties_add_float_slider(props, kSettingsDemoInterval,
-		kSettingsDemoIntervalDesc, 1.0f, 60.0f, 1.0f);
-	obs_properties_add_float_slider(props, kSettingsDemoDelay,
-		kSettingsDemoDelayDesc, 1.0f, 60.0f, 1.0f);
+	obs_properties_add_bool(props, P_DEMOMODEON, P_TRANSLATE(P_DEMOMODEON));
+	obs_properties_add_text(props, P_DEMOFOLDER, P_TRANSLATE(P_DEMOFOLDER), 
+		obs_text_type::OBS_TEXT_DEFAULT);
+	obs_properties_add_float_slider(props, P_DEMOINTERVAL,
+		P_TRANSLATE(P_DEMOINTERVAL), 1.0f, 60.0f, 1.0f);
+	obs_properties_add_float_slider(props, P_DEMODELAY,
+		P_TRANSLATE(P_DEMODELAY), 1.0f, 60.0f, 1.0f);
 
-	obs_properties_add_bool(props, kSettingsGenPreviews,
-		kSettingsGenPreviewsDesc);
+	obs_properties_add_bool(props, P_GENTHUMBS,	P_TRANSLATE(P_GENTHUMBS));
 
 	// debug drawing flags
-	obs_properties_add_bool(props, kSettingsDrawMask,
-		kSettingsDrawMaskDesc);
-	obs_properties_add_bool(props, kSettingsDrawFaces,
-		kSettingsDrawFacesDesc);
-	obs_properties_add_bool(props, kSettingsDrawMorphTris,
-		kSettingsDrawMorphTrisDesc);
-	obs_properties_add_bool(props, kSettingsDrawFDCropRect,
-		kSettingsDrawFDCropRectDesc);
+	obs_properties_add_bool(props, P_DRAWMASK,
+		P_TRANSLATE(P_DRAWMASK));
+	obs_properties_add_bool(props, P_DRAWFACEDATA,
+		P_TRANSLATE(P_DRAWFACEDATA));
+	obs_properties_add_bool(props, P_DRAWMORPHTRIS,
+		P_TRANSLATE(P_DRAWMORPHTRIS));
+	obs_properties_add_bool(props, P_DRAWCROPRECT,
+		P_TRANSLATE(P_DRAWCROPRECT));
 
 	// add advanced configuration params
 	smll::Config::singleton().get_properties(props);
@@ -462,19 +457,6 @@ bool Plugin::FaceMaskFilter::Instance::rewind_clicked(obs_properties_t *pr, obs_
 	return true;
 }
 
-bool Plugin::FaceMaskFilter::Instance::properties_modified(obs_properties_t *pr, obs_property_t *p, obs_data_t *data) {
-	UNUSED_PARAMETER(p);
-
-	// Advanced
-	bool isAdvancedVisible = obs_data_get_bool(data, P_ADVANCED);
-	obs_property_set_visible(obs_properties_get(pr, P_RESOLUTIONSCALE), isAdvancedVisible);
-
-	// Debug
-	bool isDebugVisible = obs_data_get_bool(data, P_DEBUG);
-	UNUSED_PARAMETER(isDebugVisible);
-
-	return true;
-}
 
 void Plugin::FaceMaskFilter::Instance::update(void *ptr, obs_data_t *data) {
 	if (ptr == nullptr)
@@ -502,7 +484,7 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 #endif
 
 	// disabled flag
-	m_isDisabled = obs_data_get_bool(data, kSettingsDeactivated);
+	m_isDisabled = obs_data_get_bool(data, P_DEACTIVATE);
 	if (m_isDisabled) {
 		// reset the buffer
 		std::unique_lock<std::mutex> lock(detection.mutex);
@@ -510,20 +492,20 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 		detection.facesIndex = -1;
 	}
 
-	autoGreenScreen = obs_data_get_bool(data, kSettingsGreenscreen);
+	autoGreenScreen = obs_data_get_bool(data, P_BGREMOVAL);
 
 	// demo mode
-	demoModeOn = obs_data_get_bool(data, kSettingsDemoMode);
-	demoModeFolder = obs_data_get_string(data, kSettingsDemoFolder);
-	demoModeInterval = (float)obs_data_get_double(data, kSettingsDemoInterval);
-	demoModeDelay = (float)obs_data_get_double(data, kSettingsDemoDelay);
-	demoModeGenPreviews = obs_data_get_bool(data, kSettingsGenPreviews);
+	demoModeOn = obs_data_get_bool(data, P_DEMOMODEON);
+	demoModeFolder = obs_data_get_string(data, P_DEMOFOLDER);
+	demoModeInterval = (float)obs_data_get_double(data, P_DEMOINTERVAL);
+	demoModeDelay = (float)obs_data_get_double(data, P_DEMODELAY);
+	demoModeGenPreviews = obs_data_get_bool(data, P_GENTHUMBS);
 
 	// update our param values
-	drawMask = obs_data_get_bool(data, kSettingsDrawMask);
-	drawFaces = obs_data_get_bool(data, kSettingsDrawFaces);
-	drawMorphTris = obs_data_get_bool(data, kSettingsDrawMorphTris);
-	drawFDRect = obs_data_get_bool(data, kSettingsDrawFDCropRect);
+	drawMask = obs_data_get_bool(data, P_DRAWMASK);
+	drawFaces = obs_data_get_bool(data, P_DRAWFACEDATA);
+	drawMorphTris = obs_data_get_bool(data, P_DRAWMORPHTRIS);
+	drawFDRect = obs_data_get_bool(data, P_DRAWCROPRECT);
 }
 
 void Plugin::FaceMaskFilter::Instance::activate(void *ptr) {
@@ -999,7 +981,10 @@ bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sou
 			}
 
 			// ask mask for a morph resource
-			Mask::Resource::Morph* morph = mdat->GetMorph();
+			Mask::Resource::Morph* morph = nullptr;
+			if (mdat) {
+				morph = mdat->GetMorph();
+			}
 
 			// (possibly) update morph buffer
 			if (morph) {

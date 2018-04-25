@@ -69,7 +69,6 @@ namespace Plugin {
 			static void get_defaults(obs_data_t *);
 			static obs_properties_t *get_properties(void *);
 			void get_properties(obs_properties_t *pr);
-			static bool properties_modified(obs_properties_t *, obs_property_t *, obs_data_t *);
 			static void update(void *, obs_data_t *);
 			void update(obs_data_t *);
 			static void activate(void *);

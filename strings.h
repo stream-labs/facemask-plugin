@@ -20,62 +20,27 @@
 */
 #pragma once
 
+// translation macros
+// see data/locale/en-US.ini
+//
 #define P_TRANSLATE(x)			obs_module_text(x)
 #define P_DESC(x)				x ".Description"
-// General Translation
-#define P_NAME					"Name"
+
 // Properties
 #define P_MASK					"Mask"
-/// Advanced
-#define P_ADVANCED				"Advanced"
-#define P_RESOLUTIONSCALE			"ResolutionScale"
-/// Debug
-#define P_DEBUG					"Debug"
+#define P_DEACTIVATE			"deactivated"
+#define P_DRAWMASK				"drawmask"
+#define P_DRAWFACEDATA			"drawfaces"
+#define P_DRAWMORPHTRIS			"drawmorphtris"
+#define P_DRAWCROPRECT			"drawFDCropRect"
+#define P_DEMOMODEON			"demoMode"
+#define P_DEMOFOLDER			"demoFolder"
+#define P_DEMOINTERVAL			"demoInterval"
+#define P_DEMODELAY				"demoDelay"
+#define P_BGREMOVAL				"greenscreen"
+#define P_GENTHUMBS				"genpreviews"
+#define P_REWIND				"rewindanims"
 
-// setting keys
-static const char* const kSettingsDeactivated = "deactivated";
-static const char* const kSettingsDrawMask = "drawmask";
-
-static const char* const kSettingsDrawFaces = "drawfaces";
-static const char* const kSettingsDrawMorphTris = "drawmorphtris";
-static const char* const kSettingsDrawFDCropRect = "drawFDCropRect";
-
-static const char* const kSettingsDemoMode = "demoMode";
-static const char* const kSettingsDemoFolder = "demoFolder";
-static const char* const kSettingsDemoInterval = "demoInterval";
-static const char* const kSettingsDemoDelay = "demoDelay";
-
-static const char* const kSettingsPixomojo = "pixomojo";
-
-static const char* const kSettingsGreenscreen = "greenscreen";
-
-static const char* const kSettingsGenPreviews = "genpreviews";
-
-static const char* const kSettingsRewind = "rewindanims";
-
-// setting descriptions
-static const char* const kSettingsDeactivatedDesc = "Deactivate the filter";
-static const char* const kSettingsDrawMaskDesc = "Draw the face mask";
-
-static const char* const kSettingsDrawFacesDesc = "Draw Face Landmark Data";
-static const char* const kSettingsDrawMorphTrisDesc = "Draw Morph Wireframe";
-static const char* const kSettingsDrawFDCropRectDesc =
-	"Draw Face Detect Crop Rectangle";
-
-static const char* const kSettingsDemoModeDesc = "Demo Mode";
-static const char* const kSettingsDemoFolderDesc = "Demo Mode Folder";
-static const char* const kSettingsDemoIntervalDesc = "Demo Mode Interval (seconds)";
-static const char* const kSettingsDemoDelayDesc = "Demo Mode Delay Between Masks (seconds)";
-
-static const char* const kSettingsPixomojoDesc = "Get more face masks from pixomojo.com";
-
-static const char* const kSettingsGreenscreenDesc = "Automatic Background Removal";
-
-static const char* const kSettingsGenPreviewsDesc = "Generate thumbnails (for demo mode)";
-static const char* const kSettingsRewindDesc = "Rewind Animations";
-
-
-static const char* const kSettingsEmpty = "";
-
+// Other static strings
 static const char* const kFileDefaultJson = "masks/Baseball Cap.json";
 

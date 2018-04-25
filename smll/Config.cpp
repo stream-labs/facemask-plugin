@@ -21,42 +21,13 @@
 #include "Config.hpp"
 
 #include <opencv2/opencv.hpp>
+#include <libobs/obs-module.h>
+
+#define P_TRANSLATE(x)			obs_module_text(x)
 
 namespace smll {
 
-	// Static strings for config setting descriptions
-	static const char* const CONFIG_BOOL_TOGGLE_SETTINGS_DESC =
-		"Show Advanced Settings";
-	static const char* const CONFIG_FLOAT_SMOOTHING_FACTOR_DESC =
-		"Smoothing Factor";
-	static const char* const CONFIG_INT_FACE_DETECT_WIDTH_DESC = 
-		"Face Detect Frame Width";
-	static const char* const CONFIG_DOUBLE_FACE_DETECT_CROP_WIDTH_DESC =
-		"Face Detect Crop Width";
-	static const char* const CONFIG_DOUBLE_FACE_DETECT_CROP_HEIGHT_DESC =
-		"Face Detect Crop Height";
-	static const char* const CONFIG_DOUBLE_FACE_DETECT_CROP_X_DESC =
-		"Face Detect Crop X";
-	static const char* const CONFIG_DOUBLE_FACE_DETECT_CROP_Y_DESC =
-		"Face Detect Crop Y";
-	static const char* const CONFIG_INT_FACE_DETECT_FREQUENCY_DESC =
-		"Face Detection Frequency";
-	static const char* const CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY_DESC =
-		"Face Detection Recheck Frequency";
-	static const char* const CONFIG_INT_TRACKING_FREQUNCY_DESC = 
-		"Tracking Frequency";
-	static const char* const CONFIG_DOUBLE_TRACKING_THRESHOLD_DESC =
-		"Tracking Confidence Threshold";
-	static const char* const CONFIG_BOOL_MAKE_CAPTURE_COPY_DESC =
-		"Make copy of capture texture";
-	static const char* const CONFIG_BOOL_MAKE_DETECT_COPY_DESC = 
-		"Make copy of detection texture";
-	static const char* const CONFIG_BOOL_MAKE_TRACK_COPY_DESC =
-		"Make copy of tracking texture";
-	static const char* const CONFIG_BOOL_KALMAN_ENABLE_DESC =
-		"Enable Kalman Filtering";
-	static const char* const CONFIG_INT_SPEED_LIMIT_DESC =
-		"Face Detection Speed Limit (in ms)";
+
 
 	// show our "advanced" settings
 	static bool g_showSettings = false;
@@ -80,39 +51,26 @@ namespace smll {
 		//
 		// ---- Add All Parameters Here ----
 		//
-		AddParam(CONFIG_BOOL_TOGGLE_SETTINGS, 
-			CONFIG_BOOL_TOGGLE_SETTINGS_DESC, false);
+		AddParam(CONFIG_BOOL_TOGGLE_SETTINGS, false);
 
-		AddParam(CONFIG_BOOL_KALMAN_ENABLE,
-			CONFIG_BOOL_KALMAN_ENABLE_DESC, true);
-		AddParam(CONFIG_FLOAT_SMOOTHING_FACTOR,
-			CONFIG_FLOAT_SMOOTHING_FACTOR_DESC, 0.666, 0.0, 10.0, 0.1);
+		AddParam(CONFIG_BOOL_KALMAN_ENABLE,true);
+		AddParam(CONFIG_FLOAT_SMOOTHING_FACTOR, 0.666, 0.0, 10.0, 0.1);
 
-		AddParam(CONFIG_INT_FACE_DETECT_WIDTH, 
-			CONFIG_INT_FACE_DETECT_WIDTH_DESC, 480, 120, 1200, 20);
+		AddParam(CONFIG_INT_FACE_DETECT_WIDTH, 480, 120, 1200, 20);
 
-		AddParam(CONFIG_DOUBLE_FACE_DETECT_CROP_WIDTH, 
-			CONFIG_DOUBLE_FACE_DETECT_CROP_WIDTH_DESC, 0.6, 0.0, 1.0, 0.01);
-		AddParam(CONFIG_DOUBLE_FACE_DETECT_CROP_HEIGHT, 
-			CONFIG_DOUBLE_FACE_DETECT_CROP_HEIGHT_DESC, 0.8, 0.0, 1.0, 0.01);
-		AddParam(CONFIG_DOUBLE_FACE_DETECT_CROP_X, 
-			CONFIG_DOUBLE_FACE_DETECT_CROP_X_DESC, 0.0, -1.0, 1.0, 0.01);
-		AddParam(CONFIG_DOUBLE_FACE_DETECT_CROP_Y, 
-			CONFIG_DOUBLE_FACE_DETECT_CROP_Y_DESC, 0.0, -1.0, 1.0, 0.01);
+		AddParam(CONFIG_DOUBLE_FACE_DETECT_CROP_WIDTH, 0.6, 0.0, 1.0, 0.01);
+		AddParam(CONFIG_DOUBLE_FACE_DETECT_CROP_HEIGHT, 0.8, 0.0, 1.0, 0.01);
+		AddParam(CONFIG_DOUBLE_FACE_DETECT_CROP_X, 0.0, -1.0, 1.0, 0.01);
+		AddParam(CONFIG_DOUBLE_FACE_DETECT_CROP_Y, 0.0, -1.0, 1.0, 0.01);
 
-		AddParam(CONFIG_INT_FACE_DETECT_FREQUENCY, 
-			CONFIG_INT_FACE_DETECT_FREQUENCY_DESC, 5, 0, 600, 1);
-		AddParam(CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY,
-			CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY_DESC, 30, 0, 600, 1);
+		AddParam(CONFIG_INT_FACE_DETECT_FREQUENCY, 5, 0, 600, 1);
+		AddParam(CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY, 30, 0, 600, 1);
 
-		AddParam(CONFIG_INT_TRACKING_FREQUNCY, 
-			CONFIG_INT_TRACKING_FREQUNCY_DESC, 3, 0, 600, 1);
+		AddParam(CONFIG_INT_TRACKING_FREQUNCY, 3, 0, 600, 1);
 
-		AddParam(CONFIG_DOUBLE_TRACKING_THRESHOLD,
-			CONFIG_DOUBLE_TRACKING_THRESHOLD_DESC, 8.0, 1.0, 100.0, 1.0);
+		AddParam(CONFIG_DOUBLE_TRACKING_THRESHOLD, 8.0, 1.0, 100.0, 1.0);
 
-		AddParam(CONFIG_INT_SPEED_LIMIT,
-			CONFIG_INT_SPEED_LIMIT_DESC, 24, 0, 33 * 16, 1);
+		AddParam(CONFIG_INT_SPEED_LIMIT, 24, 0, 33 * 16, 1);
 
 		m_data = obs_data_create();
 		set_defaults(m_data);
@@ -157,11 +115,13 @@ namespace smll {
 			}
 
 			ParamInfo& pinfo = m_params[*it];
+			const char* pname = it->c_str();
+			obs_property_t* p = nullptr;
 
 			switch (pinfo.type)	{
 			case PARAM_TYPE_BOOL: {
-				obs_property_t* p = obs_properties_add_bool(props, 
-					it->c_str(), pinfo.description);
+				p = obs_properties_add_bool(props, 
+					pname, P_TRANSLATE(pname));
 				if (*it == CONFIG_BOOL_TOGGLE_SETTINGS) {
 					obs_property_set_modified_callback(p, onSettingsToggle);
 					if (!g_showSettings)
@@ -170,16 +130,20 @@ namespace smll {
 				break; 
 			}
 			case PARAM_TYPE_INT:
-				obs_properties_add_int_slider(props, it->c_str(), 
-					pinfo.description, (int)pinfo.min, (int)pinfo.max, 
-					(int)pinfo.step);
+				p = obs_properties_add_int_slider(props, pname, P_TRANSLATE(pname),
+					(int)pinfo.min, (int)pinfo.max, (int)pinfo.step);
 				break;
 			case PARAM_TYPE_DOUBLE:
-				obs_properties_add_float_slider(props, it->c_str(),
-					pinfo.description, pinfo.min, pinfo.max, pinfo.step);
+				p = obs_properties_add_float_slider(props, pname, P_TRANSLATE(pname),
+					pinfo.min, pinfo.max, pinfo.step);
 				break;
 			default:
 				break;
+			}
+
+			if (p) {
+				std::string pdesc = *it + ".Description";
+				obs_property_set_long_description(p, P_TRANSLATE(pdesc.c_str()));
 			}
 		}
 	}
@@ -212,27 +176,23 @@ namespace smll {
 	}
 
 
-	void Config::AddParam(const char* name, const char* description, 
-		bool defaultValue)
+	void Config::AddParam(const char* name, bool defaultValue)
 	{
-		AddParam(name, description, (double)defaultValue, 0.0, 0.0, 0.0);
+		AddParam(name, (double)defaultValue, 0.0, 0.0, 0.0);
 		m_params[name].type = PARAM_TYPE_BOOL;
 	}
 
-	void Config::AddParam(const char* name, const char* description, 
-		int defaultValue, int min, int max, int step)
+	void Config::AddParam(const char* name, int defaultValue, int min, int max, int step)
 	{
-		AddParam(name, description, (double)defaultValue, (double)min, 
+		AddParam(name, (double)defaultValue, (double)min, 
 			(double)max, (double)step);
 		m_params[name].type = PARAM_TYPE_INT;
 	}
 
-	void Config::AddParam(const char* name, const char* description, 
-		double defaultValue, double min, double max, double step)
+	void Config::AddParam(const char* name, double defaultValue, double min, double max, double step)
 	{
 		ParamInfo info;
 		info.name = name;
-		info.description = description;
 		info.defaultValue = defaultValue;
 		info.min = min;
 		info.max = max;
