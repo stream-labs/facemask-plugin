@@ -60,8 +60,10 @@ public:
 	int		getSize() const;
 	int		getNumElems() const;
 
+	// Intel IPP wrappers
 	void	ResizeTo(ImageWrapper& other) const;
 	void	ColorConvertTo(ImageWrapper& other) const;
+	void	CopyTo(ImageWrapper& other) const;
 
 	void    AlignedAlloc();
 private:

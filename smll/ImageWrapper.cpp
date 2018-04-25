@@ -18,16 +18,18 @@
 * along with this program; if not, write to the Free Software
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#include "ImageWrapper.hpp"
+#include "imageWrapper.hpp"
 #include "utils.h"
 
 #define ICV_BASE  (1)
 
 // Intel IPP
 extern "C" {
-#include <iw/iw_image.h>
-#include <iw/iw_image_transform.h>
+#include <iw/iw_core.h>
 #include <iw/iw_image_color.h>
+#include <iw/iw_image_filter.h>
+#include <iw/iw_image_op.h>
+#include <iw/iw_image_transform.h>
 }
 
 namespace smll {
@@ -134,6 +136,24 @@ namespace smll {
 		const IwiImage* const srcList[1] = { &src };
 		IwiImage* const destList[1] = { &dest };
 		iwiColorConvert(srcList, src_colorfmt, destList, dest_colorfmt, 1.0f, NULL, NULL);
+	}
+
+	void ImageWrapper::CopyTo(ImageWrapper& other) const {
+		IppStatus result;
+
+		IwiImage dest;
+		IwiSize dest_size;
+		dest_size.width = other.w;
+		dest_size.height = other.h;
+		result = iwiImage_InitExternal(&dest, dest_size, ipp8u, other.getNumElems(), NULL, other.data, other.getStride());
+
+		IwiImage src;
+		IwiSize src_size;
+		src_size.width = w;
+		src_size.height = h;
+		result = iwiImage_InitExternalConst(&src, src_size, ipp8u, getNumElems(), NULL, data, getStride());
+
+		result = iwiCopy(&src, &dest, NULL, NULL, NULL);
 	}
 
 	void    ImageWrapper::AlignedAlloc() {

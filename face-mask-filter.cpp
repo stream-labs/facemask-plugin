@@ -51,10 +51,15 @@
 
 // use threaded memcpy (not sure if this actually helps
 // due to windows thread priorities)
-#define USE_THREADED_MEMCPY				(false)
+#define USE_THREADED_MEMCPY				(true)
 
 // if we aren't using threaded memcpy, use fast memcpy?
 #define USE_FAST_MEMCPY					(false)
+
+// if we aren't using threaded memcpy, use Intel IPP copy?
+#define USE_IPP_MEMCPY					(false)
+
+
 
 // whether to run landmark detection/solvepnp/morph on main thread
 #define STUFF_ON_MAIN_THREAD			(false)
@@ -964,6 +969,10 @@ bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sou
 						threaded_memcpy(detect.data, data, detect.getSize(), memcpyEnv);
 					else if (USE_FAST_MEMCPY)
 						Utils::fastMemcpy(detect.data, data, detect.getSize());
+					else if (USE_IPP_MEMCPY) {
+						smll::ImageWrapper src(detect.w, detect.h, detect.stride, detect.type, (char*)data);
+						src.CopyTo(detect);
+					}
 					else
 						memcpy(detect.data, data, detect.getSize());
 					gs_stagesurface_unmap(detectStage);
