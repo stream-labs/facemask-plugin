@@ -62,6 +62,34 @@ SET(SMLLDir "${PROJECT_SOURCE_DIR}/smll")
 include_directories("thirdparty/tinyobjloader")
 SET(TINYOBJDir "thirdparty/tinyobjloader")
 
+# freetype
+SET(PATH_FREETYPE "" CACHE PATH "FreeType Software Font Rendering Engine")
+if(PATH_FREETYPE STREQUAL "")
+	message(FATAL_ERROR "PATH_FREETYPE not set!")
+	return()
+endif()
+if(NOT EXISTS "${PATH_FREETYPE}/src/base/ftsystem.c")
+	message(FATAL_ERROR "PATH_FREETYPE is invalid!")
+	return()
+endif()
+SET(freetype_SOURCES
+	"${PATH_FREETYPE}/src/base/ftsystem.c"
+    "${PATH_FREETYPE}/src/base/ftinit.c"
+    "${PATH_FREETYPE}/src/base/ftdebug.c"
+    "${PATH_FREETYPE}/src/base/ftbase.c"
+    "${PATH_FREETYPE}/src/base/ftbbox.c"
+    "${PATH_FREETYPE}/src/base/ftglyph.c"
+    "${PATH_FREETYPE}/src/base/ftbitmap.c"
+    "${PATH_FREETYPE}/src/truetype/truetype.c"
+    "${PATH_FREETYPE}/src/smooth/smooth.c"
+    "${PATH_FREETYPE}/src/base/ftstroke.c"
+    "${PATH_FREETYPE}/src/sfnt/sfnt.c"
+    "${PATH_FREETYPE}/src/psnames/psnames.c"
+    "${PATH_FREETYPE}/src/autofit/autofit.c"
+	)
+add_definitions(-DFT2_BUILD_LIBRARY)
+include_directories(${PATH_FREETYPE}/include)
+
 # OBS Studio
 SET(PATH_OBS_STUDIO "" CACHE PATH "OBS Studio Source Code Directory")
 if(PATH_OBS_STUDIO STREQUAL "")
@@ -119,6 +147,7 @@ SET(smll_HEADERS
 	"${SMLLDir}/ImageWrapper.hpp"
 	"${SMLLDir}/landmarks.hpp"
 	"${SMLLDir}/MorphData.hpp"
+	"${SMLLDir}/OBSFont.hpp"
 	"${SMLLDir}/OBSRenderer.hpp"
 	"${SMLLDir}/OBSTexture.hpp"
 	"${SMLLDir}/sarray.hpp"
@@ -168,6 +197,7 @@ SET(smll_SOURCES
 	"${SMLLDir}/DetectionResults.cpp"
 	"${SMLLDir}/Face.cpp"
 	"${SMLLDir}/FaceDetector.cpp"
+	"${SMLLDir}/OBSFont.cpp"
 	"${SMLLDir}/OBSRenderer.cpp"
 	"${SMLLDir}/ImageWrapper.cpp"
 	"${SMLLDir}/landmarks.cpp"
@@ -208,8 +238,10 @@ SET(facemask-plugin_SOURCES
 	"${gs_SOURCES}"
 	"${mask_SOURCES}"
 	"${smll_SOURCES}"
+	"${freetype_SOURCES}"
 )
 SET(facemask-plugin_DATA
+	"${PROJECT_SOURCE_DIR}/data/effects/color_alpha_tex.effect"
 	"${PROJECT_SOURCE_DIR}/data/effects/color_conversion.effect"
 	"${PROJECT_SOURCE_DIR}/data/effects/default.effect"
 	"${PROJECT_SOURCE_DIR}/data/effects/denoise.effect"
@@ -235,6 +267,7 @@ source_group("Plugin\\Headers" FILES ${facemask-plugin_HEADERS})
 source_group("Plugin\\Sources" FILES ${facemask-plugin_SOURCES})
 source_group("SMLL\\Headers" FILES ${smll_HEADERS})
 source_group("SMLL\\Sources" FILES ${smll_SOURCES})
+source_group("FreeType" FILES ${freetype_SOURCES})
 source_group("GS\\Headers" FILES ${gs_HEADERS})
 source_group("GS\\Sources" FILES ${gs_SOURCES})
 source_group("Mask\\Headers" FILES ${mask_HEADERS})

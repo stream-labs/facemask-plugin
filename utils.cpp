@@ -25,6 +25,10 @@
 #include <sstream>
 #include <iterator>
 #include "base64.h"
+
+#include <immintrin.h>
+#include <cstdint>
+
 #include <assert.h>
 
 namespace Utils {
