@@ -173,6 +173,17 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	maskJsonList = Utils::ListFolder(maskPath, "*.json");
 	bfree(maskname);
 
+	// make sure default is first
+	std::string defmask = kFileDefaultJson;
+	Utils::find_and_replace(defmask, "masks/", "");
+	maskJsonList.insert(maskJsonList.begin(), defmask);
+	for (int i = 1; i < maskJsonList.size(); i++) {
+		if (maskJsonList[i] == defmask) {
+			maskJsonList.erase(maskJsonList.begin() + i);
+			break;
+		}
+	}
+
 	// initialize face detection thread data
 	{
 		std::unique_lock<std::mutex> lock(detection.mutex);
@@ -329,10 +340,6 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 	for (int i = 0; i < maskJsonList.size(); i++) {
 		std::string n = maskJsonList[i];
 		Utils::find_and_replace(n, ".json", "");
-		Utils::find_and_replace(n, "+depth_head", "");
-		Utils::find_and_replace(n, ".head", "");
-		Utils::find_and_replace(n, ".", " ");
-		Utils::find_and_replace(n, "+", " + ");
 		obs_property_list_add_int(p, n.c_str(), i);
 	}
 
