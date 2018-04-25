@@ -113,12 +113,13 @@ namespace Plugin {
 
 		private:
 			// Filter State
-			obs_source_t* m_source;
-			int32_t m_baseWidth, m_baseHeight;
-			bool m_isActive;
-			bool m_isVisible;
-			bool m_isDisabled;
-			HANDLE m_taskHandle;
+			obs_source_t*	source;
+			int32_t			baseWidth, baseHeight;
+			bool			isActive;
+			bool			isVisible;
+			bool			isDisabled;
+			bool			videoTicked;
+			HANDLE			taskHandle;
 
 			// Options
 
@@ -131,12 +132,12 @@ namespace Plugin {
 			//smll::OBSFont*			smllFont2;
 			//smll::OBSFont*			smllFont3;
 
-			gs_texrender_t*		m_sourceRenderTarget;
+			gs_texrender_t*		sourceRenderTarget;
 			gs_texrender_t*		drawTexRender;
 			gs_texrender_t*		detectTexRender;
 			gs_stagesurf_t*		detectStage;
 
-			struct memcpy_environment* m_memcpyEnv;
+			struct memcpy_environment* memcpyEnv;
 
 			const char*			maskJsonFilename;
 			std::string			currentMaskJsonFilename;
@@ -162,6 +163,7 @@ namespace Plugin {
 			std::vector<std::unique_ptr<Mask::MaskData>>	demoMaskDatas;
 			std::vector<std::string> demoMaskFilenames;
 
+			// For writing thumbnails
 			struct PreviewFrame {
 				gs_texture_t*	vidtex;
 
@@ -186,7 +188,7 @@ namespace Plugin {
 			bool				filterPreviewMode;
 			bool				autoGreenScreen;
 
-			// for testing
+			// for testing/thumbs
 			gs_stagesurf_t*		testingStage;
 
 			// find a cached video frame
@@ -196,7 +198,7 @@ namespace Plugin {
 			// Detection
 			struct ThreadData {
 
-				static const int BUFFER_SIZE = 8;
+				static const int BUFFER_SIZE = 4;
 
 				std::thread thread;
 				std::mutex mutex;
@@ -209,6 +211,7 @@ namespace Plugin {
 					smll::MorphData     morphData;
 					std::mutex			mutex;
 					TimeStamp			timestamp;
+					bool				active;
 				};
 				int frameIndex;
 				std::array<struct CachedFrame, BUFFER_SIZE> frames;

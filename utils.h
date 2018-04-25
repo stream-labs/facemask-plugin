@@ -24,7 +24,7 @@
 #include <vector>
 #include "base64.h"
 
-// ALIGNED : macro to align a memory address
+// ALIGN_xx : macros to align a memory address
 #define ALIGN_16(XXX) ((intptr_t(XXX) & 0xF)  ? ((intptr_t(XXX) + 0x10) & ~0xF)  : intptr_t(XXX))
 #define ALIGN_32(XXX) ((intptr_t(XXX) & 0x1F) ? ((intptr_t(XXX) + 0x20) & ~0x1F) : intptr_t(XXX))
 
