@@ -1,0 +1,11 @@
+{
+    "name": "No Mask",
+    "description": "Streamlabs facemask description",
+    "author": "Streamlabs",
+    "license": "Copyright 2017 - General Working Inc. - All rights reserved.",
+    "website": "http://streamlabs.com/",
+    "resources": {
+    },
+    "parts": {
+    }
+}

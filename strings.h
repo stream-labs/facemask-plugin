@@ -42,5 +42,5 @@
 #define P_REWIND				"rewindanims"
 
 // Other static strings
-static const char* const kFileDefaultJson = "masks/Baseball Cap.json";
+static const char* const kFileDefaultJson = "masks/No Mask.json";
 
