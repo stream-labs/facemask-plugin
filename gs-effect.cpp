@@ -35,7 +35,7 @@ GS::Effect::Effect(std::string file) {
 		bfree((void*)errorMessage);
 		obs_leave_graphics(); 
 		throw std::runtime_error(error); 
-	} 
+	}
 	obs_leave_graphics();
 }
 

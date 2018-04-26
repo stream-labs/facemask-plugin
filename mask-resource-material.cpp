@@ -359,7 +359,7 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 		gs_effect_t* eff = m_effect->GetEffect()->GetObject();
 
 		// Set up the sampler state
-		// TODO: move this to gs::effectparameter
+		// TODO: move this to gs::effectparameter?
 		if (!m_samplerState) {
 			gs_sampler_info sinfo;
 			sinfo.address_u = m_wrapU;
@@ -367,10 +367,9 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 			sinfo.address_w = m_wrapW;
 			sinfo.filter = m_filter;
 			sinfo.border_color = 0;
-			sinfo.max_anisotropy = 8;
+			sinfo.max_anisotropy = 4;
 			m_samplerState = gs_samplerstate_create(&sinfo);
 		}
-		gs_load_samplerstate(m_samplerState, 0);
 
 		// Set material rendering flags
 		gs_enable_depth_test(m_depthTest != gs_depth_test::GS_ALWAYS);
@@ -407,6 +406,17 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 			catch (...) {
 			}
 		}
+		/*
+		// do we need to do this? nothing seems to work here
+		gs_load_samplerstate(m_samplerState, 0);
+		gs_load_samplerstate(m_samplerState, 1);
+		gs_load_samplerstate(m_samplerState, 2);
+		gs_load_samplerstate(m_samplerState, 3);
+		gs_load_samplerstate(m_samplerState, 4);
+		gs_load_samplerstate(m_samplerState, 5);
+		gs_load_samplerstate(m_samplerState, 6);
+		gs_load_samplerstate(m_samplerState, 7);
+		*/
 
 		// set params for lighting
 		SetLightingParameters(part);

@@ -467,7 +467,7 @@ void Mask::MaskData::Tick(float time) {
 		}
 		instanceDatas.Pop();
 	}
-
+	
 	// intro animation?
 	if (m_isIntroAnim) {
 		std::shared_ptr<Mask::AlphaInstanceData> aid =
@@ -481,7 +481,7 @@ void Mask::MaskData::Tick(float time) {
 			t = m_elapsedTime / m_introFadeTime;
 		}
 		// drawing?
-		else if (m_elapsedTime < DF) {
+		else if (m_elapsedTime < DF) { 
 			t = 1.0f;
 		}
 		// fading out?

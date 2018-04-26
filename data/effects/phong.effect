@@ -94,9 +94,35 @@ uniform float shininess = 8.0;
 uniform int transformNormals = 1;
 uniform float alpha = 1.0;
 
-// TEXTURE SAMPLER
-sampler_state textureSampler {
-	Filter    = Anisotropic;
+
+// TEXTURE SAMPLERS
+sampler_state normalSampler {
+	Filter    = Linear;
+	AddressU  = Clamp;
+	AddressV  = Clamp;
+};
+sampler_state ambientSampler {
+	Filter    = Linear;
+	AddressU  = Clamp;
+	AddressV  = Clamp;
+};
+sampler_state diffuseSampler {
+	Filter    = Linear;
+	AddressU  = Clamp;
+	AddressV  = Clamp;
+};
+sampler_state specularSampler {
+	Filter    = Linear;
+	AddressU  = Clamp;
+	AddressV  = Clamp;
+};
+sampler_state emissiveSampler {
+	Filter    = Linear;
+	AddressU  = Clamp;
+	AddressV  = Clamp;
+};
+sampler_state reflectSampler {
+	Filter    = Linear;
 	AddressU  = Clamp;
 	AddressV  = Clamp;
 };
@@ -377,7 +403,7 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 		float3 bitangent = normalize(v_in.bitangent);
 		float3x3 TBN = float3x3( tangent, bitangent, normal );
 
-		normal = normalTex.Sample(textureSampler, v_in.uv).xyz * 2.0 - 1.0;
+		normal = normalTex.Sample(normalSampler, v_in.uv).xyz * 2.0 - 1.0;
 		normal = normalize(mul(normal, TBN));
 	}
 
@@ -389,13 +415,13 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 	
 	// texture maps
 	if (ambientMap != 0)
-		ambColor = ambientTex.Sample(textureSampler, v_in.uv);
+		ambColor = ambientTex.Sample(ambientSampler, v_in.uv);
 	if (diffuseMap != 0)
-		dffColor = diffuseTex.Sample(textureSampler, v_in.uv);
+		dffColor = diffuseTex.Sample(diffuseSampler, v_in.uv);
 	if (specularMap != 0)
-		spcColor = specularTex.Sample(textureSampler, v_in.uv);
+		spcColor = specularTex.Sample(specularSampler, v_in.uv);
 	if (emissiveMap != 0)
-		emmColor = emissiveTex.Sample(textureSampler, v_in.uv);
+		emmColor = emissiveTex.Sample(emissiveSampler, v_in.uv);
 
 	// reflection map trumps diffuse
 	if (reflectMap != 0) {
@@ -404,7 +430,7 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 		float2 vN = r.xy / m + 0.5;
 		vN.y = 1.0 - vN.y; // need to flip Y
 		
-		dffColor = reflectTex.Sample(textureSampler, vN);
+		dffColor = reflectTex.Sample(reflectSampler, vN);
 	}
 	
 	// emmissive
