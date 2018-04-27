@@ -35,7 +35,7 @@ static const char* const S_DELTAS = "deltas";
 
 
 Mask::Resource::Morph::Morph(Mask::MaskData* parent, std::string name, obs_data_t* data)
-	: IBase(parent, name) {
+	: IBase(parent, name), m_drawEffect(nullptr) {
 
 	for (int i = 0; i < smll::NUM_FACE_AREAS; i++) {
 		faceIndexBuffers[i] = nullptr;
@@ -81,7 +81,7 @@ Mask::Resource::Morph::Morph(Mask::MaskData* parent, std::string name, obs_data_
 
 
 Mask::Resource::Morph::Morph(Mask::MaskData* parent, std::string name)
-	: IBase(parent, name) {
+	: IBase(parent, name), m_drawEffect(nullptr) {
 
 	for (int i = 0; i < smll::NUM_FACE_AREAS; i++) {
 		faceIndexBuffers[i] = nullptr;
@@ -95,6 +95,8 @@ Mask::Resource::Morph::~Morph() {
 		if (faceIndexBuffers[i])
 			gs_indexbuffer_destroy(faceIndexBuffers[i]);
 	}
+	if (m_drawEffect)
+		gs_effect_destroy(m_drawEffect);
 	obs_leave_graphics();
 }
 
@@ -169,35 +171,52 @@ void Mask::Resource::Morph::RenderMorphVideo(gs_texture* vidtex,
 	MakeFaceIndexBuffers();
 
 	// Effects
-	gs_effect_t* defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
-	gs_effect_t* solidEffect = obs_get_base_effect(OBS_EFFECT_SOLID);
-	gs_eparam_t* solidcolor = gs_effect_get_param_by_name(solidEffect, "color");
+	if (m_drawEffect == nullptr) {
+		char* f = obs_module_file("effects/vcol_mod_tex.effect");
+		char* errorMessage = nullptr;
+		m_drawEffect = gs_effect_create_from_file(f, &errorMessage);
+		if (!m_drawEffect || errorMessage) {
+			std::string error(errorMessage);
+			bfree((void*)errorMessage);
+			obs_leave_graphics();
+			throw std::runtime_error(error);
+		}
+		bfree(f);
+	}
+	gs_eparam_t* solidcolor = gs_effect_get_param_by_name(m_drawEffect, "color");
 
 	struct vec4 veccol;
 
 	// Draw the source video
 	gs_enable_depth_test(false);
 	gs_set_cull_mode(GS_NEITHER);
-
-	while (gs_effect_loop(defaultEffect, "Draw")) {
-//	while (gs_effect_loop(solidEffect, "Solid")) {
-			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+	std::string technique = "Draw";
+	if (trires.cartoonMode)
+		technique += "Cartoon";
+	if (trires.autoBGRemoval)
+		technique += "Mod";
+ 
+	while (gs_effect_loop(m_drawEffect, technique.c_str())) {
+			gs_effect_set_texture(gs_effect_get_param_by_name(m_drawEffect,
 			"image"), vidtex); 
 			gs_load_vertexbuffer(trires.vertexBuffer);
 
-			if (!trires.autoGreenScreen) {
+			if (!trires.autoBGRemoval) {
 				// bg
 				vec4_from_rgba(&veccol, MAKE32COLOR(66, 134, 244, 255));
 				gs_effect_set_vec4(solidcolor, &veccol);
 				gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_BACKGROUND]);
 				gs_draw(GS_TRIS, 0, 0);
-
-				// hull
-				vec4_from_rgba(&veccol, MAKE32COLOR(41, 118, 242, 255));
-				gs_effect_set_vec4(solidcolor, &veccol);
-				gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_HULL]);
-				gs_draw(GS_TRIS, 0, 0);
 			}
+
+			// hull
+			if (trires.autoBGRemoval)
+				vec4_from_rgba(&veccol, MAKE32COLOR(0, 0, 0, 255));
+			else
+				vec4_from_rgba(&veccol, MAKE32COLOR(41, 118, 242, 255));
+			gs_effect_set_vec4(solidcolor, &veccol);
+			gs_load_indexbuffer(trires.indexBuffers[smll::TriangulationResult::IDXBUFF_HULL]);
+			gs_draw(GS_TRIS, 0, 0);
 
 			// face
 			vec4_from_rgba(&veccol, MAKE32COLOR(255, 220, 177, 255));

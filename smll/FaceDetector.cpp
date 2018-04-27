@@ -38,7 +38,6 @@
 #include <vector>
 
 
-
 #pragma warning( pop )
 
 #define FOCAL_LENGTH_FACTOR		(1.0f)
@@ -344,6 +343,8 @@ namespace smll {
 		obs_enter_graphics();
 		gs_render_start(true);
 		size_t nv = points.size();
+		LandmarkBitmask hpbm;
+		hpbm.set(HULL_POINT);
 		for (int i = 0; i < nv; i++) {
 			// position from warped points
 			// uv from original points
@@ -353,6 +354,11 @@ namespace smll {
 			// add point and uv
 			gs_texcoord(uv.x / width, uv.y / height, 0);
 			gs_vertex2f(p.x, p.y);
+
+			if ((m_vtxBitmaskLookup[i] & hpbm).any())
+				gs_color(0x0);
+			else
+				gs_color(0xFFFFFFFF);
 		}
 		result.vertexBuffer = gs_render_save();
 		obs_leave_graphics();

@@ -60,6 +60,7 @@ namespace Mask {
 		protected:
 
 			smll::MorphData		m_morphData;
+			gs_effect_t*		m_drawEffect;
 
 			std::array<gs_indexbuffer_t*, smll::NUM_FACE_AREAS> faceIndexBuffers;
 			void	MakeFaceIndexBuffers();

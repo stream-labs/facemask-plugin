@@ -1,0 +1,74 @@
+uniform float4x4 ViewProj;
+uniform texture2d image;
+uniform float4 color;
+
+sampler_state defaultSampler {
+	Filter = Anisotropic;
+	AddressU = Clamp;
+	AddressV = Clamp;
+};
+
+struct VertDataIn {
+	float4 pos : POSITION;
+	float4 color : COLOR;
+	float2 uv  : TEXCOORD0;
+};
+
+struct VertDataOut {
+	float4 pos : POSITION;
+	float4 color : COLOR;
+	float2 uv  : TEXCOORD0;
+};
+
+VertDataOut VSDefault(VertDataIn v_in) {
+	VertDataOut vert_out;
+	vert_out.pos = mul(float4(v_in.pos.xyz, 1.0), ViewProj);
+	vert_out.uv = v_in.uv;
+	vert_out.color = v_in.color;
+	return vert_out;
+}
+
+float4 PSDefault(VertDataOut v_in) : TARGET {
+	return image.Sample(defaultSampler, v_in.uv);
+}
+
+float4 PSColorMod(VertDataOut v_in) : TARGET {
+	float4 samp = image.Sample(defaultSampler, v_in.uv);
+	return float4(samp.r * v_in.color.r, samp.g * v_in.color.g, samp.b * v_in.color.b, v_in.color.a);
+}
+
+float4 PSCartoon(VertDataOut v_in) : TARGET {
+	return color;
+}
+
+float4 PSCartoonMod(VertDataOut v_in) : TARGET {
+	return float4(color.r * v_in.color.r, color.g * v_in.color.g, color.b * v_in.color.b, v_in.color.a);
+}
+
+technique Draw {
+	pass {
+		vertex_shader = VSDefault(v_in);
+		pixel_shader = PSDefault(v_in);
+	}
+}
+
+technique DrawCartoon {
+	pass {
+		vertex_shader = VSDefault(v_in);
+		pixel_shader = PSCartoon(v_in);
+	}
+}
+
+technique DrawCartoonMod {
+	pass {
+		vertex_shader = VSDefault(v_in);
+		pixel_shader = PSCartoonMod(v_in);
+	}
+}
+
+technique DrawMod {
+	pass {
+		vertex_shader = VSDefault(v_in);
+		pixel_shader = PSColorMod(v_in);
+	}
+}

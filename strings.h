@@ -40,6 +40,7 @@
 #define P_BGREMOVAL				"greenscreen"
 #define P_GENTHUMBS				"genpreviews"
 #define P_REWIND				"rewindanims"
+#define P_CARTOON				"cartoonMode"
 
 // Other static strings
 static const char* const kFileDefaultJson = "masks/No Mask.json";

@@ -625,7 +625,7 @@ bool Mask::MaskData::RenderMorphVideo(gs_texture* vidtex, uint32_t width, uint32
 	GetMorph();
 
 	// Add an empty morph resource if they want to use the auto-green screen feature
-	if (trires.autoGreenScreen && m_morph == nullptr) {
+	if (trires.autoBGRemoval && m_morph == nullptr) {
 		std::string n("auto_morph");
 		std::shared_ptr<Mask::Resource::IBase> r = 
 			std::make_shared<Mask::Resource::Morph>(this, n);

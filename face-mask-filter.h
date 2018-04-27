@@ -188,7 +188,8 @@ namespace Plugin {
 			bool				drawMorphTris;
 			bool				drawFDRect;
 			bool				filterPreviewMode;
-			bool				autoGreenScreen;
+			bool				autoBGRemoval;
+			bool				cartoonMode;
 
 			// for testing/thumbs
 			gs_stagesurf_t*		testingStage;

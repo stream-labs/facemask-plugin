@@ -138,10 +138,10 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	isDisabled(false), videoTicked(true), taskHandle(NULL), memcpyEnv(nullptr), detectStage(nullptr),
 	maskDataShutdown(false), maskJsonFilename(nullptr), maskData(nullptr),
 	demoModeOn(false), demoModeMaskJustChanged(false), demoModeMaskChanged(false), 
-	demoCurrentMask(0), demoModeInterval(0.0f),
-	demoModeDelay(0.0f), demoModeElapsed(0.0f), demoModeInDelay(false), demoModeGenPreviews(false),
-	demoModeSavingFrames(false), drawMask(true),	drawFaces(false), drawMorphTris(false), 
-	drawFDRect(false), filterPreviewMode(false), autoGreenScreen(false), testingStage(nullptr) {
+	demoCurrentMask(0), demoModeInterval(0.0f), demoModeDelay(0.0f), demoModeElapsed(0.0f), 
+	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), drawMask(true),	
+	drawFaces(false), drawMorphTris(false), drawFDRect(false), filterPreviewMode(false), 
+	autoBGRemoval(false), cartoonMode(false), testingStage(nullptr) {
 
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
 
@@ -294,6 +294,7 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	bfree(jsonName);
 #endif
 
+	obs_data_set_default_bool(data, P_CARTOON, false);
 	obs_data_set_default_bool(data, P_BGREMOVAL, false);
 
 	obs_data_set_default_bool(data, P_GENTHUMBS, false);
@@ -355,6 +356,9 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 
 	p = obs_properties_add_bool(props, P_BGREMOVAL, P_TRANSLATE(P_BGREMOVAL));
 	obs_property_set_long_description(p, P_TRANSLATE(P_DESC(P_BGREMOVAL)));
+
+	p = obs_properties_add_bool(props, P_CARTOON, P_TRANSLATE(P_CARTOON));
+	obs_property_set_long_description(p, P_TRANSLATE(P_DESC(P_CARTOON)));
 
 #if !defined(PUBLIC_RELEASE)
 
@@ -437,7 +441,8 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 		detection.facesIndex = -1;
 	}
 
-	autoGreenScreen = obs_data_get_bool(data, P_BGREMOVAL);
+	autoBGRemoval = obs_data_get_bool(data, P_BGREMOVAL);
+	cartoonMode = obs_data_get_bool(data, P_CARTOON);
 
 	// demo mode
 	demoModeOn = obs_data_get_bool(data, P_DEMOMODEON);
@@ -642,7 +647,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	}
 
 	// Draw the source video, if we aren't going to later
-	if (!autoGreenScreen && 
+	if (!autoBGRemoval && 
 		(faces.length == 0 || !drawMask || !mask_data || !videoTicked)) {
 		gs_enable_depth_test(false);
 		gs_set_cull_mode(GS_NEITHER);
@@ -697,7 +702,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 						// Draw the source video
 						if (mask_data && !demoModeInDelay) {
-							triangulation.autoGreenScreen = autoGreenScreen;
+							triangulation.autoBGRemoval = autoBGRemoval;
+							triangulation.cartoonMode = cartoonMode;
 							mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
 						}
 						else {
@@ -717,6 +723,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 						}
 					}
 				}
+
+				// draw face detection data
+				if (drawFaces)
+					smllRenderer->DrawFaces(faces);
 
 				gs_texrender_end(drawTexRender);
 			}
