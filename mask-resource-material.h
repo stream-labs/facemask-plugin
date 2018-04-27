@@ -43,6 +43,7 @@ namespace Mask {
 
 			bool IsDepthOnly() override { return m_depthOnly; }
 			bool IsOpaque() { return m_opaque; }
+			bool WriteAlpha() { return m_alphaWrite; }
 
 		private:
 			struct Parameter {
@@ -79,6 +80,7 @@ namespace Mask {
 			std::array<size_t, 8> m_lightIds;
 			bool m_depthOnly;
 			bool m_opaque;
+			bool m_alphaWrite;
 
 			gs_address_mode StringToAddressMode(std::string s);
 			void SetLightingParameters(Mask::Part* part);

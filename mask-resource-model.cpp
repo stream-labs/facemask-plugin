@@ -96,6 +96,11 @@ void Mask::Resource::Model::Render(Mask::Part* part) {
 }
 
 void Mask::Resource::Model::DirectRender(Mask::Part* part) {
+	if (m_material->WriteAlpha())
+		gs_enable_color(true, true, true, true);
+	else
+		gs_enable_color(true, true, true, false);
+
 	m_parent->instanceDatas.Push(m_id);
 	while (m_material->Loop(part)) {
 		m_mesh->Render(part);

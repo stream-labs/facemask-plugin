@@ -503,7 +503,11 @@ void Mask::MaskData::Render(bool depthOnly) {
 
 	gs_blend_state_push();
 	gs_reset_blend_state();
-	gs_enable_blending(false);
+	gs_enable_blending(true);
+	gs_blend_function_separate(gs_blend_type::GS_BLEND_ONE,
+		gs_blend_type::GS_BLEND_ZERO,
+		gs_blend_type::GS_BLEND_ONE,
+		gs_blend_type::GS_BLEND_ZERO);
 	gs_enable_color(true, true, true, true);
 
 	// OPAQUE
@@ -525,10 +529,10 @@ void Mask::MaskData::Render(bool depthOnly) {
 
 	// TRANSPARENT
 	if (!depthOnly) {
-
-		gs_enable_blending(true);
-		gs_enable_color(true, true, true, false);
-		gs_blend_function(gs_blend_type::GS_BLEND_SRCALPHA, gs_blend_type::GS_BLEND_INVSRCALPHA);
+		gs_blend_function_separate(gs_blend_type::GS_BLEND_SRCALPHA,
+			gs_blend_type::GS_BLEND_INVSRCALPHA,
+			gs_blend_type::GS_BLEND_ONE,
+			gs_blend_type::GS_BLEND_ZERO);
 
 		for (unsigned int i = 0; i < NUM_DRAW_BUCKETS; i++) {
 			SortedDrawObject* sdo = m_drawBuckets[i];
@@ -631,15 +635,6 @@ bool Mask::MaskData::RenderMorphVideo(gs_texture* vidtex, uint32_t width, uint32
 			std::make_shared<Mask::Resource::Morph>(this, n);
 		AddResource(n, r);
 	}
-
-	// make sure blending is on
-	gs_enable_blending(true);
-	gs_blend_function_separate(
-		gs_blend_type::GS_BLEND_SRCALPHA,
-		gs_blend_type::GS_BLEND_INVSRCALPHA,
-		gs_blend_type::GS_BLEND_SRCALPHA,
-		gs_blend_type::GS_BLEND_INVSRCALPHA
-	);
 
 	if (m_morph && trires.vertexBuffer) {
 		didMorph = true;

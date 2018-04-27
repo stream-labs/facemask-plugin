@@ -41,6 +41,32 @@ bool is_vector(string v) {
 	return (bits.size() > 1);
 }
 
+bool is_bool(string v) {
+	if (v == "true")
+		return true;
+	if (v == "True")
+		return true;
+	if (v == "TRUE")
+		return true;
+	if (v == "false")
+		return true;
+	if (v == "False")
+		return true;
+	if (v == "FALSE")
+		return true;
+	return false;
+}
+
+bool atobool(string v) {
+	if (v == "true")
+		return true;
+	if (v == "True")
+		return true;
+	if (v == "TRUE")
+		return true;
+	return false;
+}
+
 void command_tweak(Args& args) {
 
 	// load json file
@@ -55,6 +81,8 @@ void command_tweak(Args& args) {
 			jval = atoi(it->second.c_str());
 		else if (is_float(it->second))
 			jval = atof(it->second.c_str());
+		else if (is_bool(it->second))
+			jval = atobool(it->second.c_str());
 		else if (is_vector(it->second)) {
 			vector<string> bits = Utils::split(it->second, ',');
 			vector<string> keys = { "x","y","z","w" };

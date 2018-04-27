@@ -743,7 +743,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		gs_set_cull_mode(GS_NEITHER);
 		gs_enable_blending(true);
 		gs_enable_color(true, true, true, true);
-		gs_blend_function(gs_blend_type::GS_BLEND_SRCALPHA, gs_blend_type::GS_BLEND_INVSRCALPHA);
+		gs_blend_function_separate(gs_blend_type::GS_BLEND_SRCALPHA,
+			gs_blend_type::GS_BLEND_INVSRCALPHA,
+			gs_blend_type::GS_BLEND_ONE,
+			gs_blend_type::GS_BLEND_ZERO);
 		while (gs_effect_loop(defaultEffect, "Draw")) {
 			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
 				"image"), mask_tex);

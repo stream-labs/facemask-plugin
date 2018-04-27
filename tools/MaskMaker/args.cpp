@@ -213,6 +213,8 @@ string Args::default_value(string key) {
 			return "false";
 		if (key == "z-sort-offset")
 			return "0";
+		if (key == "alpha-write")
+			return "true";
 	}
 	if (command == "addpart") {
 		if (key == "parent")
@@ -308,7 +310,7 @@ json Args::getMaterialParams() {
 	json params;
 	vector<string> mat_params = { "name", "type", "effect", "technique",
 		"u-wrap", "v-wrap", "w-wrap", "culling", "depth-test", "depth-only",
-		"filter", "opaque" };
+		"filter", "opaque", "alpha-write" };
 	for (auto it = kvpairs.begin(); it != kvpairs.end(); it++) {
 		if (std::find(mat_params.begin(), mat_params.end(), it->first) == mat_params.end()) {
 
@@ -628,6 +630,7 @@ json Args::createMaterial(json params, string effect) {
 	o["v-wrap"] = this->value("v-wrap");
 	o["w-wrap"] = this->value("w-wrap");
 	o["culling"] = this->value("culling");
+	o["alpha-write"] = this->boolValue("alpha-write");
 	o["depth-test"] = this->value("depth-test");
 	o["depth-only"] = this->boolValue("depth-only");
 	o["filter"] = this->value("filter");

@@ -187,6 +187,13 @@ void Mask::Resource::Morph::RenderMorphVideo(gs_texture* vidtex,
 
 	struct vec4 veccol;
 
+	// render modes
+	gs_blend_state_push();
+	gs_enable_blending(true);
+	gs_enable_color(true, true, true, true);
+	gs_blend_function(gs_blend_type::GS_BLEND_SRCALPHA,
+		gs_blend_type::GS_BLEND_INVSRCALPHA);
+
 	// Draw the source video
 	gs_enable_depth_test(false);
 	gs_set_cull_mode(GS_NEITHER);
@@ -277,4 +284,6 @@ void Mask::Resource::Morph::RenderMorphVideo(gs_texture* vidtex,
 			gs_draw(GS_POINTS, 0, 0);
 		}
 	}
+
+	gs_blend_state_pop();
 }

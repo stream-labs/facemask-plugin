@@ -44,6 +44,7 @@ static const char* const S_DEPTHTEST = "depth-test";
 static const char* const S_DEPTHONLY = "depth-only";
 static const char* const S_OPAQUE = "opaque";
 static const char* const S_FILTER = "filter";
+static const char* const S_ALPHAWRITE = "alpha-write";
 
 
 static const char* const PARAM_WORLD = "World";
@@ -55,7 +56,7 @@ static const char* const PARAM_NUMLIGHTS = "numLights";
 
 Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs_data_t* data)
 	: IBase(parent, name), m_effect(nullptr), m_looping(false), m_currentTechnique(nullptr),
-	m_samplerState(nullptr), m_depthOnly(false), m_opaque(true) {
+	m_samplerState(nullptr), m_depthOnly(false), m_opaque(true), m_alphaWrite(true) {
 	
 	std::hash<std::string> hasher;
 	char temp[64];
@@ -133,6 +134,10 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 	m_opaque = true;
 	if (obs_data_has_user_value(data, S_OPAQUE)) {
 		m_opaque = obs_data_get_bool(data, S_OPAQUE);
+	}
+	m_alphaWrite = true;
+	if (obs_data_has_user_value(data, S_ALPHAWRITE)) {
+		m_alphaWrite = obs_data_get_bool(data, S_ALPHAWRITE);
 	}
 	m_filter = GS_FILTER_ANISOTROPIC;
 	if (obs_data_has_user_value(data, S_FILTER)) {
