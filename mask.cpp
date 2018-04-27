@@ -501,6 +501,11 @@ void Mask::MaskData::Render(bool depthOnly) {
 
 	ClearSortedDrawObjects();
 
+	gs_blend_state_push();
+	gs_reset_blend_state();
+	gs_enable_blending(false);
+	gs_enable_color(true, true, true, true);
+
 	// OPAQUE
 	for (auto kv : m_parts) {
 		if (kv.second->resources.size() == 0)
@@ -520,6 +525,11 @@ void Mask::MaskData::Render(bool depthOnly) {
 
 	// TRANSPARENT
 	if (!depthOnly) {
+
+		gs_enable_blending(true);
+		gs_enable_color(true, true, true, false);
+		gs_blend_function(gs_blend_type::GS_BLEND_SRCALPHA, gs_blend_type::GS_BLEND_INVSRCALPHA);
+
 		for (unsigned int i = 0; i < NUM_DRAW_BUCKETS; i++) {
 			SortedDrawObject* sdo = m_drawBuckets[i];
 			while (sdo) {
@@ -534,6 +544,8 @@ void Mask::MaskData::Render(bool depthOnly) {
 			}
 		}
 	}
+
+	gs_blend_state_pop();
 }
 
 static const char* const S_POSITION = "position";

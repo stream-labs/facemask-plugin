@@ -406,17 +406,6 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 			catch (...) {
 			}
 		}
-		/*
-		// do we need to do this? nothing seems to work here
-		gs_load_samplerstate(m_samplerState, 0);
-		gs_load_samplerstate(m_samplerState, 1);
-		gs_load_samplerstate(m_samplerState, 2);
-		gs_load_samplerstate(m_samplerState, 3);
-		gs_load_samplerstate(m_samplerState, 4);
-		gs_load_samplerstate(m_samplerState, 5);
-		gs_load_samplerstate(m_samplerState, 6);
-		gs_load_samplerstate(m_samplerState, 7);
-		*/
 
 		// set params for lighting
 		SetLightingParameters(part);

@@ -135,7 +135,7 @@ void Plugin::FaceMaskFilter::destroy(void *ptr) {
 
 Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *source)
 	: source(source), baseWidth(640), baseHeight(480), isActive(true), isVisible(true),
-	isDisabled(false), videoTicked(false), taskHandle(NULL), memcpyEnv(nullptr), detectStage(nullptr),
+	isDisabled(false), videoTicked(true), taskHandle(NULL), memcpyEnv(nullptr), detectStage(nullptr),
 	maskDataShutdown(false), maskJsonFilename(nullptr), maskData(nullptr),
 	demoModeOn(false), demoModeMaskJustChanged(false), demoModeMaskChanged(false), 
 	demoCurrentMask(0), demoModeInterval(0.0f),
@@ -160,8 +160,6 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 
 	//FONTDEMO
 	//smllFont1 = new smll::OBSFont("c:/Windows/Fonts/graffonti.3d.drop.[fontvir.us].ttf", 100);
-	//smllFont2 = new smll::OBSFont("c:/Windows/Fonts/ROGFontsv1.6-Regular.ttf", 100);
-	//smllFont3 = new smll::OBSFont("c:/Windows/Fonts/segoescb.ttf", 100);
 
 	// set our mm thread task
 	if (!taskHandle) {
@@ -252,8 +250,6 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 
 	//FONTDEMO
 	//delete smllFont1;
-	//delete smllFont2;
-	//delete smllFont3;
 
 	if (memcpyEnv)
 		destroy_threaded_memcpy_pool(memcpyEnv);
@@ -520,22 +516,8 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 	// ----- GET FACES FROM OTHER THREAD -----
 	updateFaces();
 
-	// demo mode : switch masks/delay
-	if (demoModeOn && demoMaskDatas.size()) {
-		demoModeElapsed += timeDelta;
-		if (demoModeInDelay && (demoModeElapsed > demoModeDelay)) {
-			demoModeInDelay = false;
-			demoModeElapsed -= demoModeDelay;
-		}
-		else if (!demoModeInDelay && (demoModeElapsed > demoModeInterval)) {
-			demoCurrentMask = (demoCurrentMask + 1) % demoMaskDatas.size();
-			demoModeMaskChanged = true;
-			demoModeMaskJustChanged = true;
-			demoModeSavingFrames = false;
-			demoModeElapsed -= demoModeInterval;
-			demoModeInDelay = true;
-		}
-	}
+	// demo mode stuff
+	demoModeUpdate(timeDelta);
 
 	// Tick the mask data
 	std::unique_lock<std::mutex> masklock(maskDataMutex, std::try_to_lock);
@@ -626,11 +608,11 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	gs_samplerstate_destroy(ss);
 
 	// mask to draw
-	Mask::MaskData* mdat = maskData.get();
+	Mask::MaskData* mask_data = maskData.get();
 	if (demoModeOn && demoMaskDatas.size() > 0) {
 		if (demoCurrentMask >= 0 &&
 			demoCurrentMask < demoMaskDatas.size()) {
-			mdat = demoMaskDatas[demoCurrentMask].get();
+			mask_data = demoMaskDatas[demoCurrentMask].get();
 		}
 	}
 	
@@ -644,22 +626,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		vidTex = sourceTexture;
 	}
 
-	// Draw the source video
-	if (mdat && !demoModeInDelay) {
-		triangulation.autoGreenScreen = autoGreenScreen;
-		mdat->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
-	} 
-	else {
-		// Draw the source video
-		gs_enable_depth_test(false);
-		gs_set_cull_mode(GS_NEITHER);
-		while (gs_effect_loop(defaultEffect, "Draw")) {
-			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
-				"image"), vidTex);
-			gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
-		}
-	}
-
 	// draw face detection data
 	if (drawFaces)
 		smllRenderer->DrawFaces(faces);
@@ -671,12 +637,24 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	drawCropRects(baseWidth, baseHeight);
 
 	// some reasons triangulation should be destroyed
-	if (!mdat || faces.length == 0) {
+	if (!mask_data || faces.length == 0) {
 		triangulation.DestroyBuffers();
 	}
 
+	// Draw the source video, if we aren't going to later
+	if (!autoGreenScreen && 
+		(faces.length == 0 || !drawMask || !mask_data || !videoTicked)) {
+		gs_enable_depth_test(false);
+		gs_set_cull_mode(GS_NEITHER);
+		while (gs_effect_loop(defaultEffect, "Draw")) {
+			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+				"image"), vidTex);
+			gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
+		}
+	}
+
 	// ready?
-	gs_texture* tex2 = nullptr;
+	gs_texture* mask_tex = nullptr;
 	if (faces.length > 0 && !demoModeInDelay) {
 
 		// only render once per video tick
@@ -694,35 +672,48 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				vec4_set(&thumbbg, vv, vv, vv, 1.0f);
 				gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
 
-				if (drawMask && mdat) {
+				if (drawMask && mask_data) {
 					std::unique_lock<std::mutex> lock(maskDataMutex, std::try_to_lock);
 					if (lock.owns_lock()) {
 						// Check here for no morph
-						if (!mdat->GetMorph()) {
+						if (!mask_data->GetMorph()) {
 							triangulation.DestroyBuffers();
 						}
 
 						// Draw depth-only stuff
 						for (int i = 0; i < faces.length; i++) {
-							drawMaskData(faces[i], mdat, true);
+							drawMaskData(faces[i], mask_data, true);
 						}
 
-						// clear the color buffer (leaving depth info there)
-						gs_clear(GS_CLEAR_COLOR, &black, 1.0f, 0);
-
 						// if we are generating thumbs
-						if (mdat && demoModeOn && demoModeMaskChanged && demoModeGenPreviews && demoModeSavingFrames) {
-
+						if (mask_data && demoModeOn && demoModeMaskChanged && demoModeGenPreviews && demoModeSavingFrames) {
 							// clear the color buffer (leaving depth info there)
 							gs_clear(GS_CLEAR_COLOR, &thumbbg, 1.0f, 0);
+						}
+						else {
+							// clear the color buffer (leaving depth info there)
+							gs_clear(GS_CLEAR_COLOR, &black, 1.0f, 0);
+						}
 
-							// draw the video
-							mdat->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
+						// Draw the source video
+						if (mask_data && !demoModeInDelay) {
+							triangulation.autoGreenScreen = autoGreenScreen;
+							mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
+						}
+						else {
+							// Draw the source video
+							gs_enable_depth_test(false);
+							gs_set_cull_mode(GS_NEITHER);
+							while (gs_effect_loop(defaultEffect, "Draw")) {
+								gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+									"image"), vidTex);
+								gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
+							}
 						}
 
 						// Draw regular stuff
 						for (int i = 0; i < faces.length; i++) {
-							drawMaskData(faces[i], mdat, false);
+							drawMaskData(faces[i], mask_data, false);
 						}
 					}
 				}
@@ -732,60 +723,64 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			texRenderEnd();
 		}
 
-		tex2 = gs_texrender_get_texture(drawTexRender);
+		mask_tex = gs_texrender_get_texture(drawTexRender);
 	}
-	/*
-	blog(LOG_DEBUG, "***** RENDER *****");
 
-	blog(LOG_DEBUG, " base %d x %d", baseWidth, baseHeight);
-
-	matrix4 m;
-	gs_matrix_get(&m);
-	blog(LOG_DEBUG, "x : %6.2f %6.2f %6.2f %6.2f", m.x.x, m.x.y, m.x.z, m.x.w);
-	blog(LOG_DEBUG, "y : %6.2f %6.2f %6.2f %6.2f", m.y.x, m.y.y, m.y.z, m.y.w);
-	blog(LOG_DEBUG, "z : %6.2f %6.2f %6.2f %6.2f", m.z.x, m.z.y, m.z.z, m.z.w);
-	blog(LOG_DEBUG, "t : %6.2f %6.2f %6.2f %6.2f", m.t.x, m.t.y, m.t.z, m.t.w);
-
-	uint32_t w = gs_get_width();
-	uint32_t h = gs_get_height();
-	blog(LOG_DEBUG, "%d x %d", w, h);
-
-	gs_rect r;
-	gs_get_viewport(&r);
-	blog(LOG_DEBUG, "%4d %4d %4d %4d", r.x, r.y, r.cx, r.cy);
-
-	if (r.x == 0 && r.y == 0) {
-		blog(LOG_DEBUG, "MAIN RENDER");
-	}
-	*/
-
-	if (tex2) {
+	if (mask_tex) {
 		// draw the rendering on top of the video
 		gs_matrix_push();
-		gs_matrix_translate3f(0.0f, 0.0f, -100.0f);
+		gs_blend_state_push();
 		gs_set_cull_mode(GS_NEITHER);
+		gs_enable_blending(true);
+		gs_enable_color(true, true, true, true);
+		gs_blend_function(gs_blend_type::GS_BLEND_SRCALPHA, gs_blend_type::GS_BLEND_INVSRCALPHA);
 		while (gs_effect_loop(defaultEffect, "Draw")) {
 			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
-				"image"), tex2);
-			gs_draw_sprite(tex2, 0, baseWidth, baseHeight);
+				"image"), mask_tex);
+			gs_draw_sprite(mask_tex, 0, baseWidth, baseHeight);
 		}
+		gs_blend_state_pop();
 		gs_matrix_pop();
 	}
 
 	//FONTDEMO
 	//smllFont1->RenderText("this is a test of FreeType", 150, 150);
-	//smllFont2->RenderText("Any true type font can be loaded &", 150, 300);
-	//smllFont2->RenderText("created and drawn on the fly.", 150, 400);
-	//smllFont3->RenderText("a bitmap font is rendered out", 150, 550);
-	//smllFont3->RenderText("And is then drawn with texture", 150, 700);
-	//smllFont3->RenderText("mapped polygons in 3D.  :-P", 150, 850);
-
 
 	// end
 	smllRenderer->DrawEnd();
 
+	// demo mode render stuff
+	demoModeRender(vidTex, mask_tex, mask_data);
+
+	// 1 frame only
+	demoModeMaskJustChanged = false;
+	videoTicked = false;
+}
+
+void Plugin::FaceMaskFilter::Instance::demoModeUpdate(float timeDelta) {
+	// demo mode : switch masks/delay
+	if (demoModeOn && demoMaskDatas.size()) {
+		demoModeElapsed += timeDelta;
+		if (demoModeInDelay && (demoModeElapsed > demoModeDelay)) {
+			demoModeInDelay = false;
+			demoModeElapsed -= demoModeDelay;
+		}
+		else if (!demoModeInDelay && (demoModeElapsed > demoModeInterval)) {
+			demoCurrentMask = (demoCurrentMask + 1) % demoMaskDatas.size();
+			demoModeMaskChanged = true;
+			demoModeMaskJustChanged = true;
+			demoModeSavingFrames = false;
+			demoModeElapsed -= demoModeInterval;
+			demoModeInDelay = true;
+		}
+	}
+}
+
+void Plugin::FaceMaskFilter::Instance::demoModeRender(gs_texture* vidTex, gs_texture* maskTex, 
+	Mask::MaskData* mask_data) {
+
 	// generate previews?
-	if (demoModeOn && !demoModeInDelay && 
+	if (demoModeOn && !demoModeInDelay && videoTicked &&
 		demoModeMaskChanged && demoModeGenPreviews) {
 
 		// get frame color
@@ -808,7 +803,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		if (demoModeSavingFrames) {
 			// sometimes the red frame is 2 frames
 			if (isRed && previewFrames.size() < 1) {
-				mdat->RewindAnimations();
+				mask_data->RewindAnimations();
 			}
 			else if (isRed) {
 				// done
@@ -817,20 +812,16 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				demoModeSavingFrames = false;
 			}
 			else {
-				PreviewFrame pf(tex2, baseWidth, baseHeight);
+				PreviewFrame pf(maskTex, baseWidth, baseHeight);
 				previewFrames.emplace_back(pf);
 			}
 		}
 		else if (isRed) {
 			// ready to go
-			mdat->RewindAnimations();
+			mask_data->RewindAnimations();
 			demoModeSavingFrames = true;
 		}
 	}
-
-	// 1 frame only
-	demoModeMaskJustChanged = false;
-	videoTicked = false;
 }
 
 gs_texture_t* Plugin::FaceMaskFilter::Instance::FindCachedFrame(const TimeStamp& ts) {
@@ -1027,11 +1018,7 @@ gs_texture* Plugin::FaceMaskFilter::Instance::RenderSourceTexture(gs_effect_t* e
 			gs_ortho(0, (float)baseWidth, 0, (float)baseHeight, -1, 1);
 			gs_set_cull_mode(GS_NEITHER);
 			gs_reset_blend_state();
-			gs_blend_function_separate(
-				gs_blend_type::GS_BLEND_ONE,
-				gs_blend_type::GS_BLEND_ZERO,
-				gs_blend_type::GS_BLEND_ONE,
-				gs_blend_type::GS_BLEND_ZERO);
+			gs_blend_function(gs_blend_type::GS_BLEND_ONE, gs_blend_type::GS_BLEND_ZERO);
 			gs_enable_depth_test(false);
 			gs_enable_stencil_test(false);
 			gs_enable_stencil_write(false);
@@ -1062,18 +1049,7 @@ void Plugin::FaceMaskFilter::Instance::drawMaskData(const smll::DetectionResult&
 	float aspect = (float)baseWidth / (float)baseHeight;
 	gs_perspective(FOVA(aspect), aspect, NEAR_Z, FAR_Z);
 
-	gs_enable_color(true, true, true, true);
-	gs_enable_depth_test(true);
-	gs_depth_function(GS_LESS);
-	gs_set_cull_mode(gs_cull_mode::GS_BACK);
 	gs_enable_stencil_test(false);
-	gs_enable_blending(!depthOnly);
-	gs_blend_function_separate(
-		gs_blend_type::GS_BLEND_SRCALPHA,
-		gs_blend_type::GS_BLEND_INVSRCALPHA,
-		gs_blend_type::GS_BLEND_SRCALPHA,
-		gs_blend_type::GS_BLEND_INVSRCALPHA
-	);
 
 	gs_matrix_push();
 	gs_matrix_identity();

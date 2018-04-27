@@ -129,8 +129,6 @@ namespace Plugin {
 
 			//FONTDEMO
 			//smll::OBSFont*			smllFont1;
-			//smll::OBSFont*			smllFont2;
-			//smll::OBSFont*			smllFont3;
 
 			gs_texrender_t*		sourceRenderTarget;
 			gs_texrender_t*		drawTexRender;
@@ -162,6 +160,10 @@ namespace Plugin {
 			bool				demoModeSavingFrames;
 			std::vector<std::unique_ptr<Mask::MaskData>>	demoMaskDatas;
 			std::vector<std::string> demoMaskFilenames;
+
+			void demoModeUpdate(float timeDelta);
+			void demoModeRender(gs_texture* vidTex, 
+				gs_texture* maskTex, Mask::MaskData* mask_data);
 
 			// For writing thumbnails
 			struct PreviewFrame {
