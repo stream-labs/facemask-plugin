@@ -1189,6 +1189,26 @@ namespace smll {
 		results.length = m_faces.length;
 	}
 
+	float FaceDetector::ReprojectionError(const std::vector<cv::Point3f>& model_points,
+		const std::vector<cv::Point2f>& image_points,
+		const cv::Mat& rotation, const cv::Mat& translation) {
+
+		// reproject to check error
+		std::vector<cv::Point2f> projectedPoints;
+		cv::projectPoints(model_points, rotation, translation,
+			GetCVCamMatrix(), GetCVDistCoeffs(), projectedPoints);
+
+		float tterr = 0.0f;
+		for (int j = 0; j < model_points.size(); j++) {
+
+			float xerr = fabs(image_points[j].x - projectedPoints[j].x);
+			float yerr = fabs(image_points[j].y - projectedPoints[j].y);
+			float terr = xerr + yerr;
+			tterr += terr;
+		}
+		return tterr;
+	}
+
 
 	void FaceDetector::DoPoseEstimation(DetectionResults& results)
 	{
@@ -1223,10 +1243,9 @@ namespace smll {
 				int idx = model_indices[j];
 				image_points.push_back(cv::Point2f((float)p[idx].x(), (float)p[idx].y()));
 			}
-			//std::vector<cv::Point2f> image_points2;
 			//p = results[i].landmarks5;
 			//for (int j = 0; j < FIVE_LANDMARK_NUM_LANDMARKS; j++) {
-			//	image_points2.push_back(cv::Point2f((float)p->x(), (float)p->y()));
+			//	image_points.push_back(cv::Point2f((float)p->x(), (float)p->y()));
 			//	p++;
 			//}
 
@@ -1238,52 +1257,6 @@ namespace smll {
 				rotation, translation,
 				m_poses[i].PoseValid());
 
-			m_poses[i].SetPose(rotation, translation);
-
-			// solve again
-			//cv::solvePnP(mp5, image_points2,
-			//GetCVCamMatrix(), GetCVDistCoeffs(),
-			//rotation, translation, true);
-
-			/*
-			// DEBUG: reproject to check error
-			std::vector<cv::Point2f> projectedPoints;
-			cv::projectPoints(model_points, rotation, translation, 
-				GetCVCamMatrix(), GetCVDistCoeffs(), projectedPoints);
-
-			float tterr = 0.0f;
-			blog(LOG_DEBUG, "_");
-			blog(LOG_DEBUG, "_");
-			blog(LOG_DEBUG, "SOLVEPNP----------------------");
-			for (int j = 0; j < model_points.size(); j++) {
-
-				float xerr = fabs(image_points[j].x - projectedPoints[j].x);
-				float yerr = fabs(image_points[j].y - projectedPoints[j].y);
-				float terr = xerr + yerr;
-				tterr += terr;
-
-				blog(LOG_DEBUG, "%d : %5.0f, %5.0f   |   %5.2f, %5.2f, %5.2f   |  %2.1f, %2.1f  |  %2.1f", j,
-					image_points[j].x, image_points[j].y, 
-					model_points[j].x, model_points[j].y, model_points[j].z,
-					xerr, yerr, terr);
-			}
-			blog(LOG_DEBUG, "--------------------");
-			if (tterr > 20.0f) 
-				blog(LOG_DEBUG, "TOTAL ERROR   %3.2f <------------------- BAD -------", tterr);
-			else
-				blog(LOG_DEBUG, "TOTAL ERROR   %3.2f", tterr);
-			blog(LOG_DEBUG, "--------------------");
-
-			blog(LOG_DEBUG, " trans: %5.2f, %5.2f, %5.2f",
-				(float)translation.at<double>(0, 0),
-				(float)translation.at<double>(1, 0),
-				(float)translation.at<double>(2, 0));
-			blog(LOG_DEBUG, "   rot: %5.2f, %5.2f, %5.2f",
-				(float)rotation.at<double>(0, 0),
-				(float)rotation.at<double>(1, 0),
-				(float)rotation.at<double>(2, 0));
-			*/
-
 			// sometimes we get crap
 			if (translation.at<double>(2, 0) > 1000.0 ||
 				translation.at<double>(2, 0) < -1000.0) {
@@ -1292,7 +1265,17 @@ namespace smll {
 				break;
 			}
 
+			// check error again, still bad, use previous pose
+			float threshold = 3.0f * model_points.size();
+			if (m_poses[i].PoseValid() &&
+				ReprojectionError(model_points, image_points, rotation, translation) > threshold) {
+				// reset pose
+				translation = m_poses[i].GetCVTranslation();
+				rotation = m_poses[i].GetCVRotation();
+			}
+
 			// Save it
+			m_poses[i].SetPose(rotation, translation);
 			results[i].SetPose(m_poses[i]);
 		}
 

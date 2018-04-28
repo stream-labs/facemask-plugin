@@ -137,13 +137,15 @@ namespace smll {
 	}
 
 	bool ThreeDPose::PoseValid() {
+		if (translation[2] < 0.0f)
+			return false;
 		double v = 0.0f;
 		for (int i = 0; i < 3; i++) {
 			v += translation[i] * translation[i];
 		}
 		if (v < 1.0)
 			return false;
-		if (v > 250.0)
+		if (v > 10000.0)
 			return false;
 		return true;
 	}
