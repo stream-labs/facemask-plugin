@@ -73,8 +73,11 @@ public:
 
 private:
 
-	// Faces
+	// Saved Faces
 	Faces			m_faces;
+
+	// Saved Poses
+	ThreeDPoses		m_poses;
 
 	// Image Buffers
 	OBSTexture		m_capture;

@@ -658,10 +658,10 @@ namespace smll {
 
 	void OBSRenderer::SetTransform(const DetectionResult& face) {
 		gs_matrix_identity();
-		gs_matrix_translate3f((float)face.translation[0], 
-			(float)face.translation[1], (float)-face.translation[2]);
-		gs_matrix_rotaa4f((float)face.rotation[0], (float)face.rotation[1], 
-			(float)-face.rotation[2], (float)-face.rotation[3]);
+		gs_matrix_translate3f((float)face.pose.translation[0],
+			(float)face.pose.translation[1], (float)-face.pose.translation[2]);
+		gs_matrix_rotaa4f((float)face.pose.rotation[0], (float)face.pose.rotation[1],
+			(float)-face.pose.rotation[2], (float)-face.pose.rotation[3]);
 	}
 
 	void OBSRenderer::makeGlasses()	{

@@ -42,6 +42,26 @@
 
 namespace smll {
 
+	class ThreeDPose{
+	public:
+		ThreeDPose();
+
+		void SetPose(cv::Mat cvRot, cv::Mat cvTrs);
+		cv::Mat GetCVRotation() const;
+		cv::Mat GetCVTranslation() const;
+
+		double DistanceTo(const ThreeDPose& r) const;
+		void CopyPoseFrom(const ThreeDPose& r);
+		void ResetPose();
+		bool PoseValid();
+
+		double		translation[3];
+		double		rotation[4];
+	};
+
+	typedef sarray<ThreeDPose, MAX_FACES> ThreeDPoses;
+
+
 	class DetectionResult
 	{
 	public:
@@ -52,9 +72,8 @@ namespace smll {
 		dlib::point			landmarks5[FIVE_LANDMARK_NUM_LANDMARKS];
 		dlib::point			landmarks68[NUM_FACIAL_LANDMARKS];
 
-		// 3D pose estimation
-		double		translation[3];
-		double		rotation[4];
+		// 3D pose 
+		ThreeDPose			pose;
 
 		DetectionResult();
 		DetectionResult(const DetectionResult& r) { *this = r; }
@@ -62,11 +81,15 @@ namespace smll {
 		DetectionResult& operator=(const DetectionResult& r);
 		DetectionResult& operator=(const Face& f);
 
+		void SetPose(const ThreeDPose& p);
 		void SetPose(cv::Mat cvRot, cv::Mat cvTrs);
 		cv::Mat GetCVRotation() const;
 		cv::Mat GetCVTranslation() const;
 
-		void UpdateResults(const DetectionResult& r);
+		void CopyPoseFrom(const DetectionResult& r);
+		void ResetPose();
+		bool PoseValid();
+		void UpdateResultsFrom(const DetectionResult& r);
 
 		double DistanceTo(const DetectionResult& r) const;
 
@@ -101,12 +124,20 @@ namespace smll {
 
 		bool	kalmanFiltersInitialized;
 		void InitKalmanFilters();
-
-		// cv::solvePnp returns totally flipped results at times. 
-		// we correct them here.
-		static void						CheckForPoseFlip(double* r, double* t);
 	};
 
-	typedef sarray<DetectionResult, MAX_FACES> DetectionResults;
+
+	class DetectionResults : public sarray<DetectionResult, MAX_FACES>
+	{
+	public:
+		DetectionResults();
+		void CorrelateAndUpdateFrom(DetectionResults& other);
+		void CorrelateAndCopyPosesFrom(DetectionResults& other);
+		int findClosest(const smll::DetectionResult& result);
+
+	private:
+
+	};
+
 }
 

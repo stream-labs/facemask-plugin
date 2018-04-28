@@ -46,8 +46,6 @@
 #include <libobs/util/threaded-memcpy.c>
 
 
-// how many frames before we consider a face "lost"
-#define NUM_FRAMES_TO_LOSE_FACE			(30)
 
 // use threaded memcpy (not sure if this actually helps
 // due to windows thread priorities)
@@ -1089,11 +1087,11 @@ void Plugin::FaceMaskFilter::Instance::drawMaskData(const smll::DetectionResult&
 
 	gs_matrix_push();
 	gs_matrix_identity();
-	gs_matrix_translate3f((float)face.translation[0],
- 		(float)face.translation[1], (float)-face.translation[2]);
+	gs_matrix_translate3f((float)face.pose.translation[0],
+ 		(float)face.pose.translation[1], (float)-face.pose.translation[2]);
 	if (!_maskData->IsIntroAnimation()) {
-		gs_matrix_rotaa4f((float)face.rotation[0], (float)face.rotation[1],
-			(float)-face.rotation[2], (float)-face.rotation[3]);
+		gs_matrix_rotaa4f((float)face.pose.rotation[0], (float)face.pose.rotation[1],
+			(float)-face.pose.rotation[2], (float)-face.pose.rotation[3]);
 	}
 	_maskData->Render(depthOnly);
 
@@ -1407,21 +1405,7 @@ void Plugin::FaceMaskFilter::Instance::drawCropRects(int width, int height) {
 	}
 }
 
-int findClosest(const smll::DetectionResult& result, const smll::DetectionResults& results) {
-	// find closest
-	int closest = -1;
-	double min = DBL_MAX;
-	for (int j = 0; j < results.length; j++) {
-		if (!results[j].matched) {
-			double d = result.DistanceTo(results[j]);
-			if (d < min) {
-				closest = j;
-				min = d;
-			}
-		}
-	}
-	return closest;
-}
+
 
 void Plugin::FaceMaskFilter::Instance::updateFaces() {
 
@@ -1473,69 +1457,8 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 			// new timestamp
 			timestamp = detection.faces[fidx].timestamp;
 
-			// no faces lost, maybe some gained
-			if (faces.length <= newFaces.length) {
-				// clear matched flags
-				for (int i = 0; i < newFaces.length; i++) {
-					newFaces[i].matched = false;
-				}
-
-				// match our faces to the new ones
-				for (int i = 0; i < faces.length; i++) {
-					// find closest
-					int closest = findClosest(faces[i], newFaces);
-
-					// smooth new face into ours
-					faces[i].UpdateResults(newFaces[closest]);
-					faces[i].numFramesLost = 0;
-					newFaces[closest].matched = true;
-				}
-
-				// now check for new faces
-				for (int i = 0; i < newFaces.length; i++) {
-					if (!newFaces[i].matched) {
-						faces[faces.length] = newFaces[i];
-						faces[faces.length].numFramesLost = 0;
-						newFaces[i].matched = true;
-						faces.length++;
-					}
-				}
-			}
-
-			// faces were lost
-			else {
-
-				// clear matched flags
-				for (int i = 0; i < faces.length; i++) {
-					faces[i].matched = false;
-				}
-
-				// match new faces to ours
-				for (int i = 0; i < newFaces.length; i++) {
-
-					// find closest
-					int closest = findClosest(newFaces[i], faces);
-
-					// smooth new face into ours
-					faces[closest].UpdateResults(newFaces[i]);
-					faces[closest].numFramesLost = 0;
-					faces[closest].matched = true;
-				}
-
-				// now we need check lost faces
-				for (int i = 0; i < faces.length; i++) {
-					if (!faces[i].matched) {
-						faces[i].numFramesLost++;
-						if (faces[i].numFramesLost > NUM_FRAMES_TO_LOSE_FACE) {
-							// remove face
-							for (int j = i; j < (faces.length - 1); j++) {
-								faces[j] = faces[j + 1];
-							}
-							faces.length--;
-						}
-					}
-				}
-			}
+			// update our results
+			faces.CorrelateAndUpdateFrom(newFaces);
 		}
 	}
 }

@@ -108,6 +108,8 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 		obs_data_get_vec3(data, S_CENTER, &center);
 	}
 	else {
+		PLOG_WARNING("Mesh '%s' is calculating center. Old mask? WTF...", name.c_str());
+
 		// calculate center
 		vec3_zero(&center);
 		if (m_VertexBuffer->get_data()) {

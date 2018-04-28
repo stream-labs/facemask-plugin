@@ -340,6 +340,9 @@ namespace smll {
 		}
 
 		// make the vertex buffer 
+		// TODO: we should probably leave the creation of this
+		//       graphics stuff to the render method
+		//
 		obs_enter_graphics();
 		gs_render_start(true);
 		size_t nv = points.size();
@@ -807,6 +810,8 @@ namespace smll {
 		}
 
 		// Build index buffers
+		// TODO: again, best to leave graphics calls to render() method
+		//
 		for (int i = 0; i < TriangulationResult::NUM_INDEX_BUFFERS; i++) {
 			if (i == TriangulationResult::IDXBUFF_LINES && !result.buildLines)
 				continue;
@@ -1202,6 +1207,13 @@ namespace smll {
 		//std::vector<cv::Point3f>& mp5 = GetFiveLandmarkPoints();
 		//model_points.insert(model_points.end(), mp5.begin(), mp5.end());
 
+		if (m_poses.length != results.length) {
+			m_poses.length = results.length;
+			for (int i = 0; i < m_poses.length; i++) {
+				m_poses[i].ResetPose();
+			}
+		}
+
 		bool resultsBad = false;
 		for (int i = 0; i < results.length; i++) {
 			std::vector<cv::Point2f> image_points;
@@ -1219,25 +1231,30 @@ namespace smll {
 			//}
 
 			// Solve for pose
-			cv::Mat translation = cv::Mat::zeros(3, 1, CV_64F);
-			cv::Mat rotation = cv::Mat::zeros(3, 1, CV_64F);
+			cv::Mat translation = m_poses[i].GetCVTranslation();
+			cv::Mat rotation = m_poses[i].GetCVRotation();
 			cv::solvePnP(model_points, image_points,
 				GetCVCamMatrix(), GetCVDistCoeffs(),
-				rotation, translation);
+				rotation, translation,
+				m_poses[i].PoseValid());
+
+			m_poses[i].SetPose(rotation, translation);
 
 			// solve again
 			//cv::solvePnP(mp5, image_points2,
-				//GetCVCamMatrix(), GetCVDistCoeffs(),
-				//rotation, translation, true);
+			//GetCVCamMatrix(), GetCVDistCoeffs(),
+			//rotation, translation, true);
 
+			/*
 			// DEBUG: reproject to check error
 			std::vector<cv::Point2f> projectedPoints;
-			cv::projectPoints(model_points, rotation, translation, GetCVCamMatrix(), GetCVDistCoeffs(), projectedPoints);
+			cv::projectPoints(model_points, rotation, translation, 
+				GetCVCamMatrix(), GetCVDistCoeffs(), projectedPoints);
 
 			float tterr = 0.0f;
-			//blog(LOG_DEBUG, "_");
-			//blog(LOG_DEBUG, "_");
-			//blog(LOG_DEBUG, "SOLVEPNP----------------------");
+			blog(LOG_DEBUG, "_");
+			blog(LOG_DEBUG, "_");
+			blog(LOG_DEBUG, "SOLVEPNP----------------------");
 			for (int j = 0; j < model_points.size(); j++) {
 
 				float xerr = fabs(image_points[j].x - projectedPoints[j].x);
@@ -1245,18 +1262,18 @@ namespace smll {
 				float terr = xerr + yerr;
 				tterr += terr;
 
-				//blog(LOG_DEBUG, "%d : %5.0f, %5.0f   |   %5.2f, %5.2f, %5.2f   |  %2.1f, %2.1f  |  %2.1f", j,
-				//	image_points[j].x, image_points[j].y, 
-				//	model_points[j].x, model_points[j].y, model_points[j].z,
-				//	xerr, yerr, terr);
+				blog(LOG_DEBUG, "%d : %5.0f, %5.0f   |   %5.2f, %5.2f, %5.2f   |  %2.1f, %2.1f  |  %2.1f", j,
+					image_points[j].x, image_points[j].y, 
+					model_points[j].x, model_points[j].y, model_points[j].z,
+					xerr, yerr, terr);
 			}
-			/*
 			blog(LOG_DEBUG, "--------------------");
 			if (tterr > 20.0f) 
 				blog(LOG_DEBUG, "TOTAL ERROR   %3.2f <------------------- BAD -------", tterr);
 			else
 				blog(LOG_DEBUG, "TOTAL ERROR   %3.2f", tterr);
 			blog(LOG_DEBUG, "--------------------");
+
 			blog(LOG_DEBUG, " trans: %5.2f, %5.2f, %5.2f",
 				(float)translation.at<double>(0, 0),
 				(float)translation.at<double>(1, 0),
@@ -1265,17 +1282,18 @@ namespace smll {
 				(float)rotation.at<double>(0, 0),
 				(float)rotation.at<double>(1, 0),
 				(float)rotation.at<double>(2, 0));
-				*/
+			*/
 
 			// sometimes we get crap
 			if (translation.at<double>(2, 0) > 1000.0 ||
 				translation.at<double>(2, 0) < -1000.0) {
 				resultsBad = true;
+				m_poses.length = 0;
 				break;
 			}
 
 			// Save it
-			results[i].SetPose(rotation, translation);
+			results[i].SetPose(m_poses[i]);
 		}
 
 		if (resultsBad) {
