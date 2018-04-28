@@ -26,6 +26,7 @@ void command_merge(Args& args) {
 
 	vector<string> all_authors;
 	vector<string> all_tags;
+	bool draw_video_with_mask = false;
 
 	// create new json with args
 	json j = args.createNewJson();
@@ -54,6 +55,8 @@ void command_merge(Args& args) {
 		for (int i = 0; i < tags.size(); i++) {
 			Utils::add_no_dupe(tags[i], all_tags);
 		}
+		if (jm["draw_video_with_mask"])
+			draw_video_with_mask = true;
 
 		// prefix
 		string n = Utils::get_filename(args.files[i]) + "_";
@@ -190,6 +193,7 @@ void command_merge(Args& args) {
 	// set meta
 	j["author"] = Utils::join(all_authors, ",");
 	j["tags"] = Utils::join(all_tags, ",");
+	j["draw_video_with_mask"] = draw_video_with_mask;
 
 	string outfilename = "";
 	if (args.filename == "auto") {

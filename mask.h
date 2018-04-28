@@ -125,6 +125,9 @@ namespace Mask {
 		void	RewindAnimations();
 		bool	IsIntroAnimation() { return m_isIntroAnim; }
 
+		// rendering flags
+		bool	DrawVideoWithMask() { return m_drawVideoWithMask; }
+
 		// global instance datas
 		MaskInstanceDatas	instanceDatas;
 
@@ -145,6 +148,9 @@ namespace Mask {
 		std::shared_ptr<Mask::Part> m_partWorld;
 		SortedDrawObject**	m_drawBuckets;
 		Resource::Morph*	m_morph;
+
+		// for certain masks that need to blend with video
+		bool				m_drawVideoWithMask;
 
 		// for intro animation fading
 		bool				m_isIntroAnim;

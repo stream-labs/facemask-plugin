@@ -457,6 +457,24 @@ bool HasInt(const std::vector<int>& v, int x) {
 	return false;
 }
 
+vec3 GetCenter(const GSVertexBuffer& vertices) {
+	vec3 center;
+	memset(&center, 0, sizeof(vec3));
+
+	for (int i = 0; i < vertices.num; i++) {
+		center.x += vertices.points[i].x;
+		center.y += vertices.points[i].y;
+		center.z += vertices.points[i].z;
+	}
+	center.x /= (float)vertices.num;
+	center.y /= (float)vertices.num;
+	center.z /= (float)vertices.num;
+
+	return center;
+}
+
+
+
 
 #define GETTEXTURE(_TEXTYPE_) {\
 imgfile = getMaterialTexture(scene->mMaterials[i], _TEXTYPE_);\
@@ -770,6 +788,7 @@ void command_import(Args& args) {
 					break;
 				}
 
+				vertices.num = numVertices;
 				cout << "Creating skin with " << numVertices << " vertices, " << numIndices / 3 << " triangles" << endl;
 
 				// encode 
@@ -787,11 +806,19 @@ void command_import(Args& args) {
 				char tt[1024];
 				snprintf(tt, sizeof(tt), "%s_skin%d", mesh->mName.C_Str(), numSkins++);
 
+				// center
+				json jcenter;
+				vec3 center = GetCenter(vertices);
+				jcenter["x"] = center.x;
+				jcenter["y"] = center.y;
+				jcenter["z"] = center.z;
+
 				// Add mesh resource
 				json mo;
 				mo["type"] = "mesh";
 				mo["vertex-buffer"] = vertexDataBase64;
 				mo["index-buffer"] = indexDataBase64;
+				mo["center"] = jcenter;
 				rez[tt] = mo;
 
 				// Add skin
@@ -866,11 +893,19 @@ void command_import(Args& args) {
 			string indexDataBase64 =
 				base64_encodeZ((uint8_t*)indices, sizeof(unsigned int) * indIdx);
 
+			// center
+			json jcenter;
+			vec3 center = GetCenter(vertices);
+			jcenter["x"] = center.x;
+			jcenter["y"] = center.y;
+			jcenter["z"] = center.z;
+
 			// Add mesh resource
 			json o;
 			o["type"] = "mesh";
 			o["vertex-buffer"] = vertexDataBase64;
 			o["index-buffer"] = indexDataBase64;
+			o["center"] = jcenter;
 			rez[mesh->mName.C_Str()] = o;
 
 			// clean up

@@ -40,6 +40,7 @@ extern "C" {
 static const char* const S_DATA = "data";
 static const char* const S_VERTEX_BUFFER = "vertex-buffer";
 static const char* const S_INDEX_BUFFER = "index-buffer";
+static const char* const S_CENTER = "center";
 
 Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t* data)
 	: IBase(parent, name) {
@@ -100,16 +101,23 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 		Utils::DeleteTempFile(tempFile);
 	}
 
-	// calculate center
+	// center?
 	vec3 center;
-	vec3_zero(&center);
-	if (m_VertexBuffer->get_data()) {
-		vec3* v = m_VertexBuffer->get_data()->points;
-		size_t numV = m_VertexBuffer->size();
-		for (size_t i = 0; i < numV; i++, v++) {
-			vec3_add(&center, &center, v);
+	if (obs_data_has_user_value(data, S_CENTER)) {
+		// all masks should have this pre-calculated
+		obs_data_get_vec3(data, S_CENTER, &center);
+	}
+	else {
+		// calculate center
+		vec3_zero(&center);
+		if (m_VertexBuffer->get_data()) {
+			vec3* v = m_VertexBuffer->get_data()->points;
+			size_t numV = m_VertexBuffer->size();
+			for (size_t i = 0; i < numV; i++, v++) {
+				vec3_add(&center, &center, v);
+			}
+			vec3_divf(&center, &center, (float)numV);
 		}
-		vec3_divf(&center, &center, (float)numV);
 	}
 	vec4_set(&m_center, center.x, center.y, center.z, 1.0f);
 } 

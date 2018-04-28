@@ -99,6 +99,7 @@ static const char* const JSON_PARTS = "parts";
 static const char* const JSON_TYPE = "type";
 static const char* const JSON_ANIMATION = "animation";
 static const char* const JSON_IS_INTRO = "is_intro";
+static const char* const JSON_DRAW_VIDEO_WITH_MASK = "draw_video_with_mask";
 static const char* const JSON_INTRO_FADE_TIME = "intro_fade_time";
 static const char* const JSON_INTRO_DURATION = "intro_duration";
 
@@ -163,6 +164,12 @@ void Mask::MaskData::Load(const std::string& file) {
 		m_metaData.website = obs_data_get_string(m_data, JSON_METADATA_WEBSITE);
 	else
 		m_metaData.website = "";
+
+	if (obs_data_has_user_value(m_data, JSON_DRAW_VIDEO_WITH_MASK))
+		m_drawVideoWithMask = obs_data_get_bool(m_data, JSON_DRAW_VIDEO_WITH_MASK);
+	else
+		m_drawVideoWithMask = false;
+
 
 	// Intro Animation Fade Values
 	if (obs_data_has_user_value(m_data, JSON_IS_INTRO))
@@ -504,9 +511,7 @@ void Mask::MaskData::Render(bool depthOnly) {
 	gs_blend_state_push();
 	gs_reset_blend_state();
 	gs_enable_blending(true);
-	gs_blend_function_separate(gs_blend_type::GS_BLEND_ONE,
-		gs_blend_type::GS_BLEND_ZERO,
-		gs_blend_type::GS_BLEND_ONE,
+	gs_blend_function(gs_blend_type::GS_BLEND_ONE,
 		gs_blend_type::GS_BLEND_ZERO);
 	gs_enable_color(true, true, true, true);
 
@@ -529,10 +534,8 @@ void Mask::MaskData::Render(bool depthOnly) {
 
 	// TRANSPARENT
 	if (!depthOnly) {
-		gs_blend_function_separate(gs_blend_type::GS_BLEND_SRCALPHA,
-			gs_blend_type::GS_BLEND_INVSRCALPHA,
-			gs_blend_type::GS_BLEND_ONE,
-			gs_blend_type::GS_BLEND_ZERO);
+		gs_blend_function(gs_blend_type::GS_BLEND_SRCALPHA,
+			gs_blend_type::GS_BLEND_INVSRCALPHA);
 
 		for (unsigned int i = 0; i < NUM_DRAW_BUCKETS; i++) {
 			SortedDrawObject* sdo = m_drawBuckets[i];
@@ -628,8 +631,9 @@ bool Mask::MaskData::RenderMorphVideo(gs_texture* vidtex, uint32_t width, uint32
 
 	GetMorph();
 
-	// Add an empty morph resource if they want to use the auto-green screen feature
-	if (trires.autoBGRemoval && m_morph == nullptr) {
+	// Add an empty morph resource if they want to use 
+	// other features that depend on it
+	if ((trires.autoBGRemoval || trires.cartoonMode) && m_morph == nullptr) {
 		std::string n("auto_morph");
 		std::shared_ptr<Mask::Resource::IBase> r = 
 			std::make_shared<Mask::Resource::Morph>(this, n);

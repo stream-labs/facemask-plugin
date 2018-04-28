@@ -139,6 +139,8 @@ string Args::default_value(string key) {
 			return "0.3333";
 		if (key == "intro_duration")
 			return "2.1333";
+		if (key == "draw_video_with_mask")
+			return "false";
 		if (key == "modtime") {
 			long long modtime = std::chrono::duration_cast<std::chrono::seconds>
 				(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -394,7 +396,8 @@ void Args::initJsonNamesAndValues() {
 		"is_intro",
 		"intro_fade_time",
 		"intro_duration",
-		"modtime"
+		"modtime",
+		"draw_video_with_mask"
 	};
 	jsonKeyNames["create"] = create_keys;
 }
@@ -412,6 +415,8 @@ json Args::createNewJson() {
 		else if (k == "modtime")
 			j[k] = longlongValue(k);
 		else if (k == "is_intro")
+			j[k] = boolValue(k);
+		else if (k == "draw_video_with_mask")
 			j[k] = boolValue(k);
 		else
 			j[k] = value(k);

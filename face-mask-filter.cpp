@@ -646,15 +646,36 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		triangulation.DestroyBuffers();
 	}
 
-	// Draw the source video, if we aren't going to later
-	if (!autoBGRemoval && 
-		(faces.length == 0 || !drawMask || !mask_data || !videoTicked)) {
-		gs_enable_depth_test(false);
-		gs_set_cull_mode(GS_NEITHER);
-		while (gs_effect_loop(defaultEffect, "Draw")) {
-			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
-				"image"), vidTex);
-			gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
+	bool genThumbs = mask_data && demoModeOn &&
+		demoModeMaskChanged && demoModeGenPreviews && demoModeSavingFrames;
+
+	bool noDrawVideo = !autoBGRemoval &&
+		(faces.length == 0 || !drawMask || !mask_data || !videoTicked);
+
+	// Draw the source video:
+	// - if we are drawing the video with the mask, then we need to draw the video
+	//   here if we aren't going to draw it with the mask.
+	// - if we are not drawing the video with the mask, then we definitely need
+	//   to draw video now.
+	if (!mask_data || 
+		(noDrawVideo && mask_data->DrawVideoWithMask()) ||
+		!mask_data->DrawVideoWithMask()) {
+
+		// Draw the source video
+		if (mask_data && !demoModeInDelay) {
+			triangulation.autoBGRemoval = autoBGRemoval;
+			triangulation.cartoonMode = cartoonMode;
+			mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
+		}
+		else {
+			// Draw the source video
+			gs_enable_depth_test(false);
+			gs_set_cull_mode(GS_NEITHER);
+			while (gs_effect_loop(defaultEffect, "Draw")) {
+				gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+					"image"), vidTex);
+				gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
+			}
 		}
 	}
 
@@ -691,7 +712,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 						}
 
 						// if we are generating thumbs
-						if (mask_data && demoModeOn && demoModeMaskChanged && demoModeGenPreviews && demoModeSavingFrames) {
+						if (genThumbs) {
 							// clear the color buffer (leaving depth info there)
 							gs_clear(GS_CLEAR_COLOR, &thumbbg, 1.0f, 0);
 						}
@@ -700,20 +721,22 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 							gs_clear(GS_CLEAR_COLOR, &black, 1.0f, 0);
 						}
 
-						// Draw the source video
-						if (mask_data && !demoModeInDelay) {
-							triangulation.autoBGRemoval = autoBGRemoval;
-							triangulation.cartoonMode = cartoonMode;
-							mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
-						}
-						else {
+						if (genThumbs || mask_data->DrawVideoWithMask()) {
 							// Draw the source video
-							gs_enable_depth_test(false);
-							gs_set_cull_mode(GS_NEITHER);
-							while (gs_effect_loop(defaultEffect, "Draw")) {
-								gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
-									"image"), vidTex);
-								gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
+							if (mask_data && !demoModeInDelay) {
+								triangulation.autoBGRemoval = autoBGRemoval;
+								triangulation.cartoonMode = cartoonMode;
+								mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
+							}
+							else {
+								// Draw the source video
+								gs_enable_depth_test(false);
+								gs_set_cull_mode(GS_NEITHER);
+								while (gs_effect_loop(defaultEffect, "Draw")) {
+									gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+										"image"), vidTex);
+									gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
+								}
 							}
 						}
 
