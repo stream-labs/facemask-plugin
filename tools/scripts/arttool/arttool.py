@@ -31,17 +31,23 @@ from PyQt5.QtWidgets import QLineEdit, QFrame, QDialog, QFrame, QSplitter
 from PyQt5.QtGui import QIcon, QBrush, QColor, QFont, QPixmap, QMovie
 from PyQt5.QtCore import QDateTime, Qt
 
-"""
-from PIL import Image as PILImage
-
-from openpyxl import Workbook
-from openpyxl.drawing.image import Image
-from openpyxl.styles import Alignment, Font
-"""
-
 from .utils import *
 from .releases import *
 from .additions import *
+
+# set to true to support xlsx import/export
+# (set to true if admin user)
+#
+EXCEL_SUPPORT_ENABLED = is_admin_user()
+
+if EXCEL_SUPPORT_ENABLED:
+    from PIL import Image as PILImage
+
+    from openpyxl import Workbook, load_workbook
+    from openpyxl.drawing.image import Image
+    from openpyxl.styles import Alignment, Font
+
+
 
 # don't check svn more often than this
 SVN_CHECK_TIME = (60 * 5)  # 5 minutes is lots
@@ -54,7 +60,7 @@ FIELD_WIDTH = 180
 PANE_WIDTH = 690
 TEXTURE_SIZES = ["32", "64", "128", "256", "512", "1024", "2048", "4096", "8192", "16384"]
 CATEGORIES = ["Top", "Eyes", "Ears", "Nose", "Mouth", "Neck", "Full", "Combo", "Other"]
-TIERS = ["1", "2", "3"]
+TIERS = ["1", "2", "3", "4"]
 MASK_UI_NAMES = {"name": "Pretty Name",
                  "description": "Description",
                  "author": "Author",
@@ -65,6 +71,7 @@ MASK_UI_NAMES = {"name": "Pretty Name",
                  "is_morph": "Morph Mask",
                  "is_vip": "V.I.P. Mask",
                  "is_intro": "Intro Animation",
+                 "draw_video_with_mask": "Draw Video with Mask",
                  "release_with_plugin": "Release With Plugin",
                  "do_not_release": "DO NOT RELEASE",
                  "texture_max": "Max Texture Size",
@@ -74,8 +81,8 @@ MASK_UI_NAMES = {"name": "Pretty Name",
                  "website": "Website"}
 
 MASK_UI_FIELDS = ["name", "description", "author", "tags", "category", "tier", "depth_head",
-                  "is_morph", "is_vip", "is_intro", "release_with_plugin", "do_not_release",
-                  "texture_max", "intro_fade_time", "intro_duration", "license", "website"]
+                  "is_morph", "is_vip", "is_intro", "draw_video_with_mask", "release_with_plugin",
+                  "do_not_release", "texture_max", "intro_fade_time", "intro_duration", "license", "website"]
 COMBO_UI_FIELDS = ["name", "description", "author", "tags", "tier", "is_vip", "is_intro",
                    "release_with_plugin", "do_not_release", "texture_max", "intro_fade_time",
                    "intro_duration", "license", "website"]
@@ -203,16 +210,18 @@ class ArtToolWindow(QMainWindow):
 
         # buttons area
         buttonArea = QWidget()
-        buttonArea.setMinimumWidth(150)
+        buttonArea.setMinimumWidth(200)
         buttonArea.setMinimumHeight(60)
-        locs = [(0, 0), (0, 30), (0, 60), (75, 0), (75, 30), (75, 60)]
+        locs = [(0, 0), (0, 25), (0, 50), (0, 75),
+                (100, 0), (100, 25), (100, 50), (100, 75)]
         c = 0
-        for nn in ["Refresh", "Autobuild", "Rebuild All", "S3 Upload", "XLS Export", "Release Masks"]:
+        for nn in ["Refresh", "Autobuild", "Rebuild All", "---",
+                   "S3 Upload", "XLS Import", "XLS Export", "Release Masks"]:
             b = QPushButton(nn)
             b.setParent(buttonArea)
             (x, y) = locs[c]
             c += 1
-            b.setGeometry(x, y, 75, 30)
+            b.setGeometry(x, y, 96, 24)
             b.pressed.connect(lambda nn=nn: self.onMainButton(nn))
         bottomArea.addWidget(buttonArea)
 
@@ -401,6 +410,9 @@ class ArtToolWindow(QMainWindow):
     # Colors and Icons for main FBX list
     # --------------------------------------------------
     def setFbxColorIconInternal(self, mdc, mt, nb, idx):
+        if not is_admin_user():
+            nb = False
+
         self.fbxlist.item(idx).setFont(QFont("Arial", 12, QFont.Bold))
         if mdc == CHECKMETA_GOOD:
             self.fbxlist.item(idx).setForeground(QBrush(QColor("#32CD32")))
@@ -687,6 +699,8 @@ class ArtToolWindow(QMainWindow):
             self.doAutobuild()
         elif button == "Rebuild All":
             self.doRebuildAll()
+        elif button == "XLS Import":
+            self.onReadMetadataExcel()
         elif button == "XLS Export":
             self.onWriteMetadataExcel()
         elif button == "Release Masks":
@@ -1040,7 +1054,7 @@ class ArtToolWindow(QMainWindow):
         for f in self.fbxfiles:
             if doesFileNeedRebuilding(f):
                 deps, missing = buildMask(f, self.outputWindow)
-                if len(missing) > 0:
+                if missing and len(missing) > 0:
                     all_missing[f] = missing
 
         for f in self.combofiles:
@@ -1118,7 +1132,24 @@ class ArtToolWindow(QMainWindow):
             self.cancelledSVN = True
 
     def doReleaseMasks(self):
-        print("todo release masks")
+        folder = "C:/STREAMLABS2/facemask-plugin/data/masks"
+        folder = QFileDialog.getExistingDirectory(self, 'Choose Folder', folder,
+                                                   QFileDialog.ShowDirsOnly)
+        if folder is not None and len(folder) > 0:
+            for fbxfile in self.fbxfiles:
+                metadata = loadMetadataFile(fbxfile)
+                if metadata and metadata["release_with_plugin"]:
+                    srcfile = os.path.abspath(fbxfile).replace(".fbx",".json").replace(".FBX",".json")
+                    dstfile = os.path.abspath(os.path.join(folder, metadata["name"] + ".json"))
+                    print(srcfile, " --> ", dstfile)
+                    copyfile(srcfile, dstfile)
+            for combofile in self.combofiles:
+                metadata = loadMetadataFile(combofile)
+                if metadata and metadata["release_with_plugin"]:
+                    srcfile = os.path.abspath(combofile)
+                    dstfile = os.path.abspath(os.path.join(folder, metadata["name"] + ".json"))
+                    print(srcfile, " --> ", dstfile)
+                    copyfile(srcfile, dstfile)
 
     def uploadToS3(self):
 
@@ -1199,12 +1230,79 @@ class ArtToolWindow(QMainWindow):
         if file is not None and len(file) > 0:
             writeMetaData(os.path.abspath(file), metalist)
 
+    def onReadMetadataExcel(self):
+
+        if not EXCEL_SUPPORT_ENABLED:
+            return
+
+        # get a file name
+        file, filter = QFileDialog.getOpenFileName(self, 'Open file', os.path.abspath("."),
+                                                   "Excel (*.xlsx)")
+        if file is not None and len(file) > 0:
+            outfile = os.path.abspath(file)
+        else:
+            return
+        f = os.path.abspath(file)
+
+        # load the xls workbook
+        wb = load_workbook(filename=f)
+        ws = wb[wb.sheetnames[0]]
+
+        # read in all the entries
+        allrecords = dict()
+        firstrow = True
+        for row in ws.rows:
+            if firstrow:
+                firstrow = False
+                continue
+            cellno = 0
+            record = dict()
+            for cell in row:
+
+                if cellno == 2:
+                    record["name"] = cell.value
+                elif cellno == 3:
+                    record["description"] = cell.value
+                elif cellno == 4:
+                    record["tags"] = cell.value
+                elif cellno == 5:
+                    record["category"] = cell.value
+                elif cellno == 6:
+                    record["tier"] = int(cell.value)
+                elif cellno == 7:
+                    record["uuid"] = cell.value
+                elif cellno == 8:
+                    record["author"] = cell.value
+                cellno += 1
+
+            allrecords[record["uuid"]] = record
+
+        # go through all the files
+        allfiles = list()
+        allfiles.extend(self.fbxfiles)
+        allfiles.extend(self.combofiles)
+        for fbxfile in self.fbxfiles:
+            metadata = loadMetadataFile(fbxfile)
+            if metadata:
+                uuid = metadata["uuid"]
+                if uuid in allrecords:
+                    record = allrecords[uuid]
+
+                    changed = False
+                    for k in ["tags"]: #["name","description","tags","category","tier"]:
+                        if record[k] != metadata[k]:
+                            print("mask",uuid,"entry",k,"differs:",metadata[k],"-->", record[k])
+                            metadata[k] = record[k]
+                            changed = True
+
+                    if changed:
+                        writeMetaData(getMetaFileName(fbxfile), metadata)
+
 
     def onWriteMetadataExcel(self):
 
-        pass
-
-        """
+        if not EXCEL_SUPPORT_ENABLED:
+            return
 
         QApplication.setOverrideCursor(Qt.WaitCursor)
 
@@ -1289,4 +1387,3 @@ class ArtToolWindow(QMainWindow):
         wb.close()
 
         QApplication.restoreOverrideCursor()
-        """

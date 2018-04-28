@@ -2,149 +2,114 @@
 '''
 @echo off
 rem https://stackoverflow.com/questions/17467441/how-to-embed-python-code-in-batch-script
-%userprofile%\\AppData\\Local\\Programs\\Python\\Python36-32\\python "%~f0"
+if exist "%userprofile%"\\AppData\\Local\\Programs\\Python\\Python36\\python.exe goto PYTHON64
+if exist "%userprofile%"\\AppData\\Local\\Programs\\Python\\Python36-32\\python.exe goto PYTHON32
+echo "I can't find python (3.6). Please install python from https://www.python.org/downloads/windows/"
+pause
+exit /b
+:PYTHON32
+"%userprofile%"\\AppData\\Local\\Programs\\Python\\Python36-32\\python "%~f0" 
+exit /b
+:PYTHON64
+"%userprofile%"\\AppData\\Local\\Programs\\Python\\Python36\\python "%~f0" 
 exit /b
 rem ^
 '''
 
+# ==============================================================================
+# Copyright (C) 2017 General Workings Inc
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+# ==============================================================================
 
-import sys, subprocess,os
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QScrollArea, QMainWindow, QCheckBox, QHBoxLayout, QTextEdit
-from PyQt5.QtGui import QIcon
+def fixpath(p):
+    p = p.replace("\\", "/")
+    b = p.split("/")
+    for i in range(0, len(b)):
+        if " " in b[i]:
+            b[i] = '"' + b[i] + '"'
+    return "\\".join(b)
 
-
-MAKEARTBATFILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),"makeart.bat")
-
-
-
-# Executes a shell command
-def execute(cmd):
-	popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True)
+def installPipModule(modname):
+	print("You don't seem to have " + modname + " installed. I will attempt to install it now.")
+	luser = os.path.expanduser("~")
+	fuser = fixpath(luser)
+	cmd = os.path.join(luser,"AppData","Local","Programs","Python","Python36","python.exe")
+	if not os.path.exists(cmd):
+		print("Can't find 64 bit python. Trying 32 bit.")
+		cmd = os.path.join(luser,"AppData","Local","Programs","Python","Python36-32","python.exe")
+	if not os.path.exists(cmd):
+		print("I can't find python. Really odd, since this is python code.")
+	cmd = os.path.join(fuser,"AppData","Local","Programs","Python","Python36","python.exe")
+	cmd += " -m pip install "+modname+" --user"
+	popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True, shell=True)
 	for stdout_line in iter(popen.stdout.readline, ""):
-		yield stdout_line 
-	popen.stdout.close()
-	return_code = popen.wait()
-	if return_code:
-		raise subprocess.CalledProcessError(return_code, cmd)
-		
-
-		
-class ArtToolWindow(QMainWindow): 
-
-	def __init__(self, *args): 
-		QMainWindow.__init__(self, *args) 
- 
-		self.checkBoxes = dict()
-
-		# Set up a vertical layout that scrolls
-		central = QWidget()
-		scroll = QScrollArea()
-		layout = QVBoxLayout(central)
-		scroll.setWidget(central)
-		scroll.setWidgetResizable(True)
-		
-		# Add widgets to the layout
-		for t in tags:
-			b = QCheckBox(t)
-			self.checkBoxes[t] = b
-			layout.addWidget(b)
-
-		# buttons
-		rightPane = QWidget()
-		buttonsArea = QVBoxLayout(rightPane)
-		# Select All
-		b = QPushButton("Select All")
-		b.clicked.connect(lambda: self.onSelectAll())
-		buttonsArea.addWidget(b)
-		# Select None
-		b = QPushButton("Select None")
-		b.clicked.connect(lambda: self.onSelectNone())
-		buttonsArea.addWidget(b)
-		# Padding
-		pad = QWidget()
-		pad.setGeometry(0,0,200,150)
-		buttonsArea.addWidget(pad)
-		# Build Art
-		b = QPushButton("BUILD ART")
-		b.clicked.connect(lambda: self.onBuildArt())
-		buttonsArea.addWidget(b)
-		# Padding
-		pad = QWidget()
-		pad.setGeometry(0,0,200,150)
-		buttonsArea.addWidget(pad)
-		# Quit
-		q = QPushButton("Quit")
-		q.clicked.connect(lambda: QApplication.quit())
-		buttonsArea.addWidget(q)
-
-		# Main area
-		mainPane = QWidget()
-		mainArea = QVBoxLayout(mainPane)
-		
-		# Top area
-		topPane = QWidget()
-		topArea = QHBoxLayout(topPane)
-		
-		# Add Stuff to top area
-		topArea.addWidget(scroll)
-		topArea.addWidget(rightPane)
-			
-		# Add Stuff to main area
-		mainArea.addWidget(topPane)
-		self.outputPane = QTextEdit()
-		mainArea.addWidget(self.outputPane)
-			
-		# Show the window
-		self.setCentralWidget(mainPane)
-		self.setGeometry(100,100, 500, 520)
-		self.setWindowTitle('Streamlabs Art Tool')
-		self.setWindowIcon(QIcon('icons/arttoolicon.png'))
-				
-
-	def onSelectAll(self):
-		for t,b in self.checkBoxes.items():
-			b.setChecked(True)
-
-	def onSelectNone(self):
-		for t,b in self.checkBoxes.items():
-			b.setChecked(False)
-
-	def onBuildArt(self):
-		for t,b in self.checkBoxes.items():
-			if b.isChecked():
-				self.outputPane.append("")
-				self.outputPane.append("----- BUILDING " + t + " -----")
-				QApplication.processEvents()
-				for line in execute([MAKEARTBATFILE, t]):
-					self.outputPane.append(line.replace("\n",""))
-					QApplication.processEvents()
-				self.outputPane.append("----- DONE BUILDING " + t + " -----")
-				QApplication.processEvents()
+		print(stdout_line)
+	popen.wait()
+	print(modname + " should be installed now. Try running art tool again.")
+	sys.exit(0)
 
 
+
+# ==============================================================================
+# IMPORTS
+# ==============================================================================
+import sys, os, subprocess
+try:
+	from PyQt5.QtWidgets import QApplication
+except:
+	installPipModule("PyQt5")
+try:
+	import boto3
+except:
+	installPipModule("boto3")
+
+"""
+try:
+	from PIL import Image
+except:
+	installPipModule("Pillow")
+try:
+	from openpyxl import Workbook
+except:
+	installPipModule("openpyxl")
+"""
+
+
+from arttool import arttool
+
+# ==============================================================================
+# MAIN ENTRY POINT
+# ==============================================================================
 if __name__ == '__main__':
-	
-	# load the makeart.bat file
-	f = open(MAKEARTBATFILE,"r")
-	makeartContents = f.read()
-	f.close()
-	
-	# get list of labels (tags)
-	lines = makeartContents.replace("\r","").split("\n")
-	tags = list()
-	for line in lines:
-		if len(line) > 0:
-			if line[0] == ":":
-				tags.append(line[1:])
-	
-	# We're a Qt App
-	app = QApplication(sys.argv)
-		
-	# Show the window
-	w = ArtToolWindow()
-	w.show()
 
-	# Exit properly
-	sys.exit(app.exec_())
-	
-	
+    # We're a Qt App
+    app = QApplication(sys.argv)
+
+    # Show the window
+    w = arttool.ArtToolWindow()
+    app.focusChanged.connect(lambda old,now: w.onFocusChanged(old,now))
+    w.show()
+
+    # Run application
+    r = app.exec_()
+
+    # Final cleanup
+    w.finalCleanup()
+
+    # Exit properly
+    sys.exit(r)
+
+

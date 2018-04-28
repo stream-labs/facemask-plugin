@@ -23,6 +23,7 @@
 import sys, subprocess, os, json, uuid, boto3
 from copy import deepcopy
 from .additions import perform_addition
+import getpass
 
 def fixpath(p):
     p = p.replace("\\", "/")
@@ -52,6 +53,11 @@ SVNBIN = os.path.abspath(os.path.join("c:\\", '"Program Files"', "TortoiseSVN", 
 MASKMAKERBIN = fixpath(os.path.abspath("./maskmaker/maskmaker.exe"))
 MORPHRESTFILE = fixpath(os.path.abspath("./morphs/morph_rest.fbx"))
 
+
+def is_admin_user():
+    if getpass.getuser() == "Ross":
+        return True
+    return False
 
 
 # ==============================================================================
@@ -166,6 +172,9 @@ def svnUpdate(outputWindow=None):
 
 
 def svnNeedsUpdate():
+
+    return False
+
     # have
     cmd = SVNBIN + ' info'
     revHave = 0
@@ -235,7 +244,8 @@ def maskmaker(command, kvpairs, files):
 def mmGetCreateKeys(metadata):
     CREATEKEYS = ["name", "uuid", "tier", "description", "author",
                   "tags", "category", "license", "website", "texture_max",
-                  "is_intro", "intro_fade_time", "intro_duration"]
+                  "is_intro", "draw_video_with_mask", "intro_fade_time",
+                  "intro_duration"]
     d = dict()
     for k in CREATEKEYS:
         d[k] = metadata[k]
@@ -296,6 +306,7 @@ def newMetaData(fbxfile):
     metadata["is_morph"] = False
     metadata["is_vip"] = False
     metadata["is_intro"] = False
+    metadata["draw_video_with_mask"] = False
     metadata["texture_max"] = 256
     metadata["release_with_plugin"] = False
     metadata["do_not_release"] = False
@@ -309,7 +320,10 @@ def newMetaData(fbxfile):
 
 def cleanMetadata(metadata):
     dd = deepcopy(metadata)
-    dd["tags"] = dd["tags"].lower().replace(", ", ",")
+    if "tags" in dd and dd["tags"]:
+        dd["tags"] = dd["tags"].lower().replace(", ", ",")
+    else:
+        dd["tags"] = ""
     dd["author"] = dd["author"].replace(", ", ",")
     return dd
 
@@ -347,6 +361,25 @@ def writeMetaData(metafile, metadata, dosvn=False):
             svnAddFile(metafile)
 
 
+def fixMissingMetaData(metadata):
+    # Fix missing/incorrect fields
+    #
+    if "General Working Inc" in metadata["license"]:
+        metadata["license"] = "Copyright 2017 - General Workings Inc. - All rights reserved."
+    if "tier" not in metadata:
+        metadata["tier"] = 1
+    if "is_intro" not in metadata:
+        metadata["is_intro"] = False
+    if "draw_video_with_mask" not in metadata:
+        metadata["draw_video_with_mask"] = False
+    if "intro_fade_time" not in metadata:
+        metadata["intro_fade_time"] = 0.3333
+    if "intro_duration" not in metadata:
+        metadata["intro_duration"] = 2.13333
+    if "release_with_plugin" not in metadata:
+        metadata["release_with_plugin"] = False
+
+
 def createGetMetaData(fbxfile):
     metafolder = getMetaFolderName(fbxfile)
     createMetaFolder(metafolder, True)
@@ -365,21 +398,8 @@ def createGetMetaData(fbxfile):
 
         else:
             metadata = json.loads(contents)
+            fixMissingMetaData(metadata)
 
-            # Fix missing/incorrect fields
-            #
-            if "General Working Inc" in metadata["license"]:
-                metadata["license"] = "Copyright 2017 - General Workings Inc. - All rights reserved."
-            if "tier" not in metadata:
-                metadata["tier"] = 1
-            if "is_intro" not in metadata:
-                metadata["is_intro"] = False
-            if "intro_fade_time" not in metadata:
-                metadata["intro_fade_time"] = 0.3333
-            if "intro_duration" not in metadata:
-                metadata["intro_duration"] = 2.13333
-            if "release_with_plugin" not in metadata:
-                metadata["release_with_plugin"] = False
     else:
         # make new metadata and write it
         metadata = newMetaData(fbxfile)
@@ -512,6 +532,8 @@ def loadMetadataFile(fbxfile):
             metadata = json.loads(fc)
         except:
             metadata = None
+
+    fixMissingMetaData(metadata)
 
     return metadata
 
@@ -666,8 +688,12 @@ def buildCombo(combofile, outputWindow, metadata=None):
 
 def buildMask(fbxfile, outputWindow, metadata=None):
 
+    print("buildMask", fbxfile)
+
     if metadata is None:
         metadata = loadMetadataFile(fbxfile)
+    if metadata is None:
+        return None, None
 
     # save dependencies
     deps, missing = getDependencies(metadata)
