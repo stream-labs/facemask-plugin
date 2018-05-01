@@ -288,9 +288,9 @@ namespace smll {
 	DetectionResult& DetectionResult::operator=(const DetectionResult& r) {
 		bounds = r.bounds;
 		pose.CopyPoseFrom(r.pose);
-		for (int i = 0; i < FIVE_LANDMARK_NUM_LANDMARKS; i++) {
-			landmarks5[i] = r.landmarks5[i];
-		}
+		//for (int i = 0; i < FIVE_LANDMARK_NUM_LANDMARKS; i++) {
+		//	landmarks5[i] = r.landmarks5[i];
+		//}
 		for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
 			landmarks68[i] = r.landmarks68[i];
 		}
@@ -374,9 +374,9 @@ namespace smll {
 
 		// copy values
 		bounds = bnd;
-		for (int i = 0; i < FIVE_LANDMARK_NUM_LANDMARKS; i++) {
-			landmarks5[i] = r.landmarks5[i];
-		}
+		//for (int i = 0; i < FIVE_LANDMARK_NUM_LANDMARKS; i++) {
+		//	landmarks5[i] = r.landmarks5[i];
+		//}
 		for (int i = 0; i < smll::NUM_FACIAL_LANDMARKS; i++) {
 			landmarks68[i] = r.landmarks68[i];
 		}

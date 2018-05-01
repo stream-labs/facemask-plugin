@@ -76,9 +76,9 @@ namespace smll {
 		char *filename = obs_module_file(kFileShapePredictor68);
 		deserialize(filename) >> m_predictor68;
 		bfree(filename);
-		filename = obs_module_file(kFileShapePredictor5);
-		deserialize(filename) >> m_predictor5;
-		bfree(filename);
+		//filename = obs_module_file(kFileShapePredictor5);
+		//deserialize(filename) >> m_predictor5;
+		//bfree(filename);
 	}
 
 	FaceDetector::~FaceDetector() {
@@ -1234,6 +1234,9 @@ namespace smll {
 			}
 		}
 
+		float threshold = 4.0f * model_points.size();
+		threshold *= ((float)CaptureWidth() / 1920.0f);
+
 		bool resultsBad = false;
 		for (int i = 0; i < results.length; i++) {
 			std::vector<cv::Point2f> image_points;
@@ -1266,7 +1269,6 @@ namespace smll {
 			}
 
 			// check error again, still bad, use previous pose
-			float threshold = 3.0f * model_points.size();
 			if (m_poses[i].PoseValid() &&
 				ReprojectionError(model_points, image_points, rotation, translation) > threshold) {
 				// reset pose

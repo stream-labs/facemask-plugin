@@ -196,12 +196,14 @@ namespace smll {
 
 			DrawLandmarks(faces[i].landmarks68, 0, 255, 0);
 
+			/* 5 landmarks 
 			SetDrawColor(255, 0, 255);
 			drawLines(faces[i].landmarks5, FIVE_LANDMARK_EYE_RIGHT_OUTER, FIVE_LANDMARK_EYE_RIGHT_INNER);
 			SetDrawColor(255, 0, 255);
 			drawLines(faces[i].landmarks5, FIVE_LANDMARK_EYE_LEFT_OUTER, FIVE_LANDMARK_NOSE_BOTTOM);
 			SetDrawColor(255, 0, 255);
 			drawLine(faces[i].landmarks5, FIVE_LANDMARK_EYE_RIGHT_INNER, FIVE_LANDMARK_NOSE_BOTTOM);
+			*/
 
 			// set up projection
 			gs_projection_push();
