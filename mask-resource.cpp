@@ -34,6 +34,8 @@
 #include "mask-resource-light.h"
 #include "mask-resource-animation.h"
 
+#include <Windows.h>
+
 extern "C" {
 #pragma warning( push )
 #pragma warning( disable: 4201 )
@@ -41,6 +43,7 @@ extern "C" {
 #pragma warning( pop )
 }
 
+#include <thread>
 
 static std::map<std::string, std::string> g_defaultImages = {
 	{ "imageNull", "resources/null.png" },
@@ -92,6 +95,9 @@ std::shared_ptr<Mask::Resource::IBase> Mask::Resource::IBase::Load(Mask::MaskDat
 		PLOG_ERROR("Resource '%s' is missing type.", name.c_str());
 		throw std::logic_error("Resource is missing type.");
 	}
+
+	// yield
+	::Sleep(0);
 
 	std::string type = obs_data_get_string(data, S_TYPE);
 	if (type == "image") {
@@ -147,6 +153,9 @@ std::shared_ptr<Mask::Resource::IBase> Mask::Resource::IBase::Load(Mask::MaskDat
 
 std::shared_ptr<Mask::Resource::IBase> Mask::Resource::IBase::LoadDefault(Mask::MaskData* parent, std::string name) {
 	std::shared_ptr<Mask::Resource::IBase> p(nullptr);
+
+	// yield
+	::Sleep(0);
 
 	// image?
 	if (g_defaultImages.find(name) != g_defaultImages.end()) {

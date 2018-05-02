@@ -53,6 +53,7 @@ static const char* const PARAM_ALPHA = "alpha";
 static const char* const PARAM_NUMBONES = "numBones";
 static const char* const PARAM_NUMLIGHTS = "numLights";
 
+#undef GetObject
 
 Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs_data_t* data)
 	: IBase(parent, name), m_effect(nullptr), m_looping(false), m_currentTechnique(nullptr),
@@ -81,9 +82,6 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 	} else {
 		m_technique = "Draw"; // Default to using draw.
 	}
-	#undef GetObject
-	if (gs_effect_get_technique(m_effect->GetEffect()->GetObject(), m_technique.c_str()) == nullptr)
-		throw std::logic_error("Material uses non-existing technique.");
 
 	m_wrapU = GS_ADDRESS_CLAMP;
 	m_wrapV = GS_ADDRESS_CLAMP;
@@ -310,6 +308,9 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 
 	m_parent->instanceDatas.Push(m_id);
 	if (!m_looping) {
+
+		m_effect->Render(part);
+
 		// Apply Parameters
 		for (auto kv : m_parameters) {
 			try {
@@ -388,11 +389,13 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 				auto el = m_effect->GetEffect()->GetParameterByName(kv.first);
 				if (kv.second->GetType() == Type::Image) {
 					std::shared_ptr<Image> img = std::dynamic_pointer_cast<Image>(kv.second);
+					img->Render(part);
 					el.SetTexture(img->GetTexture());
 					el.SetSampler(m_samplerState);
 				}
 				else if (kv.second->GetType() == Type::Sequence) {
 					std::shared_ptr<Sequence> seq = std::dynamic_pointer_cast<Sequence>(kv.second);
+					seq->Render(part);
 					std::shared_ptr<Image> img = seq->GetImage();
 					el.SetTexture(img->GetTexture());
 					el.SetSampler(m_samplerState);

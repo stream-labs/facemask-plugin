@@ -59,8 +59,8 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 		base64_decode(vertex64data, decodedVertices);
 		// add extra to buffer size to allow for alignment
 		size_t vertBuffSize = zlib_size(decodedVertices) + 16;
-		uint8_t* vtxbuffer = new uint8_t[vertBuffSize];
-		zlib_decode(decodedVertices, (uint8_t*)ALIGN_16(vtxbuffer));
+		m_rawVertices = new uint8_t[vertBuffSize];
+		zlib_decode(decodedVertices, (uint8_t*)ALIGN_16(m_rawVertices));
 
 		// Index Buffer
 		if (!obs_data_has_user_value(data, S_INDEX_BUFFER)) {
@@ -75,14 +75,10 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 		std::vector<uint8_t> decodedIndices;
 		base64_decode(index64data, decodedIndices);
 		size_t idxBuffSize = zlib_size(decodedIndices);
-		size_t numIndices = idxBuffSize / sizeof(uint32_t);
+		m_numIndices = (int)(idxBuffSize / sizeof(uint32_t));
 		// add extra to buffer size to allow for alignment
-		uint8_t* idxbuffer = new uint8_t[idxBuffSize + 16];
-		zlib_decode(decodedIndices, (uint8_t*)ALIGN_16(idxbuffer));
-
-		// Make Buffers
-		m_VertexBuffer = std::make_shared<GS::VertexBuffer>(vtxbuffer);
-		m_IndexBuffer = std::make_shared<GS::IndexBuffer>(idxbuffer, numIndices);
+		m_rawIndices = new uint8_t[idxBuffSize + 16];
+		zlib_decode(decodedIndices, (uint8_t*)ALIGN_16(m_rawIndices));
 	}
 	
 	// OBJ data?
@@ -96,30 +92,14 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 			PLOG_ERROR("Mesh '%s' has empty data.", name.c_str());
 			throw std::logic_error("Mesh has empty data.");
 		}
-		const char* tempFile = Utils::Base64ToTempFile(base64data);
-		LoadObj(tempFile);
-		Utils::DeleteTempFile(tempFile);
+		m_tempFile = Utils::Base64ToTempFile(base64data);
 	}
 
 	// center?
 	vec3 center;
+	vec3_zero(&center);
 	if (obs_data_has_user_value(data, S_CENTER)) {
-		// all masks should have this pre-calculated
 		obs_data_get_vec3(data, S_CENTER, &center);
-	}
-	else {
-		PLOG_WARNING("Mesh '%s' is calculating center. Old mask? WTF...", name.c_str());
-
-		// calculate center
-		vec3_zero(&center);
-		if (m_VertexBuffer->get_data()) {
-			vec3* v = m_VertexBuffer->get_data()->points;
-			size_t numV = m_VertexBuffer->size();
-			for (size_t i = 0; i < numV; i++, v++) {
-				vec3_add(&center, &center, v);
-			}
-			vec3_divf(&center, &center, (float)numV);
-		}
 	}
 	vec4_set(&m_center, center.x, center.y, center.z, 1.0f);
 } 
@@ -143,6 +123,20 @@ void Mask::Resource::Mesh::Update(Mask::Part* part, float time) {
 
 void Mask::Resource::Mesh::Render(Mask::Part* part) {
 	UNUSED_PARAMETER(part);
+
+	if (m_VertexBuffer == nullptr) {
+		// create GS resources
+		if (m_tempFile.length() > 0) {
+			LoadObj(m_tempFile);
+			Utils::DeleteTempFile(m_tempFile);
+			m_tempFile.clear();
+		}
+		else {
+			m_VertexBuffer = std::make_shared<GS::VertexBuffer>(m_rawVertices);
+			m_IndexBuffer = std::make_shared<GS::IndexBuffer>(m_rawIndices, m_numIndices);
+		}
+	}
+
 	gs_load_vertexbuffer(m_VertexBuffer->get());
 	gs_load_indexbuffer(m_IndexBuffer->get());
 	gs_draw(gs_draw_mode::GS_TRIS, 0, (uint32_t)m_IndexBuffer->size());

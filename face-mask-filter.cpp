@@ -592,6 +592,14 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// ----- SEND FRAME TO FACE DETECTION THREAD -----
 	SendSourceTextureToThread(sourceTexture);
 
+	std::unique_lock<std::mutex> masklock(maskDataMutex, std::try_to_lock);
+	if (!masklock.owns_lock()) {
+		// can't get mutex on mask, skip rendering
+		obs_source_skip_video_filter(source);
+		return;
+	}
+
+
 	// ----- DRAW -----
 
 	// start
@@ -697,51 +705,48 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
 
 				if (drawMask && mask_data) {
-					std::unique_lock<std::mutex> lock(maskDataMutex, std::try_to_lock);
-					if (lock.owns_lock()) {
-						// Check here for no morph
-						if (!mask_data->GetMorph()) {
-							triangulation.DestroyBuffers();
-						}
+					// Check here for no morph
+					if (!mask_data->GetMorph()) {
+						triangulation.DestroyBuffers();
+					}
 
-						// Draw depth-only stuff
-						for (int i = 0; i < faces.length; i++) {
-							drawMaskData(faces[i], mask_data, true);
-						}
+					// Draw depth-only stuff
+					for (int i = 0; i < faces.length; i++) {
+						drawMaskData(faces[i], mask_data, true);
+					}
 
-						// if we are generating thumbs
-						if (genThumbs) {
-							// clear the color buffer (leaving depth info there)
-							gs_clear(GS_CLEAR_COLOR, &thumbbg, 1.0f, 0);
+					// if we are generating thumbs
+					if (genThumbs) {
+						// clear the color buffer (leaving depth info there)
+						gs_clear(GS_CLEAR_COLOR, &thumbbg, 1.0f, 0);
+					}
+					else {
+						// clear the color buffer (leaving depth info there)
+						gs_clear(GS_CLEAR_COLOR, &black, 1.0f, 0);
+					}
+
+					if (genThumbs || mask_data->DrawVideoWithMask()) {
+						// Draw the source video
+						if (mask_data && !demoModeInDelay) {
+							triangulation.autoBGRemoval = autoBGRemoval;
+							triangulation.cartoonMode = cartoonMode;
+							mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
 						}
 						else {
-							// clear the color buffer (leaving depth info there)
-							gs_clear(GS_CLEAR_COLOR, &black, 1.0f, 0);
-						}
-
-						if (genThumbs || mask_data->DrawVideoWithMask()) {
 							// Draw the source video
-							if (mask_data && !demoModeInDelay) {
-								triangulation.autoBGRemoval = autoBGRemoval;
-								triangulation.cartoonMode = cartoonMode;
-								mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
-							}
-							else {
-								// Draw the source video
-								gs_enable_depth_test(false);
-								gs_set_cull_mode(GS_NEITHER);
-								while (gs_effect_loop(defaultEffect, "Draw")) {
-									gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
-										"image"), vidTex);
-									gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
-								}
+							gs_enable_depth_test(false);
+							gs_set_cull_mode(GS_NEITHER);
+							while (gs_effect_loop(defaultEffect, "Draw")) {
+								gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+									"image"), vidTex);
+								gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
 							}
 						}
+					}
 
-						// Draw regular stuff
-						for (int i = 0; i < faces.length; i++) {
-							drawMaskData(faces[i], mask_data, false);
-						}
+					// Draw regular stuff
+					for (int i = 0; i < faces.length; i++) {
+						drawMaskData(faces[i], mask_data, false);
 					}
 				}
 
@@ -879,7 +884,7 @@ int Plugin::FaceMaskFilter::Instance::FindCachedFrameIndex(const TimeStamp& ts) 
 	}
 	
 	// Now look for a valid frame with the closest timestamp
-	long long tst = TIMESTAMP_AS_LL(ts);
+	long long tst = TIMESTAMP_MS_LL(ts);
 	long long diff = 0;
 	int nearest = -1;
 	for (int i = 0; i < ThreadData::BUFFER_SIZE; i++) {
@@ -888,10 +893,10 @@ int Plugin::FaceMaskFilter::Instance::FindCachedFrameIndex(const TimeStamp& ts) 
 			detection.frames[i].capture.height > 0) {
 			if (diff == 0) {
 				nearest = i;
-				diff = UNSIGNED_DIFF(TIMESTAMP_AS_LL(detection.frames[i].timestamp), tst);
+				diff = UNSIGNED_DIFF(TIMESTAMP_MS_LL(detection.frames[i].timestamp), tst);
 			}
 			else {
-				long long d = UNSIGNED_DIFF(TIMESTAMP_AS_LL(detection.frames[i].timestamp), tst);
+				long long d = UNSIGNED_DIFF(TIMESTAMP_MS_LL(detection.frames[i].timestamp), tst);
 				if (d < diff) {
 					diff = d;
 					nearest = i;
@@ -1019,7 +1024,7 @@ bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sou
 
 			// (possibly) update morph buffer
 			if (morph) {
-				if (morph->GetMorphData().IsNewerThan(detection.frames[fidx].morphData)) {
+				if (morph->GetMorphData().IsNewerThan(detection.frames[fidx].morphData) || demoModeOn) {
 					detection.frames[fidx].morphData = morph->GetMorphData();
 				}
 			}
@@ -1232,7 +1237,7 @@ int32_t Plugin::FaceMaskFilter::Instance::StaticMaskDataThreadMain(Instance *ptr
 
 int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 
-	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_IDLE);
+	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_LOWEST);
 
 	bool lastDemoMode = false; 
 	while (!maskDataShutdown) {

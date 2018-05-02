@@ -187,7 +187,8 @@ void Mask::MaskData::Load(const std::string& file) {
 	else
 		m_introDuration = 10.0f;
 
-	std::this_thread::sleep_for(std::chrono::microseconds(1000));
+	// yield
+	::Sleep(0);
 
 	// Loading is implemented through lazy loading. Only things that are used by
 	// parts and referenced resources will be available, which should improve
@@ -214,7 +215,8 @@ void Mask::MaskData::Load(const std::string& file) {
 		GetPart(name);
 	}
 
-	std::this_thread::sleep_for(std::chrono::microseconds(1000));
+	// yield
+	::Sleep(0);
 
 	// Except for animations. 
 	obs_data_t* resources = obs_data_get_obj(m_data, JSON_RESOURCES);
@@ -259,7 +261,8 @@ std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::GetResource(const std::st
 		return p;
 	}
 
-	std::this_thread::sleep_for(std::chrono::microseconds(1000));
+	// yield
+	::Sleep(0);
 
 	// Lazy Loaded
 	obs_data_item_t* resources = obs_data_item_byname(m_data, JSON_RESOURCES);

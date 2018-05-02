@@ -48,6 +48,12 @@ namespace Mask {
 			std::shared_ptr<GS::IndexBuffer>	m_IndexBuffer;
 			vec4								m_center;
 
+			// for delayed gs creation
+			std::string				m_tempFile;
+			uint8_t*				m_rawVertices;
+			uint8_t*				m_rawIndices;
+			int						m_numIndices;
+
 			vec3 CalculateTangent(const GS::Vertex& v1,
 				const GS::Vertex& v2, const GS::Vertex& v3);
 		};

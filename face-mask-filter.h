@@ -201,7 +201,7 @@ namespace Plugin {
 			// Detection
 			struct ThreadData {
 
-				static const int BUFFER_SIZE = 4;
+				static const int BUFFER_SIZE = 8;
 
 				std::thread thread;
 				std::mutex mutex;

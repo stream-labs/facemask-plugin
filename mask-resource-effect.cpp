@@ -45,11 +45,10 @@ Mask::Resource::Effect::Effect(Mask::MaskData* parent, std::string name, obs_dat
 		throw std::logic_error("Effect has empty data.");
 	}
 
-	// This code works
-	//
-	const char* tempFile = Utils::Base64ToTempFile(base64data);
-	m_Effect = std::make_shared<GS::Effect>(tempFile);
-	Utils::DeleteTempFile(tempFile);
+	// write to temp file
+	m_filename = Utils::Base64ToTempFile(base64data);
+	m_filenameIsTemp = true;
+
 
 	// This code does not work
 	// TODO: make it work! hitting the file system sucks!
@@ -63,7 +62,8 @@ Mask::Resource::Effect::Effect(Mask::MaskData* parent, std::string name, obs_dat
 Mask::Resource::Effect::Effect(Mask::MaskData* parent, std::string name, std::string filename)
 	: IBase(parent, name) {
 
-	m_Effect = std::make_shared<GS::Effect>(filename);
+	m_filename = filename;
+	m_filenameIsTemp = false;
 }
 
 
@@ -81,5 +81,13 @@ void Mask::Resource::Effect::Update(Mask::Part* part, float time) {
 
 void Mask::Resource::Effect::Render(Mask::Part* part) {
 	UNUSED_PARAMETER(part);
+	if (m_Effect == nullptr) {
+		m_Effect = std::make_shared<GS::Effect>(m_filename);
+		if (m_filenameIsTemp) {
+			Utils::DeleteTempFile(m_filename);
+		}
+		m_filename.clear();
+	}
+
 	return;
 }

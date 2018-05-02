@@ -42,8 +42,11 @@ static const char* const S_MIP_LEVELS = "mip-levels";
 static const char* const S_MIP_DATA = "mip-data-%d";
 static const char* const S_BPP = "bpp";
 
+static const unsigned int MAX_MIP_LEVELS = 32;
+
+
 Mask::Resource::Image::Image(Mask::MaskData* parent, std::string name, obs_data_t* data)
-	: IBase(parent, name) {
+	: IBase(parent, name), m_width(0), m_height(0), m_fmt(GS_RGBA) {
 
 	char mipdat[128];
 	snprintf(mipdat, sizeof(mipdat), S_MIP_DATA, 0);
@@ -58,16 +61,8 @@ Mask::Resource::Image::Image(Mask::MaskData* parent, std::string name, obs_data_
 			throw std::logic_error("Image has empty data.");
 		}
 
-		const char* tempFile = Utils::Base64ToTempFile(base64data);
-
-		// my theory is that textures get buggered if the thread gets interrupted
-		// (since we load on a secondary thread)
-		//
-		// SO: let's sleep now so that we reduce the chances of getting interrupted
-		std::this_thread::sleep_for(std::chrono::microseconds(1));
-
-		m_Texture = std::make_shared<GS::Texture>(tempFile); 
-		Utils::DeleteTempFile(tempFile);
+		// save for later
+		m_tempFile = Utils::Base64ToTempFile(base64data);
 	}
 
 	// RAW DATA?
@@ -91,15 +86,14 @@ Mask::Resource::Image::Image(Mask::MaskData* parent, std::string name, obs_data_
 		}
 
 		// get image info
-		int width = (int)obs_data_get_int(data, S_WIDTH);
-		int height = (int)obs_data_get_int(data, S_HEIGHT);
+		m_width = (int)obs_data_get_int(data, S_WIDTH);
+		m_height = (int)obs_data_get_int(data, S_HEIGHT);
 		int bpp = (int)obs_data_get_int(data, S_BPP);
 		int mipLevels = (int)obs_data_get_int(data, S_MIP_LEVELS);
 
 		// check format
-		gs_color_format fmt = GS_RGBA;
 		if (bpp == 1) {
-			fmt = GS_R8;
+			m_fmt = GS_R8;
 		}
 		else if (bpp != 4) {
 			PLOG_ERROR("BPP of %d is not supported.", bpp);
@@ -107,13 +101,12 @@ Mask::Resource::Image::Image(Mask::MaskData* parent, std::string name, obs_data_
 		}
 
 		// load mip datas
-		static const unsigned int MAX_MIP_LEVELS = 32;
 		if (mipLevels > MAX_MIP_LEVELS)
 			mipLevels = MAX_MIP_LEVELS;
-		const uint8_t* mips[MAX_MIP_LEVELS];
-		int w = width;
-		int h = height;
-		std::vector<std::vector<uint8_t>> base64mips;
+
+		int w = m_width;
+		int h = m_height;
+
 		for (int i = 0; i < mipLevels; i++) {
 			snprintf(mipdat, sizeof(mipdat), S_MIP_DATA, i);
 			const char* base64data = obs_data_get_string(data, mipdat);
@@ -123,7 +116,7 @@ Mask::Resource::Image::Image(Mask::MaskData* parent, std::string name, obs_data_
 			}
 			std::vector<uint8_t> decoded;
 			base64_decodeZ(base64data, decoded);
-			base64mips.emplace_back(decoded);
+			m_decoded_mips.emplace_back(decoded);
 			if (decoded.size() != (w * h * bpp)) {
 				size_t ds = decoded.size();
 
@@ -131,18 +124,9 @@ Mask::Resource::Image::Image(Mask::MaskData* parent, std::string name, obs_data_
 					name.c_str(), (w*h*bpp), ds);
 				throw std::logic_error("Image size doesnt add up.");
 			}
-			mips[i] = base64mips[i].data();
 			w /= 2;
 			h /= 2;
 		}
-
-		// my theory is that textures get buggered if the thread gets interrupted
-		// (since we load on a secondary thread)
-		//
-		// SO: let's sleep now so that we reduce the chances of getting interrupted
-		std::this_thread::sleep_for(std::chrono::microseconds(1));
-
-		m_Texture = std::make_shared<GS::Texture>(width, height, fmt, mipLevels, mips, 0);
 	}
 	else {
 		PLOG_ERROR("Image '%s' has no data.", name.c_str());
@@ -167,10 +151,26 @@ Mask::Resource::Type Mask::Resource::Image::GetType() {
 void Mask::Resource::Image::Update(Mask::Part* part, float time) {
 	UNUSED_PARAMETER(part);
 	UNUSED_PARAMETER(time);
-	return;
 }
 
 void Mask::Resource::Image::Render(Mask::Part* part) {
 	UNUSED_PARAMETER(part);
-	return;
+	if (m_Texture == nullptr) {
+
+		// temp file?
+		if (m_tempFile.length() > 0) {
+			m_Texture = std::make_shared<GS::Texture>(m_tempFile);
+			Utils::DeleteTempFile(m_tempFile);
+			m_tempFile.clear();
+		}
+		else {
+			int mipLevels = (int)m_decoded_mips.size();
+			const uint8_t* mips[MAX_MIP_LEVELS];
+			for (int i = 0; i < mipLevels; i++) {
+				mips[i] = m_decoded_mips[i].data();
+			}
+			m_Texture = std::make_shared<GS::Texture>(m_width, m_height, m_fmt, mipLevels, mips, 0);
+			m_decoded_mips.clear();
+		}
+	}
 }

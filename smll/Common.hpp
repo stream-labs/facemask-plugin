@@ -24,5 +24,7 @@
 
 typedef std::chrono::time_point<std::chrono::steady_clock>	TimeStamp;
 #define NEW_TIMESTAMP			(std::chrono::steady_clock::now())
-#define TIMESTAMP_AS_LL(TS)		(std::chrono::duration_cast<std::chrono::milliseconds>((TS).time_since_epoch()).count())
+#define TIMESTAMP_MS_LL(TS)		(std::chrono::duration_cast<std::chrono::milliseconds>((TS).time_since_epoch()).count())
+#define TIMESTAMP_US_LL(TS)		(std::chrono::duration_cast<std::chrono::microseconds>((TS).time_since_epoch()).count())
+#define TIMESTAMP_NS_LL(TS)		(std::chrono::duration_cast<std::chrono::nanoseconds>((TS).time_since_epoch()).count())
 #define UNSIGNED_DIFF(A, B)     ((A)>(B)?(A)-(B):(B)-(A))

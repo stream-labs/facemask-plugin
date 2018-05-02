@@ -205,6 +205,7 @@ void Mask::Resource::Sequence::Update(Mask::Part* part, float time) {
 
 void Mask::Resource::Sequence::Render(Mask::Part* part) {
 	UNUSED_PARAMETER(part);
+	m_image->Render(part);
 }
 
 

@@ -16,6 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
+#include <Windows.h>
 
 #include "base64.h"
 #include <iostream>
@@ -112,6 +113,8 @@ void base64_decode(std::string const& encoded_string, std::vector<uint8_t>& ret)
 		for (j = 0; (j < i - 1); j++) 
 			ret.push_back(char_array_3[j]);
 	}
+	// yield
+	::Sleep(0);
 }
 
 std::string base64_encodeZ(uint8_t const* buf, size_t bufLen) {
@@ -152,10 +155,12 @@ void base64_decodeZ(std::string const& encoded, std::vector<uint8_t>& decompress
 		zlib::uncompress((zlib::Bytef*)decompressed.data(), &destLen,
 			(zlib::Bytef*)decoded.data(), srcLen);
 	}
+	// yield
+	::Sleep(0);
 }
 
 size_t zlib_size(const std::vector<uint8_t>& decoded) {
-	// only decompress if this is zlib data
+	// only get size if this is zlib data
 	if (((unsigned char*)decoded.data())[0] == ZLIB_BYTE1 &&
 		((unsigned char*)decoded.data())[1] == ZLIB_BYTE2) {
 
@@ -187,6 +192,8 @@ void zlib_decode(const std::vector<uint8_t>& decoded, uint8_t* outbuf) {
 		zlib::uncompress((zlib::Bytef*)outbuf, &destLen,
 			(zlib::Bytef*)decoded.data(), srcLen);
 	}
+	// yield
+	::Sleep(0);
 }
 
 
