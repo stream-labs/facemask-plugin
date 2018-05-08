@@ -751,9 +751,9 @@ namespace smll {
 		gs_set_cull_mode(GS_NEITHER);
 
 		float y = font.GetHeight();
-		float height = font.GetHeight() * lines.size();
-		if (height < tex_height)
-			y = (tex_height - height + font.GetHeight()) / 2.0f;
+		//float height = font.GetHeight() * lines.size();
+		//if (height < tex_height)
+		//	y = (tex_height - height + font.GetHeight()) / 2.0f;
 
 		gs_texrender_reset(drawTexRender);
 		if (gs_texrender_begin(drawTexRender, tex_width, tex_height)) {

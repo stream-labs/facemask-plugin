@@ -160,7 +160,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 
 	// Fonts
 	char* fontname = obs_module_file(kFontAlertTTF);
-	smllFont = new smll::OBSFont(fontname, 30);
+	smllFont = new smll::OBSFont(fontname, 80);
 	bfree(fontname);
 
 	// set our mm thread task
@@ -802,19 +802,17 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 			// draw stuff to texture
 			gs_texrender_reset(alertTexRender);
-			if (gs_texrender_begin(alertTexRender, canvasWidth / 2, canvasHeight / 2)) {
+			if (gs_texrender_begin(alertTexRender, canvasWidth / 3, canvasHeight / 2)) {
 
 				// clear
 				vec4 black;
 				vec4_zero(&black);
-				black.x = 1;
-				black.w = 1;
 				gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
 
 				// Draw regular stuff
 				gs_matrix_push();
 				gs_matrix_identity();
-				gs_matrix_translate3f(0.0f, 0.0f, -55.0f);
+				gs_matrix_translate3f(0.0f, 0.0f, -35.0f);
 				drawMaskData(alertMaskData.get(), false, true);
 				gs_matrix_pop();
 
@@ -860,7 +858,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		while (gs_effect_loop(defaultEffect, "Draw")) {
 			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
 				"image"), alert_tex);
-			gs_draw_sprite(alert_tex, 0, canvasWidth / 2, canvasHeight / 2);
+			gs_draw_sprite(alert_tex, 0, canvasWidth / 3, canvasHeight / 2);
 		}
 		gs_blend_state_pop();
 		gs_matrix_pop();
@@ -1179,7 +1177,7 @@ void Plugin::FaceMaskFilter::Instance::drawMaskData(Mask::MaskData*	_maskData,
 	uint32_t w = baseWidth;
 	uint32_t h = baseHeight;
 	if (isAlert) {
-		w = canvasWidth / 2;
+		w = canvasWidth / 3;
 		h = canvasHeight / 2;
 	}
 
@@ -1339,7 +1337,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 	//bfree(alert_filename);
 
 	// DEBUG : load direct 
-	alertMaskData = std::unique_ptr<Mask::MaskData>(LoadMask("c:/STREAMLABS/slart/alerts/alert_test_RT.json"));
+	alertMaskData = std::unique_ptr<Mask::MaskData>(LoadMask("c:/STREAMLABS/slart/alerts/alert_test_LT.json"));
 	alertsLoaded = true;
 
 	// Loading loop
