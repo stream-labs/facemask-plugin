@@ -45,6 +45,8 @@ namespace smll {
 		int GetSize() const { return m_size; }
 		int GetHeight() const { return m_height; }
 
+		std::vector<std::string> BreakIntoLines(const std::string& text, int max_width) const;
+
 	private:
 		class FontInfo {
 		public:

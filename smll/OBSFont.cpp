@@ -40,6 +40,8 @@
 #include <libobs/graphics/matrix4.h>
 #include <libobs/graphics/image-file.h>
 #include <tiny_obj_loader.h>
+#include "utils.h"
+
 
 #pragma warning( pop )
 
@@ -190,5 +192,40 @@ namespace smll {
 			w += fi.advance;
 		}
 		return w;
+	}
+
+	std::vector<std::string> OBSFont::BreakIntoLines(const std::string& text, int max_width) const {
+		// split the text into words
+		std::vector<std::string> words = Utils::split(text, ' ');
+
+		// sort into lines
+		std::vector<std::string> lines;
+		int word_idx = 0;
+		float line_limit = (float)(max_width - 10);
+		while (word_idx < words.size()) {
+			std::string line, newline;
+			while (this->GetTextWidth(newline) < line_limit) {
+				line = newline;
+				if (newline.length() > 0) {
+					word_idx++;
+					if (word_idx == words.size())
+						break;
+					newline += " " + words[word_idx];
+				}
+				else
+					newline = words[word_idx];
+			}
+			if (line.length() == 0) {
+				std::string word = words[word_idx];
+				words.erase(words.begin() + word_idx);
+				int split_idx = word.length() / 2;
+				words.insert(words.begin() + word_idx, word.substr(split_idx));
+				words.insert(words.begin() + word_idx, word.substr(0, split_idx));
+			}
+			else {
+				lines.emplace_back(line);
+			}
+		}
+		return lines;
 	}
 }

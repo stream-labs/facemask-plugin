@@ -160,7 +160,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 
 	// Fonts
 	char* fontname = obs_module_file(kFontAlertTTF);
-	smllFont = new smll::OBSFont(fontname, 36);
+	smllFont = new smll::OBSFont(fontname, 30);
 	bfree(fontname);
 
 	// set our mm thread task
@@ -250,8 +250,6 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 
 	delete smllFaceDetector;
 	delete smllRenderer;
-
-	// Fonts
 	delete smllFont;
 
 	if (memcpyEnv)
@@ -809,6 +807,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				// clear
 				vec4 black;
 				vec4_zero(&black);
+				black.x = 1;
+				black.w = 1;
 				gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
 
 				// Draw regular stuff
@@ -1339,7 +1339,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 	//bfree(alert_filename);
 
 	// DEBUG : load direct 
-	alertMaskData = std::unique_ptr<Mask::MaskData>(LoadMask("c:/STREAMLABS/slart/alerts/alert_test2.json"));
+	alertMaskData = std::unique_ptr<Mask::MaskData>(LoadMask("c:/STREAMLABS/slart/alerts/alert_test_RT.json"));
 	alertsLoaded = true;
 
 	// Loading loop
