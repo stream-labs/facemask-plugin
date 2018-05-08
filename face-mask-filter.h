@@ -98,15 +98,15 @@ namespace Plugin {
 			Mask::MaskData*	LoadMask(std::string filename);
 			void LoadDemo();
 
-			void texRenderBegin(int width, int height);
-			void texRenderEnd();
-
 			void drawCropRects(int width, int height);
 
 			void updateFaces();
 
-			void drawMaskData(const smll::DetectionResult& face,
-				Mask::MaskData*	maskData, bool depthOnly);
+			void setFaceTransform(const smll::DetectionResult& face,
+				bool billboard);
+
+			void drawMaskData(Mask::MaskData*	maskData, bool depthOnly, 
+				bool isAlert);
 
 			gs_texture* RenderSourceTexture(gs_effect_t* effect);
 			bool SendSourceTextureToThread(gs_texture* sourceTexture);
@@ -114,6 +114,8 @@ namespace Plugin {
 		private:
 			// Filter State
 			obs_source_t*	source;
+			gs_rect			canvasViewport;
+			int32_t			canvasWidth, canvasHeight;
 			int32_t			baseWidth, baseHeight;
 			bool			isActive;
 			bool			isVisible;
@@ -128,10 +130,11 @@ namespace Plugin {
 			smll::OBSRenderer*		smllRenderer;
 
 			//FONTDEMO
-			//smll::OBSFont*			smllFont1;
+			smll::OBSFont*			smllFont;
 
 			gs_texrender_t*		sourceRenderTarget;
 			gs_texrender_t*		drawTexRender;
+			gs_texrender_t*		alertTexRender;
 			gs_texrender_t*		detectTexRender;
 			gs_stagesurf_t*		detectStage;
 
@@ -145,6 +148,11 @@ namespace Plugin {
 			std::thread			maskDataThread;
 			std::mutex			maskDataMutex;
 			std::unique_ptr<Mask::MaskData>	maskData;
+
+			// alert data
+			std::string			alertText;
+			std::unique_ptr<Mask::MaskData>	alertMaskData;
+			bool				alertsLoaded;
 
 			// demo mode
 			bool				demoModeOn;

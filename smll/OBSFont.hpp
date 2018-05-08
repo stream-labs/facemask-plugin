@@ -18,6 +18,8 @@
 * along with this program; if not, write to the Free Software
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
+#pragma once
+
 extern "C" {
 #pragma warning( push )
 #pragma warning( disable: 4201 )
@@ -38,7 +40,10 @@ namespace smll {
 		OBSFont(const std::string& filename="c:/Windows/Fonts/Arial.ttf", int size=48);
 		~OBSFont();
 
-		void RenderText(const std::string& text, float x, float y);
+		void RenderText(const std::string& text, float x, float y) const;
+		float GetTextWidth(const std::string& text) const;
+		int GetSize() const { return m_size; }
+		int GetHeight() const { return m_height; }
 
 	private:
 		class FontInfo {
@@ -51,6 +56,8 @@ namespace smll {
 
 		gs_effect_t*			m_effect;
 		std::vector<FontInfo>	m_fontInfos;
+		int						m_size;
+		int						m_height;
 
 		void SetFont(const std::string& filename, int size);
 		void DestroyFontInfo();

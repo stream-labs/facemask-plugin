@@ -29,7 +29,7 @@ extern "C" {
 	#pragma warning( pop )
 }
 
-GS::Texture::Texture(uint32_t width, uint32_t height, gs_color_format format, uint32_t mip_levels, const uint8_t **mip_data, uint32_t flags) {
+GS::Texture::Texture(uint32_t width, uint32_t height, gs_color_format format, uint32_t mip_levels, const uint8_t **mip_data, uint32_t flags) : m_destroy(true) {
 	if (width == 0)
 		throw std::logic_error("width must be at least 1");
 	if (height == 0)
@@ -54,7 +54,7 @@ GS::Texture::Texture(uint32_t width, uint32_t height, gs_color_format format, ui
 		throw std::runtime_error("Failed to create texture.");
 }
 
-GS::Texture::Texture(uint32_t width, uint32_t height, uint32_t depth, gs_color_format format, uint32_t mip_levels, const uint8_t **mip_data, uint32_t flags) {
+GS::Texture::Texture(uint32_t width, uint32_t height, uint32_t depth, gs_color_format format, uint32_t mip_levels, const uint8_t **mip_data, uint32_t flags) : m_destroy(true) {
 	if (width == 0)
 		throw std::logic_error("width must be at least 1");
 	if (height == 0)
@@ -82,7 +82,7 @@ GS::Texture::Texture(uint32_t width, uint32_t height, uint32_t depth, gs_color_f
 		throw std::runtime_error("Failed to create texture.");
 }
 
-GS::Texture::Texture(uint32_t size, gs_color_format format, uint32_t mip_levels, const uint8_t **mip_data, uint32_t flags) {
+GS::Texture::Texture(uint32_t size, gs_color_format format, uint32_t mip_levels, const uint8_t **mip_data, uint32_t flags) : m_destroy(true) {
 	if (size == 0)
 		throw std::logic_error("size must be at least 1");
 	if (mip_levels == 0)
@@ -104,7 +104,7 @@ GS::Texture::Texture(uint32_t size, gs_color_format format, uint32_t mip_levels,
 		throw std::runtime_error("Failed to create texture.");
 }
 
-GS::Texture::Texture(std::string file) {
+GS::Texture::Texture(std::string file) : m_destroy(true) {
 	struct stat st;
 	if (os_stat(file.c_str(), &st) != 0)
 		throw Plugin::file_not_found_error(file);
@@ -117,69 +117,8 @@ GS::Texture::Texture(std::string file) {
 		throw Plugin::io_error("Failed to load texture.", file);
 }
 
-GS::Texture::Texture(Texture& other) {
-	UNUSED_PARAMETER(other);
-	throw std::logic_error("not yet implemented");
-	//obs_enter_graphics();
-	//switch (gs_get_texture_type(other.m_texture)) {
-	//	case GS_TEXTURE_2D:
-	//		uint32_t width = gs_texture_get_width(other.m_texture);
-	//		uint32_t height = gs_texture_get_height(other.m_texture);
-	//		gs_color_format format = gs_texture_get_color_format(other.m_texture);
-	//		uint32_t mult = 0;
-	//		switch (format) {
-	//			case GS_A8:
-	//			case GS_R8:
-	//				mult = 1;
-	//				break;
-	//			case GS_R16:
-	//			case GS_R16F:
-	//				mult = 2;
-	//				break;
-	//			case GS_RG16F:
-	//			case GS_R32F:
-	//			case GS_BGRA:
-	//			case GS_BGRX:
-	//			case GS_RGBA:
-	//			case GS_R10G10B10A2:
-	//				mult = 4;
-	//				break;
-	//			case GS_RGBA16:
-	//			case GS_RGBA16F:
-	//			case GS_RG32F:
-	//				mult = 8;
-	//				break;
-	//			case GS_RGBA32F:
-	//				mult = 16;
-	//				break;
-	//			case GS_DXT1:
-	//			case GS_DXT3:
-	//			case GS_DXT5:
-	//				mult = 8;
-	//				break;
-	//		}
-	//		uint8_t* buf = new uint8_t[width * height * mult];
-	//		m_texture = gs_texture_create(width, height, format,
-	//			1, &buf);
-	//		delete buf;
-	//		break;
-	//	case GS_TEXTURE_3D:
-	//		uint32_t width = gs_voltexture_get_width(other.m_texture);
-	//		uint32_t height = gs_voltexture_get_height(other.m_texture);
-	//		uint32_t depth = gs_voltexture_get_height(other.m_texture);
-	//		gs_color_format format = gs_voltexture_get_color_format(other.m_texture);
-	//		break;
-	//	case GS_TEXTURE_CUBE:
-	//		uint32_t size = gs_cubetexture_get_size(other.m_texture);
-	//		gs_color_format format = gs_cubetexture_get_color_format(other.m_texture);
-	//		gs_copy_texture()
-	//			break;
-	//}
-	//obs_leave_graphics();
-}
-
 GS::Texture::~Texture() {
-	if (m_texture) {
+	if (m_texture && m_destroy) {
 		obs_enter_graphics();
 		switch (gs_get_texture_type(m_texture)) {
 			case GS_TEXTURE_2D:

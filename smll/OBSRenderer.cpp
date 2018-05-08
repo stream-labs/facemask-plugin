@@ -32,6 +32,7 @@
 #include <libobs/graphics/matrix4.h>
 #include <libobs/graphics/image-file.h>
 #include <tiny_obj_loader.h>
+#include "utils.h"
 
 #pragma warning( pop )
 
@@ -105,10 +106,8 @@ namespace smll {
 		gs_vertex3f(0, 0, 0);
 		gs_vertex3f(0, 0, 1000);
 		EndVertexBuffer();
-		// glasses
-		makeGlasses();
-		// mask
-		makeMask();
+
+		drawTexRender = gs_texrender_create(GS_RGBA, GS_ZS_NONE);
 
 		obs_leave_graphics();
 	}
@@ -122,6 +121,7 @@ namespace smll {
 			gs_vertexbuffer_destroy(m_vertexBuffers[i]);
 		}
 		gs_effect_destroy(m_colorConversion);
+		gs_texrender_destroy(drawTexRender);
 		obs_leave_graphics();
 	}
 
@@ -175,16 +175,6 @@ namespace smll {
 
 		gs_texture_destroy(m_textures[texture]);
 		m_textures[texture] = nullptr;
-	}
-
-	void OBSRenderer::DrawBegin() {
-		gs_blend_state_push();
-	}
-
-	void OBSRenderer::DrawEnd()	{
-		gs_blend_state_pop();
-		gs_depth_function(GS_NEVER);
-		gs_set_cull_mode(GS_NEITHER);
 	}
 
 	void OBSRenderer::DrawFaces(const DetectionResults& faces) {
@@ -666,94 +656,6 @@ namespace smll {
 			(float)-face.pose.rotation[2], (float)-face.pose.rotation[3]);
 	}
 
-	void OBSRenderer::makeGlasses()	{
-
-		cv::Point3d	ec = GetLandmarkPoint(EYE_CENTER);
-		cv::Point3d	j1 = GetLandmarkPoint(JAW_1);
-		cv::Point3d	j17 = GetLandmarkPoint(JAW_17);
-		
-		float x = (float)j17.x;
-		float y = (float)ec.y;
-		float z = (float)ec.z;
-		float dy = (float)(j17.x - j1.x) / 4.0f;
-		float dz = (float)-4.0f * x;
-
-		BeginVertexBuffer();
-
-		float lu = 0.0f;
-		float hu = 1.0f;
-		float lv = 1.0f;
-		float mv = 0.5f;
-		float hv = 0.0f;
-
-		// front
-		gs_texcoord(lu, hv, TEXUNIT); // 1
-		gs_vertex3f(x, y + dy, z);
-		gs_texcoord(hu, hv, TEXUNIT); // 2
-		gs_vertex3f(-x, y + dy, z);
-		gs_texcoord(lu, mv, TEXUNIT); // 4
-		gs_vertex3f(x, y - dy, z);
-		gs_texcoord(hu, hv, TEXUNIT); // 2
-		gs_vertex3f(-x, y + dy, z);
-		gs_texcoord(hu, mv, TEXUNIT); // 3
-		gs_vertex3f(-x, y - dy, z);
-		gs_texcoord(lu, mv, TEXUNIT); // 4
-		gs_vertex3f(x, y - dy, z);
-
-		// side
-		gs_texcoord(hu, lv, TEXUNIT);  // 1
-		gs_vertex3f(x, y - dy, z);
-		gs_texcoord(lu, lv, TEXUNIT);  // 2
-		gs_vertex3f(x, y - dy, z - dz);
-		gs_texcoord(hu, mv, TEXUNIT); // 4
-		gs_vertex3f(x, y + dy, z);
-		gs_texcoord(lu, lv, TEXUNIT);  // 2
-		gs_vertex3f(x, y - dy, z - dz);
-		gs_texcoord(lu, mv, TEXUNIT); // 3
-		gs_vertex3f(x, y + dy, z - dz);
-		gs_texcoord(hu, mv, TEXUNIT); // 4
-		gs_vertex3f(x, y + dy, z);
-
-		// side
-		gs_texcoord(hu, mv, TEXUNIT); // 1
-		gs_vertex3f(-x, y + dy, z);
-		gs_texcoord(lu, mv, TEXUNIT); // 2
-		gs_vertex3f(-x, y + dy, z - dz);
-		gs_texcoord(hu, lv, TEXUNIT); // 4
-		gs_vertex3f(-x, y - dy, z);
-		gs_texcoord(lu, mv, TEXUNIT); // 2
-		gs_vertex3f(-x, y + dy, z - dz);
-		gs_texcoord(lu, lv, TEXUNIT); // 3
-		gs_vertex3f(-x, y - dy, z - dz);
-		gs_texcoord(hu, lv, TEXUNIT); // 4
-		gs_vertex3f(-x, y - dy, z);
-
-		EndVertexBuffer();
-	}
-
-	void OBSRenderer::makeMask() {
-
-		cv::Point3d	ec = GetLandmarkPoint(EYE_CENTER);
-		cv::Point3d	j9 = GetLandmarkPoint(JAW_9);
-		cv::Point3d	j17 = GetLandmarkPoint(JAW_17);
-
-		float x = (float)j17.x;
-		float y = (float)ec.y;
-		float z = (float)ec.z;
-		float dy = (float)(j9.y - ec.y);
-
-		BeginVertexBuffer();
-		gs_texcoord(0, 1, TEXUNIT);
-		gs_vertex3f(-x, y - dy, z);
-		gs_texcoord(1, 1, TEXUNIT);
-		gs_vertex3f(x, y - dy, z);
-		gs_texcoord(0, 0, TEXUNIT);
-		gs_vertex3f(-x, y + dy, z);
-		gs_texcoord(1, 0, TEXUNIT);
-		gs_vertex3f(x, y + dy, z);
-		EndVertexBuffer();
-	}
-
 	void	OBSRenderer::drawLines(const dlib::point* points, int start,
 		int end, bool closed) {
 		// make vb
@@ -826,6 +728,72 @@ namespace smll {
 		gs_viewport_pop();
 		gs_projection_pop();
 	}
+
+	gs_texture*		OBSRenderer::RenderTextToTexture(const std::string& text,
+		int tex_width, int tex_height, const OBSFont& font) {
+
+		// split the text into words
+		std::vector<std::string> words = Utils::split(text, ' ');
+		
+		// sort into lines
+		std::vector<std::string> lines;
+		int word_idx = 0;
+		float line_limit = (float)(tex_width - 10);
+		while (word_idx < words.size()) {
+			std::string line, newline;
+			while (font.GetTextWidth(newline) < line_limit) {
+				line = newline;
+				if (newline.length() > 0) {
+					word_idx++;
+					if (word_idx == words.size())
+						break;
+					newline += " " + words[word_idx];
+				}
+				else 
+					newline = words[word_idx];
+			}
+			if (line.length() == 0) {
+				// TODO BREAK WORD
+				break;
+			}
+			lines.emplace_back(line);
+		}
+
+		gs_matrix_push();
+		gs_projection_push();
+		gs_viewport_push();
+
+		gs_matrix_identity();
+		gs_set_viewport(0, 0, tex_width, tex_height);
+		gs_ortho(0.0f, (float)tex_width, 0.0f, (float)tex_height, 0.0f, 100.0f);
+
+		gs_set_cull_mode(GS_NEITHER);
+
+		float y = font.GetHeight();
+
+		gs_texrender_reset(drawTexRender);
+		if (gs_texrender_begin(drawTexRender, tex_width, tex_height)) {
+
+			// clear
+			vec4 black;
+			vec4_zero(&black);
+			gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
+
+			for (int i = 0; i < lines.size(); i++) {
+				float x = (tex_width - font.GetTextWidth(lines[i])) / 2;
+				font.RenderText(lines[i], x, y);
+				y += font.GetHeight();
+			}
+
+			gs_texrender_end(drawTexRender);
+		}
+		gs_matrix_pop();
+		gs_viewport_pop();
+		gs_projection_pop();
+
+		return gs_texrender_get_texture(drawTexRender);
+	}
+
 
 
 } // smll namespace

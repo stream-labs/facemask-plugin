@@ -436,6 +436,11 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 	// emmissive
 	float3 outColor = emmColor.xyz;
 
+	// NO LIGHTS
+	if (numLights == 0) {
+		outColor += dffColor.xyz;
+	}
+	
 	// LIGHT 0
 	if (numLights > 0) {
 		outColor += DoLighting(

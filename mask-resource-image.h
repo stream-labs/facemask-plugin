@@ -35,6 +35,10 @@ namespace Mask {
 			virtual void Update(Mask::Part* part, float time) override;
 			virtual void Render(Mask::Part* part) override;
 
+			void SwapTexture(gs_texture* tex, bool mineToDestroy = false) {
+				m_Texture = std::make_shared<GS::Texture>(tex, mineToDestroy);
+			}
+
 		protected:
 			std::shared_ptr<GS::Texture> m_Texture;
 

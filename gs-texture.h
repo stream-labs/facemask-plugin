@@ -99,23 +99,19 @@ namespace GS {
 		*
 		* \param file File to create the texture from.
 		*/
-		Texture(std::string file);// { LoadFromFile(file); }
-
-		/*!
-		* \brief Copy an existing texture
-		*
-		* Create a Texture instance from an existing texture.
-		* This will not take ownership of the underlying gs_texture_t object.
-		*
-		* \param other
-		* \return
-		*/
-		Texture(Texture& other);
+		Texture(std::string file);
 
 		/*!
 		* \brief Default constructor
 		*/
-		Texture() : m_texture(nullptr) {}
+		Texture() 
+			: m_texture(nullptr), m_destroy(true) {}
+
+		/*!
+		* \brief Wrapper constructur
+		*/
+		Texture(gs_texture* tex, bool destroy=false) 
+			: m_texture(tex), m_destroy(destroy) {}
 
 		/*!
 		 * \brief Destructor
@@ -147,6 +143,7 @@ namespace GS {
 
 		protected:
 		gs_texture_t* m_texture;
+		bool m_destroy;
 
 		void DestroyTexture();
 	};

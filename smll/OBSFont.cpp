@@ -88,6 +88,9 @@ namespace smll {
 
 	void OBSFont::SetFont(const std::string& filename, int size) {
 
+		// save the size
+		m_size = size;
+
 		// Init FreeType
 		FT_Library ft;
 		if (FT_Init_FreeType(&ft))
@@ -106,6 +109,7 @@ namespace smll {
 		obs_enter_graphics();
 
 		// Let's do ascii 32 - 126
+		m_height = 0;
 		for (char c = 32; c < 127; c++)
 		{
 			// Load character glyph 
@@ -115,10 +119,13 @@ namespace smll {
 				continue;
 			}
 
+			if (face->glyph->bitmap.rows > m_height)
+				m_height = face->glyph->bitmap.rows;
+
 			FontInfo fi;
 			vec2_set(&(fi.size), (float)face->glyph->bitmap.width, (float)face->glyph->bitmap.rows);
 			vec2_set(&(fi.bearing), (float)face->glyph->bitmap_left, (float)-face->glyph->bitmap_top);
-			fi.advance = (float)face->glyph->advance.x;
+			fi.advance = (float)face->glyph->advance.x / 64.0f; // advance is 1/64 pixels
 			fi.texture = nullptr;
 			if (face->glyph->bitmap.rows > 0 && face->glyph->bitmap.width > 0) {
 				fi.texture = gs_texture_create(face->glyph->bitmap.width,
@@ -136,20 +143,10 @@ namespace smll {
 		FT_Done_FreeType(ft);
 	}
 
-	void OBSFont::RenderText(const std::string& text, float xx, float y) {
-
-		//gs_effect_t* defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
-
-		/*
-		gs_enable_color(true, true, true, true);
-		gs_enable_depth_test(true);
-		gs_depth_function(GS_LESS);
-		gs_set_cull_mode(gs_cull_mode::GS_BACK);
-		gs_enable_stencil_test(false);
-		*/
+	void OBSFont::RenderText(const std::string& text, float xx, float y) const {
 
 		vec4 color;
-		vec4_set(&color, 210.0f / 255.0f, 180.0f / 255.0f, 222.0f / 255.0f, 1.0f);
+		vec4_set(&color, 0.0f, 0.0f, 0.0f, 1.0f);
 
 		gs_enable_blending(true);
 		gs_blend_function_separate(
@@ -162,7 +159,9 @@ namespace smll {
 		std::string::const_iterator c;
 		for (c = text.begin(); c != text.end(); c++) {
 			int idx = (int)*c - 32;
-			FontInfo& fi = m_fontInfos[idx];
+			if (idx < 0 || idx >= m_fontInfos.size())
+				continue;
+			const FontInfo& fi = m_fontInfos[idx];
 
 			if (fi.texture) {
 				gs_matrix_push();
@@ -176,8 +175,20 @@ namespace smll {
 				}
 				gs_matrix_pop();
 			}
-			xx += (fi.advance / 64.0f); // advance is 1/64 pixels
+			xx += fi.advance;
 		}
 	}
 
+	float OBSFont::GetTextWidth(const std::string& text) const {
+		float w = 0;
+		std::string::const_iterator c;
+		for (c = text.begin(); c != text.end(); c++) {
+			int idx = (int)*c - 32;
+			if (idx < 0 || idx >= m_fontInfos.size())
+				continue;
+			const FontInfo& fi = m_fontInfos[idx];
+			w += fi.advance;
+		}
+		return w;
+	}
 }

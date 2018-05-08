@@ -132,8 +132,9 @@ void Plugin::FaceMaskFilter::destroy(void *ptr) {
 // ------------------------------------------------------------------------- //
 
 Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *source)
-	: source(source), baseWidth(640), baseHeight(480), isActive(true), isVisible(true),
-	isDisabled(false), videoTicked(true), taskHandle(NULL), memcpyEnv(nullptr), detectStage(nullptr),
+	: source(source), canvasWidth(0), canvasHeight(0), baseWidth(640), baseHeight(480), 
+	isActive(true), isVisible(true), isDisabled(false), videoTicked(true),
+	taskHandle(NULL), memcpyEnv(nullptr), detectStage(nullptr),
 	maskDataShutdown(false), maskJsonFilename(nullptr), maskData(nullptr),
 	demoModeOn(false), demoModeMaskJustChanged(false), demoModeMaskChanged(false), 
 	demoCurrentMask(0), demoModeInterval(0.0f), demoModeDelay(0.0f), demoModeElapsed(0.0f), 
@@ -150,14 +151,17 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	sourceRenderTarget = gs_texrender_create(GS_RGBA, GS_ZS_NONE);
 	detectTexRender = gs_texrender_create(GS_R8, GS_ZS_NONE);
 	drawTexRender = gs_texrender_create(GS_RGBA, GS_Z32F); // has depth buffer
+	alertTexRender = gs_texrender_create(GS_RGBA, GS_Z32F); // has depth buffer
 	obs_leave_graphics();
 
 	// Make the smll stuff
 	smllFaceDetector = new smll::FaceDetector();
 	smllRenderer = new smll::OBSRenderer(); 
 
-	//FONTDEMO
-	//smllFont1 = new smll::OBSFont("c:/Windows/Fonts/graffonti.3d.drop.[fontvir.us].ttf", 100);
+	// Fonts
+	char* fontname = obs_module_file(kFontAlertTTF);
+	smllFont = new smll::OBSFont(fontname, 36);
+	bfree(fontname);
 
 	// set our mm thread task
 	if (!taskHandle) {
@@ -230,6 +234,7 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 	obs_enter_graphics();
 	gs_texrender_destroy(sourceRenderTarget);
 	gs_texrender_destroy(drawTexRender);
+	gs_texrender_destroy(alertTexRender);
 	gs_texrender_destroy(detectTexRender);
 	for (int i = 0; i < ThreadData::BUFFER_SIZE; i++) {
 		if (detection.frames[i].capture.texture) {
@@ -246,8 +251,8 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 	delete smllFaceDetector;
 	delete smllRenderer;
 
-	//FONTDEMO
-	//delete smllFont1;
+	// Fonts
+	delete smllFont;
 
 	if (memcpyEnv)
 		destroy_threaded_memcpy_pool(memcpyEnv);
@@ -540,6 +545,10 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 			mdat->Tick(timeDelta);
 		}
 	}
+
+	if (alertsLoaded && alertMaskData) {
+		alertMaskData->Tick(timeDelta);
+	}
 }
 
 void Plugin::FaceMaskFilter::Instance::video_render(void *ptr,
@@ -575,6 +584,21 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		return;
 	}
 
+	// Canvas width and height
+	if (videoTicked) {
+		gs_rect vpr;
+		gs_get_viewport(&vpr);
+		canvasWidth = vpr.cx;
+		canvasHeight = vpr.cy;
+
+		matrix4 m;
+		gs_matrix_get(&m);
+		canvasViewport.x = (int)m.t.x;
+		canvasViewport.y = (int)m.t.y;
+		canvasViewport.cx = (int)((float)baseWidth * m.x.x);
+		canvasViewport.cy = (int)((float)baseHeight * m.y.y);
+	}
+
 	// Effects
 	gs_effect_t* defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
 
@@ -599,11 +623,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		return;
 	}
 
-
 	// ----- DRAW -----
-
-	// start
-	smllRenderer->DrawBegin();
 
 	// Set up sampler state
 	// Note: We need to wrap for morphing
@@ -640,9 +660,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// draw face detection data
 	if (drawFaces)
 		smllRenderer->DrawFaces(faces);
-
-	gs_enable_depth_test(true);
-	gs_depth_function(GS_LESS);
 
 	// draw crop rectangles
 	drawCropRects(baseWidth, baseHeight);
@@ -685,16 +702,14 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		}
 	}
 
-	// ready?
+	// render mask?
 	gs_texture* mask_tex = nullptr;
 	if (faces.length > 0 && !demoModeInDelay) {
 
 		// only render once per video tick
 		if (videoTicked) {
-
 			// draw stuff to texture
 			gs_texrender_reset(drawTexRender);
-			texRenderBegin(baseWidth, baseHeight);
 			if (gs_texrender_begin(drawTexRender, baseWidth, baseHeight)) {
 
 				// clear
@@ -712,7 +727,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 					// Draw depth-only stuff
 					for (int i = 0; i < faces.length; i++) {
-						drawMaskData(faces[i], mask_data, true);
+						gs_matrix_push();
+						setFaceTransform(faces[i], mask_data->IsIntroAnimation());
+						drawMaskData(mask_data, true, false);
+						gs_matrix_pop();
 					}
 
 					// if we are generating thumbs
@@ -746,7 +764,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 					// Draw regular stuff
 					for (int i = 0; i < faces.length; i++) {
-						drawMaskData(faces[i], mask_data, false);
+						gs_matrix_push();
+						setFaceTransform(faces[i], mask_data->IsIntroAnimation());
+						drawMaskData(mask_data, false, false);
+						gs_matrix_pop();
 					}
 				}
 
@@ -756,18 +777,52 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 				gs_texrender_end(drawTexRender);
 			}
-			texRenderEnd();
 		}
 
 		mask_tex = gs_texrender_get_texture(drawTexRender);
 	}
 
+
+	// render alert?
+	gs_texture* alert_tex = nullptr;
+	if (faces.length > 0 && alertsLoaded && alertMaskData) {
+
+		if (videoTicked) {
+			//                  12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
+			std::string text = "This is a test of line breaking... I wonder if this is going to work. 140 is a lot of characters to fit in a bubble, but we'll make it work.";
+			gs_texture* tex = smllRenderer->RenderTextToTexture(text, 512, 256, *smllFont);
+			std::shared_ptr<Mask::Resource::Image> img = std::dynamic_pointer_cast<Mask::Resource::Image>
+				(alertMaskData->GetResource("diffuse-1"));
+			img->SwapTexture(tex);
+
+			// draw stuff to texture
+			gs_texrender_reset(alertTexRender);
+			if (gs_texrender_begin(alertTexRender, canvasWidth / 2, canvasHeight / 2)) {
+
+				// clear
+				vec4 black;
+				vec4_zero(&black);
+				gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
+
+				// Draw regular stuff
+				gs_matrix_push();
+				gs_matrix_identity();
+				gs_matrix_translate3f(0.0f, 0.0f, -55.0f);
+				drawMaskData(alertMaskData.get(), false, true);
+				gs_matrix_pop();
+
+				gs_texrender_end(alertTexRender);
+			}
+		}
+		alert_tex = gs_texrender_get_texture(alertTexRender);
+	}
+
 	if (mask_tex) {
 		// draw the rendering on top of the video
-		gs_matrix_push();
 		gs_blend_state_push();
 		gs_set_cull_mode(GS_NEITHER);
 		gs_enable_blending(true);
+		gs_enable_depth_test(false);
 		gs_enable_color(true, true, true, true);
 		gs_blend_function_separate(gs_blend_type::GS_BLEND_SRCALPHA,
 			gs_blend_type::GS_BLEND_INVSRCALPHA,
@@ -779,14 +834,30 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			gs_draw_sprite(mask_tex, 0, baseWidth, baseHeight);
 		}
 		gs_blend_state_pop();
-		gs_matrix_pop();
 	}
 
-	//FONTDEMO
-	//smllFont1->RenderText("this is a test of FreeType", 150, 150);
-
-	// end
-	smllRenderer->DrawEnd();
+	if (alert_tex) {
+		// draw the rendering on top of the video
+		gs_matrix_push();
+		gs_blend_state_push();
+		gs_matrix_identity();
+		gs_matrix_translate3f(100, 100, 0);
+		gs_enable_color(true, true, true, true);
+		gs_enable_blending(true);
+		gs_blend_function_separate(gs_blend_type::GS_BLEND_SRCALPHA,
+			gs_blend_type::GS_BLEND_INVSRCALPHA,
+			gs_blend_type::GS_BLEND_ONE,
+			gs_blend_type::GS_BLEND_ZERO);
+		gs_enable_depth_test(false);
+		gs_set_cull_mode(GS_NEITHER);
+		while (gs_effect_loop(defaultEffect, "Draw")) {
+			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+				"image"), alert_tex);
+			gs_draw_sprite(alert_tex, 0, canvasWidth / 2, canvasHeight / 2);
+		}
+		gs_blend_state_pop();
+		gs_matrix_pop();
+	}
 
 	// demo mode render stuff
 	demoModeRender(vidTex, mask_tex, mask_data);
@@ -1078,30 +1149,46 @@ gs_texture* Plugin::FaceMaskFilter::Instance::RenderSourceTexture(gs_effect_t* e
 	return gs_texrender_get_texture(sourceRenderTarget);
 }
 
+void Plugin::FaceMaskFilter::Instance::setFaceTransform(const smll::DetectionResult& face, 
+	bool billboard) {
+
+	gs_matrix_identity();
+	gs_matrix_translate3f((float)face.pose.translation[0],
+		(float)face.pose.translation[1], (float)-face.pose.translation[2]);
+	if (!billboard) {
+		gs_matrix_rotaa4f((float)face.pose.rotation[0], (float)face.pose.rotation[1],
+			(float)-face.pose.rotation[2], (float)-face.pose.rotation[3]);
+	}
+}
 
 
 
-void Plugin::FaceMaskFilter::Instance::drawMaskData(const smll::DetectionResult& face,
-	Mask::MaskData*	_maskData, bool depthOnly) {
+void Plugin::FaceMaskFilter::Instance::drawMaskData(Mask::MaskData*	_maskData, 
+	bool depthOnly, bool isAlert) {
 
+	gs_viewport_push();
 	gs_projection_push();
-	float aspect = (float)baseWidth / (float)baseHeight;
+
+	uint32_t w = baseWidth;
+	uint32_t h = baseHeight;
+	if (isAlert) {
+		w = canvasWidth / 2;
+		h = canvasHeight / 2;
+	}
+
+	gs_set_viewport(0, 0, w, h);
+	gs_enable_depth_test(true);
+	gs_depth_function(GS_LESS);
+
+	float aspect = (float)w / (float)h;
 	gs_perspective(FOVA(aspect), aspect, NEAR_Z, FAR_Z);
 
 	gs_enable_stencil_test(false);
 
-	gs_matrix_push();
-	gs_matrix_identity();
-	gs_matrix_translate3f((float)face.pose.translation[0],
- 		(float)face.pose.translation[1], (float)-face.pose.translation[2]);
-	if (!_maskData->IsIntroAnimation()) {
-		gs_matrix_rotaa4f((float)face.pose.rotation[0], (float)face.pose.rotation[1],
-			(float)-face.pose.rotation[2], (float)-face.pose.rotation[3]);
-	}
 	_maskData->Render(depthOnly);
 
-	gs_matrix_pop();
 	gs_projection_pop();
+	gs_viewport_pop();
 }
 
 
@@ -1239,6 +1326,16 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_LOWEST);
 
+	// Load Alerts
+	//char* alert_filename = obs_module_file(kFileAlertJson);
+	//alertMaskData = std::unique_ptr<Mask::MaskData>(LoadMask(alert_filename));
+	//bfree(alert_filename);
+
+	// DEBUG : load direct 
+	alertMaskData = std::unique_ptr<Mask::MaskData>(LoadMask("c:/STREAMLABS/slart/alerts/alert_test2.json"));
+	alertsLoaded = true;
+
+	// Loading loop
 	bool lastDemoMode = false; 
 	while (!maskDataShutdown) {
 		{
@@ -1344,8 +1441,7 @@ void Plugin::FaceMaskFilter::Instance::LoadDemo() {
 Mask::MaskData*
 Plugin::FaceMaskFilter::Instance::LoadMask(std::string filename) {
 
-	obs_enter_graphics();
-	PLOG_INFO("Loading mask '%s'...", filename.c_str());
+	PLOG_INFO("Loading mask json '%s'...", filename.c_str());
 
 	// new mask data
 	Mask::MaskData* mdat = new Mask::MaskData();
@@ -1356,29 +1452,10 @@ Plugin::FaceMaskFilter::Instance::LoadMask(std::string filename) {
 		PLOG_INFO("Loading mask '%s' successful!", filename.c_str());
 	}
 	catch (...) {
-		obs_leave_graphics();
 		PLOG_ERROR("Failed to load mask %s.", filename.c_str());
 	}
-	obs_leave_graphics();
 
 	return mdat;
-}
-
-
-void Plugin::FaceMaskFilter::Instance::texRenderBegin(int width, int height) {
-	gs_matrix_push();
-	gs_projection_push();
-	gs_viewport_push();
-
-	gs_matrix_identity();
-	gs_set_viewport(0, 0, width, height);
-	gs_ortho(0, (float)width, 0, (float)height, 0, 100);
-}
-
-void Plugin::FaceMaskFilter::Instance::texRenderEnd() {
-	gs_matrix_pop();
-	gs_viewport_pop();
-	gs_projection_pop();
 }
 
 void Plugin::FaceMaskFilter::Instance::drawCropRects(int width, int height) {

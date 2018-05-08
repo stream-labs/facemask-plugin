@@ -34,6 +34,7 @@
 
 
 #include "OBSTexture.hpp"
+#include "OBSFont.hpp"
 #include "ImageWrapper.hpp"
 #include "FaceDetector.hpp"
 #include "DetectionResults.hpp"
@@ -64,8 +65,6 @@ namespace smll {
 		gs_vertbuffer_t* GetVertexBuffer(int which);
 		void    DestroyVertexBufffer(int which);
 
-		void	DrawBegin();
-		void	DrawEnd();
 		void	DrawFaces(const DetectionResults& faces);
 		void	DrawLandmarks(const dlib::point* points, uint8_t r, 
 			uint8_t g, uint8_t b);
@@ -85,6 +84,9 @@ namespace smll {
 
 		void						SetTransform(const DetectionResult& face);
 
+		gs_texture*		RenderTextToTexture(const std::string& text,
+			int tex_width, int tex_height, const OBSFont& font);
+
 	private:
 
 		// gl texture names
@@ -99,13 +101,12 @@ namespace smll {
 		std::vector<gs_vertbuffer_t*>	m_vertexBuffers;
 		gs_effect_t*				m_colorConversion;
 
+		gs_texrender_t*				drawTexRender;
+
 		void						drawLines(const dlib::point* points,
 			int start, int end, bool closed = false);
 		void						drawLine(const dlib::point* points,
 			int start, int end);
-
-		void						makeGlasses();
-		void						makeMask();
 	};
 
 

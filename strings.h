@@ -44,4 +44,6 @@
 
 // Other static strings
 static const char* const kFileDefaultJson = "masks/No Mask.json";
+static const char* const kFileAlertJson = "alerts/alert.json";
+static const char* const kFontAlertTTF = "fonts/back_issues.ttf";
 
