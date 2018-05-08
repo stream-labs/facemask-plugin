@@ -41,6 +41,7 @@
 #define P_GENTHUMBS				"genpreviews"
 #define P_REWIND				"rewindanims"
 #define P_CARTOON				"cartoonMode"
+#define P_ALERT_TEXT			"alertText"
 
 // Other static strings
 static const char* const kFileDefaultJson = "masks/No Mask.json";

@@ -297,6 +297,8 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	bfree(jsonName);
 #endif
 
+	obs_data_set_default_string(data, P_ALERT_TEXT, "");
+
 	obs_data_set_default_bool(data, P_CARTOON, false);
 	obs_data_set_default_bool(data, P_BGREMOVAL, false);
 
@@ -372,6 +374,11 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 	obs_properties_add_button(props, P_REWIND, P_TRANSLATE(P_REWIND), 
 		rewind_clicked);
 
+	// alert text
+	p = obs_properties_add_text(props, P_ALERT_TEXT, P_TRANSLATE(P_ALERT_TEXT),
+		obs_text_type::OBS_TEXT_DEFAULT);
+	obs_property_set_long_description(p, P_TRANSLATE(P_DESC(P_ALERT_TEXT)));
+
 	// Demo mode
 	obs_properties_add_bool(props, P_DEMOMODEON, P_TRANSLATE(P_DEMOMODEON));
 	obs_properties_add_text(props, P_DEMOFOLDER, P_TRANSLATE(P_DEMOFOLDER), 
@@ -446,6 +453,8 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 
 	autoBGRemoval = obs_data_get_bool(data, P_BGREMOVAL);
 	cartoonMode = obs_data_get_bool(data, P_CARTOON);
+
+	alertText = obs_data_get_string(data, P_ALERT_TEXT);
 
 	// demo mode
 	demoModeOn = obs_data_get_bool(data, P_DEMOMODEON);
@@ -785,12 +794,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// render alert?
 	gs_texture* alert_tex = nullptr;
-	if (faces.length > 0 && alertsLoaded && alertMaskData) {
+	if (alertsLoaded && alertMaskData) {
 
 		if (videoTicked) {
-			//                  12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
-			std::string text = "This is a test of line breaking... I wonder if this is going to work. 140 is a lot of characters to fit in a bubble, but we'll make it work.";
-			gs_texture* tex = smllRenderer->RenderTextToTexture(text, 512, 256, *smllFont);
+			gs_texture* tex = smllRenderer->RenderTextToTexture(alertText, 512, 256, *smllFont);
 			std::shared_ptr<Mask::Resource::Image> img = std::dynamic_pointer_cast<Mask::Resource::Image>
 				(alertMaskData->GetResource("diffuse-1"));
 			img->SwapTexture(tex);

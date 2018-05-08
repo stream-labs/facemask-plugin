@@ -753,10 +753,15 @@ namespace smll {
 					newline = words[word_idx];
 			}
 			if (line.length() == 0) {
-				// TODO BREAK WORD
-				break;
+				std::string word = words[word_idx];
+				words.erase(words.begin() + word_idx);
+				int split_idx = word.length() / 2;
+				words.insert(words.begin() + word_idx, word.substr(split_idx));
+				words.insert(words.begin() + word_idx, word.substr(0, split_idx));
 			}
-			lines.emplace_back(line);
+			else {
+				lines.emplace_back(line);
+			}
 		}
 
 		gs_matrix_push();
