@@ -184,6 +184,7 @@ namespace Plugin {
 			};
 			std::vector<PreviewFrame>	previewFrames;
 			void WritePreviewFrames();
+			void WriteTextureToFile(gs_texture* tex, std::string filename);
 
 			// our current face detection results
 			smll::DetectionResults		faces;
@@ -195,6 +196,7 @@ namespace Plugin {
 			bool				drawFaces;
 			bool				drawMorphTris;
 			bool				drawFDRect;
+			bool				drawVideo;
 			bool				filterPreviewMode;
 			bool				autoBGRemoval;
 			bool				cartoonMode;
