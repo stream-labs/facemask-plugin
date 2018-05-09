@@ -43,6 +43,7 @@
 #include "mask-resource-effect.h"
 
  // yep...this is what we're doin
+#define USE_WINMM_FOR_THREADED_MEMCPY	(1)
 #include <libobs/util/threaded-memcpy.c>
 
 
@@ -616,7 +617,19 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	sinfo.max_anisotropy = 0;
 	gs_samplerstate_t* ss = gs_samplerstate_create(&sinfo);
 	gs_load_samplerstate(ss, 0);
-	gs_samplerstate_destroy(ss);
+
+	// set up initial rendering state
+	gs_blend_state_push();
+	gs_enable_stencil_test(false);
+	gs_enable_depth_test(false);
+	gs_depth_function(GS_ALWAYS);
+	gs_set_cull_mode(GS_NEITHER);
+	gs_enable_color(true, true, true, true);
+	gs_enable_blending(true);
+	gs_blend_function_separate(gs_blend_type::GS_BLEND_SRCALPHA,
+		gs_blend_type::GS_BLEND_INVSRCALPHA,
+		gs_blend_type::GS_BLEND_ONE,
+		gs_blend_type::GS_BLEND_ZERO);
 
 	// mask to draw
 	Mask::MaskData* mask_data = maskData.get();
@@ -640,9 +653,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// draw face detection data
 	if (drawFaces)
 		smllRenderer->DrawFaces(faces);
-
-	gs_enable_depth_test(true);
-	gs_depth_function(GS_LESS);
 
 	// draw crop rectangles
 	drawCropRects(baseWidth, baseHeight);
@@ -675,8 +685,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		}
 		else {
 			// Draw the source video
-			gs_enable_depth_test(false);
-			gs_set_cull_mode(GS_NEITHER);
 			while (gs_effect_loop(defaultEffect, "Draw")) {
 				gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
 					"image"), vidTex);
@@ -684,6 +692,9 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			}
 		}
 	}
+
+	gs_enable_depth_test(true);
+	gs_depth_function(GS_LESS);
 
 	// ready?
 	gs_texture* mask_tex = nullptr;
@@ -761,25 +772,19 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 		mask_tex = gs_texrender_get_texture(drawTexRender);
 	}
-
+	
 	if (mask_tex) {
-		// draw the rendering on top of the video
-		gs_matrix_push();
-		gs_blend_state_push();
+		// draw the rendered mask texture
 		gs_set_cull_mode(GS_NEITHER);
 		gs_enable_blending(true);
 		gs_enable_color(true, true, true, true);
-		gs_blend_function_separate(gs_blend_type::GS_BLEND_SRCALPHA,
-			gs_blend_type::GS_BLEND_INVSRCALPHA,
-			gs_blend_type::GS_BLEND_ONE,
-			gs_blend_type::GS_BLEND_ZERO);
+		gs_blend_function(gs_blend_type::GS_BLEND_SRCALPHA,
+			gs_blend_type::GS_BLEND_INVSRCALPHA);
 		while (gs_effect_loop(defaultEffect, "Draw")) {
 			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
 				"image"), mask_tex);
 			gs_draw_sprite(mask_tex, 0, baseWidth, baseHeight);
 		}
-		gs_blend_state_pop();
-		gs_matrix_pop();
 	}
 
 	//FONTDEMO
@@ -790,6 +795,9 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// demo mode render stuff
 	demoModeRender(vidTex, mask_tex, mask_data);
+
+	gs_blend_state_pop();
+	gs_samplerstate_destroy(ss);
 
 	// 1 frame only
 	demoModeMaskJustChanged = false;
@@ -1088,8 +1096,6 @@ void Plugin::FaceMaskFilter::Instance::drawMaskData(const smll::DetectionResult&
 	float aspect = (float)baseWidth / (float)baseHeight;
 	gs_perspective(FOVA(aspect), aspect, NEAR_Z, FAR_Z);
 
-	gs_enable_stencil_test(false);
-
 	gs_matrix_push();
 	gs_matrix_identity();
 	gs_matrix_translate3f((float)face.pose.translation[0],
@@ -1344,7 +1350,6 @@ void Plugin::FaceMaskFilter::Instance::LoadDemo() {
 Mask::MaskData*
 Plugin::FaceMaskFilter::Instance::LoadMask(std::string filename) {
 
-	obs_enter_graphics();
 	PLOG_INFO("Loading mask '%s'...", filename.c_str());
 
 	// new mask data
@@ -1356,10 +1361,8 @@ Plugin::FaceMaskFilter::Instance::LoadMask(std::string filename) {
 		PLOG_INFO("Loading mask '%s' successful!", filename.c_str());
 	}
 	catch (...) {
-		obs_leave_graphics();
 		PLOG_ERROR("Failed to load mask %s.", filename.c_str());
 	}
-	obs_leave_graphics();
 
 	return mdat;
 }
@@ -1558,6 +1561,38 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 	bfree(gifmaker);
 }
 
+void Plugin::FaceMaskFilter::Instance::WriteTextureToFile(gs_texture* tex, std::string filename) {
+	cv::Mat vidf(baseWidth, baseHeight, CV_8UC4);
+
+	if (!testingStage) {
+		testingStage = gs_stagesurface_create(baseWidth, baseHeight, GS_RGBA);
+	}
+
+	// get vid tex
+	gs_stage_texture(testingStage, tex);
+	uint8_t *data; uint32_t linesize;
+	if (gs_stagesurface_map(testingStage, &data, &linesize)) {
+
+		cv::Mat cvm = cv::Mat(baseHeight, baseWidth, CV_8UC4, data, linesize);
+		cvm.copyTo(vidf);
+
+		gs_stagesurface_unmap(testingStage);
+	}
+
+	// convert rgba -> bgra
+	uint8_t* vpixel = vidf.data;
+	for (int w = 0; w < baseWidth; w++)
+		for (int h = 0; h < baseHeight; h++) {
+			uint8_t red = vpixel[0];
+			uint8_t blue = vpixel[2];
+			vpixel[0] = blue;
+			vpixel[2] = red;
+			vpixel += 4;
+		}
+
+	// wrap & write
+	cv::imwrite(filename.c_str(), vidf);
+}
 
 Plugin::FaceMaskFilter::Instance::PreviewFrame::PreviewFrame(gs_texture_t* v, 
 	int w, int h) {
