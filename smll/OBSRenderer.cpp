@@ -742,10 +742,10 @@ namespace smll {
 
 		for (int i = 0; i < fonts.size(); i++) {
 			OBSFont* font = fonts[i];
-			std::vector<std::string> lines = font->BreakIntoLines(text, tex_width);
+			int line_count = font->CountNumLines(text, tex_width);
 			int num_lines = tex_height / font->GetHeight();
-			if (lines.size() <= num_lines) {
-				return RenderTextToTexture(lines, tex_width, tex_height, font);
+			if (line_count <= num_lines) {
+				return RenderTextToTexture(text, tex_width, tex_height, font);
 			}
 		}
 
@@ -754,11 +754,6 @@ namespace smll {
 
 	gs_texture*	OBSRenderer::RenderTextToTexture(const std::vector<std::string>& lines,
 		int tex_width, int tex_height, OBSFont* font) {
-
-		blog(LOG_DEBUG, "----- RENDERING TEXT ----");
-		for (int i = 0; i < lines.size(); i++) {
-			blog(LOG_DEBUG, "%02d : %s", i, lines[i].c_str());
-		}
 
 		gs_matrix_push();
 		gs_projection_push();

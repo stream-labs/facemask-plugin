@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <unordered_map>
 #include <tiny_obj_loader.h>
+#include <opencv2/opencv.hpp>
 extern "C" {
 	#pragma warning( push )
 	#pragma warning( disable: 4201 )
@@ -262,4 +263,62 @@ vec3 Mask::Resource::Mesh::CalculateTangent(const GS::Vertex& v1,
 
 	return normalized;
 }
+
+bool Mask::Resource::Mesh::GetScreenExtents(gs_rect* r, int screen_width, int screen_height, float trsZ) {
+	gs_vb_data* vb_data = nullptr;
+	if (m_VertexBuffer)
+		vb_data = m_VertexBuffer->get_data();
+	if (vb_data) {
+
+		// TODO: find our part transform and apply it first
+
+		// get points
+		std::vector<cv::Point3f> points;
+		for (int i = 0; i < vb_data->num; i++) {
+			points.emplace_back(cv::Point3f(vb_data->points[i].x, vb_data->points[i].y, vb_data->points[i].z));
+		}
+
+		// Approximate focal length.
+		float focal_length = (float)screen_width;
+		cv::Point2f center = cv::Point2f(screen_width / 2.0f, screen_height / 2.0f);
+		cv::Mat camera_matrix =
+			(cv::Mat_<float>(3, 3) <<
+				focal_length, 0, center.x,
+				0, focal_length, center.y,
+				0, 0, 1);
+		// We assume no lens distortion
+		cv::Mat dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<float>::type);
+
+		cv::Mat rot = cv::Mat::zeros(3, 1, cv::DataType<float>::type);
+		cv::Mat trx = (cv::Mat_<float>(3, 1) << 0, 0, trsZ);
+
+		// project
+		std::vector<cv::Point2f> projpoints;
+		cv::projectPoints(points, rot, trx, camera_matrix, dist_coeffs, projpoints);
+
+		// get extents
+		int x_min = screen_width;
+		int x_max = 0;
+		int y_min = screen_height;
+		int y_max = 0;
+		for (int i = 0; i < projpoints.size(); i++) {
+			int x = (int)projpoints[i].x;
+			int y = (int)projpoints[i].y;
+			if (x < x_min) x_min = x;
+			if (y < y_min) y_min = y;
+			if (x > x_max) x_max = x;
+			if (y > y_max) y_max = y;
+		}
+
+		// set rect
+		r->x = x_min;
+		r->y = y_min;
+		r->cx = x_max - x_min;
+		r->cy = y_max - y_min;
+
+		return true;
+	}
+	return false;
+}
+
 

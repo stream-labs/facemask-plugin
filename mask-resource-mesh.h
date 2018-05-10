@@ -40,6 +40,8 @@ namespace Mask {
 
 			vec4 GetCenter() { return m_center; }
 
+			bool GetScreenExtents(gs_rect* r, int screen_width, int screen_height, float trsZ);
+
 		private:
 			void LoadObj(std::string file);
 

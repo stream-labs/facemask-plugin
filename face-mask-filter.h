@@ -149,9 +149,21 @@ namespace Plugin {
 			std::mutex			maskDataMutex;
 			std::unique_ptr<Mask::MaskData>	maskData;
 
+			// alert location
+			enum AlertLocation {
+				UPPER_LEFT,
+				UPPER_RIGHT,
+				BOTTOM_LEFT,
+				BOTTOM_RIGHT,
+
+				NUM_ALERT_LOCATIONS
+			};
+
 			// alert data
 			std::string			alertText;
-			std::unique_ptr<Mask::MaskData>	alertMaskData;
+			std::string			renderedAlertText;
+			AlertLocation		currentAlertLocation;
+			std::unique_ptr<Mask::MaskData>	alertMaskDatas[AlertLocation::NUM_ALERT_LOCATIONS];
 			bool				alertsLoaded;
 
 			// demo mode

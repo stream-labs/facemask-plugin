@@ -46,6 +46,7 @@ namespace smll {
 		int GetSize() const { return m_size; }
 		int GetHeight() const { return m_height; }
 
+		int CountNumLines(const std::string& text, int max_width) const;
 		std::vector<std::string> BreakIntoLines(const std::string& text, int max_width) const;
 
 	private:

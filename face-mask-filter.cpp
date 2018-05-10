@@ -139,11 +139,12 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	: source(source), canvasWidth(0), canvasHeight(0), baseWidth(640), baseHeight(480), 
 	isActive(true), isVisible(true), isDisabled(false), videoTicked(true),
 	taskHandle(NULL), memcpyEnv(nullptr), detectStage(nullptr),
-	maskDataShutdown(false), maskJsonFilename(nullptr), maskData(nullptr),
+	maskDataShutdown(false), maskJsonFilename(nullptr), maskData(nullptr), 
+	currentAlertLocation(UPPER_LEFT), alertsLoaded(false),
 	demoModeOn(false), demoModeMaskJustChanged(false), demoModeMaskChanged(false), 
 	demoCurrentMask(0), demoModeInterval(0.0f), demoModeDelay(0.0f), demoModeElapsed(0.0f), 
-	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), drawMask(true),	
-	drawFaces(false), drawMorphTris(false), drawFDRect(false), drawVideo(true),
+	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), 
+	drawMask(true),	drawFaces(false), drawMorphTris(false), drawFDRect(false), drawVideo(true),
 	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr) {
 
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
@@ -561,8 +562,8 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 		}
 	}
 
-	if (alertsLoaded && alertMaskData) {
-		alertMaskData->Tick(timeDelta);
+	if (alertsLoaded && alertMaskDatas[currentAlertLocation]) {
+		alertMaskDatas[currentAlertLocation]->Tick(timeDelta);
 	}
 }
 
@@ -787,15 +788,35 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// render alert?
 	gs_texture* alert_tex = nullptr;
-	if (alertsLoaded && alertMaskData) {
+	if (alertsLoaded && alertMaskDatas[currentAlertLocation]) {
 
 		if (videoTicked) {
-			// Render text to texture
-			gs_texture* tex = smllRenderer->RenderTextToTexture(alertText, 512, 256, smllFonts);
-			// Swap texture
-			std::shared_ptr<Mask::Resource::Image> img = std::dynamic_pointer_cast<Mask::Resource::Image>
-				(alertMaskData->GetResource("diffuse-1"));
-			img->SwapTexture(tex);
+
+			if (renderedAlertText != alertText) {
+				// get screen extents of text mesh
+				bool got_extents = false;
+				gs_rect r = { 0, 0, 512, 256 };
+				std::shared_ptr<Mask::Resource::Mesh> mesh = std::dynamic_pointer_cast<Mask::Resource::Mesh>
+					(alertMaskDatas[currentAlertLocation]->GetResource("mesh1"));
+				if (mesh) {
+					got_extents = mesh->GetScreenExtents(&r, canvasWidth / 3, canvasHeight / 2, -35.0f);
+					r.cx = (int)ALIGN_4(r.cx);
+					r.cy = (int)ALIGN_4(r.cy);
+				}
+
+				// Render text to texture
+				gs_texture* tex = smllRenderer->RenderTextToTexture(alertText, r.cx, r.cy, smllFonts);
+
+				// Swap texture
+				std::shared_ptr<Mask::Resource::Image> img = std::dynamic_pointer_cast<Mask::Resource::Image>
+					(alertMaskDatas[currentAlertLocation]->GetResource("diffuse-1"));
+				if (img)
+					img->SwapTexture(tex);
+
+				// done
+				if (got_extents)
+					renderedAlertText = alertText;
+			}
 
 			// draw stuff to texture
 			gs_texrender_reset(alertTexRender);
@@ -810,7 +831,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				gs_matrix_push();
 				gs_matrix_identity();
 				gs_matrix_translate3f(0.0f, 0.0f, -35.0f);
-				drawMaskData(alertMaskData.get(), false, true);
+				drawMaskData(alertMaskDatas[currentAlertLocation].get(), false, true);
 				gs_matrix_pop();
 
 				gs_texrender_end(alertTexRender);
@@ -964,7 +985,7 @@ void Plugin::FaceMaskFilter::Instance::demoModeRender(gs_texture* vidTex, gs_tex
 
 gs_texture_t* Plugin::FaceMaskFilter::Instance::FindCachedFrame(const TimeStamp& ts) {
 	int i = FindCachedFrameIndex(ts);
-	if (i > 1)
+	if (i >= 0)
 		return detection.frames[i].capture.texture;
 	return nullptr;
 }
@@ -1358,7 +1379,10 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 	//bfree(alert_filename);
 
 	// DEBUG : load direct 
-	alertMaskData = std::unique_ptr<Mask::MaskData>(LoadMask("c:/STREAMLABS/slart/alerts/alert_test_LT.json"));
+	alertMaskDatas[AlertLocation::UPPER_LEFT] = std::unique_ptr<Mask::MaskData>(LoadMask("c:/STREAMLABS/slart/alerts/alert_test_LT.json"));
+	alertMaskDatas[AlertLocation::UPPER_RIGHT] = std::unique_ptr<Mask::MaskData>(LoadMask("c:/STREAMLABS/slart/alerts/alert_test_RT.json"));
+	alertMaskDatas[AlertLocation::BOTTOM_LEFT] = std::unique_ptr<Mask::MaskData>(LoadMask("c:/STREAMLABS/slart/alerts/alert_test_LB.json"));
+	alertMaskDatas[AlertLocation::BOTTOM_LEFT] = std::unique_ptr<Mask::MaskData>(LoadMask("c:/STREAMLABS/slart/alerts/alert_test_RB.json"));
 	alertsLoaded = true;
 
 	// Loading loop
