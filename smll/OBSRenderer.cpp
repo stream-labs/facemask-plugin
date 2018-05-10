@@ -730,15 +730,35 @@ namespace smll {
 	}
 
 	gs_texture*	OBSRenderer::RenderTextToTexture(const std::string& text,
-		int tex_width, int tex_height, OBSFont& font) {
+		int tex_width, int tex_height, OBSFont* font) {
 
-		std::vector<std::string> lines = font.BreakIntoLines(text, tex_width);
+		std::vector<std::string> lines = font->BreakIntoLines(text, tex_width);
 
 		return RenderTextToTexture(lines, tex_width, tex_height, font);
 	}
 
+	gs_texture*	OBSRenderer::RenderTextToTexture(const std::string& text,
+		int tex_width, int tex_height, std::vector<OBSFont*>& fonts) {
+
+		for (int i = 0; i < fonts.size(); i++) {
+			OBSFont* font = fonts[i];
+			std::vector<std::string> lines = font->BreakIntoLines(text, tex_width);
+			int num_lines = tex_height / font->GetHeight();
+			if (lines.size() <= num_lines) {
+				return RenderTextToTexture(lines, tex_width, tex_height, font);
+			}
+		}
+
+		return RenderTextToTexture(text, tex_width, tex_height, fonts[fonts.size() - 1]);
+	}
+
 	gs_texture*	OBSRenderer::RenderTextToTexture(const std::vector<std::string>& lines,
-		int tex_width, int tex_height, OBSFont& font) {
+		int tex_width, int tex_height, OBSFont* font) {
+
+		blog(LOG_DEBUG, "----- RENDERING TEXT ----");
+		for (int i = 0; i < lines.size(); i++) {
+			blog(LOG_DEBUG, "%02d : %s", i, lines[i].c_str());
+		}
 
 		gs_matrix_push();
 		gs_projection_push();
@@ -755,10 +775,10 @@ namespace smll {
 		gs_blend_function(gs_blend_type::GS_BLEND_SRCALPHA,
 			gs_blend_type::GS_BLEND_INVSRCALPHA);
 
-		float y = (float)font.GetHeight();
-		//float height = font.GetHeight() * lines.size();
-		//if (height < tex_height)
-		//	y = (tex_height - height + font.GetHeight()) / 2.0f;
+		float y = (float)font->GetHeight();
+		float height = font->GetHeight() * lines.size();
+		if (height < tex_height)
+			y += (tex_height - height) / 2.0f;
 
 		gs_texrender_reset(drawTexRender);
 		if (gs_texrender_begin(drawTexRender, tex_width, tex_height)) {
@@ -769,9 +789,9 @@ namespace smll {
 			gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
 
 			for (int i = 0; i < lines.size(); i++) {
-				float x = (tex_width - font.GetTextWidth(lines[i])) / 2;
-				font.RenderText(lines[i], x, y);
-				y += font.GetHeight();
+				float x = (tex_width - font->GetTextWidth(lines[i])) / 2;
+				font->RenderText(lines[i], x, y);
+				y += font->GetHeight();
 			}
 
 			gs_texrender_end(drawTexRender);

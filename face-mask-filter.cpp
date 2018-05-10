@@ -72,6 +72,9 @@
 // Maximum for number of masks loaded in demo mode
 #define DEMO_MODE_MAX_MASKS				(400)
 
+static const int NUM_FONT_SIZES = 8;
+static const int FONT_SIZES[NUM_FONT_SIZES] = { 200, 120, 80, 62, 50, 42, 36, 30 };
+
 static float FOVA(float aspect) {
 	// field of view angle matched to focal length for solvePNP
 	return 56.0f / aspect;
@@ -161,7 +164,10 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 
 	// Fonts
 	char* fontname = obs_module_file(kFontAlertTTF);
-	smllFont = new smll::OBSFont(fontname, 80);
+	for (int i = 0; i < NUM_FONT_SIZES; i++) {
+		smll::OBSFont* smllFont = new smll::OBSFont(fontname, FONT_SIZES[i]);
+		smllFonts.emplace_back(smllFont);
+	}
 	bfree(fontname);
 
 	// set our mm thread task
@@ -251,8 +257,9 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 
 	delete smllFaceDetector;
 	delete smllRenderer;
-	delete smllFont;
-
+	for (int i = 0; i < NUM_FONT_SIZES; i++) {
+		delete smllFonts[i];
+	}
 	if (memcpyEnv)
 		destroy_threaded_memcpy_pool(memcpyEnv);
 
@@ -784,7 +791,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 		if (videoTicked) {
 			// Render text to texture
-			gs_texture* tex = smllRenderer->RenderTextToTexture(alertText, 512, 256, *smllFont);
+			gs_texture* tex = smllRenderer->RenderTextToTexture(alertText, 512, 256, smllFonts);
 			// Swap texture
 			std::shared_ptr<Mask::Resource::Image> img = std::dynamic_pointer_cast<Mask::Resource::Image>
 				(alertMaskData->GetResource("diffuse-1"));

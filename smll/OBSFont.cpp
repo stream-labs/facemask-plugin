@@ -43,8 +43,8 @@
 #include "utils.h"
 #include <opencv2/opencv.hpp>
 
-#define MAX_TEXTURE_WIDTH	(1024)
-#define MAX_TEXTURE_HEIGHT	(1024)
+#define MAX_TEXTURE_WIDTH	(2048)
+#define MAX_TEXTURE_HEIGHT	(2048)
 #define MAX_TEXTURE_SIZE	(MAX_TEXTURE_WIDTH * MAX_TEXTURE_HEIGHT)
 
 #pragma warning( pop )
@@ -226,12 +226,8 @@ namespace smll {
 		vec4_set(&color, 0.0f, 0.0f, 0.0f, 1.0f);
 
 		gs_enable_blending(true);
-		gs_blend_function_separate(
-			gs_blend_type::GS_BLEND_SRCALPHA,
-			gs_blend_type::GS_BLEND_INVSRCALPHA,
-			gs_blend_type::GS_BLEND_SRCALPHA,
-			gs_blend_type::GS_BLEND_INVSRCALPHA
-		);
+		gs_blend_function(gs_blend_type::GS_BLEND_SRCALPHA,
+			gs_blend_type::GS_BLEND_INVSRCALPHA);
 
 		std::string::const_iterator c;
 		for (c = text.begin(); c != text.end(); c++) {

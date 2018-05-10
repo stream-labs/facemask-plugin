@@ -130,7 +130,7 @@ namespace Plugin {
 			smll::OBSRenderer*		smllRenderer;
 
 			//FONTDEMO
-			smll::OBSFont*			smllFont;
+			std::vector<smll::OBSFont*>		smllFonts;
 
 			gs_texrender_t*		sourceRenderTarget;
 			gs_texrender_t*		drawTexRender;
