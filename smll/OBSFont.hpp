@@ -66,7 +66,8 @@ namespace smll {
 
 		void SetFont(const std::string& filename, int size);
 		void DestroyFontInfo();
-		void UpdateVertices(float w, float h, float u, float v);
+		void UpdateAndDrawVertices(float w, float h, 
+			float u1, float u2, float v1, float v2);
 	};
 
 }

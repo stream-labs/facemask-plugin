@@ -43,9 +43,9 @@
 #include "utils.h"
 #include <opencv2/opencv.hpp>
 
-#define MAX_TEXTURE_WIDTH	(2048)
-#define MAX_TEXTURE_HEIGHT	(2048)
-#define MAX_TEXTURE_SIZE	(MAX_TEXTURE_WIDTH * MAX_TEXTURE_HEIGHT * 4)
+#define MAX_TEXTURE_WIDTH	(1024)
+#define MAX_TEXTURE_HEIGHT	(1024)
+#define MAX_TEXTURE_SIZE	(MAX_TEXTURE_WIDTH * MAX_TEXTURE_HEIGHT)
 
 #pragma warning( pop )
 
@@ -127,8 +127,8 @@ namespace smll {
 
 		// temp buffer for texture data
 		char* textureData = new char[MAX_TEXTURE_SIZE];
-		cv::Mat dstMat = cv::Mat(MAX_TEXTURE_HEIGHT, MAX_TEXTURE_WIDTH, CV_8UC4,
-			textureData, MAX_TEXTURE_WIDTH * 4);
+		cv::Mat dstMat = cv::Mat(MAX_TEXTURE_HEIGHT, MAX_TEXTURE_WIDTH, CV_8UC1,
+			textureData);
 
 		// Let's do ascii 32 - 126
 		m_height = 0;
@@ -165,8 +165,8 @@ namespace smll {
 
 			// Copy bitmap 
 			if (face->glyph->bitmap.rows > 0 && face->glyph->bitmap.width > 0) {
-				cv::Mat srcMat = cv::Mat(face->glyph->bitmap.rows, face->glyph->bitmap.width, CV_8UC4,
-					face->glyph->bitmap.buffer, abs(face->glyph->bitmap.pitch));
+				cv::Mat srcMat = cv::Mat(face->glyph->bitmap.rows, face->glyph->bitmap.width, CV_8UC1,
+					face->glyph->bitmap.buffer, face->glyph->bitmap.pitch);
 				srcMat.copyTo(dstMat.rowRange(y, y + face->glyph->bitmap.rows).colRange(x, x + face->glyph->bitmap.width));
 				vec2_set(&(fi.pos), (float)x, (float)y);
 			}
@@ -175,9 +175,10 @@ namespace smll {
 			}
 
 			x += face->glyph->bitmap.width;
-
 			m_fontInfos.emplace_back(fi);
 		}
+
+		cv::imwrite("c:/temp/fuckyou.png", dstMat);
 
 		// Create the texture
 		obs_enter_graphics();
@@ -212,21 +213,24 @@ namespace smll {
 				continue;
 			const FontInfo& fi = m_fontInfos[idx];
 
-			float u = fi.pos.x / (float)(MAX_TEXTURE_WIDTH - 1);
-			float v = fi.pos.y / (float)(MAX_TEXTURE_HEIGHT - 1);
-			UpdateVertices((float)fi.size.x, (float)fi.size.y, u, v);
+			if (fi.size.x > 0 && fi.size.y > 0) {
+				float u1 = fi.pos.x / (float)(MAX_TEXTURE_WIDTH - 1);
+				float u2 = (fi.pos.x + fi.size.x) / (float)(MAX_TEXTURE_WIDTH - 1);
+				float v1 = fi.pos.y / (float)(MAX_TEXTURE_HEIGHT - 1);
+				float v2 = (fi.pos.y + fi.size.y) / (float)(MAX_TEXTURE_HEIGHT - 1);
 
-			gs_matrix_push();
-			gs_matrix_translate3f(xx + fi.bearing.x, y + fi.bearing.y, 0.0f);
-			while (gs_effect_loop(m_effect, "Draw")) {
-				gs_effect_set_vec4(gs_effect_get_param_by_name(m_effect,
-					"color"), &color);
-				gs_effect_set_texture(gs_effect_get_param_by_name(m_effect,
-					"image"), m_texture);
-				
-				gs_draw(GS_TRISTRIP, 0, 0);
+				gs_matrix_push();
+				gs_matrix_translate3f(xx + fi.bearing.x, y + fi.bearing.y, 0.0f);
+				while (gs_effect_loop(m_effect, "Draw")) {
+					gs_effect_set_vec4(gs_effect_get_param_by_name(m_effect,
+						"color"), &color);
+					gs_effect_set_texture(gs_effect_get_param_by_name(m_effect,
+						"image"), m_texture);
+
+					UpdateAndDrawVertices((float)fi.size.x, (float)fi.size.y, u1, u2, v1, v2);
+				}
+				gs_matrix_pop();
 			}
-			gs_matrix_pop();
 			xx += fi.advance;
 		}
 	}
@@ -279,21 +283,23 @@ namespace smll {
 		return lines;
 	}
 
-	void OBSFont::UpdateVertices(float w, float h, float u, float v) {
+	void OBSFont::UpdateAndDrawVertices(float w, float h, 
+		float u1, float u2, float v1, float v2) {
 		vec3_set(&(m_vertexData->points[0]), 0.0f, 0.0f, 0.0f);
 		vec3_set(&(m_vertexData->points[1]), w, 0.0f, 0.0f);
 		vec3_set(&(m_vertexData->points[2]), 0.0f, h, 0.0f);
 		vec3_set(&(m_vertexData->points[3]), w, h, 0.0f);
 
 		vec2* uvs = (vec2*)m_vertexData->tvarray[0].array;
-		vec2_set(&(uvs[0]), 0.0f, 0.0f);
-		vec2_set(&(uvs[0]), u, 0.0f);
-		vec2_set(&(uvs[0]), 0.0f, v);
-		vec2_set(&(uvs[0]), u, v);
+		vec2_set(&(uvs[0]), u1, v1);
+		vec2_set(&(uvs[1]), u2, v1);
+		vec2_set(&(uvs[2]), u1, v2);
+		vec2_set(&(uvs[3]), u2, v2);
 
 		gs_vertexbuffer_flush(m_vertexBuffer);
 		gs_load_vertexbuffer(m_vertexBuffer);
 		gs_load_indexbuffer(NULL);
+		gs_draw(GS_TRISTRIP, 0, 0);
 	}
 
 }
