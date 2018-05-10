@@ -56,8 +56,7 @@
 
 namespace smll {
 
-	OBSFont::OBSFont(const std::string& filename, int size)
-	: m_texture(nullptr) {
+	OBSFont::OBSFont(const std::string& filename, int size) {
 
 		// make our own sprite vertex buffer
 		m_vertexData = gs_vbdata_create();
@@ -85,6 +84,10 @@ namespace smll {
 		m_vertexBuffer = gs_vertexbuffer_create(m_vertexData, GS_DYNAMIC);
 		obs_leave_graphics();
 
+		m_texture.width = 0;
+		m_texture.height = 0;
+		m_texture.texture = nullptr;
+
 		SetFont(filename, size);
 	}
 
@@ -99,9 +102,12 @@ namespace smll {
 
 	void OBSFont::DestroyFontInfo() {
 		obs_enter_graphics();
-		gs_texture_destroy(m_texture);
+		if (m_texture.texture)
+			gs_texture_destroy(m_texture.texture);
 		obs_leave_graphics();
-		m_texture = nullptr;
+		m_texture.width = 0;
+		m_texture.height = 0;
+		m_texture.texture = nullptr;
 		m_fontInfos.clear();
 	}
 
@@ -130,8 +136,12 @@ namespace smll {
 		cv::Mat dstMat = cv::Mat(MAX_TEXTURE_HEIGHT, MAX_TEXTURE_WIDTH, CV_8UC1,
 			textureData);
 
+		// figure a reasonable width
+		int reasonable_width = size * 10;
+
 		// Let's do ascii 32 - 126
 		m_height = 0;
+		int actual_width = 0;
 		int row_height = 0;
 		int x = 0;
 		int y = 0;
@@ -151,7 +161,9 @@ namespace smll {
 				row_height = face->glyph->bitmap.rows;
 
 			// End of line?
-			if ((x + face->glyph->bitmap.width) > MAX_TEXTURE_WIDTH) {
+			if ((x + face->glyph->bitmap.width) > reasonable_width) {
+				if (x > actual_width)
+					actual_width = x;
 				x = 0;
 				y += row_height;
 				row_height = 0;
@@ -178,15 +190,30 @@ namespace smll {
 			m_fontInfos.emplace_back(fi);
 		}
 
-		cv::imwrite("c:/temp/fuckyou.png", dstMat);
+		int actual_height = y + row_height;
+
+		// Create actual texture data
+		actual_width = (int)ALIGN_16(actual_width);
+		actual_height = (int)ALIGN_16(actual_height);
+		char* actualTextureData = new char[actual_width * actual_height];
+		cv::Mat actualMat = cv::Mat(actual_height, actual_width, CV_8UC1,
+			actualTextureData);
+		dstMat.rowRange(0, actual_height).colRange(0, actual_width).copyTo(actualMat);
+
+		// DEBUG: write out image
+		char temp[256];
+		snprintf(temp, sizeof(temp), "c:/temp/font-%d.png", size);
+		cv::imwrite(temp, actualMat);
 
 		// Create the texture
 		obs_enter_graphics();
-		m_texture = gs_texture_create(face->glyph->bitmap.width,
-			face->glyph->bitmap.rows, GS_R8, 1,
-			(const uint8_t**)&textureData, 0);
+		m_texture.width = actual_width;
+		m_texture.height = actual_height;
+		m_texture.texture = gs_texture_create(actual_width, actual_height, GS_R8, 1,
+			(const uint8_t**)&actualTextureData, 0);
 		obs_leave_graphics();
 		delete[] textureData;
+		delete[] actualTextureData;
 
 		// Destroy FreeType once we're finished
 		FT_Done_Face(face);
@@ -214,10 +241,17 @@ namespace smll {
 			const FontInfo& fi = m_fontInfos[idx];
 
 			if (fi.size.x > 0 && fi.size.y > 0) {
-				float u1 = fi.pos.x / (float)(MAX_TEXTURE_WIDTH - 1);
-				float u2 = (fi.pos.x + fi.size.x) / (float)(MAX_TEXTURE_WIDTH - 1);
-				float v1 = fi.pos.y / (float)(MAX_TEXTURE_HEIGHT - 1);
-				float v2 = (fi.pos.y + fi.size.y) / (float)(MAX_TEXTURE_HEIGHT - 1);
+				float u1 = fi.pos.x / (float)(m_texture.width - 1);
+				float u2 = (fi.pos.x + fi.size.x) / (float)(m_texture.width - 1);
+				float v1 = fi.pos.y / (float)(m_texture.height - 1);
+				float v2 = (fi.pos.y + fi.size.y) / (float)(m_texture.height - 1);
+
+				float halfU = 0.5f / (float)(m_texture.width - 1);
+				float halfV = 0.5f / (float)(m_texture.height - 1);
+				u1 += halfU;
+				u2 -= halfU;
+				v1 += halfV;
+				v2 -= halfV;
 
 				gs_matrix_push();
 				gs_matrix_translate3f(xx + fi.bearing.x, y + fi.bearing.y, 0.0f);
@@ -225,8 +259,7 @@ namespace smll {
 					gs_effect_set_vec4(gs_effect_get_param_by_name(m_effect,
 						"color"), &color);
 					gs_effect_set_texture(gs_effect_get_param_by_name(m_effect,
-						"image"), m_texture);
-
+						"image"), m_texture.texture);
 					UpdateAndDrawVertices((float)fi.size.x, (float)fi.size.y, u1, u2, v1, v2);
 				}
 				gs_matrix_pop();

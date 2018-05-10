@@ -30,6 +30,7 @@ extern "C" {
 
 #include <vector>
 #include <string>
+#include "smll/OBSTexture.hpp"
 
 namespace smll {
 
@@ -57,7 +58,7 @@ namespace smll {
 		};
 
 		gs_effect_t*			m_effect;
-		gs_texture_t*			m_texture;
+		OBSTexture				m_texture;
 		gs_vb_data*				m_vertexData;
 		gs_vertbuffer_t*		m_vertexBuffer;
 		std::vector<FontInfo>	m_fontInfos;
