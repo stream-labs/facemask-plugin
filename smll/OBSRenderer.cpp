@@ -749,6 +749,11 @@ namespace smll {
 		gs_ortho(0.0f, (float)tex_width, 0.0f, (float)tex_height, 0.0f, 100.0f);
 
 		gs_set_cull_mode(GS_NEITHER);
+		gs_enable_blending(true);
+		gs_enable_depth_test(false);
+		gs_enable_color(true, true, true, true);
+		gs_blend_function(gs_blend_type::GS_BLEND_SRCALPHA,
+			gs_blend_type::GS_BLEND_INVSRCALPHA);
 
 		float y = font.GetHeight();
 		//float height = font.GetHeight() * lines.size();
