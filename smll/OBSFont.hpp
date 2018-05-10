@@ -40,7 +40,7 @@ namespace smll {
 		OBSFont(const std::string& filename="c:/Windows/Fonts/Arial.ttf", int size=48);
 		~OBSFont();
 
-		void RenderText(const std::string& text, float x, float y) const;
+		void RenderText(const std::string& text, float x, float y);
 		float GetTextWidth(const std::string& text) const;
 		int GetSize() const { return m_size; }
 		int GetHeight() const { return m_height; }
@@ -50,19 +50,23 @@ namespace smll {
 	private:
 		class FontInfo {
 		public:
-			gs_texture_t*	texture;
+			vec2			pos;
 			vec2			size;
 			vec2			bearing;
 			float			advance;
 		};
 
 		gs_effect_t*			m_effect;
+		gs_texture_t*			m_texture;
+		gs_vb_data*				m_vertexData;
+		gs_vertbuffer_t*		m_vertexBuffer;
 		std::vector<FontInfo>	m_fontInfos;
 		int						m_size;
 		int						m_height;
 
 		void SetFont(const std::string& filename, int size);
 		void DestroyFontInfo();
+		void UpdateVertices(float w, float h, float u, float v);
 	};
 
 }

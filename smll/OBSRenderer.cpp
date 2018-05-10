@@ -730,7 +730,7 @@ namespace smll {
 	}
 
 	gs_texture*	OBSRenderer::RenderTextToTexture(const std::string& text,
-		int tex_width, int tex_height, const OBSFont& font) {
+		int tex_width, int tex_height, OBSFont& font) {
 
 		std::vector<std::string> lines = font.BreakIntoLines(text, tex_width);
 
@@ -738,7 +738,7 @@ namespace smll {
 	}
 
 	gs_texture*	OBSRenderer::RenderTextToTexture(const std::vector<std::string>& lines,
-		int tex_width, int tex_height, const OBSFont& font) {
+		int tex_width, int tex_height, OBSFont& font) {
 
 		gs_matrix_push();
 		gs_projection_push();
@@ -750,7 +750,7 @@ namespace smll {
 
 		gs_set_cull_mode(GS_NEITHER);
 
-		float y = font.GetHeight();
+		float y = (float)font.GetHeight();
 		//float height = font.GetHeight() * lines.size();
 		//if (height < tex_height)
 		//	y = (tex_height - height + font.GetHeight()) / 2.0f;

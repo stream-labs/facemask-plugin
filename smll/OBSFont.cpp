@@ -41,7 +41,11 @@
 #include <libobs/graphics/image-file.h>
 #include <tiny_obj_loader.h>
 #include "utils.h"
+#include <opencv2/opencv.hpp>
 
+#define MAX_TEXTURE_WIDTH	(2048)
+#define MAX_TEXTURE_HEIGHT	(2048)
+#define MAX_TEXTURE_SIZE	(MAX_TEXTURE_WIDTH * MAX_TEXTURE_HEIGHT * 4)
 
 #pragma warning( pop )
 
@@ -52,8 +56,21 @@
 
 namespace smll {
 
-	OBSFont::OBSFont(const std::string& filename, int size) {
-		
+	OBSFont::OBSFont(const std::string& filename, int size)
+	: m_texture(nullptr) {
+
+		// make our own sprite vertex buffer
+		m_vertexData = gs_vbdata_create();
+		m_vertexData->num = 4;
+		m_vertexData->points = (vec3*)bmalloc(sizeof(struct vec3) * 4);
+		m_vertexData->num_tex = 1;
+		m_vertexData->tvarray = (gs_tvertarray*)bmalloc(sizeof(struct gs_tvertarray));
+		m_vertexData->tvarray[0].width = 2;
+		m_vertexData->tvarray[0].array = bmalloc(sizeof(struct vec2) * 4);
+		memset(m_vertexData->points, 0, sizeof(struct vec3) * 4);
+		memset(m_vertexData->tvarray[0].array, 0, sizeof(struct vec2) * 4);
+
+		// GS stuff
 		obs_enter_graphics();
 		char* f = obs_module_file("effects/color_alpha_tex.effect");
 		char* errorMessage = nullptr;
@@ -65,6 +82,7 @@ namespace smll {
 			throw std::runtime_error(error);
 		}
 		bfree(f);
+		m_vertexBuffer = gs_vertexbuffer_create(m_vertexData, GS_DYNAMIC);
 		obs_leave_graphics();
 
 		SetFont(filename, size);
@@ -74,17 +92,16 @@ namespace smll {
 		DestroyFontInfo();
 		obs_enter_graphics();
 		gs_effect_destroy(m_effect);
+		gs_vertexbuffer_destroy(m_vertexBuffer);
+		gs_vbdata_destroy(m_vertexData);
 		obs_leave_graphics();
 	}
 
 	void OBSFont::DestroyFontInfo() {
 		obs_enter_graphics();
-		for (int i = 0; i < m_fontInfos.size(); i++) {
-			if (m_fontInfos[i].texture) {
-				gs_texture_destroy(m_fontInfos[i].texture);
-			}
-		}
+		gs_texture_destroy(m_texture);
 		obs_leave_graphics();
+		m_texture = nullptr;
 		m_fontInfos.clear();
 	}
 
@@ -108,10 +125,16 @@ namespace smll {
 
 		DestroyFontInfo();
 
-		obs_enter_graphics();
+		// temp buffer for texture data
+		char* textureData = new char[MAX_TEXTURE_SIZE];
+		cv::Mat dstMat = cv::Mat(MAX_TEXTURE_HEIGHT, MAX_TEXTURE_WIDTH, CV_8UC4,
+			textureData, MAX_TEXTURE_WIDTH * 4);
 
 		// Let's do ascii 32 - 126
 		m_height = 0;
+		int row_height = 0;
+		int x = 0;
+		int y = 0;
 		for (char c = 32; c < 127; c++)
 		{
 			// Load character glyph 
@@ -121,31 +144,55 @@ namespace smll {
 				continue;
 			}
 
+			// Maximum heights
 			if (face->glyph->bitmap.rows > m_height)
 				m_height = face->glyph->bitmap.rows;
+			if (face->glyph->bitmap.rows > row_height)
+				row_height = face->glyph->bitmap.rows;
 
+			// End of line?
+			if ((x + face->glyph->bitmap.width) > MAX_TEXTURE_WIDTH) {
+				x = 0;
+				y += row_height;
+				row_height = 0;
+			}
+
+			// Create font info
 			FontInfo fi;
 			vec2_set(&(fi.size), (float)face->glyph->bitmap.width, (float)face->glyph->bitmap.rows);
 			vec2_set(&(fi.bearing), (float)face->glyph->bitmap_left, (float)-face->glyph->bitmap_top);
 			fi.advance = (float)face->glyph->advance.x / 64.0f; // advance is 1/64 pixels
-			fi.texture = nullptr;
+
+			// Copy bitmap 
 			if (face->glyph->bitmap.rows > 0 && face->glyph->bitmap.width > 0) {
-				fi.texture = gs_texture_create(face->glyph->bitmap.width,
-					face->glyph->bitmap.rows, GS_R8, 1,
-					(const uint8_t**)&(face->glyph->bitmap.buffer), 0);
+				cv::Mat srcMat = cv::Mat(face->glyph->bitmap.rows, face->glyph->bitmap.width, CV_8UC4,
+					face->glyph->bitmap.buffer, abs(face->glyph->bitmap.pitch));
+				srcMat.copyTo(dstMat.rowRange(y, y + face->glyph->bitmap.rows).colRange(x, x + face->glyph->bitmap.width));
+				vec2_set(&(fi.pos), (float)x, (float)y);
 			}
+			else {
+				vec2_set(&(fi.pos), (float)-1, (float)-1);
+			}
+
+			x += face->glyph->bitmap.width;
 
 			m_fontInfos.emplace_back(fi);
 		}
 
+		// Create the texture
+		obs_enter_graphics();
+		m_texture = gs_texture_create(face->glyph->bitmap.width,
+			face->glyph->bitmap.rows, GS_R8, 1,
+			(const uint8_t**)&textureData, 0);
 		obs_leave_graphics();
+		delete[] textureData;
 
 		// Destroy FreeType once we're finished
 		FT_Done_Face(face);
 		FT_Done_FreeType(ft);
 	}
 
-	void OBSFont::RenderText(const std::string& text, float xx, float y) const {
+	void OBSFont::RenderText(const std::string& text, float xx, float y) {
 
 		vec4 color;
 		vec4_set(&color, 0.0f, 0.0f, 0.0f, 1.0f);
@@ -165,18 +212,21 @@ namespace smll {
 				continue;
 			const FontInfo& fi = m_fontInfos[idx];
 
-			if (fi.texture) {
-				gs_matrix_push();
-				gs_matrix_translate3f(xx + fi.bearing.x, y + fi.bearing.y, 0.0f);
-				while (gs_effect_loop(m_effect, "Draw")) {
-					gs_effect_set_vec4(gs_effect_get_param_by_name(m_effect,
-						"color"), &color);
-					gs_effect_set_texture(gs_effect_get_param_by_name(m_effect,
-						"image"), fi.texture);
-					gs_draw_sprite(fi.texture, 0, (uint32_t)fi.size.x, (uint32_t)fi.size.y);
-				}
-				gs_matrix_pop();
+			float u = fi.pos.x / (float)(MAX_TEXTURE_WIDTH - 1);
+			float v = fi.pos.y / (float)(MAX_TEXTURE_HEIGHT - 1);
+			UpdateVertices((float)fi.size.x, (float)fi.size.y, u, v);
+
+			gs_matrix_push();
+			gs_matrix_translate3f(xx + fi.bearing.x, y + fi.bearing.y, 0.0f);
+			while (gs_effect_loop(m_effect, "Draw")) {
+				gs_effect_set_vec4(gs_effect_get_param_by_name(m_effect,
+					"color"), &color);
+				gs_effect_set_texture(gs_effect_get_param_by_name(m_effect,
+					"image"), m_texture);
+				
+				gs_draw(GS_TRISTRIP, 0, 0);
 			}
+			gs_matrix_pop();
 			xx += fi.advance;
 		}
 	}
@@ -218,7 +268,7 @@ namespace smll {
 			if (line.length() == 0) {
 				std::string word = words[word_idx];
 				words.erase(words.begin() + word_idx);
-				int split_idx = word.length() / 2;
+				int split_idx = (int)word.length() / 2;
 				words.insert(words.begin() + word_idx, word.substr(split_idx));
 				words.insert(words.begin() + word_idx, word.substr(0, split_idx));
 			}
@@ -228,4 +278,22 @@ namespace smll {
 		}
 		return lines;
 	}
+
+	void OBSFont::UpdateVertices(float w, float h, float u, float v) {
+		vec3_set(&(m_vertexData->points[0]), 0.0f, 0.0f, 0.0f);
+		vec3_set(&(m_vertexData->points[1]), w, 0.0f, 0.0f);
+		vec3_set(&(m_vertexData->points[2]), 0.0f, h, 0.0f);
+		vec3_set(&(m_vertexData->points[3]), w, h, 0.0f);
+
+		vec2* uvs = (vec2*)m_vertexData->tvarray[0].array;
+		vec2_set(&(uvs[0]), 0.0f, 0.0f);
+		vec2_set(&(uvs[0]), u, 0.0f);
+		vec2_set(&(uvs[0]), 0.0f, v);
+		vec2_set(&(uvs[0]), u, v);
+
+		gs_vertexbuffer_flush(m_vertexBuffer);
+		gs_load_vertexbuffer(m_vertexBuffer);
+		gs_load_indexbuffer(NULL);
+	}
+
 }

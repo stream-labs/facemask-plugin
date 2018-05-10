@@ -682,12 +682,11 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		triangulation.DestroyBuffers();
 	}
 
+	// flags
 	bool genThumbs = mask_data && demoModeOn &&
 		demoModeMaskChanged && demoModeGenPreviews && demoModeSavingFrames;
-
 	bool noDrawVideo = !autoBGRemoval &&
 		(faces.length == 0 || !drawMask || !mask_data || !videoTicked);
-
 
 	// render mask to texture
 	gs_texture* mask_tex = nullptr;
@@ -695,7 +694,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 		// only render once per video tick
 		if (videoTicked) {
-			// draw stuff to texture
+
+			// draw mask to texture
 			gs_texrender_reset(drawTexRender);
 			if (gs_texrender_begin(drawTexRender, baseWidth, baseHeight)) {
 
@@ -707,6 +707,15 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
 
 				if (drawMask && mask_data) {
+
+					// Swap texture with video texture :P
+					// TODO: we'd prefer to have the mask drawn on top
+					// TODO: this should be a feature!!
+					//std::shared_ptr<Mask::Resource::Image> img = std::dynamic_pointer_cast<Mask::Resource::Image>
+					//	(mask_data->GetResource("diffuse-1"));
+					//if (img)
+					//	img->SwapTexture(vidTex);
+
 					// Check here for no morph
 					if (!mask_data->GetMorph()) {
 						triangulation.DestroyBuffers();
@@ -774,7 +783,9 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	if (alertsLoaded && alertMaskData) {
 
 		if (videoTicked) {
+			// Render text to texture
 			gs_texture* tex = smllRenderer->RenderTextToTexture(alertText, 512, 256, *smllFont);
+			// Swap texture
 			std::shared_ptr<Mask::Resource::Image> img = std::dynamic_pointer_cast<Mask::Resource::Image>
 				(alertMaskData->GetResource("diffuse-1"));
 			img->SwapTexture(tex);
