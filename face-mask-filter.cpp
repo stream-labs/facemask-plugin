@@ -873,7 +873,7 @@ void Plugin::FaceMaskFilter::Instance::demoModeRender(gs_texture* vidTex, gs_tex
 
 gs_texture_t* Plugin::FaceMaskFilter::Instance::FindCachedFrame(const TimeStamp& ts) {
 	int i = FindCachedFrameIndex(ts);
-	if (i > 1)
+	if (i >= 0)
 		return detection.frames[i].capture.texture;
 	return nullptr;
 }
