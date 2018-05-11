@@ -107,6 +107,8 @@ namespace Mask {
 		void AddPart(const std::string& name, std::shared_ptr<Part> part);
 		std::shared_ptr<Part> GetPart(const std::string& name);
 		std::shared_ptr<Part> RemovePart(const std::string& name);
+		size_t GetNumParts();
+		std::shared_ptr<Part> GetPart(int index);
 
 		// main: tick & render
 		void Tick(float time);

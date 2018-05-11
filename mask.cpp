@@ -385,6 +385,25 @@ std::shared_ptr<Mask::Part> Mask::MaskData::RemovePart(const std::string& name) 
 	return el;
 }
 
+size_t Mask::MaskData::GetNumParts() { 
+	return m_parts.size(); 
+}
+
+std::shared_ptr<Mask::Part> Mask::MaskData::GetPart(int index) {
+	int count = 0;
+	std::shared_ptr<Mask::Part> el = nullptr;
+	std::map<std::string, std::shared_ptr<Part>>::iterator kv = m_parts.begin();
+	while (kv != m_parts.end()) {
+		if (count == index)
+			el = kv->second;
+		count++;
+		kv++;
+	}
+	return el;
+}
+
+
+
 void  Mask::MaskData::ClearSortedDrawObjects() {
 	SortedDrawObject** sdo = m_drawBuckets;
 	for (unsigned int i = 0; i < NUM_DRAW_BUCKETS; i++) {
@@ -525,7 +544,7 @@ void Mask::MaskData::Render(bool depthOnly) {
 		instanceDatas.Push(kv.second->hash_id);
 		gs_matrix_push();
 		gs_matrix_mul(&kv.second->global);
-		for (auto it = kv.second->resources.begin();
+		for (auto  it = kv.second->resources.begin();
 			it != kv.second->resources.end(); it++) {
 			if ((*it)->IsDepthOnly() == depthOnly) {
 				(*it)->Render(kv.second.get());
@@ -668,7 +687,7 @@ void Mask::MaskData::RewindAnimations() {
 
 	// reset instance datas
 	std::vector<std::shared_ptr<InstanceData>> idatas = instanceDatas.GetInstances();
-	for (auto const& id : idatas) {
+	for (auto id : idatas) {
 		id->Reset();
 	}
 

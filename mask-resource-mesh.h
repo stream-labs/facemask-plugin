@@ -50,6 +50,9 @@ namespace Mask {
 			std::shared_ptr<GS::IndexBuffer>	m_IndexBuffer;
 			vec4								m_center;
 
+			// cached in GetScreenExtents
+			std::shared_ptr<Mask::Part>			m_part;
+
 			// for delayed gs creation
 			std::string				m_tempFile;
 			uint8_t*				m_rawVertices;

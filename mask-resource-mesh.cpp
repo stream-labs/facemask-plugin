@@ -28,6 +28,9 @@
 #include <unordered_map>
 #include <tiny_obj_loader.h>
 #include <opencv2/opencv.hpp>
+#include "mask.h"
+#include "mask-resource-model.h"
+
 extern "C" {
 	#pragma warning( push )
 	#pragma warning( disable: 4201 )
@@ -44,7 +47,7 @@ static const char* const S_INDEX_BUFFER = "index-buffer";
 static const char* const S_CENTER = "center";
 
 Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t* data)
-	: IBase(parent, name) {
+	: IBase(parent, name), m_part(nullptr) {
 
 	// We could be an embedded OBJ file, or raw geometry
 
@@ -106,7 +109,7 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 } 
 
 Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, std::string file)
-	: IBase(parent, name) {
+	: IBase(parent, name), m_part(nullptr) {
 	LoadObj(file);
 }
 
@@ -269,13 +272,43 @@ bool Mask::Resource::Mesh::GetScreenExtents(gs_rect* r, int screen_width, int sc
 	if (m_VertexBuffer)
 		vb_data = m_VertexBuffer->get_data();
 	if (vb_data) {
+		// We need to find our transform
+		matrix4 transform;
+		matrix4_identity(&transform);
 
-		// TODO: find our part transform and apply it first
+		// Find our model
+		if (m_part == nullptr) {
+			size_t numModels = m_parent->GetNumResources(Resource::Type::Model);
+			for (int i = 0; i < numModels; i++) {
+				std::shared_ptr<Mask::Resource::Model> mdl = std::dynamic_pointer_cast<Mask::Resource::Model>
+					(m_parent->GetResource(Resource::Type::Model, i));
+				if (mdl->GetMesh()->GetId() == GetId()) {
+
+					// Found it! Now let's find our part
+					size_t numParts = m_parent->GetNumParts();
+					for (int j = 0; j < numParts; j++) {
+						std::shared_ptr<Mask::Part> part = m_parent->GetPart(j);
+						for (auto const& it : part->resources) {
+							if (it->GetId() == mdl->GetId()) {
+								m_part = part;
+							}
+						}
+					}
+				}
+			}
+		}
+		if (m_part != nullptr) {
+			matrix4_copy(&transform, &(m_part->global));
+		}
 
 		// get points
 		std::vector<cv::Point3f> points;
 		for (int i = 0; i < vb_data->num; i++) {
-			points.emplace_back(cv::Point3f(vb_data->points[i].x, vb_data->points[i].y, vb_data->points[i].z));
+			vec4 p, pp;
+			vec4_from_vec3(&p, &(vb_data->points[i]));
+			p.w = 1.0f;
+			vec4_transform(&pp, &p, &transform);
+			points.emplace_back(cv::Point3f(pp.x, pp.y, pp.z));
 		}
 
 		// Approximate focal length.

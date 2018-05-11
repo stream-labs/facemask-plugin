@@ -165,7 +165,7 @@ namespace smll {
 				if (x > actual_width)
 					actual_width = x;
 				x = 0;
-				y += row_height;
+				y += row_height + 1;
 				row_height = 0;
 			}
 
@@ -186,11 +186,11 @@ namespace smll {
 				vec2_set(&(fi.pos), (float)-1, (float)-1);
 			}
 
-			x += face->glyph->bitmap.width;
+			x += face->glyph->bitmap.width + 1;
 			m_fontInfos.emplace_back(fi);
 		}
 
-		int actual_height = y + row_height;
+		int actual_height = y + row_height + 1;
 
 		// Create actual texture data
 		actual_width = (int)ALIGN_16(actual_width);
@@ -241,13 +241,6 @@ namespace smll {
 				float u2 = (fi.pos.x + fi.size.x) / (float)(m_texture.width - 1);
 				float v1 = fi.pos.y / (float)(m_texture.height - 1);
 				float v2 = (fi.pos.y + fi.size.y) / (float)(m_texture.height - 1);
-
-				float halfU = 0.5f / (float)(m_texture.width - 1);
-				float halfV = 0.5f / (float)(m_texture.height - 1);
-				u1 += halfU;
-				u2 -= halfU;
-				v1 += halfV;
-				v2 -= halfV;
 
 				gs_matrix_push();
 				gs_matrix_translate3f(xx + fi.bearing.x, y + fi.bearing.y, 0.0f);
