@@ -104,6 +104,9 @@ namespace Plugin {
 
 			void setFaceTransform(const smll::DetectionResult& face,
 				bool billboard);
+			void setupRenderingState();
+
+			void getCanvasInfo();
 
 			void drawMaskData(Mask::MaskData*	maskData, bool depthOnly, 
 				bool isAlert);
@@ -114,7 +117,7 @@ namespace Plugin {
 		private:
 			// Filter State
 			obs_source_t*	source;
-			gs_rect			canvasViewport;
+			gs_rect			sourceViewport;
 			int32_t			canvasWidth, canvasHeight;
 			int32_t			baseWidth, baseHeight;
 			bool			isActive;
@@ -123,27 +126,29 @@ namespace Plugin {
 			bool			videoTicked;
 			HANDLE			taskHandle;
 
-			// Options
-
 			// Face detector
 			smll::FaceDetector*		smllFaceDetector;
 			smll::OBSRenderer*		smllRenderer;
 
-			//FONTDEMO
+			// Fonts
 			std::vector<smll::OBSFont*>		smllFonts;
 
+			// Texture rendering & staging
 			gs_texrender_t*		sourceRenderTarget;
 			gs_texrender_t*		drawTexRender;
 			gs_texrender_t*		alertTexRender;
 			gs_texrender_t*		detectTexRender;
 			gs_stagesurf_t*		detectStage;
 
+			// threaded memcpy
 			struct memcpy_environment* memcpyEnv;
 
+			// mask filenames
 			const char*			maskJsonFilename;
 			std::string			currentMaskJsonFilename;
 			std::vector<std::string>	maskJsonList;
 
+			// mask data loading thread
 			bool				maskDataShutdown;
 			std::thread			maskDataThread;
 			std::mutex			maskDataMutex;
@@ -164,7 +169,10 @@ namespace Plugin {
 			std::string			renderedAlertText;
 			AlertLocation		currentAlertLocation;
 			std::unique_ptr<Mask::MaskData>	alertMaskDatas[AlertLocation::NUM_ALERT_LOCATIONS];
+			float				alertTranslation;
+			float				alertAspectRatio;
 			bool				alertsLoaded;
+			gs_rect				alertViewport;
 
 			// demo mode
 			bool				demoModeOn;
@@ -213,7 +221,7 @@ namespace Plugin {
 			bool				autoBGRemoval;
 			bool				cartoonMode;
 
-			// for testing/thumbs
+			// for testing/thumbs/writing textures to files
 			gs_stagesurf_t*		testingStage;
 
 			// find a cached video frame

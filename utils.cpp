@@ -194,4 +194,16 @@ namespace Utils {
 		}
 		_mm_sfence();
 	}
+
+	int count_spaces(const std::string& s) {
+		const char* p = s.data();
+		if (!p) return 0;
+		int count = 0;
+		while (*p) {
+			if (*p == ' ')
+				count++;
+		}
+		return count;
+	}
+
 }

@@ -140,7 +140,8 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	isActive(true), isVisible(true), isDisabled(false), videoTicked(true),
 	taskHandle(NULL), memcpyEnv(nullptr), detectStage(nullptr),
 	maskDataShutdown(false), maskJsonFilename(nullptr), maskData(nullptr), 
-	currentAlertLocation(UPPER_LEFT), alertsLoaded(false),
+	currentAlertLocation(UPPER_LEFT), alertTranslation(-35.0f), alertAspectRatio(1.15f), 
+	alertsLoaded(false),
 	demoModeOn(false), demoModeMaskJustChanged(false), demoModeMaskChanged(false), 
 	demoCurrentMask(0), demoModeInterval(0.0f), demoModeDelay(0.0f), demoModeElapsed(0.0f), 
 	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), 
@@ -151,6 +152,8 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 
 	if (USE_THREADED_MEMCPY)
 		memcpyEnv = init_threaded_memcpy_pool(0);
+
+	memset(&alertViewport, 0, sizeof(gs_rect));
 
 	obs_enter_graphics();
 	sourceRenderTarget = gs_texrender_create(GS_RGBA, GS_ZS_NONE);
@@ -600,20 +603,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		return;
 	}
 
-	// Canvas width and height
-	if (videoTicked) {
-		gs_rect vpr;
-		gs_get_viewport(&vpr);
-		canvasWidth = vpr.cx;
-		canvasHeight = vpr.cy;
-
-		matrix4 m;
-		gs_matrix_get(&m);
-		canvasViewport.x = (int)m.t.x;
-		canvasViewport.y = (int)m.t.y;
-		canvasViewport.cx = (int)((float)baseWidth * m.x.x);
-		canvasViewport.cy = (int)((float)baseHeight * m.y.y);
-	}
+	// Canvas info
+	getCanvasInfo();
 
 	// Effects
 	gs_effect_t* defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
@@ -641,30 +632,9 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// ----- DRAW -----
 
-	// Set up sampler state
-	// Note: We need to wrap for morphing
-	gs_sampler_info sinfo;
-	sinfo.address_u = GS_ADDRESS_WRAP;
-	sinfo.address_v = GS_ADDRESS_WRAP;
-	sinfo.address_w = GS_ADDRESS_CLAMP;
-	sinfo.filter = GS_FILTER_LINEAR;
-	sinfo.border_color = 0;
-	sinfo.max_anisotropy = 0;
-	gs_samplerstate_t* ss = gs_samplerstate_create(&sinfo);
-	gs_load_samplerstate(ss, 0);
-
-	// set up initial rendering state
+	// OBS rendering state
 	gs_blend_state_push();
-	gs_enable_stencil_test(false);
-	gs_enable_depth_test(false);
-	gs_depth_function(GS_ALWAYS);
-	gs_set_cull_mode(GS_NEITHER);
-	gs_enable_color(true, true, true, true);
-	gs_enable_blending(true);
-	gs_blend_function_separate(gs_blend_type::GS_BLEND_SRCALPHA,
-		gs_blend_type::GS_BLEND_INVSRCALPHA,
-		gs_blend_type::GS_BLEND_ONE,
-		gs_blend_type::GS_BLEND_ZERO);
+	setupRenderingState();
 
 	// get mask data to draw
 	Mask::MaskData* mask_data = maskData.get();
@@ -719,10 +689,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					// Swap texture with video texture :P
 					// TODO: we'd prefer to have the mask drawn on top
 					// TODO: this should be a feature!!
-					//std::shared_ptr<Mask::Resource::Image> img = std::dynamic_pointer_cast<Mask::Resource::Image>
-					//	(mask_data->GetResource("diffuse-1"));
-					//if (img)
-					//	img->SwapTexture(vidTex);
+					std::shared_ptr<Mask::Resource::Image> img = std::dynamic_pointer_cast<Mask::Resource::Image>
+						(mask_data->GetResource("diffuse-1"));
+					if (img)
+						img->SwapTexture(vidTex);
 
 					// Check here for no morph
 					if (!mask_data->GetMorph()) {
@@ -786,7 +756,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		mask_tex = gs_texrender_get_texture(drawTexRender);
 	}
 
-	// render alert?
+	// render alert to texture
 	gs_texture* alert_tex = nullptr;
 	if (alertsLoaded && alertMaskDatas[currentAlertLocation]) {
 
@@ -799,7 +769,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				std::shared_ptr<Mask::Resource::Mesh> mesh = std::dynamic_pointer_cast<Mask::Resource::Mesh>
 					(alertMaskDatas[currentAlertLocation]->GetResource("mesh1"));
 				if (mesh) {
-					got_extents = mesh->GetScreenExtents(&r, canvasWidth / 3, canvasHeight / 2, -35.0f);
+					got_extents = mesh->GetScreenExtents(&r, alertViewport.cx, alertViewport.cy, alertTranslation);
 					r.cx = (int)ALIGN_4(r.cx);
 					r.cy = (int)ALIGN_4(r.cy);
 				}
@@ -820,7 +790,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 			// draw stuff to texture
 			gs_texrender_reset(alertTexRender);
-			if (gs_texrender_begin(alertTexRender, canvasWidth / 3, canvasHeight / 2)) {
+			if (gs_texrender_begin(alertTexRender, alertViewport.cx, alertViewport.cy)) {
 
 				// clear
 				vec4 black;
@@ -830,7 +800,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				// Draw regular stuff
 				gs_matrix_push();
 				gs_matrix_identity();
-				gs_matrix_translate3f(0.0f, 0.0f, -35.0f);
+				gs_matrix_translate3f(0.0f, 0.0f, alertTranslation);
 				drawMaskData(alertMaskDatas[currentAlertLocation].get(), false, true);
 				gs_matrix_pop();
 
@@ -840,7 +810,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		alert_tex = gs_texrender_get_texture(alertTexRender);
 	}
 
-
+	// SPRITE DRAWING - draw rendered stuff as sprites
 
 	// set up for sprite rendering
 	gs_set_cull_mode(GS_NEITHER);
@@ -876,6 +846,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		}
 	}
 
+	// Draw the rendered Mask
 	if (mask_tex) {
 		while (gs_effect_loop(defaultEffect, "Draw")) {
 			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
@@ -884,19 +855,19 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		}
 	}
 	
+	// Draw the rendered alert
 	if (alert_tex) {
 		// draw the rendering on top of the video
 		gs_matrix_push();
 		gs_matrix_identity();
-		gs_matrix_translate3f(100, 100, 0);
+		gs_matrix_translate3f((float)alertViewport.x, (float)alertViewport.y, 0);
 		while (gs_effect_loop(defaultEffect, "Draw")) {
 			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
 				"image"), alert_tex);
-			gs_draw_sprite(alert_tex, 0, canvasWidth / 3, canvasHeight / 2);
+			gs_draw_sprite(alert_tex, 0, alertViewport.cx, alertViewport.cy);
 		}
 		gs_matrix_pop();
 	}
-	
 
 	// draw face detection data
 	if (drawFaces)
@@ -908,8 +879,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// demo mode render stuff
 	demoModeRender(vidTex, mask_tex, mask_data);
 
+	// restore rendering state
 	gs_blend_state_pop();
-	gs_samplerstate_destroy(ss);
 
 	// 1 frame only
 	demoModeMaskJustChanged = false;
@@ -1198,6 +1169,126 @@ gs_texture* Plugin::FaceMaskFilter::Instance::RenderSourceTexture(gs_effect_t* e
 	return gs_texrender_get_texture(sourceRenderTarget);
 }
 
+void Plugin::FaceMaskFilter::Instance::getCanvasInfo() {
+	if (videoTicked) {
+		// get canvas width & height
+		gs_rect vpr;
+		gs_get_viewport(&vpr);
+		canvasWidth = vpr.cx;
+		canvasHeight = vpr.cy;
+
+		// get our dimensions (viewport) in the canvas
+		matrix4 m;
+		gs_matrix_get(&m);
+		sourceViewport.x = (int)m.t.x;
+		sourceViewport.y = (int)m.t.y;
+		sourceViewport.cx = (int)((float)baseWidth * m.x.x);
+		sourceViewport.cy = (int)((float)baseHeight * m.y.y);
+
+		// source/canvas centers
+		vec2 sourcePos;
+		vec2_set(&sourcePos,
+			(float)sourceViewport.x + (sourceViewport.cx / 2),
+			(float)sourceViewport.y + (sourceViewport.cy / 2));
+		vec2 canvasCenter;
+		vec2_set(&canvasCenter,
+			(float)canvasWidth / 2, (float)canvasHeight / 2);
+
+		// calculate alert location
+		AlertLocation loc;
+		bool is_left = false;
+		bool is_top = false;
+		if (sourcePos.x < canvasCenter.x) {
+			// source is L, alert is R
+			if (sourcePos.y < canvasCenter.y) {
+				// source is UL, alert is BR
+				loc = AlertLocation::BOTTOM_RIGHT;
+			}
+			else {
+				is_top = true;
+				// source is BL, alert is UR
+				loc = AlertLocation::UPPER_RIGHT;
+			}
+		}
+		else {
+			is_left = true;
+			// source is R, alert is L
+			if (sourcePos.y < canvasCenter.y) {
+				// source is UR, alert is BL
+				loc = AlertLocation::BOTTOM_LEFT;
+			}
+			else {
+				is_top = true;
+				// source is BR, alert is UL
+				loc = AlertLocation::UPPER_LEFT;
+			}
+		}
+		if (loc != currentAlertLocation) {
+			// set new location, trigger redraw of alert
+			currentAlertLocation = loc;
+			renderedAlertText = "";
+		}
+
+		// calculate alert box size
+		float min = 0.2f * canvasWidth;
+		float max = 0.4f * canvasWidth;
+		float alpha = (float)alertText.size() / 140.0f;
+		alpha = (alpha > 1.0f) ? 1.0f : alpha;
+		alertViewport.cx = (int)((1.0f - alpha) * min + alpha * max);
+		alertViewport.cy = (int)((float)alertViewport.cx / alertAspectRatio);
+
+		// calculate alert box position
+		if (is_left)
+			alertViewport.x = sourceViewport.x - alertViewport.cx;
+		else
+			alertViewport.x = sourceViewport.x + sourceViewport.cx;
+		if (is_top)
+			alertViewport.y = (int)sourcePos.y - alertViewport.cy;
+		else
+			alertViewport.y = (int)sourcePos.y;
+
+		// keep it on the screen
+		if (alertViewport.x < 0)
+			alertViewport.x = 0;
+		if ((alertViewport.x + alertViewport.cx) > canvasWidth)
+			alertViewport.x = canvasWidth - alertViewport.cx;
+		if (alertViewport.y < 0)
+			alertViewport.y = 0;
+		if ((alertViewport.y + alertViewport.cy) > canvasHeight)
+			alertViewport.y = canvasHeight - alertViewport.cy;
+	}
+}
+
+
+void Plugin::FaceMaskFilter::Instance::setupRenderingState() {
+
+	// Set up sampler state
+	// Note: We need to wrap for morphing
+	gs_sampler_info sinfo;
+	sinfo.address_u = GS_ADDRESS_WRAP;
+	sinfo.address_v = GS_ADDRESS_WRAP;
+	sinfo.address_w = GS_ADDRESS_CLAMP;
+	sinfo.filter = GS_FILTER_LINEAR;
+	sinfo.border_color = 0;
+	sinfo.max_anisotropy = 0;
+	gs_samplerstate_t* ss = gs_samplerstate_create(&sinfo);
+	gs_load_samplerstate(ss, 0);
+	gs_samplerstate_destroy(ss);
+
+	// set up initial rendering state
+	gs_enable_stencil_test(false);
+	gs_enable_depth_test(false);
+	gs_depth_function(GS_ALWAYS);
+	gs_set_cull_mode(GS_NEITHER);
+	gs_enable_color(true, true, true, true);
+	gs_enable_blending(true);
+	gs_blend_function_separate(gs_blend_type::GS_BLEND_SRCALPHA,
+		gs_blend_type::GS_BLEND_INVSRCALPHA,
+		gs_blend_type::GS_BLEND_ONE,
+		gs_blend_type::GS_BLEND_ZERO);
+}
+
+
 void Plugin::FaceMaskFilter::Instance::setFaceTransform(const smll::DetectionResult& face, 
 	bool billboard) {
 
@@ -1221,8 +1312,8 @@ void Plugin::FaceMaskFilter::Instance::drawMaskData(Mask::MaskData*	_maskData,
 	uint32_t w = baseWidth;
 	uint32_t h = baseHeight;
 	if (isAlert) {
-		w = canvasWidth / 3;
-		h = canvasHeight / 2;
+		w = alertViewport.cx;
+		h = alertViewport.cy;
 	}
 
 	gs_set_viewport(0, 0, w, h);
@@ -1382,7 +1473,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 	alertMaskDatas[AlertLocation::UPPER_LEFT] = std::unique_ptr<Mask::MaskData>(LoadMask("c:/STREAMLABS/slart/alerts/alert_test_LT.json"));
 	alertMaskDatas[AlertLocation::UPPER_RIGHT] = std::unique_ptr<Mask::MaskData>(LoadMask("c:/STREAMLABS/slart/alerts/alert_test_RT.json"));
 	alertMaskDatas[AlertLocation::BOTTOM_LEFT] = std::unique_ptr<Mask::MaskData>(LoadMask("c:/STREAMLABS/slart/alerts/alert_test_LB.json"));
-	alertMaskDatas[AlertLocation::BOTTOM_LEFT] = std::unique_ptr<Mask::MaskData>(LoadMask("c:/STREAMLABS/slart/alerts/alert_test_RB.json"));
+	alertMaskDatas[AlertLocation::BOTTOM_RIGHT] = std::unique_ptr<Mask::MaskData>(LoadMask("c:/STREAMLABS/slart/alerts/alert_test_RB.json"));
 	alertsLoaded = true;
 
 	// Loading loop

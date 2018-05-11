@@ -771,7 +771,7 @@ namespace smll {
 			gs_blend_type::GS_BLEND_INVSRCALPHA);
 
 		float y = (float)font->GetHeight();
-		float height = font->GetHeight() * lines.size();
+		float height = (float)font->GetHeight() * lines.size();
 		if (height < tex_height)
 			y += (tex_height - height) / 2.0f;
 
