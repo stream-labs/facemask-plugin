@@ -83,6 +83,13 @@ static float FOVA(float aspect) {
 static const float_t NEAR_Z = 1.0f;
 static const float_t FAR_Z = 15000.0f;
 
+bool gs_rect_equal(const gs_rect& a, const gs_rect& b) {
+	if (a.x != b.x || a.y != b.y || a.cx != b.cx || a.cy != b.cy) {
+		return false;
+	}
+	return true;
+}
+
 // for rewind button
 bool Plugin::FaceMaskFilter::Instance::request_rewind = false;
 
@@ -154,6 +161,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 		memcpyEnv = init_threaded_memcpy_pool(0);
 
 	memset(&alertViewport, 0, sizeof(gs_rect));
+	vec2_zero(&smoothCenter);
 
 	obs_enter_graphics();
 	sourceRenderTarget = gs_texrender_create(GS_RGBA, GS_ZS_NONE);
@@ -1180,10 +1188,42 @@ void Plugin::FaceMaskFilter::Instance::getCanvasInfo() {
 		// get our dimensions (viewport) in the canvas
 		matrix4 m;
 		gs_matrix_get(&m);
-		sourceViewport.x = (int)m.t.x;
-		sourceViewport.y = (int)m.t.y;
-		sourceViewport.cx = (int)((float)baseWidth * m.x.x);
-		sourceViewport.cy = (int)((float)baseHeight * m.y.y);
+		gs_rect svp;
+		svp.x = (int)m.t.x;
+		svp.y = (int)m.t.y;
+		svp.cx = (int)((float)baseWidth * m.x.x);
+		svp.cy = (int)((float)baseHeight * m.y.y);
+		if (!gs_rect_equal(svp, sourceViewport)) {
+			sourceViewport = svp;
+			// reset our "smooth center"
+			vec2_set(&smoothCenter,
+				(float)sourceViewport.x + (sourceViewport.cx / 2),
+				(float)sourceViewport.y + (sourceViewport.cy / 2));
+		}
+
+		// the "smooth center" follows tracked faces...smoothly
+		if (faces.length) {
+			// find center of all tracked faces
+			vec2 c;
+			vec2_zero(&c);
+			for (int i = 0; i < faces.length; i++) {
+				int x = (faces[i].bounds.left() + faces[i].bounds.right()) / 2;
+				int y = (faces[i].bounds.top() + faces[i].bounds.bottom()) / 2;
+				c.x += (float)x;
+				c.y += (float)y;
+			}
+			c.x /= (float)faces.length;
+			c.y /= (float)faces.length;
+
+			// put in screen space
+			c.x = (c.x / (float)baseWidth) * sourceViewport.cx + sourceViewport.x;
+			c.y = (c.y / (float)baseHeight) * sourceViewport.cy + sourceViewport.y;
+
+			// blend with the current smooth center
+			float alpha = 0.01f;
+			smoothCenter.x = (1.0f - alpha) * smoothCenter.x + alpha * c.x;
+			smoothCenter.y = (1.0f - alpha) * smoothCenter.y + alpha * c.y;
+		}
 
 		// source/canvas centers
 		vec2 sourcePos;
@@ -1194,38 +1234,41 @@ void Plugin::FaceMaskFilter::Instance::getCanvasInfo() {
 		vec2_set(&canvasCenter,
 			(float)canvasWidth / 2, (float)canvasHeight / 2);
 
+		// source viewport size as ratio of canvas
+		float ratio = (float)sourceViewport.cx / (float)canvasWidth;
+		vec2 track_pos = sourcePos;
+		float size_threshold = 0.7f;
+		if (ratio > size_threshold)
+			track_pos = smoothCenter;
+
 		// calculate alert location
 		AlertLocation loc;
 		bool is_left = false;
 		bool is_top = false;
-		if (sourcePos.x < canvasCenter.x) {
-			// source is L, alert is R
-			if (sourcePos.y < canvasCenter.y) {
-				// source is UL, alert is BR
+		if (track_pos.x < canvasCenter.x) {
+			if (track_pos.y < canvasCenter.y) {
 				loc = AlertLocation::BOTTOM_RIGHT;
 			}
 			else {
 				is_top = true;
-				// source is BL, alert is UR
 				loc = AlertLocation::UPPER_RIGHT;
 			}
 		}
 		else {
 			is_left = true;
-			// source is R, alert is L
-			if (sourcePos.y < canvasCenter.y) {
-				// source is UR, alert is BL
+			if (track_pos.y < canvasCenter.y) {
 				loc = AlertLocation::BOTTOM_LEFT;
 			}
 			else {
 				is_top = true;
-				// source is BR, alert is UL
 				loc = AlertLocation::UPPER_LEFT;
 			}
 		}
+
+		// set new location
 		if (loc != currentAlertLocation) {
-			// set new location, trigger redraw of alert
 			currentAlertLocation = loc;
+			// trigger redraw
 			renderedAlertText = "";
 		}
 
@@ -1234,18 +1277,42 @@ void Plugin::FaceMaskFilter::Instance::getCanvasInfo() {
 		float max = 0.4f * canvasWidth;
 		float alpha = (float)alertText.size() / 140.0f;
 		alpha = (alpha > 1.0f) ? 1.0f : alpha;
-		alertViewport.cx = (int)((1.0f - alpha) * min + alpha * max);
-		alertViewport.cy = (int)((float)alertViewport.cx / alertAspectRatio);
+		int alertW = (int)((1.0f - alpha) * min + alpha * max);
+		int alertH = (int)((float)alertViewport.cx / alertAspectRatio);
+
+		// set alert dimensions
+		if (alertViewport.cx != alertW ||
+			alertViewport.cy != alertH) {
+			alertViewport.cx = alertW;
+			alertViewport.cy = alertH;
+			// trigger redraw
+			renderedAlertText = "";
+		}
+
+		// offset alert box a bit
+		int offset = (int)((float)sourceViewport.cx * 0.2f);
 
 		// calculate alert box position
-		if (is_left)
-			alertViewport.x = sourceViewport.x - alertViewport.cx;
-		else
-			alertViewport.x = sourceViewport.x + sourceViewport.cx;
-		if (is_top)
-			alertViewport.y = (int)sourcePos.y - alertViewport.cy;
-		else
-			alertViewport.y = (int)sourcePos.y;
+		if (ratio > size_threshold) {
+			if (is_left)
+				alertViewport.x = (int)smoothCenter.x - alertViewport.cx - offset;
+			else
+				alertViewport.x = (int)smoothCenter.x + offset;
+			if (is_top)
+				alertViewport.y = (int)smoothCenter.y - alertViewport.cy;
+			else
+				alertViewport.y = (int)smoothCenter.y;
+		}
+		else {
+			if (is_left)
+				alertViewport.x = sourceViewport.x - alertViewport.cx - offset;
+			else
+				alertViewport.x = sourceViewport.x + sourceViewport.cx + offset;
+			if (is_top)
+				alertViewport.y = (int)sourcePos.y - alertViewport.cy;
+			else
+				alertViewport.y = (int)sourcePos.y;
+		}
 
 		// keep it on the screen
 		if (alertViewport.x < 0)

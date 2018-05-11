@@ -173,6 +173,7 @@ namespace Plugin {
 			float				alertAspectRatio;
 			bool				alertsLoaded;
 			gs_rect				alertViewport;
+			vec2				smoothCenter;
 
 			// demo mode
 			bool				demoModeOn;
