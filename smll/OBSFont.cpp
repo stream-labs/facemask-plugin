@@ -44,7 +44,7 @@
 #include <opencv2/opencv.hpp>
 
 #define MAX_TEXTURE_WIDTH	(2048)
-#define MAX_TEXTURE_HEIGHT	(2048)
+#define MAX_TEXTURE_HEIGHT	(4096)
 #define MAX_TEXTURE_SIZE	(MAX_TEXTURE_WIDTH * MAX_TEXTURE_HEIGHT)
 
 #pragma warning( pop )
@@ -144,7 +144,7 @@ namespace smll {
 		int actual_width = 0;
 		int row_height = 0;
 		int x = 0;
-		int y = 0;
+		int y = 1;
 		for (char c = 32; c < 127; c++)
 		{
 			// Load character glyph 

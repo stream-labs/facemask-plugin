@@ -697,10 +697,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					// Swap texture with video texture :P
 					// TODO: we'd prefer to have the mask drawn on top
 					// TODO: this should be a feature!!
-					std::shared_ptr<Mask::Resource::Image> img = std::dynamic_pointer_cast<Mask::Resource::Image>
-						(mask_data->GetResource("diffuse-1"));
-					if (img)
-						img->SwapTexture(vidTex);
+					//std::shared_ptr<Mask::Resource::Image> img = std::dynamic_pointer_cast<Mask::Resource::Image>
+					//	(mask_data->GetResource("diffuse-1"));
+					//if (img)
+					//	img->SwapTexture(vidTex);
 
 					// Check here for no morph
 					if (!mask_data->GetMorph()) {
