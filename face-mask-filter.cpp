@@ -25,6 +25,7 @@
 #include <smll/Face.hpp>
 #include <smll/Config.hpp>
 #include <smll/landmarks.hpp>
+#include <smll/TextShaper.hpp>
 
 #include <Shlwapi.h>
 #include <memory>
@@ -159,6 +160,9 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 
 	if (USE_THREADED_MEMCPY)
 		memcpyEnv = init_threaded_memcpy_pool(0);
+
+	// DEBUG TEST TEXT SHAPER
+	smll::TextShaper ts("this  is a string  to test with lol fuck you.");
 
 	memset(&alertViewport, 0, sizeof(gs_rect));
 	vec2_zero(&smoothCenter);

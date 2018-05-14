@@ -151,6 +151,7 @@ SET(smll_HEADERS
 	"${SMLLDir}/OBSRenderer.hpp"
 	"${SMLLDir}/OBSTexture.hpp"
 	"${SMLLDir}/sarray.hpp"
+	"${SMLLDir}/TextShaper.hpp"
 	"${SMLLDir}/TriangulationResult.hpp"
 	"${SMLLDir}/SingleValueKalman.hpp"
 )
@@ -202,6 +203,7 @@ SET(smll_SOURCES
 	"${SMLLDir}/ImageWrapper.cpp"
 	"${SMLLDir}/landmarks.cpp"
 	"${SMLLDir}/MorphData.cpp"
+	"${SMLLDir}/TextShaper.cpp"
 	"${SMLLDir}/TriangulationResult.cpp"
 	"${SMLLDir}/SingleValueKalman.cpp"
 )
