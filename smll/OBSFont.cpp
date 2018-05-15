@@ -82,6 +82,11 @@ namespace smll {
 		}
 		bfree(f);
 		m_vertexBuffer = gs_vertexbuffer_create(m_vertexData, GS_DYNAMIC);
+		f = obs_module_file("resources/kevin.png");
+		m_kevin.texture = gs_texture_create_from_file(f);
+		bfree(f);
+		m_kevin.width = gs_texture_get_width(m_kevin.texture);
+		m_kevin.height = gs_texture_get_height(m_kevin.texture);
 		obs_leave_graphics();
 
 		// No bitmap font rendered
@@ -99,6 +104,7 @@ namespace smll {
 		gs_effect_destroy(m_effect);
 		gs_vertexbuffer_destroy(m_vertexBuffer);
 		gs_vbdata_destroy(m_vertexData);
+		gs_texture_destroy(m_kevin.texture);
 		obs_leave_graphics();
 	}
 
@@ -134,6 +140,9 @@ namespace smll {
 				blog(LOG_ERROR, "ERROR::FREETYPE: Failed to load font");
 				return;
 			}
+
+			blog(LOG_DEBUG, "Font Family: %s  Style: %s",
+				face->family_name, face->style_name);
 
 			for (int size = minSize; size <= maxSize; size++) {
 				std::array<float, NUM_CHARACTERS> advances;
@@ -265,9 +274,9 @@ namespace smll {
 		dstMat.rowRange(0, actual_height).colRange(0, actual_width).copyTo(actualMat);
 
 		// DEBUG: write out image
-		char temp[256];
-		snprintf(temp, sizeof(temp), "c:/temp/font-%d.png", size);
-		cv::imwrite(temp, actualMat);
+		//char temp[256];
+		//snprintf(temp, sizeof(temp), "c:/temp/font-%d.png", size);
+		//cv::imwrite(temp, actualMat);
 
 		// Create the texture
 		obs_enter_graphics();
@@ -293,11 +302,23 @@ namespace smll {
 		gs_blend_function(gs_blend_type::GS_BLEND_SRCALPHA,
 			gs_blend_type::GS_BLEND_INVSRCALPHA);
 
+		gs_effect_t* defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
+
 		std::string::const_iterator c;
 		for (c = text.begin(); c != text.end(); c++) {
 			int idx = (int)*c - LOWEST_CHARACTER;
-			if (idx < 0 || idx >= m_fontInfos.size())
+			if (idx < 0 || idx >= m_fontInfos.size()) {
+				gs_matrix_push();
+				gs_matrix_translate3f(xx, y - ((float)m_height * 0.84f), 0.0f);
+				while (gs_effect_loop(defaultEffect, "Draw")) {
+					gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+						"image"), m_kevin.texture);
+					gs_draw_sprite(m_kevin.texture, 0, m_height - 2, m_height - 2);
+					xx += m_height;
+				}
+				gs_matrix_pop();
 				continue;
+			}
 			const FontInfo& fi = m_fontInfos[idx];
 
 			if (fi.size.x > 0 && fi.size.y > 0) {
@@ -328,11 +349,13 @@ namespace smll {
 		if (aidx < 0 || aidx >= m_advances.size())
 			return 0.0f;
 		const std::array<float, NUM_CHARACTERS>& advances = m_advances[aidx];
+		bool lastkevin = false;
 		for (c = text.begin(); c != text.end(); c++) {
 			int idx = (int)*c - LOWEST_CHARACTER;
 			if (idx < 0 || idx >= NUM_CHARACTERS)
-				continue;
-			w += advances[idx];
+				w += m_heights[aidx]; // kevin
+			else
+				w += advances[idx];
 		}
 		return w;
 	}
@@ -344,9 +367,10 @@ namespace smll {
 	float OBSFont::GetCharAdvance(int size, char c) const {
 		int aidx = size - m_minSize;
 		int cidx = (int)c - LOWEST_CHARACTER;
-		if (aidx < 0 || aidx >= m_advances.size() ||
-			cidx < 0 || cidx >= NUM_CHARACTERS)
-			return 0.0f;
+		if (aidx < 0 || aidx >= m_advances.size())
+			return 0;
+		if (cidx < 0 || cidx >= NUM_CHARACTERS)
+			return m_heights[aidx]; // kevin
 		return m_advances[aidx][cidx];
 	}
 

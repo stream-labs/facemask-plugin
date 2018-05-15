@@ -471,6 +471,8 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	cartoonMode = obs_data_get_bool(data, P_CARTOON);
 
 	alertText = obs_data_get_string(data, P_ALERT_TEXT);
+	smllTextShaper->SetString(alertText);
+	alertText = smllTextShaper->GetString(); // get clean string
 
 	// demo mode
 	demoModeOn = obs_data_get_bool(data, P_DEMOMODEON);
@@ -781,7 +783,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				}
 
 				// Render text to texture
-				smllTextShaper->SetString(alertText);
 				int size = smllTextShaper->GetOptimalSize(*smllFont, r.cx, r.cy);
 				smllFont->RenderBitmapFont(size);
 				std::vector<std::string> lines = smllTextShaper->GetLines(*smllFont, size, r.cx);

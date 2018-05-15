@@ -46,8 +46,11 @@
 // Other static strings
 static const char* const kFileDefaultJson = "masks/No Mask.json";
 static const char* const kFileAlertJson = "alerts/alert.json";
-//static const char* const kFontAlertTTF = "fonts/BackIssuesBB_reg.ttf";
+static const char* const kFontAlertTTF = "fonts/BackIssuesBB_reg.ttf";
 //static const char* const kFontAlertTTF = "fonts/BadaboomBB_Reg.ttf";
-static const char* const kFontAlertTTF = "fonts/amsterdam.ttf";
+//static const char* const kFontAlertTTF = "fonts/amsterdam.ttf";
 //static const char* const kFontAlertTTF = "fonts/Peinture Fraiche.ttf";
-
+//static const char* const kFontAlertTTF = "fonts/adrip1.ttf";
+//static const char* const kFontAlertTTF = "fonts/Comic Panels.ttf";
+//static const char* const kFontAlertTTF = "fonts/Urban Calligraphy.ttf";
+//static const char* const kFontAlertTTF = "fonts/whoa.ttf";

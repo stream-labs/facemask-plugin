@@ -35,6 +35,7 @@
 #include <opencv2/opencv.hpp>
 
 #define WORD_SPLIT_SIZE_LIMIT	 (20)
+#define LINE_LIMIT(W)			 ((float)((W) - 5))
 
 #pragma warning( pop )
 
@@ -49,6 +50,21 @@ namespace smll {
 
 	void TextShaper::SetString(const std::string& s) {
 		m_text = s;
+		bool lastbad = false;
+		for (int i = 0; i < m_text.length(); i++) {
+			int c = (int)m_text[i];
+			if (c < 32 || c > 126) {
+				if (lastbad) {
+					m_text.erase(i, 1);
+					i--;
+					lastbad = false;
+				}
+				else
+					lastbad = true;
+			}
+			else
+				lastbad = false;
+		}
 		m_words.clear();
 		Word word;
 		bool word_saved = true;
@@ -90,7 +106,7 @@ namespace smll {
 	std::vector<std::string> TextShaper::GetLines(const OBSFont& font, 
 		int size, int target_width) {
 
-		float line_limit = (float)(target_width - 1);
+		float line_limit = LINE_LIMIT(target_width);
 		std::vector<Word>	words;
 		GetActualWords(font, size, line_limit, words);
 
@@ -128,7 +144,7 @@ namespace smll {
 	bool TextShaper::WillTextFit(const OBSFont& font, int size,
 		int target_width, int target_height) {
 
-		float line_limit = (float)(target_width - 1);
+		float line_limit = LINE_LIMIT(target_width);
 		std::vector<Word>	words;
 		GetActualWords(font, size, line_limit, words);
 

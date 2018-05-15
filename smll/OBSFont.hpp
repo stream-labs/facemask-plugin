@@ -40,7 +40,7 @@ namespace smll {
 	{
 	public:
 
-		OBSFont(const std::string& filename="c:/Windows/Fonts/Arial.ttf", int minSize=16, int maxSize=300);
+		OBSFont(const std::string& filename="c:/Windows/Fonts/Arial.ttf", int minSize=16, int maxSize=250);
 		~OBSFont();
 
 		// Render out the font at given size
@@ -83,6 +83,7 @@ namespace smll {
 		gs_effect_t*			m_effect;
 		gs_vb_data*				m_vertexData;
 		gs_vertbuffer_t*		m_vertexBuffer;
+		OBSTexture				m_kevin;
 
 		// rendered bitmap font data
 		OBSTexture				m_texture;
