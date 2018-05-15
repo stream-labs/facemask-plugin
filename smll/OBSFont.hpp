@@ -29,8 +29,10 @@ extern "C" {
 }
 
 #include <vector>
+#include <array>
 #include <string>
 #include "smll/OBSTexture.hpp"
+
 
 namespace smll {
 
@@ -38,16 +40,28 @@ namespace smll {
 	{
 	public:
 
-		OBSFont(const std::string& filename="c:/Windows/Fonts/Arial.ttf", int size=48);
+		OBSFont(const std::string& filename="c:/Windows/Fonts/Arial.ttf", int minSize=16, int maxSize=300);
 		~OBSFont();
 
+		// Render out the font at given size
+		void RenderBitmapFont(int size);
+
+		// For the currently rendered font
 		void RenderText(const std::string& text, float x, float y);
-		float GetTextWidth(const std::string& text) const;
 		int GetSize() const { return m_size; }
 		int GetHeight() const { return m_height; }
 
-		int CountNumLines(const std::string& text, int max_width) const;
-		std::vector<std::string> BreakIntoLines(const std::string& text, int max_width) const;
+		// Font metrics
+		int GetMinSize() const { return m_minSize; }
+		int GetMaxSize() const { return m_maxSize; }
+		float GetFontHeight(int size) const;
+		float GetCharAdvance(int size, char c) const;
+		float GetTextWidth(int size, const std::string& text) const;
+
+		// Constants
+		static const char LOWEST_CHARACTER = 32;
+		static const char HIGHEST_CHARACTER = 126;
+		static const size_t NUM_CHARACTERS = (HIGHEST_CHARACTER - LOWEST_CHARACTER + 1);
 
 	private:
 		class FontInfo {
@@ -58,15 +72,26 @@ namespace smll {
 			float			advance;
 		};
 
+		// the font
+		std::string				m_filename;
+		int						m_minSize;
+		int						m_maxSize;
+		std::vector<std::array<float, NUM_CHARACTERS>> m_advances;
+		std::vector<float>		m_heights;
+
+		// rendering
 		gs_effect_t*			m_effect;
-		OBSTexture				m_texture;
 		gs_vb_data*				m_vertexData;
 		gs_vertbuffer_t*		m_vertexBuffer;
+
+		// rendered bitmap font data
+		OBSTexture				m_texture;
 		std::vector<FontInfo>	m_fontInfos;
 		int						m_size;
 		int						m_height;
 
-		void SetFont(const std::string& filename, int size);
+
+		void SetFont(const std::string& filename, int minSize = 16, int maxSize = 300);
 		void DestroyFontInfo();
 		void UpdateAndDrawVertices(float w, float h, 
 			float u1, float u2, float v1, float v2);

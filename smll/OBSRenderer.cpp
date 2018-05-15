@@ -729,29 +729,6 @@ namespace smll {
 		gs_projection_pop();
 	}
 
-	gs_texture*	OBSRenderer::RenderTextToTexture(const std::string& text,
-		int tex_width, int tex_height, OBSFont* font) {
-
-		std::vector<std::string> lines = font->BreakIntoLines(text, tex_width);
-
-		return RenderTextToTexture(lines, tex_width, tex_height, font);
-	}
-
-	gs_texture*	OBSRenderer::RenderTextToTexture(const std::string& text,
-		int tex_width, int tex_height, std::vector<OBSFont*>& fonts) {
-
-		for (int i = 0; i < fonts.size(); i++) {
-			OBSFont* font = fonts[i];
-			int line_count = font->CountNumLines(text, tex_width);
-			int num_lines = tex_height / font->GetHeight();
-			if (line_count <= num_lines) {
-				return RenderTextToTexture(text, tex_width, tex_height, font);
-			}
-		}
-
-		return RenderTextToTexture(text, tex_width, tex_height, fonts[fonts.size() - 1]);
-	}
-
 	gs_texture*	OBSRenderer::RenderTextToTexture(const std::vector<std::string>& lines,
 		int tex_width, int tex_height, OBSFont* font) {
 
@@ -775,6 +752,8 @@ namespace smll {
 		if (height < tex_height)
 			y += (tex_height - height) / 2.0f;
 
+		int fontSize = font->GetSize();
+
 		gs_texrender_reset(drawTexRender);
 		if (gs_texrender_begin(drawTexRender, tex_width, tex_height)) {
 
@@ -784,7 +763,7 @@ namespace smll {
 			gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
 
 			for (int i = 0; i < lines.size(); i++) {
-				float x = (tex_width - font->GetTextWidth(lines[i])) / 2;
+				float x = (tex_width - font->GetTextWidth(fontSize, lines[i])) / 2;
 				font->RenderText(lines[i], x, y);
 				y += font->GetHeight();
 			}

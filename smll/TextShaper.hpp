@@ -30,6 +30,7 @@ extern "C" {
 
 #include <vector>
 #include <string>
+#include "smll/OBSFont.hpp"
 
 namespace smll {
 
@@ -37,10 +38,16 @@ namespace smll {
 	{
 	public:
 
-		TextShaper(const std::string& s);
+		TextShaper(const std::string& s="");
 		~TextShaper();
 
 		void SetString(const std::string& s);
+		const std::string& GetString() const { return m_text; }
+
+		int GetOptimalSize(const OBSFont& font, 
+			int target_width, int target_height);
+		std::vector<std::string> GetLines(const OBSFont& font, 
+			int size, int target_width);
 
 	private:
 
@@ -52,6 +59,13 @@ namespace smll {
 
 		std::string			m_text;
 		std::vector<Word>	m_words;
+
+		bool WillTextFit(const OBSFont& font, int size,
+			int target_width, int target_height);
+		float GetWordWidth(const OBSFont& font, int size,
+			const Word& word);
+		void GetActualWords(const OBSFont& font, int size, 
+			float line_limit, std::vector<Word>& words);
 	};
 
 }

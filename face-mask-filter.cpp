@@ -25,7 +25,7 @@
 #include <smll/Face.hpp>
 #include <smll/Config.hpp>
 #include <smll/landmarks.hpp>
-#include <smll/TextShaper.hpp>
+
 
 #include <Shlwapi.h>
 #include <memory>
@@ -161,9 +161,6 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	if (USE_THREADED_MEMCPY)
 		memcpyEnv = init_threaded_memcpy_pool(0);
 
-	// DEBUG TEST TEXT SHAPER
-	smll::TextShaper ts("this  is a string  to test with lol fuck you.");
-
 	memset(&alertViewport, 0, sizeof(gs_rect));
 	vec2_zero(&smoothCenter);
 
@@ -177,13 +174,11 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	// Make the smll stuff
 	smllFaceDetector = new smll::FaceDetector();
 	smllRenderer = new smll::OBSRenderer(); 
+	smllTextShaper = new smll::TextShaper();
 
 	// Fonts
 	char* fontname = obs_module_file(kFontAlertTTF);
-	for (int i = 0; i < NUM_FONT_SIZES; i++) {
-		smll::OBSFont* smllFont = new smll::OBSFont(fontname, FONT_SIZES[i]);
-		smllFonts.emplace_back(smllFont);
-	}
+	smllFont = new smll::OBSFont(fontname);
 	bfree(fontname);
 
 	// set our mm thread task
@@ -273,9 +268,8 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 
 	delete smllFaceDetector;
 	delete smllRenderer;
-	for (int i = 0; i < NUM_FONT_SIZES; i++) {
-		delete smllFonts[i];
-	}
+	delete smllFont;
+	delete smllTextShaper;
 	if (memcpyEnv)
 		destroy_threaded_memcpy_pool(memcpyEnv);
 
@@ -787,7 +781,11 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				}
 
 				// Render text to texture
-				gs_texture* tex = smllRenderer->RenderTextToTexture(alertText, r.cx, r.cy, smllFonts);
+				smllTextShaper->SetString(alertText);
+				int size = smllTextShaper->GetOptimalSize(*smllFont, r.cx, r.cy);
+				smllFont->RenderBitmapFont(size);
+				std::vector<std::string> lines = smllTextShaper->GetLines(*smllFont, size, r.cx);
+				gs_texture* tex = smllRenderer->RenderTextToTexture(lines, r.cx, r.cy, smllFont);
 
 				// Swap texture
 				std::shared_ptr<Mask::Resource::Image> img = std::dynamic_pointer_cast<Mask::Resource::Image>

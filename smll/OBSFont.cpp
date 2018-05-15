@@ -56,7 +56,7 @@
 
 namespace smll {
 
-	OBSFont::OBSFont(const std::string& filename, int size) {
+	OBSFont::OBSFont(const std::string& filename, int minSize, int maxSize) {
 
 		// make our own sprite vertex buffer
 		m_vertexData = gs_vbdata_create();
@@ -84,15 +84,17 @@ namespace smll {
 		m_vertexBuffer = gs_vertexbuffer_create(m_vertexData, GS_DYNAMIC);
 		obs_leave_graphics();
 
+		// No bitmap font rendered
 		m_texture.width = 0;
 		m_texture.height = 0;
 		m_texture.texture = nullptr;
 
-		SetFont(filename, size);
+		SetFont(filename, minSize, maxSize);
 	}
 
 	OBSFont::~OBSFont() {
 		DestroyFontInfo();
+
 		obs_enter_graphics();
 		gs_effect_destroy(m_effect);
 		gs_vertexbuffer_destroy(m_vertexBuffer);
@@ -111,20 +113,82 @@ namespace smll {
 		m_fontInfos.clear();
 	}
 
-	void OBSFont::SetFont(const std::string& filename, int size) {
+	void OBSFont::SetFont(const std::string& filename, int minSize, int maxSize) {
+		if (m_filename != filename) {
+			// init file info
+			m_filename = filename;
+			m_minSize = minSize;
+			m_maxSize = maxSize;
+			m_advances.clear();
+
+			// Init FreeType
+			FT_Library ft;
+			if (FT_Init_FreeType(&ft)) {
+				blog(LOG_ERROR, "ERROR::FREETYPE: Could not init FreeType Library");
+				return;
+			}
+
+			// Load font as face
+			FT_Face face;
+			if (FT_New_Face(ft, m_filename.c_str(), 0, &face)) {
+				blog(LOG_ERROR, "ERROR::FREETYPE: Failed to load font");
+				return;
+			}
+
+			for (int size = minSize; size <= maxSize; size++) {
+				std::array<float, NUM_CHARACTERS> advances;
+
+				// Set size to load glyphs as
+				FT_Set_Pixel_Sizes(face, 0, size);
+
+				float height = 0.0f;
+				for (char c = LOWEST_CHARACTER; c <= HIGHEST_CHARACTER; c++)
+				{
+					// Load character glyph 
+					if (FT_Load_Char(face, c, FT_LOAD_DEFAULT))
+					{
+						blog(LOG_ERROR, "ERROR::FREETYTPE: Failed to load Glyph");
+						continue;
+					}
+
+					int index = (int)c - (int)LOWEST_CHARACTER;
+					advances[index] = (float)face->glyph->advance.x / 64.0f; // 26.6 format
+
+					float  glyph_height = (float)face->glyph->metrics.height / 64.0f;
+					if (glyph_height > height)
+						height = glyph_height;
+				}
+
+				m_heights.emplace_back(height);
+				m_advances.emplace_back(advances);
+			}	
+		}
+	}
+
+	void OBSFont::RenderBitmapFont(int size) {
+
+		// sanity check
+		if (m_filename.size() < 1)
+			return;
+		if (size == m_size)
+			return;
 
 		// save the size
 		m_size = size;
 
 		// Init FreeType
 		FT_Library ft;
-		if (FT_Init_FreeType(&ft))
+		if (FT_Init_FreeType(&ft)) {
 			blog(LOG_ERROR, "ERROR::FREETYPE: Could not init FreeType Library");
+			return;
+		}
 
 		// Load font as face
 		FT_Face face;
-		if (FT_New_Face(ft, filename.c_str(), 0, &face))
+		if (FT_New_Face(ft, m_filename.c_str(), 0, &face)) {
 			blog(LOG_ERROR, "ERROR::FREETYPE: Failed to load font");
+			return;
+		}
 
 		// Set size to load glyphs as
 		FT_Set_Pixel_Sizes(face, 0, size);
@@ -145,7 +209,7 @@ namespace smll {
 		int row_height = 0;
 		int x = 0;
 		int y = 1;
-		for (char c = 32; c < 127; c++)
+		for (char c = LOWEST_CHARACTER; c <= HIGHEST_CHARACTER; c++)
 		{
 			// Load character glyph 
 			if (FT_Load_Char(face, c, FT_LOAD_RENDER))
@@ -231,7 +295,7 @@ namespace smll {
 
 		std::string::const_iterator c;
 		for (c = text.begin(); c != text.end(); c++) {
-			int idx = (int)*c - 32;
+			int idx = (int)*c - LOWEST_CHARACTER;
 			if (idx < 0 || idx >= m_fontInfos.size())
 				continue;
 			const FontInfo& fi = m_fontInfos[idx];
@@ -257,87 +321,33 @@ namespace smll {
 		}
 	}
 
-	float OBSFont::GetTextWidth(const std::string& text) const {
+	float OBSFont::GetTextWidth(int size, const std::string& text) const {
 		float w = 0;
 		std::string::const_iterator c;
+		int aidx = size - m_minSize;
+		if (aidx < 0 || aidx >= m_advances.size())
+			return 0.0f;
+		const std::array<float, NUM_CHARACTERS>& advances = m_advances[aidx];
 		for (c = text.begin(); c != text.end(); c++) {
-			int idx = (int)*c - 32;
-			if (idx < 0 || idx >= m_fontInfos.size())
+			int idx = (int)*c - LOWEST_CHARACTER;
+			if (idx < 0 || idx >= NUM_CHARACTERS)
 				continue;
-			const FontInfo& fi = m_fontInfos[idx];
-			w += fi.advance;
+			w += advances[idx];
 		}
 		return w;
 	}
 
-	int OBSFont::CountNumLines(const std::string& text, int max_width) const {
-		// split the text into words
-		std::vector<std::string> words = Utils::split(text, ' ');
-
-		// sort into lines
-		int num_lines = 0;
-		int word_idx = 0;
-		float line_limit = (float)(max_width - 10);
-		while (word_idx < words.size()) {
-			std::string line, newline;
-			while (this->GetTextWidth(newline) < line_limit) {
-				line = newline;
-				if (newline.length() > 0) {
-					word_idx++;
-					if (word_idx == words.size())
-						break;
-					newline += " " + words[word_idx];
-				}
-				else
-					newline = words[word_idx];
-			}
-			if (line.length() == 0) {
-				std::string word = words[word_idx];
-				words.erase(words.begin() + word_idx);
-				int split_idx = (int)word.length() / 2;
-				words.insert(words.begin() + word_idx, word.substr(split_idx));
-				words.insert(words.begin() + word_idx, word.substr(0, split_idx));
-			}
-			else {
-				num_lines++;
-			}
-		}
-		return num_lines;
+	float OBSFont::GetFontHeight(int size) const {
+		return m_heights[size - m_minSize];
 	}
 
-	std::vector<std::string> OBSFont::BreakIntoLines(const std::string& text, int max_width) const {
-		// split the text into words
-		std::vector<std::string> words = Utils::split(text, ' ');
-
-		// sort into lines
-		std::vector<std::string> lines;
-		int word_idx = 0;
-		float line_limit = (float)(max_width - 10);
-		while (word_idx < words.size()) {
-			std::string line, newline;
-			while (this->GetTextWidth(newline) < line_limit) {
-				line = newline;
-				if (newline.length() > 0) {
-					word_idx++;
-					if (word_idx == words.size())
-						break;
-					newline += " " + words[word_idx];
-				}
-				else
-					newline = words[word_idx];
-			}
-			if (line.length() == 0) {
-				std::string word = words[word_idx];
-				words.erase(words.begin() + word_idx);
-				int split_idx = (int)word.length() / 2;
-				words.insert(words.begin() + word_idx, word.substr(split_idx));
-				words.insert(words.begin() + word_idx, word.substr(0, split_idx));
-			}
-			else {
-				lines.emplace_back(line);
-			}
-		}
-		return lines;
+	float OBSFont::GetCharAdvance(int size, char c) const {
+		int aidx = size - m_minSize;
+		int cidx = (int)c - LOWEST_CHARACTER;
+		if (aidx < 0 || aidx >= m_advances.size() ||
+			cidx < 0 || cidx >= NUM_CHARACTERS)
+			return 0.0f;
+		return m_advances[aidx][cidx];
 	}
 
 	void OBSFont::UpdateAndDrawVertices(float w, float h, 

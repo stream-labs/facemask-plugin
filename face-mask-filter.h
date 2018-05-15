@@ -31,6 +31,8 @@
 #include "smll/DetectionResults.hpp"
 #include "smll/TriangulationResult.hpp"
 #include "smll/MorphData.hpp"
+#include "smll/TextShaper.hpp"
+
 
 #include "mask.h"
 
@@ -131,7 +133,8 @@ namespace Plugin {
 			smll::OBSRenderer*		smllRenderer;
 
 			// Fonts
-			std::vector<smll::OBSFont*>		smllFonts;
+			smll::TextShaper*		smllTextShaper;
+			smll::OBSFont*			smllFont;
 
 			// Texture rendering & staging
 			gs_texrender_t*		sourceRenderTarget;

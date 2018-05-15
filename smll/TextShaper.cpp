@@ -34,6 +34,8 @@
 #include "utils.h"
 #include <opencv2/opencv.hpp>
 
+#define WORD_SPLIT_SIZE_LIMIT	 (20)
+
 #pragma warning( pop )
 
 namespace smll {
@@ -71,11 +73,129 @@ namespace smll {
 			m_words.push_back(word);
 			word_saved = true;
 		}
+	}
 
-		blog(LOG_DEBUG, "      012345678901234567890123456789012345678901234567890");
-		blog(LOG_DEBUG, "text: %s", s.c_str());
+	int TextShaper::GetOptimalSize(const OBSFont& font, 
+		int target_width, int target_height) {
+
+		for (int size = font.GetMaxSize(); size >= font.GetMinSize(); size--) {
+			if (WillTextFit(font, size, target_width, target_height)) {
+				return size;
+			}
+		}
+
+		return font.GetMinSize();
+	}
+
+	std::vector<std::string> TextShaper::GetLines(const OBSFont& font, 
+		int size, int target_width) {
+
+		float line_limit = (float)(target_width - 1);
+		std::vector<Word>	words;
+		GetActualWords(font, size, line_limit, words);
+
+		std::vector<std::string> lines;
+
+		float x = 0.0f;
+		float space_width = font.GetCharAdvance(size, ' ');
+		std::string line = "";
+		for (int i = 0; i < words.size(); i++) {
+			const Word& word = words[i];
+			float w = GetWordWidth(font, size, word);
+			float d = w;
+			if (line.length() > 0) {
+				d += space_width;
+			}
+			if ((x + d) > line_limit) {
+				lines.push_back(line);
+				// new line
+				line = m_text.substr(word.index, word.length);
+				x = w;
+			}
+			else {
+				if (line.length() > 0)
+					line += " "; 
+				line += m_text.substr(word.index, word.length);
+				x += d;
+			}
+		}
+		if (line.length() > 0)
+			lines.push_back(line);
+
+		return lines;
+	}
+
+	bool TextShaper::WillTextFit(const OBSFont& font, int size,
+		int target_width, int target_height) {
+
+		float line_limit = (float)(target_width - 1);
+		std::vector<Word>	words;
+		GetActualWords(font, size, line_limit, words);
+
+		// see if all the words fit
+		float height = font.GetFontHeight(size);
+		int max_lines = (int)((float)target_height / height);
+		float x = 0.0f;
+		int line = 0;
+		float space_width = font.GetCharAdvance(size, ' ');
+		for (int i = 0; i < words.size(); i++) {
+			const Word& word = words[i];
+			float w = GetWordWidth(font, size, word);
+			if (w > line_limit)
+				return false; // word will never fit
+			if ((x + space_width + w) > line_limit) {
+				line++;
+				if (line >= max_lines) {
+					return false;
+				}
+				x = w;
+			}
+			else {
+				x += space_width + w;
+			}
+		}
+		if (x > 0.0f)
+			line++;
+		if (line >= max_lines) {
+			return false;
+		}
+
+		return true;
+	}
+
+	void TextShaper::GetActualWords(const OBSFont& font, int size, 
+		float line_limit, std::vector<Word>& words) {
+
+		// build our list of words
 		for (int i = 0; i < m_words.size(); i++) {
-			blog(LOG_DEBUG, "words[%d]: %d  length: %d", i, m_words[i].index, m_words[i].length);
+			words.emplace_back(m_words[i]);
+		}
+		// slit words too long to fit on a line
+		for (int i = 0; i < words.size(); i++) {
+			Word& word = words[i];
+			float w = GetWordWidth(font, size, word);
+			if (w > line_limit && word.length >= WORD_SPLIT_SIZE_LIMIT) {
+				// split
+				Word new_word;
+				int ll = word.length / 2;
+				new_word.index = word.index + ll;
+				new_word.length = word.length - ll;
+				word.length = ll;
+				words.insert(words.begin() + i + 1, new_word);
+				i--;
+			}
 		}
 	}
+
+
+	float TextShaper::GetWordWidth(const OBSFont& font, int size,
+		const Word& word) {
+		int end = word.index + word.length;
+		float len = 0.0f;
+		for (int i = word.index; i < end; i++) {
+			len += font.GetCharAdvance(size, m_text[i]);
+		}
+		return len;
+	}
+
 }
