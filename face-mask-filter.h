@@ -135,8 +135,6 @@ namespace Plugin {
 			gs_texrender_t*		detectTexRender;
 			gs_stagesurf_t*		detectStage;
 
-			struct memcpy_environment* memcpyEnv;
-
 			const char*			maskJsonFilename;
 			std::string			currentMaskJsonFilename;
 			std::vector<std::string>	maskJsonList;

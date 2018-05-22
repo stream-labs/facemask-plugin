@@ -42,23 +42,9 @@
 #include "mask-resource-morph.h"
 #include "mask-resource-effect.h"
 
- // yep...this is what we're doin
-#define USE_WINMM_FOR_THREADED_MEMCPY	(1)
-#include <libobs/util/threaded-memcpy.c>
-
-
-
-// use threaded memcpy (not sure if this actually helps
-// due to windows thread priorities)
-#define USE_THREADED_MEMCPY				(true)
-
-// if we aren't using threaded memcpy, use fast memcpy?
+// System memcpy is faster, these are usually false
 #define USE_FAST_MEMCPY					(false)
-
-// if we aren't using threaded memcpy, use Intel IPP copy?
 #define USE_IPP_MEMCPY					(false)
-
-
 
 // whether to run landmark detection/solvepnp/morph on main thread
 #define STUFF_ON_MAIN_THREAD			(false)
@@ -134,7 +120,7 @@ void Plugin::FaceMaskFilter::destroy(void *ptr) {
 
 Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *source)
 	: source(source), baseWidth(640), baseHeight(480), isActive(true), isVisible(true),
-	isDisabled(false), videoTicked(true), taskHandle(NULL), memcpyEnv(nullptr), detectStage(nullptr),
+	isDisabled(false), videoTicked(true), taskHandle(NULL), detectStage(nullptr),
 	maskDataShutdown(false), maskJsonFilename(nullptr), maskData(nullptr),
 	demoModeOn(false), demoModeMaskJustChanged(false), demoModeMaskChanged(false), 
 	demoCurrentMask(0), demoModeInterval(0.0f), demoModeDelay(0.0f), demoModeElapsed(0.0f), 
@@ -143,9 +129,6 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	autoBGRemoval(false), cartoonMode(false), testingStage(nullptr) {
 
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
-
-	if (USE_THREADED_MEMCPY)
-		memcpyEnv = init_threaded_memcpy_pool(0);
 
 	obs_enter_graphics();
 	sourceRenderTarget = gs_texrender_create(GS_RGBA, GS_ZS_NONE);
@@ -249,9 +232,6 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 
 	//FONTDEMO
 	//delete smllFont1;
-
-	if (memcpyEnv)
-		destroy_threaded_memcpy_pool(memcpyEnv);
 
 	if (taskHandle != NULL) {
 		AvRevertMmThreadCharacteristics(taskHandle);
@@ -1003,9 +983,7 @@ bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sou
 						detect.AlignedAlloc();
 					}
 
-					if (memcpyEnv)
-						threaded_memcpy(detect.data, data, detect.getSize(), memcpyEnv);
-					else if (USE_FAST_MEMCPY)
+					if (USE_FAST_MEMCPY)
 						Utils::fastMemcpy(detect.data, data, detect.getSize());
 					else if (USE_IPP_MEMCPY) {
 						smll::ImageWrapper src(detect.w, detect.h, detect.stride, detect.type, (char*)data);

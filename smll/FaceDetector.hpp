@@ -44,7 +44,6 @@
 #include <dlib/image_processing/frontal_face_detector.h>
 #include <dlib/image_processing.h>
 #include <libobs/graphics/graphics.h>
-#include <libobs/util/threaded-memcpy.h>
 #pragma warning( pop )
 
 namespace smll {
