@@ -25,9 +25,11 @@
 //
 #define P_TRANSLATE(x)			obs_module_text(x)
 #define P_DESC(x)				x ".Description"
+#define P_OPTION(x,n)			x ".Option" n
 
 // Properties
 #define P_MASK					"Mask"
+#define P_MASKFOLDER			"maskFolder"
 #define P_DEACTIVATE			"deactivated"
 #define P_DRAWMASK				"drawmask"
 #define P_DRAWFACEDATA			"drawfaces"
@@ -43,8 +45,10 @@
 #define P_CARTOON				"cartoonMode"
 #define P_ALERT_TEXT			"alertText"
 
+
 // Other static strings
-static const char* const kFileDefaultJson = "masks/No Mask.json";
+static const char* const kDefaultMask = "No_Mask.json";
+static const char* const kDefaultMaskFolder = "masks";
 static const char* const kFileAlertJson = "alerts/alert.json";
 static const char* const kFontAlertTTF = "fonts/BackIssuesBB_reg.ttf";
 //static const char* const kFontAlertTTF = "fonts/BadaboomBB_Reg.ttf";

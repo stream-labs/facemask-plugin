@@ -43,20 +43,12 @@
 #include "mask-resource-morph.h"
 #include "mask-resource-effect.h"
 
- // yep...this is what we're doin
-#define USE_WINMM_FOR_THREADED_MEMCPY	(1)
-#include <libobs/util/threaded-memcpy.c>
-
-
-
-// use threaded memcpy (not sure if this actually helps
-// due to windows thread priorities)
-#define USE_THREADED_MEMCPY				(true)
-
-// if we aren't using threaded memcpy, use fast memcpy?
+//
+// SYSTEM MEMCPY STILL SEEMS FASTEST
+//
+// - the following memcpy options are typically set to false
+//
 #define USE_FAST_MEMCPY					(false)
-
-// if we aren't using threaded memcpy, use Intel IPP copy?
 #define USE_IPP_MEMCPY					(false)
 
 
@@ -90,9 +82,6 @@ bool gs_rect_equal(const gs_rect& a, const gs_rect& b) {
 	}
 	return true;
 }
-
-// for rewind button
-bool Plugin::FaceMaskFilter::Instance::request_rewind = false;
 
 // Filter Wrapper
 Plugin::FaceMaskFilter::FaceMaskFilter() {
@@ -144,10 +133,12 @@ void Plugin::FaceMaskFilter::destroy(void *ptr) {
 // ------------------------------------------------------------------------- //
 
 Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *source)
-	: source(source), canvasWidth(0), canvasHeight(0), baseWidth(640), baseHeight(480), 
+	: request_rewind(false), 
+	source(source), canvasWidth(0), canvasHeight(0), baseWidth(640), baseHeight(480),
 	isActive(true), isVisible(true), isDisabled(false), videoTicked(true),
-	taskHandle(NULL), memcpyEnv(nullptr), detectStage(nullptr),
-	maskDataShutdown(false), maskJsonFilename(nullptr), maskData(nullptr), 
+	taskHandle(NULL), detectStage(nullptr),
+	maskDataShutdown(false), maskFilename(nullptr), maskFolder(nullptr), 
+	maskData(nullptr),
 	currentAlertLocation(UPPER_LEFT), alertTranslation(-35.0f), alertAspectRatio(1.15f), 
 	alertsLoaded(false),
 	demoModeOn(false), demoModeMaskJustChanged(false), demoModeMaskChanged(false), 
@@ -157,9 +148,6 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr) {
 
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
-
-	if (USE_THREADED_MEMCPY)
-		memcpyEnv = init_threaded_memcpy_pool(0);
 
 	memset(&alertViewport, 0, sizeof(gs_rect));
 	vec2_zero(&smoothCenter);
@@ -187,23 +175,6 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 		taskHandle = AvSetMmThreadCharacteristics(TEXT(MM_THREAD_TASK_NAME), &taskIndex);
 		if (taskHandle == NULL) {
 			blog(LOG_DEBUG, "[FaceMask] Failed to set MM thread characteristics");
-		}
-	}
-
-	// get list of masks
-	char* maskname = obs_module_file(kFileDefaultJson);
-	std::string maskPath = Utils::dirname(maskname);
-	maskJsonList = Utils::ListFolder(maskPath, "*.json");
-	bfree(maskname);
-
-	// make sure default is first
-	std::string defmask = kFileDefaultJson;
-	Utils::find_and_replace(defmask, "masks/", "");
-	maskJsonList.insert(maskJsonList.begin(), defmask);
-	for (int i = 1; i < maskJsonList.size(); i++) {
-		if (maskJsonList[i] == defmask) {
-			maskJsonList.erase(maskJsonList.begin() + i);
-			break;
 		}
 	}
 
@@ -270,8 +241,6 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 	delete smllRenderer;
 	delete smllFont;
 	delete smllTextShaper;
-	if (memcpyEnv)
-		destroy_threaded_memcpy_pool(memcpyEnv);
 
 	if (taskHandle != NULL) {
 		AvRevertMmThreadCharacteristics(taskHandle);
@@ -301,16 +270,24 @@ uint32_t Plugin::FaceMaskFilter::Instance::get_height() {
 }
 
 void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
-	// default params
 
 	obs_data_set_default_bool(data, P_DEACTIVATE, false);
 
+	char* fuck = obs_module_file("masks");
+	blog(LOG_DEBUG, "%s", fuck);
+
 #ifdef PUBLIC_RELEASE	
-	obs_data_set_default_int(data, P_MASK, 0);
+	obs_data_set_default_string(data, P_MASK, kDefaultMask);
+
+	char* defMaskFolder = obs_module_file(kDefaultMaskFolder);
+	obs_data_set_default_string(data, P_MASKFOLDER, defMaskFolder);
+	bfree(defMaskFolder);
 #else
-	char* jsonName = obs_module_file(kFileDefaultJson);
-	obs_data_set_default_string(data, P_MASK, jsonName);
-	bfree(jsonName);
+	char* defMaskFolder = obs_module_file(kDefaultMaskFolder);
+	std::string jsonWithPath = defMaskFolder;
+	jsonWithPath = jsonWithPath + "/" + kDefaultMask;
+	obs_data_set_default_string(data, P_MASK, jsonWithPath.c_str());
+	bfree(defMaskFolder);
 #endif
 
 	obs_data_set_default_string(data, P_ALERT_TEXT, "");
@@ -351,29 +328,27 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 	// Source-specific properties can be added through this.
 	obs_property_t* p = nullptr;
 
-	char* jsonName = obs_module_file(kFileDefaultJson);
-	std::string maskDir = Utils::dirname(jsonName);
-	bfree(jsonName);
-
+	char* defMaskFolder = obs_module_file(kDefaultMaskFolder);
 
 #if defined(PUBLIC_RELEASE)
-	// mask
-	p = obs_properties_add_list(props, P_MASK, P_TRANSLATE(P_MASK),
-		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
-	for (int i = 0; i < maskJsonList.size(); i++) {
-		std::string n = maskJsonList[i];
-		Utils::find_and_replace(n, ".json", "");
-		obs_property_list_add_int(p, n.c_str(), i);
-	}
+	// mask 
+	p = obs_properties_add_text(props, P_MASK, P_TRANSLATE(P_MASK),
+		obs_text_type::OBS_TEXT_DEFAULT);
+	obs_property_set_long_description(p, P_TRANSLATE(P_DESC(P_MASK)));
 
+	// mask folder
+	p = obs_properties_add_text(props, P_MASKFOLDER, P_TRANSLATE(P_MASKFOLDER),
+		obs_text_type::OBS_TEXT_DEFAULT);
+	obs_property_set_long_description(p, P_TRANSLATE(P_DESC(P_MASKFOLDER)));
 #else
 	// mask
 	p = obs_properties_add_path(props, P_MASK, P_TRANSLATE(P_MASK),
 		obs_path_type::OBS_PATH_FILE,
-		"Face Mask JSON (*.json)", maskDir.c_str());
+		"Face Mask JSON (*.json)", defMaskFolder);
 	obs_property_set_long_description(p, P_TRANSLATE(P_DESC(P_MASK)));
-
 #endif
+
+	bfree(defMaskFolder);
 
 	p = obs_properties_add_bool(props, P_BGREMOVAL, P_TRANSLATE(P_BGREMOVAL));
 	obs_property_set_long_description(p, P_TRANSLATE(P_DESC(P_BGREMOVAL)));
@@ -422,16 +397,18 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 #endif
 }
 
-bool Plugin::FaceMaskFilter::Instance::rewind_clicked(obs_properties_t *pr, obs_property_t *p, void *data) {
-	UNUSED_PARAMETER(p);
-	UNUSED_PARAMETER(pr);
-	UNUSED_PARAMETER(data);
-
-	Plugin::FaceMaskFilter::Instance::request_rewind = true;
-
-	return true;
+bool Plugin::FaceMaskFilter::Instance::rewind_clicked(obs_properties_t *pr, obs_property_t *p, void *ptr) {
+	if (ptr == nullptr)
+		return false;
+	return reinterpret_cast<Instance*>(ptr)->rewind_clicked(pr, p);
 }
 
+bool Plugin::FaceMaskFilter::Instance::rewind_clicked(obs_properties_t *pr, obs_property_t *p) {
+	UNUSED_PARAMETER(pr);
+	UNUSED_PARAMETER(p);
+	this->request_rewind = true;
+	return true;
+}
 
 void Plugin::FaceMaskFilter::Instance::update(void *ptr, obs_data_t *data) {
 	if (ptr == nullptr)
@@ -441,17 +418,8 @@ void Plugin::FaceMaskFilter::Instance::update(void *ptr, obs_data_t *data) {
 
 void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 
-	{
-		std::unique_lock<std::mutex> lock(maskDataMutex, std::try_to_lock);
-		if (lock.owns_lock()) {
-#ifdef PUBLIC_RELEASE
-			long long idx = obs_data_get_int(data, P_MASK);
-			maskJsonFilename = maskJsonList[idx % maskJsonList.size()].c_str();
-#else
-			maskJsonFilename = (char*)obs_data_get_string(data, P_MASK);
-#endif
-		}
-	}
+	maskFilename = (char*)obs_data_get_string(data, P_MASK);
+	maskFolder = (char*)obs_data_get_string(data, P_MASKFOLDER);
 
 #if !defined(PUBLIC_RELEASE)
 	// update advanced properties
@@ -467,9 +435,11 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 		detection.facesIndex = -1;
 	}
 
+	// Flags
 	autoBGRemoval = obs_data_get_bool(data, P_BGREMOVAL);
 	cartoonMode = obs_data_get_bool(data, P_CARTOON);
 
+	// Alerts
 	alertText = obs_data_get_string(data, P_ALERT_TEXT);
 	smllTextShaper->SetString(alertText);
 	alertText = smllTextShaper->GetString(); // get clean string
@@ -564,9 +534,9 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 				mdat = demoMaskDatas[demoCurrentMask].get();
 		}
 		if (mdat) {
-			if (Plugin::FaceMaskFilter::Instance::request_rewind) {
+			if (request_rewind) {
 				mdat->RewindAnimations();
-				Plugin::FaceMaskFilter::Instance::request_rewind = false;
+				request_rewind = false;
 			}
 
 			mdat->Tick(timeDelta);
@@ -893,10 +863,23 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// restore rendering state
 	gs_blend_state_pop();
 
+	// since we are on the gpu right now anyway...
+
+	// mask filename or folder changed?
+	if ((maskFilename &&
+	 	 currentMaskFilename != maskFilename) ||
+		(maskFolder &&
+		 currentMaskFolder != maskFolder)) {
+
+		// unload mask
+		maskData = nullptr;
+	}
+
 	// 1 frame only
 	demoModeMaskJustChanged = false;
 	videoTicked = false;
 }
+
 
 void Plugin::FaceMaskFilter::Instance::demoModeUpdate(float timeDelta) {
 	// demo mode : switch masks/delay
@@ -1097,9 +1080,7 @@ bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sou
 						detect.AlignedAlloc();
 					}
 
-					if (memcpyEnv)
-						threaded_memcpy(detect.data, data, detect.getSize(), memcpyEnv);
-					else if (USE_FAST_MEMCPY)
+					if (USE_FAST_MEMCPY)
 						Utils::fastMemcpy(detect.data, data, detect.getSize());
 					else if (USE_IPP_MEMCPY) {
 						smll::ImageWrapper src(detect.w, detect.h, detect.stride, detect.type, (char*)data);
@@ -1555,31 +1536,21 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 
 				// time to load mask?
 				if ((maskData == nullptr) &&
-					maskJsonFilename && maskJsonFilename[0]) {
+					maskFilename && maskFilename[0]) {
 
 					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);
-					std::string maskFilename = maskJsonFilename;
+
+					currentMaskFilename = maskFilename;
+					currentMaskFolder = maskFolder;
+
 #ifdef PUBLIC_RELEASE
-					char* maskname = obs_module_file(kFileDefaultJson);
-					std::string maskPath = Utils::dirname(maskname);
-					bfree(maskname);
-					maskFilename = maskPath + "/" + maskJsonFilename;
+					std::string maskFn = currentMaskFolder + "\\" + currentMaskFilename;
+#else
+					std::string maskFn = currentMaskFilename;
 #endif
-
 					// load mask
-					maskData = std::unique_ptr<Mask::MaskData>(LoadMask(maskFilename));
-					currentMaskJsonFilename = maskJsonFilename;
+					maskData = std::unique_ptr<Mask::MaskData>(LoadMask(maskFn));
 					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_END);
-				}
-
-				// mask filename changed?
-				if (maskJsonFilename &&
-					currentMaskJsonFilename != maskJsonFilename) {
-
-					// unload mask
-					obs_enter_graphics();
-					maskData = nullptr;
-					obs_leave_graphics();
 				}
 
 				// demo mode

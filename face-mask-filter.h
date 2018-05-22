@@ -87,32 +87,32 @@ namespace Plugin {
 			static void video_render(void *, gs_effect_t *);
 			void video_render(gs_effect_t *);
 
+			// callbacks
 			static bool rewind_clicked(obs_properties_t *pr, obs_property_t *p, void *data);
-			static bool request_rewind;
+			bool rewind_clicked(obs_properties_t *pr, obs_property_t *p);
+			bool request_rewind;
+
 
 		protected:
+			// face detection thread
 			static int32_t StaticThreadMain(Instance*);
 			int32_t LocalThreadMain();
 
+			// mask data loading thread
 			static int32_t StaticMaskDataThreadMain(Instance*);
 			int32_t LocalMaskDataThreadMain();
 
+			// misc functions
 			Mask::MaskData*	LoadMask(std::string filename);
 			void LoadDemo();
-
 			void drawCropRects(int width, int height);
-
 			void updateFaces();
-
 			void setFaceTransform(const smll::DetectionResult& face,
 				bool billboard);
 			void setupRenderingState();
-
 			void getCanvasInfo();
-
 			void drawMaskData(Mask::MaskData*	maskData, bool depthOnly, 
 				bool isAlert);
-
 			gs_texture* RenderSourceTexture(gs_effect_t* effect);
 			bool SendSourceTextureToThread(gs_texture* sourceTexture);
 
@@ -143,13 +143,11 @@ namespace Plugin {
 			gs_texrender_t*		detectTexRender;
 			gs_stagesurf_t*		detectStage;
 
-			// threaded memcpy
-			struct memcpy_environment* memcpyEnv;
-
 			// mask filenames
-			const char*			maskJsonFilename;
-			std::string			currentMaskJsonFilename;
-			std::vector<std::string>	maskJsonList;
+			const char*			maskFilename;
+			std::string			currentMaskFilename;
+			const char*			maskFolder;
+			std::string			currentMaskFolder;
 
 			// mask data loading thread
 			bool				maskDataShutdown;
