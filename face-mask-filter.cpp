@@ -1253,9 +1253,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 					currentMaskJsonFilename != maskJsonFilename) {
 
 					// unload mask
-					obs_enter_graphics();
 					maskData = nullptr;
-					obs_leave_graphics();
 				}
 
 				// demo mode
