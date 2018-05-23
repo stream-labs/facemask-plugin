@@ -349,7 +349,6 @@ namespace smll {
 		if (aidx < 0 || aidx >= m_advances.size())
 			return 0.0f;
 		const std::array<float, NUM_CHARACTERS>& advances = m_advances[aidx];
-		bool lastkevin = false;
 		for (c = text.begin(); c != text.end(); c++) {
 			int idx = (int)*c - LOWEST_CHARACTER;
 			if (idx < 0 || idx >= NUM_CHARACTERS)

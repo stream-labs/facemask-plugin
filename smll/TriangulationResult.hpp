@@ -58,7 +58,6 @@ namespace smll {
 		bool					cartoonMode;
 
 		TriangulationResult();
-		TriangulationResult(const TriangulationResult& r) { *this = r; }
 		~TriangulationResult();
 
 		void DestroyBuffers();
