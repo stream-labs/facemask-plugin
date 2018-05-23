@@ -608,8 +608,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	gs_enable_blending(true);
 	gs_blend_function_separate(gs_blend_type::GS_BLEND_SRCALPHA,
 		gs_blend_type::GS_BLEND_INVSRCALPHA,
-		gs_blend_type::GS_BLEND_ONE,
-		gs_blend_type::GS_BLEND_ZERO);
+		gs_blend_type::GS_BLEND_SRCALPHA,
+		gs_blend_type::GS_BLEND_INVSRCALPHA);
 
 	// mask to draw
 	Mask::MaskData* mask_data = maskData.get();
