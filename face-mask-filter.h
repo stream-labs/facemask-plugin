@@ -167,6 +167,8 @@ namespace Plugin {
 			std::thread			maskDataThread;
 			std::mutex			maskDataMutex;
 			std::unique_ptr<Mask::MaskData>	maskData;
+			std::unique_ptr<Mask::MaskData>	introData;
+			std::unique_ptr<Mask::MaskData>	outroData;
 
 			// alert location
 			enum AlertLocation {

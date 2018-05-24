@@ -831,6 +831,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				// clear
 				vec4 black;
 				vec4_zero(&black);
+				black.x = 0;
+				black.y = 0;
+				black.z = 1;
+				black.w = 1;
 				gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
 
 				// Draw regular stuff
@@ -1596,21 +1600,57 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 				// time to load mask?
 				if ((maskData == nullptr) &&
 					maskFilename && maskFilename[0]) {
-
-					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);
-
+					// save current
 					currentMaskFilename = maskFilename;
 					currentMaskFolder = maskFolder;
-
+					// mask filename
 #ifdef PUBLIC_RELEASE
 					std::string maskFn = currentMaskFolder + "\\" + currentMaskFilename;
 #else
 					std::string maskFn = currentMaskFilename;
 #endif
 					// load mask
+					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);
 					maskData = std::unique_ptr<Mask::MaskData>(LoadMask(maskFn));
 					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_END);
 				}
+
+				// time to load intro?
+				if ((introData == nullptr) &&
+					introFilename && introFilename[0]) {
+					// save current
+					currentIntroFilename = introFilename;
+					currentMaskFolder = maskFolder;
+					// mask filename
+#ifdef PUBLIC_RELEASE
+					std::string maskFn = currentMaskFolder + "\\" + currentIntroFilename;
+#else
+					std::string maskFn = currentIntroFilename;
+#endif
+					// load mask
+					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);
+					maskData = std::unique_ptr<Mask::MaskData>(LoadMask(maskFn));
+					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_END);
+				}
+
+				// time to load outro?
+				if ((outroData == nullptr) && 
+					outroFilename && outroFilename[0]) {
+					// save current
+					currentOutroFilename = outroFilename;
+					currentMaskFolder = maskFolder;
+					// mask filename
+#ifdef PUBLIC_RELEASE
+					std::string maskFn = currentMaskFolder + "\\" + currentOutroFilename;
+#else
+					std::string maskFn = currentOutroFilename;
+#endif
+					// load mask
+					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);
+					maskData = std::unique_ptr<Mask::MaskData>(LoadMask(maskFn));
+					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_END);
+				}
+
 
 				// demo mode
 				if (demoModeOn && !lastDemoMode) {
