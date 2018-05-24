@@ -815,8 +815,10 @@ namespace smll {
 			if (i == TriangulationResult::IDXBUFF_LINES && !result.buildLines)
 				continue;
 			obs_enter_graphics();
+			uint32_t* indices = (uint32_t*)bmalloc(sizeof(uint32_t) * triangles[i].size());
+			memcpy(indices, triangles[i].data(), sizeof(uint32_t) * triangles[i].size());
 			result.indexBuffers[i] = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
-				(void*)triangles[i].data(), triangles[i].size(), 0);
+				(void*)indices, triangles[i].size(), 0);
 			obs_leave_graphics();
 		}
 	}

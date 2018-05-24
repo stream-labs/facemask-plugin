@@ -26,8 +26,11 @@ extern "C" {
 	#pragma warning( pop )
 }
 
-GS::IndexBuffer::IndexBuffer(const uint8_t* raw, size_t len)
- : IndexBuffer((uint32_t*)ALIGN_16(raw), len) {
+GS::IndexBuffer::IndexBuffer(const uint8_t* raw, size_t len) {
+	// fucking realloc indices
+	uint32_t* indices = (uint32_t*)bmalloc(sizeof(uint32_t) * len);
+	memcpy(indices, (uint32_t*)ALIGN_16(raw), sizeof(uint32_t) * len);
+	MakeBuffer(indices, len);
 	m_raw = raw;
 }
 
@@ -37,18 +40,19 @@ GS::IndexBuffer::IndexBuffer(const std::vector<uint32_t>& other)
 
 GS::IndexBuffer::IndexBuffer(const uint32_t* buff, size_t len)
  : m_raw(nullptr) {
+	MakeBuffer(buff, len);
+}
+
+void GS::IndexBuffer::MakeBuffer(const uint32_t* buff, size_t len) {
 	m_numIndices = len;
 	obs_enter_graphics();
 	m_indexBuffer = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG, (void*)buff, len, 0);
 	obs_leave_graphics();
 }
 
-
-
-
 GS::IndexBuffer::~IndexBuffer() {
-	obs_enter_graphics(); 
-	gs_indexbuffer_destroy(m_indexBuffer);
+	obs_enter_graphics();
+	//gs_indexbuffer_destroy(m_indexBuffer);
 	obs_leave_graphics();
 	if (m_raw)
 		delete[] m_raw;

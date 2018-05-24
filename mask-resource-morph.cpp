@@ -155,8 +155,11 @@ void Mask::Resource::Morph::MakeFaceIndexBuffers() {
 		obs_enter_graphics();
 		for (int i = 0; i < smll::NUM_FACE_AREAS; i++) {
 			const smll::FaceArea& fa = smll::GetFaceArea((smll::FaceAreaID)i);
+			// and fucking alloc again....ugggghhhh
+			uint32_t* indices = (uint32_t*)bmalloc(sizeof(uint32_t) * fa.mesh_indices.size());
+			memcpy(indices, fa.mesh_indices.data(), fa.mesh_indices.size() * sizeof(uint32_t));
 			faceIndexBuffers[i] = gs_indexbuffer_create(gs_index_type::GS_UNSIGNED_LONG,
-				(void*)fa.mesh_indices.data(), fa.mesh_indices.size(), 0);
+				(void*)indices, fa.mesh_indices.size(), 0);
 		}
 		obs_leave_graphics();
 	}

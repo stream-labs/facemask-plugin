@@ -103,7 +103,7 @@ namespace smll {
 		obs_enter_graphics();
 		gs_effect_destroy(m_effect);
 		gs_vertexbuffer_destroy(m_vertexBuffer);
-		gs_vbdata_destroy(m_vertexData);
+		//nope gs_vbdata_destroy(m_vertexData);
 		gs_texture_destroy(m_kevin.texture);
 		obs_leave_graphics();
 	}

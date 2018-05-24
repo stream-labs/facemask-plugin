@@ -27,6 +27,20 @@ extern "C" {
 	#pragma warning( pop )
 }
 
+static void init_vbdata(gs_vb_data* vbd, size_t num_verts) {
+	vbd->num = num_verts;
+	vbd->num_tex = 8;
+	vbd->points = (vec3*)bmalloc(sizeof(vec3) * num_verts);
+	vbd->normals = (vec3*)bmalloc(sizeof(vec3) * num_verts);
+	vbd->tangents = (vec3*)bmalloc(sizeof(vec3) * num_verts);
+	vbd->colors = (uint32_t*)bmalloc(sizeof(uint32_t) * num_verts);
+	vbd->tvarray = (gs_tvertarray*)bmalloc(sizeof(gs_tvertarray) * 8);
+	for (int i = 0; i < 8; i++) {
+		vbd->tvarray[i].width = 4;
+		vbd->tvarray[i].array = bmalloc(sizeof(float) * 4 * num_verts);
+	}
+}
+
 GS::VertexBuffer::VertexBuffer(uint8_t* raw)
  : m_vb_data(nullptr), m_vertexbuffer(nullptr), m_raw(nullptr) {
 	m_raw = raw;
@@ -55,10 +69,26 @@ GS::VertexBuffer::VertexBuffer(uint8_t* raw)
 	for (int i = 0; i < vbdata->num_tex; i++) {
 		vbdata->tvarray[i].array = (void*)((size_t)(vbdata->tvarray[i].array) + top);
 	}
-	
+
+	// And now re-allocate the whole fucking thing
+	// (for some reason, gs_vertexbuffer_destroy() now deletes the vb data :P )
+	//
+	gs_vb_data* vbd = gs_vbdata_create();
+	init_vbdata(vbd, vbdata->num);
+	memcpy(vbd->points, vbdata->points, sizeof(vec3) * vbdata->num);
+	if (vbdata->normals)
+		memcpy(vbd->normals, vbdata->normals, sizeof(vec3) * vbdata->num);
+	if (vbdata->tangents)
+		memcpy(vbd->tangents, vbdata->tangents, sizeof(vec3) * vbdata->num);
+	if (vbdata->colors)
+		memcpy(vbd->colors, vbdata->colors, sizeof(uint32_t) * vbdata->num);
+	for (int i = 0; i < vbdata->num_tex; i++) {
+		memcpy(vbd->tvarray[i].array, vbdata->tvarray[i].array, sizeof(float) * vbd->tvarray[i].width * vbdata->num);
+	}
+
 	// create the gs vertex buffer
 	obs_enter_graphics();
-	m_vertexbuffer = gs_vertexbuffer_create(vbdata, 0);
+	m_vertexbuffer = gs_vertexbuffer_create(vbd, 0);
 	obs_leave_graphics();
 } 
 
@@ -68,25 +98,15 @@ GS::VertexBuffer::VertexBuffer(const std::vector<GS::Vertex>& verts)
 
 	// Make a libOBS vertex buffer
 	m_vb_data = gs_vbdata_create();
-	m_vb_data->num = verts.size();
-	m_vb_data->num_tex = 8;
-	m_vb_data->points = (vec3*)bmalloc(sizeof(vec3) * verts.size());
-	m_vb_data->normals = (vec3*)bmalloc(sizeof(vec3) * verts.size());
-	m_vb_data->tangents = (vec3*)bmalloc(sizeof(vec3) * verts.size());
-	m_vb_data->colors = (uint32_t*)bmalloc(sizeof(uint32_t) * verts.size());
-	m_vb_data->tvarray = (gs_tvertarray*)bmalloc(sizeof(gs_tvertarray) * 8);
-	for (int i = 0; i < 8; i++) {
-		m_vb_data->tvarray[i].width = 4;
-		m_vb_data->tvarray[i].array = bmalloc(sizeof(float) * 4 * verts.size());
-	}
+	init_vbdata(m_vb_data, verts.size());
 
 	// copy in the verts
+	float* uvs = (float*)(m_vb_data->tvarray[0].array);
 	for (size_t i = 0; i < verts.size(); i++) {
 		const GS::Vertex& vtx = verts[i];
 		vec3_copy(&m_vb_data->points[i], &vtx.position);
 		vec3_copy(&m_vb_data->normals[i], &vtx.normal);
 		vec3_copy(&m_vb_data->tangents[i], &vtx.tangent);
-		float* uvs = (float*)(m_vb_data->tvarray[0].array);
 		uvs[i * 4 + 0] = vtx.uv[0].x;
 		uvs[i * 4 + 1] = vtx.uv[0].y;
 	}
@@ -103,8 +123,9 @@ GS::VertexBuffer::~VertexBuffer() {
 		delete[] m_raw;
 
 	obs_enter_graphics();
-	if (m_vb_data)
-		gs_vbdata_destroy(m_vb_data);
+	// nope, should be destroyed below
+	//if (m_vb_data)
+	//	gs_vbdata_destroy(m_vb_data);
 	if (m_vertexbuffer)
 		gs_vertexbuffer_destroy(m_vertexbuffer);
 	obs_leave_graphics();

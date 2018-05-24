@@ -51,8 +51,6 @@
 #define USE_FAST_MEMCPY					(false)
 #define USE_IPP_MEMCPY					(false)
 
-
-
 // whether to run landmark detection/solvepnp/morph on main thread
 #define STUFF_ON_MAIN_THREAD			(false)
 
@@ -1728,6 +1726,9 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 }
 
 void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
+
+	if (demoMaskFilenames.size() == 0)
+		return;
 
 	obs_enter_graphics();
 

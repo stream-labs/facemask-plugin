@@ -44,5 +44,7 @@ namespace GS {
 		size_t				m_numIndices;
 		const uint8_t*		m_raw;
 		gs_indexbuffer_t*	m_indexBuffer;
+
+		void MakeBuffer(const uint32_t* buff, size_t len);
 	};
 }
