@@ -831,10 +831,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				// clear
 				vec4 black;
 				vec4_zero(&black);
-				black.x = 0;
-				black.y = 0;
-				black.z = 1;
-				black.w = 1;
 				gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
 
 				// Draw regular stuff
@@ -922,16 +918,23 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// restore rendering state
 	gs_blend_state_pop();
 
-	// since we are on the gpu right now anyway...
+	// since we are on the gpu right now anyway, here is 
+	// a good spot to unload mask data if we need to.
 
-	// mask filename or folder changed?
-	if ((maskFilename &&
-	 	 currentMaskFilename != maskFilename) ||
-		(maskFolder &&
-		 currentMaskFolder != maskFolder)) {
-
-		// unload mask
+	// Check for file/folder changes
+	if (maskFilename &&	currentMaskFilename != maskFilename) {
 		maskData = nullptr;
+	}
+	if (introFilename && currentIntroFilename != introFilename) {
+		introData = nullptr;
+	}
+	if (outroFilename && currentOutroFilename != outroFilename) {
+		outroData = nullptr;
+	}
+	if (maskFolder &&	currentMaskFolder != maskFolder) {
+		maskData = nullptr;
+		introData = nullptr;
+		outroData = nullptr;
 	}
 
 	// 1 frame only
