@@ -40,11 +40,10 @@ static const char* const S_POSTSTATE = "post-state";
 static const char* const S_VALUES = "values";
 
 
-float	Mask::Resource::AnimationChannel::GetValue(float time) {
+float	Mask::Resource::AnimationChannel::GetValue(int frame) {
 	float v = 0.0f;
-	size_t i = (size_t)time;
 
-	if (i < 0) {
+	if (frame < 0) {
 		switch (preState) {
 		case CONSTANT:
 			if (values.size() > 0)
@@ -56,14 +55,14 @@ float	Mask::Resource::AnimationChannel::GetValue(float time) {
 				v = values[0];
 			break;
 		case REPEAT:
-			while (i < 0)
-				i += values.size();
-			if (i < values.size())
-				v = values[i];
+			while (frame < 0)
+				frame += (int)values.size();
+			if (frame < values.size())
+				v = values[frame];
 			break;
 		}
 	}
-	else if (i >= values.size()) {
+	else if (frame >= values.size()) {
 		switch (postState) {
 		case CONSTANT:
 			if (values.size() > 0)
@@ -76,14 +75,14 @@ float	Mask::Resource::AnimationChannel::GetValue(float time) {
 			break;
 		case REPEAT:
 			if (values.size() > 0) {
-				i = i % values.size();
-				v = values[i];
+				frame = frame % values.size();
+				v = values[frame];
 			}
 			break;
 		}
 	}
 	else {
-		v = values[i];
+		v = values[frame];
 	}
 
 	return v;
@@ -93,7 +92,7 @@ float	Mask::Resource::AnimationChannel::GetValue(float time) {
 
 
 Mask::Resource::Animation::Animation(Mask::MaskData* parent, std::string name, obs_data_t* data)
-	: IBase(parent, name) {
+	: IBase(parent, name), m_speed(1.0f) {
 
 	if (!obs_data_has_user_value(data, S_DURATION)) {
 		PLOG_ERROR("Animation '%s' has no duration.", name.c_str());
@@ -188,14 +187,14 @@ void Mask::Resource::Animation::Update(Mask::Part* part, float time) {
 		m_parent->instanceDatas.GetData<AnimationInstanceData>();
 
 	// time has elapsed
-	instData->elapsed += time;
+	instData->elapsed += time * m_speed;
 
 	// process animation channels
-	float t = instData->elapsed * m_fps;
+	int frame = (int)(instData->elapsed * m_fps);
 	for (int i = 0; i < m_channels.size(); i++) {
 		AnimationChannel& ch = m_channels[i];
 		if (ch.item != nullptr) {
-			ch.item->SetAnimatableValue(ch.GetValue(t), ch.type);
+			ch.item->SetAnimatableValue(ch.GetValue(frame), ch.type);
 		}
 	}
 
@@ -207,8 +206,7 @@ void Mask::Resource::Animation::Render(Mask::Part* part) {
 	return;
 }
 
-void Mask::Resource::Animation::Rewind() {
-
+void Mask::Resource::Animation::Seek(float t) {
 	m_parent->instanceDatas.Push(m_id);
 
 	// get our instance data
@@ -216,11 +214,10 @@ void Mask::Resource::Animation::Rewind() {
 		m_parent->instanceDatas.GetData<AnimationInstanceData>();
 
 	// reset time
-	instData->elapsed = 0.0f;
+	instData->elapsed = t;
 
 	m_parent->instanceDatas.Pop();
 }
-
 
 Mask::Resource::AnimationChannelType 
 Mask::Resource::Animation::AnimationTypeFromString(const std::string& s) {
