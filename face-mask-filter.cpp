@@ -134,10 +134,11 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	: request_rewind(false), 
 	source(source), canvasWidth(0), canvasHeight(0), baseWidth(640), baseHeight(480),
 	isActive(true), isVisible(true), isDisabled(false), videoTicked(true),
-	taskHandle(NULL), detectStage(nullptr),
-	maskDataShutdown(false), maskFilename(nullptr), maskFolder(nullptr), 
-	maskData(nullptr),
-	currentAlertLocation(UPPER_LEFT), alertTranslation(-35.0f), alertAspectRatio(1.15f), 
+	taskHandle(NULL), detectStage(nullptr),	maskDataShutdown(false), 
+	maskFolder(nullptr), maskFilename(nullptr),
+	introFilename(nullptr),	outroFilename(nullptr),	alertActivate(false), alertDoIntro(false),
+	alertDoOutro(false), alertDuration(10.0f), alertAttributionDuration(2.0f),
+	currentAlertLocation(LEFT_TOP), alertTranslation(-35.0f), alertAspectRatio(1.15f), 
 	alertsLoaded(false),
 	demoModeOn(false), demoModeMaskJustChanged(false), demoModeMaskChanged(false), 
 	demoCurrentMask(0), demoModeInterval(0.0f), demoModeDelay(0.0f), demoModeElapsed(0.0f), 
@@ -271,31 +272,48 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 
 	obs_data_set_default_bool(data, P_DEACTIVATE, false);
 
-	char* fuck = obs_module_file("masks");
-	blog(LOG_DEBUG, "%s", fuck);
+	char* defMaskFolder = obs_module_file(kDefaultMaskFolder);
+	obs_data_set_default_string(data, P_MASKFOLDER, defMaskFolder);
 
 #ifdef PUBLIC_RELEASE	
 	obs_data_set_default_string(data, P_MASK, kDefaultMask);
-
-	char* defMaskFolder = obs_module_file(kDefaultMaskFolder);
-	obs_data_set_default_string(data, P_MASKFOLDER, defMaskFolder);
-	bfree(defMaskFolder);
+	obs_data_set_default_string(data, P_ALERT_INTRO, "");
+	obs_data_set_default_string(data, P_ALERT_OUTRO, "");
 #else
-	char* defMaskFolder = obs_module_file(kDefaultMaskFolder);
 	std::string jsonWithPath = defMaskFolder;
 	jsonWithPath = jsonWithPath + "/" + kDefaultMask;
 	obs_data_set_default_string(data, P_MASK, jsonWithPath.c_str());
-	bfree(defMaskFolder);
+
+	jsonWithPath = defMaskFolder; 
+	jsonWithPath = jsonWithPath + "/" + kDefaultIntro;
+	obs_data_set_default_string(data, P_ALERT_INTRO, jsonWithPath.c_str());
+
+	jsonWithPath = defMaskFolder; 
+	jsonWithPath = jsonWithPath + "/" + kDefaultOutro;
+	obs_data_set_default_string(data, P_ALERT_OUTRO, jsonWithPath.c_str());
 #endif
 
-	obs_data_set_default_string(data, P_ALERT_TEXT, "");
+	bfree(defMaskFolder);
 
+	// ALERTS
+	obs_data_set_default_bool(data, P_ALERT_ACTIVATE, false);
+	obs_data_set_default_string(data, P_ALERT_TEXT, "");
+	obs_data_set_default_double(data, P_ALERT_DURATION, 10.0f);
+	obs_data_set_default_string(data, P_ALERT_ATTRIBUTION, "");
+	obs_data_set_default_double(data, P_ALERT_ATTRIBUTIONDURATION, 2.0f);
+	obs_data_set_default_bool(data, P_ALERT_DOINTRO, false);
+	obs_data_set_default_bool(data, P_ALERT_DOOUTRO, false);
+	
 	obs_data_set_default_bool(data, P_CARTOON, false);
 	obs_data_set_default_bool(data, P_BGREMOVAL, false);
 
 	obs_data_set_default_bool(data, P_GENTHUMBS, false);
 
+#ifdef PUBLIC_RELEASE
+	obs_data_set_default_bool(data, P_DRAWMASK, false);
+#else
 	obs_data_set_default_bool(data, P_DRAWMASK, true);
+#endif
 	obs_data_set_default_bool(data, P_DRAWFACEDATA, false);
 	obs_data_set_default_bool(data, P_DRAWMORPHTRIS, false);
 	obs_data_set_default_bool(data, P_DRAWCROPRECT, false);
@@ -322,72 +340,100 @@ obs_properties_t * Plugin::FaceMaskFilter::Instance::get_properties(void *ptr) {
 	return props;
 }
 
-void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
-	// Source-specific properties can be added through this.
-	obs_property_t* p = nullptr;
+static void add_bool_property(obs_properties_t *props, const char* name) {
+	obs_property_t* p = obs_properties_add_bool(props, name, P_TRANSLATE(name));
+	std::string n = name; n += ".Description";
+	obs_property_set_long_description(p, P_TRANSLATE(n.c_str()));
+}
 
-	char* defMaskFolder = obs_module_file(kDefaultMaskFolder);
+static void add_text_property(obs_properties_t *props, const char* name) {
+	obs_property_t* p = p = obs_properties_add_text(props, name, P_TRANSLATE(name),
+		obs_text_type::OBS_TEXT_DEFAULT);
+	std::string n = name; n += ".Description";
+	obs_property_set_long_description(p, P_TRANSLATE(n.c_str()));
+}
+
+static void add_json_file_property(obs_properties_t *props, const char* name,
+	const char* folder) {
+	char* defFolder = obs_module_file(folder);
+	obs_property_t* p = obs_properties_add_path(props, name, P_TRANSLATE(name),
+		obs_path_type::OBS_PATH_FILE,
+		"Face Mask JSON (*.json)", defFolder);
+	std::string n = name; n += ".Description";
+	obs_property_set_long_description(p, P_TRANSLATE(n.c_str()));
+	bfree(defFolder);
+}
+
+static void add_float_slider(obs_properties_t *props, const char* name, float min, float max, float step) {
+	obs_property_t* p = obs_properties_add_float_slider(props, name,
+		P_TRANSLATE(name), min, max, step);
+	std::string n = name; n += ".Description";
+	obs_property_set_long_description(p, P_TRANSLATE(n.c_str()));
+}
+
+
+void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 
 #if defined(PUBLIC_RELEASE)
-	// mask 
-	p = obs_properties_add_text(props, P_MASK, P_TRANSLATE(P_MASK),
-		obs_text_type::OBS_TEXT_DEFAULT);
-	obs_property_set_long_description(p, P_TRANSLATE(P_DESC(P_MASK)));
 
 	// mask folder
-	p = obs_properties_add_text(props, P_MASKFOLDER, P_TRANSLATE(P_MASKFOLDER),
-		obs_text_type::OBS_TEXT_DEFAULT);
-	obs_property_set_long_description(p, P_TRANSLATE(P_DESC(P_MASKFOLDER)));
+	add_text_property(props, P_MASKFOLDER);
+
+	// mask 
+	add_text_property(props, P_MASK);
+
+	// alert files
+	add_text_property(props, P_ALERT_INTRO);
+	add_text_property(props, P_ALERT_OUTRO);
+
 #else
+
 	// mask
-	p = obs_properties_add_path(props, P_MASK, P_TRANSLATE(P_MASK),
-		obs_path_type::OBS_PATH_FILE,
-		"Face Mask JSON (*.json)", defMaskFolder);
-	obs_property_set_long_description(p, P_TRANSLATE(P_DESC(P_MASK)));
+	add_json_file_property(props, P_MASK, kDefaultMaskFolder);
+
+	// alert files
+	add_json_file_property(props, P_ALERT_INTRO, kDefaultMaskFolder);
+	add_json_file_property(props, P_ALERT_OUTRO, kDefaultMaskFolder);
+
 #endif
 
-	bfree(defMaskFolder);
-
-	p = obs_properties_add_bool(props, P_BGREMOVAL, P_TRANSLATE(P_BGREMOVAL));
-	obs_property_set_long_description(p, P_TRANSLATE(P_DESC(P_BGREMOVAL)));
-
-	p = obs_properties_add_bool(props, P_CARTOON, P_TRANSLATE(P_CARTOON));
-	obs_property_set_long_description(p, P_TRANSLATE(P_DESC(P_CARTOON)));
+	// ALERT PROPERTIES
+	add_bool_property(props, P_ALERT_ACTIVATE);
+	add_text_property(props, P_ALERT_TEXT);
+	add_float_slider(props, P_ALERT_DURATION, 5.0f, 60.0f, 0.1f);
+	add_text_property(props, P_ALERT_ATTRIBUTION);
+	add_float_slider(props, P_ALERT_ATTRIBUTIONDURATION, 5.0f, 60.0f, 0.1f);
+	add_bool_property(props, P_ALERT_DOINTRO);
+	add_bool_property(props, P_ALERT_DOOUTRO);
 
 #if !defined(PUBLIC_RELEASE)
 
+	// bg removal
+	add_bool_property(props, P_BGREMOVAL);
+
+	// cartoon mode
+	add_bool_property(props, P_CARTOON);
+
 	// disable the plugin
-	obs_properties_add_bool(props, P_DEACTIVATE, P_TRANSLATE(P_DEACTIVATE));
+	add_bool_property(props, P_DEACTIVATE);
 
 	// rewind button
 	obs_properties_add_button(props, P_REWIND, P_TRANSLATE(P_REWIND), 
 		rewind_clicked);
 
-	// alert text
-	p = obs_properties_add_text(props, P_ALERT_TEXT, P_TRANSLATE(P_ALERT_TEXT),
-		obs_text_type::OBS_TEXT_DEFAULT);
-	obs_property_set_long_description(p, P_TRANSLATE(P_DESC(P_ALERT_TEXT)));
-
 	// Demo mode
-	obs_properties_add_bool(props, P_DEMOMODEON, P_TRANSLATE(P_DEMOMODEON));
-	obs_properties_add_text(props, P_DEMOFOLDER, P_TRANSLATE(P_DEMOFOLDER), 
-		obs_text_type::OBS_TEXT_DEFAULT);
-	obs_properties_add_float_slider(props, P_DEMOINTERVAL,
-		P_TRANSLATE(P_DEMOINTERVAL), 1.0f, 60.0f, 1.0f);
-	obs_properties_add_float_slider(props, P_DEMODELAY,
-		P_TRANSLATE(P_DEMODELAY), 1.0f, 60.0f, 1.0f);
+	add_bool_property(props, P_DEMOMODEON);
+	add_text_property(props, P_DEMOFOLDER);
+	add_float_slider(props, P_DEMOINTERVAL, 1.0f, 60.0f, 1.0f);
+	add_float_slider(props, P_DEMODELAY, 1.0f, 60.0f, 1.0f);
 
-	obs_properties_add_bool(props, P_GENTHUMBS,	P_TRANSLATE(P_GENTHUMBS));
+	add_bool_property(props, P_GENTHUMBS);
 
 	// debug drawing flags
-	obs_properties_add_bool(props, P_DRAWMASK,
-		P_TRANSLATE(P_DRAWMASK));
-	obs_properties_add_bool(props, P_DRAWFACEDATA,
-		P_TRANSLATE(P_DRAWFACEDATA));
-	obs_properties_add_bool(props, P_DRAWMORPHTRIS,
-		P_TRANSLATE(P_DRAWMORPHTRIS));
-	obs_properties_add_bool(props, P_DRAWCROPRECT,
-		P_TRANSLATE(P_DRAWCROPRECT));
+	add_bool_property(props, P_DRAWMASK);
+	add_bool_property(props, P_DRAWFACEDATA);
+	add_bool_property(props, P_DRAWMORPHTRIS);
+	add_bool_property(props, P_DRAWCROPRECT);
 
 	// add advanced configuration params
 	smll::Config::singleton().get_properties(props);
@@ -416,13 +462,14 @@ void Plugin::FaceMaskFilter::Instance::update(void *ptr, obs_data_t *data) {
 
 void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 
-	maskFilename = (char*)obs_data_get_string(data, P_MASK);
-	maskFolder = (char*)obs_data_get_string(data, P_MASKFOLDER);
-
 #if !defined(PUBLIC_RELEASE)
 	// update advanced properties
 	smll::Config::singleton().update_properties(data);
 #endif
+
+	// mask file names
+	maskFolder = (char*)obs_data_get_string(data, P_MASKFOLDER);
+	maskFilename = (char*)obs_data_get_string(data, P_MASK);
 
 	// disabled flag
 	isDisabled = obs_data_get_bool(data, P_DEACTIVATE);
@@ -438,7 +485,17 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	cartoonMode = obs_data_get_bool(data, P_CARTOON);
 
 	// Alerts
+	alertActivate = obs_data_get_bool(data, P_ALERT_ACTIVATE);
 	alertText = obs_data_get_string(data, P_ALERT_TEXT);
+	alertAttribution = obs_data_get_string(data, P_ALERT_ATTRIBUTION);
+	alertDuration = (float)obs_data_get_double(data, P_ALERT_DURATION);
+	alertAttributionDuration = (float)obs_data_get_double(data, P_ALERT_ATTRIBUTIONDURATION);
+	alertDoIntro = obs_data_get_bool(data, P_ALERT_DOINTRO);
+	alertDoOutro = obs_data_get_bool(data, P_ALERT_DOOUTRO);
+	introFilename = (char*)obs_data_get_string(data, P_ALERT_INTRO);
+	outroFilename = (char*)obs_data_get_string(data, P_ALERT_OUTRO);
+
+	// text shaper for alerts
 	smllTextShaper->SetString(alertText);
 	alertText = smllTextShaper->GetString(); // get clean string
 
@@ -1229,21 +1286,21 @@ void Plugin::FaceMaskFilter::Instance::getCanvasInfo() {
 		bool is_top = false;
 		if (track_pos.x < canvasCenter.x) {
 			if (track_pos.y < canvasCenter.y) {
-				loc = AlertLocation::BOTTOM_RIGHT;
+				loc = AlertLocation::RIGHT_BOTTOM;
 			}
 			else {
 				is_top = true;
-				loc = AlertLocation::UPPER_RIGHT;
+				loc = AlertLocation::RIGHT_TOP;
 			}
 		}
 		else {
 			is_left = true;
 			if (track_pos.y < canvasCenter.y) {
-				loc = AlertLocation::BOTTOM_LEFT;
+				loc = AlertLocation::LEFT_BOTTOM;
 			}
 			else {
 				is_top = true;
-				loc = AlertLocation::UPPER_LEFT;
+				loc = AlertLocation::LEFT_TOP;
 			}
 		}
 
@@ -1513,16 +1570,20 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_LOWEST);
 
-	// Load Alerts
-	//char* alert_filename = obs_module_file(kFileAlertJson);
-	//alertMaskData = std::unique_ptr<Mask::MaskData>(LoadMask(alert_filename));
-	//bfree(alert_filename);
+	// Load the alerts
+	char* f = obs_module_file(kDefaultAlertLT);
+	alertMaskDatas[AlertLocation::LEFT_TOP] = std::unique_ptr<Mask::MaskData>(LoadMask(f));
+	bfree(f);
+	f = obs_module_file(kDefaultAlertLB);
+	alertMaskDatas[AlertLocation::LEFT_BOTTOM] = std::unique_ptr<Mask::MaskData>(LoadMask(f));
+	bfree(f);
+	f = obs_module_file(kDefaultAlertRT);
+	alertMaskDatas[AlertLocation::RIGHT_TOP] = std::unique_ptr<Mask::MaskData>(LoadMask(f));
+	bfree(f);
+	f = obs_module_file(kDefaultAlertRB);
+	alertMaskDatas[AlertLocation::RIGHT_BOTTOM] = std::unique_ptr<Mask::MaskData>(LoadMask(f));
+	bfree(f);
 
-	// DEBUG : load direct 
-	alertMaskDatas[AlertLocation::UPPER_LEFT] = std::unique_ptr<Mask::MaskData>(LoadMask("c:/STREAMLABS/slart/alerts/alert_test_LT.json"));
-	alertMaskDatas[AlertLocation::UPPER_RIGHT] = std::unique_ptr<Mask::MaskData>(LoadMask("c:/STREAMLABS/slart/alerts/alert_test_RT.json"));
-	alertMaskDatas[AlertLocation::BOTTOM_LEFT] = std::unique_ptr<Mask::MaskData>(LoadMask("c:/STREAMLABS/slart/alerts/alert_test_LB.json"));
-	alertMaskDatas[AlertLocation::BOTTOM_RIGHT] = std::unique_ptr<Mask::MaskData>(LoadMask("c:/STREAMLABS/slart/alerts/alert_test_RB.json"));
 	alertsLoaded = true;
 
 	// Loading loop

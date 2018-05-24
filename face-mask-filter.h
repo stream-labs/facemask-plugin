@@ -144,10 +144,23 @@ namespace Plugin {
 			gs_stagesurf_t*		detectStage;
 
 			// mask filenames
-			const char*			maskFilename;
-			std::string			currentMaskFilename;
 			const char*			maskFolder;
 			std::string			currentMaskFolder;
+			const char*			maskFilename;
+			std::string			currentMaskFilename;
+			const char*			introFilename;
+			std::string			currentIntroFilename;
+			const char*			outroFilename;
+			std::string			currentOutroFilename;
+
+			// alert params
+			bool				alertActivate;
+			bool				alertDoIntro;
+			bool				alertDoOutro;
+			std::string			alertText;
+			std::string			alertAttribution;
+			float				alertDuration;
+			float				alertAttributionDuration;
 
 			// mask data loading thread
 			bool				maskDataShutdown;
@@ -157,16 +170,15 @@ namespace Plugin {
 
 			// alert location
 			enum AlertLocation {
-				UPPER_LEFT,
-				UPPER_RIGHT,
-				BOTTOM_LEFT,
-				BOTTOM_RIGHT,
+				LEFT_BOTTOM,
+				LEFT_TOP,
+				RIGHT_BOTTOM,
+				RIGHT_TOP,
 
 				NUM_ALERT_LOCATIONS
 			};
 
 			// alert data
-			std::string			alertText;
 			std::string			renderedAlertText;
 			AlertLocation		currentAlertLocation;
 			std::unique_ptr<Mask::MaskData>	alertMaskDatas[AlertLocation::NUM_ALERT_LOCATIONS];
