@@ -468,12 +468,14 @@ void  Mask::MaskData::PartCalcMatrix(std::shared_ptr<Mask::Part> _part) {
 
 void Mask::MaskData::Tick(float time) {
 	// update animations with the first Part
+	Part* p = nullptr;
 	for (auto aakv : m_animations) {
 		if (aakv.second) {
-			Part* p = nullptr;
-			for (auto kv : m_parts) {
-				p = kv.second.get();
-				break;
+			if (!p) {
+				for (auto kv : m_parts) {
+					p = kv.second.get();
+					break;
+				}
 			}
 			aakv.second->Update(p, time);
 		}
@@ -636,6 +638,101 @@ std::shared_ptr<Mask::Part> Mask::MaskData::LoadPart(std::string name, obs_data_
 	this->AddPart(name, current);
 	return current;
 }
+
+
+void	Mask::MaskData::Play() {
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			aakv.second->Play();
+		}
+	}
+}
+
+void	Mask::MaskData::PlayBackwards() {
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			aakv.second->PlayBackwards();
+		}
+	}
+}
+
+void	Mask::MaskData::Stop() {
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			aakv.second->Stop();
+		}
+	}
+}
+
+void	Mask::MaskData::Rewind(bool last) {
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			aakv.second->Rewind(last);
+		}
+	}
+}
+
+float	Mask::MaskData::GetDuration() {
+	// find max
+	float d = 0.0f;
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			if (d < aakv.second->GetDuration())
+				d = aakv.second->GetDuration();
+		}
+	}
+	return d;
+}
+
+float	Mask::MaskData::LastFrame() {
+	// find max
+	float f = 0.0f;
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			if (f < aakv.second->LastFrame())
+				f = aakv.second->LastFrame();
+		}
+	}
+	return f;
+}
+
+float	Mask::MaskData::GetFPS() {
+	// just grab first
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			return aakv.second->GetFPS();
+		}
+	}
+	return 0.0f;
+}
+
+float	Mask::MaskData::GetPlaybackSpeed() {
+	// just grab first
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			return aakv.second->GetPlaybackSpeed();
+		}
+	}
+	return 0.0f;
+}
+
+void	Mask::MaskData::SetPlaybackSpeed(float speed) {
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			aakv.second->SetPlaybackSpeed(speed);
+		}
+	}
+}
+
+void   Mask::MaskData::Seek(float time) {
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			aakv.second->Seek(time);
+		}
+	}
+}
+
+
 
 Mask::Resource::Morph* Mask::MaskData::GetMorph() {
 	// cache the morph pointer so we dont constantly search for it

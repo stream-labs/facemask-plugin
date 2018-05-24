@@ -86,7 +86,7 @@ namespace Mask {
 		class Animation;
 	}
 
-	class MaskData {
+	class MaskData : public Resource::IAnimationControls {
 	public:
 		MaskData();
 		virtual ~MaskData();
@@ -113,6 +113,18 @@ namespace Mask {
 		// main: tick & render
 		void Tick(float time);
 		void Render(bool depthOnly = false);
+
+		// IAnimationControls
+		void	Play() override;
+		void	PlayBackwards() override;
+		void	Stop() override;
+		void	Rewind(bool last = false) override;
+		float	GetDuration() override;
+		float	LastFrame() override;
+		float	GetFPS() override;
+		float	GetPlaybackSpeed() override;
+		void	SetPlaybackSpeed(float speed) override;
+		void    Seek(float time) override;
 
 		// sorted draw objects
 		void ClearSortedDrawObjects();

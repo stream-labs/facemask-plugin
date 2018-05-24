@@ -64,6 +64,20 @@ namespace Mask {
 			virtual void SetAnimatableValue(float v, AnimationChannelType act) = 0;
 		};
 
+		class IAnimationControls {
+		public:
+			virtual void	Play() = 0;
+			virtual void	PlayBackwards() = 0;
+			virtual void	Stop() = 0;
+			virtual void	Rewind(bool last = false) = 0;
+			virtual float	GetDuration() = 0;
+			virtual float	LastFrame() = 0;
+			virtual float	GetFPS() = 0;
+			virtual float	GetPlaybackSpeed() = 0;
+			virtual void	SetPlaybackSpeed(float speed) = 0;
+			virtual void    Seek(float time) = 0;
+		};
+
 		struct AnimationInstanceData : public InstanceData {
 			float	elapsed;
 			AnimationInstanceData() : elapsed(0.0f) {}
@@ -72,16 +86,16 @@ namespace Mask {
 
 		struct AnimationChannel {
 			std::shared_ptr<IAnimatable>	item;
-			AnimationChannelType		type;
-			AnimationBehaviour			preState;
-			AnimationBehaviour			postState;
-			std::vector<float>			values;
+			AnimationChannelType			type;
+			AnimationBehaviour				preState;
+			AnimationBehaviour				postState;
+			std::vector<float>				values;
 
 			float	GetValue(int frame);
 		};
 
 
-		class Animation : public IBase {
+		class Animation : public IBase, IAnimationControls {
 		public:
 			Animation(Mask::MaskData* parent, std::string name, obs_data_t* data);
 			virtual ~Animation();
@@ -90,16 +104,16 @@ namespace Mask {
 			virtual void Update(Mask::Part* part, float time) override;
 			virtual void Render(Mask::Part* part) override;
 
-			void	Play() { m_speed = 1.0f; }
-			void	PlayBackwards() { m_speed = -1.0f; }
-			void	Stop() { m_speed = 0.0f; }
-			void	Rewind(bool last = false) { last ? Seek(LastFrame()) : Seek(0); }
-			float	GetDuration() { return m_duration; }
-			float	LastFrame() { return m_duration - (1.0f / m_fps); }
-			float	GetFPS() { return m_fps; }
-			float	GetPlaybackSpeed() { return m_speed; }
-			void	SetPlaybackSpeed(float speed) { m_speed = speed; }
-			void    Seek(float time);
+			void	Play() override { m_speed = 1.0f; }
+			void	PlayBackwards() override { m_speed = -1.0f; }
+			void	Stop() override { m_speed = 0.0f; }
+			void	Rewind(bool last = false) override { last ? Seek(LastFrame()) : Seek(0); }
+			float	GetDuration() override { return m_duration; }
+			float	LastFrame() override { return m_duration - (1.0f / m_fps); }
+			float	GetFPS() override { return m_fps; }
+			float	GetPlaybackSpeed() override { return m_speed; }
+			void	SetPlaybackSpeed(float speed) override { m_speed = speed; }
+			void    Seek(float time) override;
 
 		protected:
 			float							m_speed;
