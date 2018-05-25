@@ -8,7 +8,7 @@
     "category": "Other",
     "license": "Copyright 2017 - General Workings Inc. - All rights reserved.",
     "website": "http://streamlabs.com",
-    "is_intro": false,
+    "is_intro": true,
     "intro_fade_time": 0.333332985639572,
     "intro_duration": 2.13333010673523,
     "modtime": 1526333724,

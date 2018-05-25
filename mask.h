@@ -125,6 +125,12 @@ namespace Mask {
 		float	GetPlaybackSpeed() override;
 		void	SetPlaybackSpeed(float speed) override;
 		void    Seek(float time) override;
+		bool	GetStopOnLastFrame() override;
+		void	SetStopOnLastFrame(bool stop = true) override;
+
+		// Global alpha
+		float	GetGlobalAlpha();
+		void	SetGlobalAlpha(float alpha);
 
 		// sorted draw objects
 		void ClearSortedDrawObjects();
@@ -135,15 +141,17 @@ namespace Mask {
 		bool RenderMorphVideo(gs_texture* vidtex, uint32_t width, uint32_t height,
 			const smll::TriangulationResult& trires);
 
-		// animation
-		void	RewindAnimations();
+		// intro animations
 		bool	IsIntroAnimation() { return m_isIntroAnim; }
+		float	GetIntroFadeTime() { return m_introFadeTime; }
+		float	GetIntroDuration() { return m_introDuration; }
 
 		// rendering flags
 		bool	DrawVideoWithMask() { return m_drawVideoWithMask; }
 
 		// global instance datas
 		MaskInstanceDatas	instanceDatas;
+		void				ResetInstanceDatas();
 
 	private:
 		std::shared_ptr<Part> LoadPart(std::string name, obs_data_t* data);

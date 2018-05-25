@@ -63,6 +63,9 @@
 // Maximum for number of masks loaded in demo mode
 #define DEMO_MODE_MAX_MASKS				(400)
 
+// Big enough
+#define BIG_ASS_FLOAT					(100000.0f)
+
 static const int NUM_FONT_SIZES = 8;
 static const int FONT_SIZES[NUM_FONT_SIZES] = { 200, 120, 80, 62, 50, 42, 36, 30 };
 
@@ -133,17 +136,17 @@ void Plugin::FaceMaskFilter::destroy(void *ptr) {
 Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *source)
 	: request_rewind(false), 
 	source(source), canvasWidth(0), canvasHeight(0), baseWidth(640), baseHeight(480),
-	isActive(true), isVisible(true), isDisabled(false), videoTicked(true),
+	isActive(true), isVisible(true), videoTicked(true),
 	taskHandle(NULL), detectStage(nullptr),	maskDataShutdown(false), 
 	maskFolder(nullptr), maskFilename(nullptr),
-	introFilename(nullptr),	outroFilename(nullptr),	alertActivate(false), alertDoIntro(false),
+	introFilename(nullptr),	outroFilename(nullptr),	alertActivate(true), alertDoIntro(false),
 	alertDoOutro(false), alertDuration(10.0f), alertAttributionDuration(2.0f),
 	currentAlertLocation(LEFT_TOP), alertTranslation(-35.0f), alertAspectRatio(1.15f), 
-	alertsLoaded(false),
+	alertElapsedTime(BIG_ASS_FLOAT), alertTriggered(false), alertsLoaded(false),
 	demoModeOn(false), demoModeMaskJustChanged(false), demoModeMaskChanged(false), 
 	demoCurrentMask(0), demoModeInterval(0.0f), demoModeDelay(0.0f), demoModeElapsed(0.0f), 
 	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), 
-	drawMask(true),	drawFaces(false), drawMorphTris(false), drawFDRect(false), drawVideo(true),
+	drawMask(true),	drawFaces(false), drawMorphTris(false), drawFDRect(false), 
 	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr) {
 
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
@@ -471,21 +474,14 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	maskFolder = (char*)obs_data_get_string(data, P_MASKFOLDER);
 	maskFilename = (char*)obs_data_get_string(data, P_MASK);
 
-	// disabled flag
-	isDisabled = obs_data_get_bool(data, P_DEACTIVATE);
-	if (isDisabled) {
-		// reset the buffer
-		std::unique_lock<std::mutex> lock(detection.mutex);
-		detection.frameIndex = -1;
-		detection.facesIndex = -1;
-	}
-
 	// Flags
 	autoBGRemoval = obs_data_get_bool(data, P_BGREMOVAL);
 	cartoonMode = obs_data_get_bool(data, P_CARTOON);
 
 	// Alerts
+	bool lastAlertActivate = alertActivate;
 	alertActivate = obs_data_get_bool(data, P_ALERT_ACTIVATE);
+	alertTriggered = (!lastAlertActivate && alertActivate);
 	alertText = obs_data_get_string(data, P_ALERT_TEXT);
 	alertAttribution = obs_data_get_string(data, P_ALERT_ATTRIBUTION);
 	alertDuration = (float)obs_data_get_double(data, P_ALERT_DURATION);
@@ -573,33 +569,114 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 
 	videoTicked = true;
 
+	if (!isVisible || !isActive) {
+		// *** SKIP TICK ***
+		return;
+	}
+
 	// ----- GET FACES FROM OTHER THREAD -----
 	updateFaces();
 
 	// demo mode stuff
 	demoModeUpdate(timeDelta);
 
-	// Tick the mask data
+	// Lock mask datas mutex
 	std::unique_lock<std::mutex> masklock(maskDataMutex, std::try_to_lock);
-	if (masklock.owns_lock()) {
-		// get the right mask data
-		Mask::MaskData* mdat = maskData.get();
-		if (demoModeOn && !demoModeInDelay) {
-			if (demoCurrentMask >= 0 && demoCurrentMask < demoMaskDatas.size())
-				mdat = demoMaskDatas[demoCurrentMask].get();
+	if (!masklock.owns_lock()) {
+		// *** SKIP TICK ***
+		return;
+	}
+
+	// Figure out what's going on
+	bool introActive = false;
+	bool outroActive = false;
+	float maskActiveTime = 0.0f;
+	if (alertDoIntro && introData) {
+		maskActiveTime = introData->GetIntroDuration() - 
+			introData->GetIntroFadeTime();
+		if (alertElapsedTime <= introData->GetIntroDuration())
+			introActive = true;
+	}
+	float maskInactiveTime = alertDuration;
+	if (alertDoOutro && outroData) {
+		maskInactiveTime -= outroData->GetIntroDuration() -
+			outroData->GetIntroFadeTime();
+		if (alertElapsedTime >= (alertDuration - outroData->GetIntroDuration()))
+			outroActive = true;
+	}
+	bool maskActive = (alertElapsedTime >= maskActiveTime &&
+		alertElapsedTime <= maskInactiveTime);
+
+	// get the right mask data
+	Mask::MaskData* mdat = maskData.get();
+	if (demoModeOn && !demoModeInDelay) {
+		if (demoCurrentMask >= 0 && demoCurrentMask < demoMaskDatas.size())
+			mdat = demoMaskDatas[demoCurrentMask].get();
+	}
+
+	// Alert triggered?
+	if (alertTriggered) {
+		alertElapsedTime = 0.0f;
+		// rewind everything
+		if (mdat)
+			mdat->Rewind();
+		if (introData)
+			introData->Rewind();
+		if (outroData)
+			outroData->Rewind();
+		for (int i = 0; alertsLoaded && i < AlertLocation::NUM_ALERT_LOCATIONS; i++) {
+			if (alertMaskDatas[i]) {
+				alertMaskDatas[i]->Rewind();
+				alertMaskDatas[i]->Play();
+			}
 		}
+		alertTriggered = false;
+	}
+
+	// mask active?
+	if (maskActive) {
 		if (mdat) {
+			// rewind
 			if (request_rewind) {
-				mdat->RewindAnimations();
+				mdat->Rewind();
 				request_rewind = false;
 			}
-
+			// tick main mask
 			mdat->Tick(timeDelta);
 		}
 	}
 
-	if (alertsLoaded && alertMaskDatas[currentAlertLocation]) {
-		alertMaskDatas[currentAlertLocation]->Tick(timeDelta);
+	// Tick the alerts
+	if (alertsLoaded) {
+		float dur = 1.0f;
+		for (int i = 0; i < AlertLocation::NUM_ALERT_LOCATIONS; i++) {
+			if (alertMaskDatas[i]) {
+				alertMaskDatas[i]->Tick(timeDelta);
+				dur = alertMaskDatas[i]->GetDuration();
+			}
+		}
+		float lastAlertElapsedTime = alertElapsedTime;
+		alertElapsedTime += timeDelta;
+
+		float alertAnimOutTime = alertDuration - dur;
+		if (alertElapsedTime < alertDuration &&
+			alertElapsedTime >= alertAnimOutTime &&
+			lastAlertElapsedTime < alertAnimOutTime) {
+			for (int i = 0; i < AlertLocation::NUM_ALERT_LOCATIONS; i++) {
+				if (alertMaskDatas[i]) {
+					alertMaskDatas[i]->Rewind(true);
+					alertMaskDatas[i]->PlayBackwards();
+				}
+			}
+		}
+	}
+
+	// Tick the intro/outro
+	if (introActive) {
+		introData->Tick(timeDelta);
+	}
+	if (outroActive) {
+		outroData->Tick(timeDelta);
 	}
 }
 
@@ -613,7 +690,16 @@ void Plugin::FaceMaskFilter::Instance::video_render(void *ptr,
 void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// Skip rendering if inactive or invisible.
-	if (!isActive || !isVisible || isDisabled) {
+	if (!isActive || !isVisible || 
+		// or if the alert is done
+		(!drawMask && alertElapsedTime > alertDuration)) {
+		// reset the buffer
+		std::unique_lock<std::mutex> lock(detection.mutex);
+		detection.frameIndex = -1;
+		detection.facesIndex = -1;
+		// make sure file loads still happen
+		checkForMaskUnloading();
+		// *** SKIP ***
 		obs_source_skip_video_filter(source);
 		return;
 	}
@@ -622,7 +708,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	obs_source_t *parent = obs_filter_get_parent(source);
 	obs_source_t *target = obs_filter_get_target(source);
 	if ((parent == NULL) || (target == NULL)) {
-		// Early-exit if we have no parent or target (invalid state).
+		// *** SKIP ***
 		obs_source_skip_video_filter(source);
 		return;
 	}
@@ -631,7 +717,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	baseWidth = obs_source_get_base_width(target);
 	baseHeight = obs_source_get_base_height(target);
 	if ((baseWidth <= 0) || (baseHeight <= 0)) {
-		// Target is not ready yet or an invalid state happened.
+		// *** SKIP ***
 		obs_source_skip_video_filter(source);
 		return;
 	}
@@ -645,7 +731,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// Render source frame to a texture
 	gs_texture* sourceTexture = RenderSourceTexture(effect ? effect : defaultEffect);
 	if (sourceTexture == NULL) {
-		// Failed to grab a usable texture, so skip.
+		// *** SKIP ***
 		obs_source_skip_video_filter(source);
 		return;
 	}
@@ -656,9 +742,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// ----- SEND FRAME TO FACE DETECTION THREAD -----
 	SendSourceTextureToThread(sourceTexture);
 
+	// Get mask data mutex
 	std::unique_lock<std::mutex> masklock(maskDataMutex, std::try_to_lock);
 	if (!masklock.owns_lock()) {
-		// can't get mutex on mask, skip rendering
+		// *** SKIP RENDERING ***
 		obs_source_skip_video_filter(source);
 		return;
 	}
@@ -677,7 +764,49 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			mask_data = demoMaskDatas[demoCurrentMask].get();
 		}
 	}
-	
+
+	// set up alphas
+	bool introActive = false;
+	bool outroActive = false;
+	float maskAlpha = 1.0f;
+	if (alertDoIntro && introData) {
+		float t1 = introData->GetIntroDuration() -
+			introData->GetIntroFadeTime();
+		float t2 = introData->GetIntroDuration();
+		if (alertElapsedTime < t1)
+			maskAlpha = 0.0f;
+		else if (alertElapsedTime < t2)
+			maskAlpha = Utils::hermite((alertElapsedTime - t1) / (t2 - t1), 0.0f, 1.0f);
+		if (alertElapsedTime <= introData->GetIntroDuration())
+			introActive = true;
+	}
+	else {
+		if (alertElapsedTime < 0.3f)
+			maskAlpha = Utils::hermite(alertElapsedTime / 0.3f, 0.0f, 1.0f);
+	}
+	if (alertDoOutro && outroData) {
+		float t1 = alertDuration - outroData->GetIntroDuration();
+		float t2 = t1 + outroData->GetIntroFadeTime();
+		if (alertElapsedTime > t2)
+			maskAlpha = 0.0f;
+		else if (alertElapsedTime > t1)
+			maskAlpha = Utils::hermite((alertElapsedTime - t1) / (t2 - t1), 1.0f, 0.0f);
+		if (alertElapsedTime >= (alertDuration - outroData->GetIntroDuration()))
+			outroActive = true;
+	}
+	else {
+		float t = alertDuration - 0.3f;
+		if (alertElapsedTime > alertDuration)
+			maskAlpha = 0.0f;
+		else if (alertElapsedTime > t)
+			maskAlpha = Utils::hermite((alertElapsedTime - 1) / 0.3f, 1.0f, 0.0f);
+	}
+	if (drawMask)
+		maskAlpha = 1.0f;
+	if (mask_data) {
+		mask_data->SetGlobalAlpha(maskAlpha);
+	}
+
 	// Select the video frame to draw
 	// - since we are already caching frames of video for the
 	//   face detection thread to consume, we can likely find
@@ -696,13 +825,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// flags
 	bool genThumbs = mask_data && demoModeOn &&
 		demoModeMaskChanged && demoModeGenPreviews && demoModeSavingFrames;
-	bool noDrawVideo = !autoBGRemoval &&
-		(faces.length == 0 || !drawMask || !mask_data || !videoTicked);
 
 	// render mask to texture
 	gs_texture* mask_tex = nullptr;
 	if (faces.length > 0 && !demoModeInDelay) {
-
 		// only render once per video tick
 		if (videoTicked) {
 
@@ -717,7 +843,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				vec4_set(&thumbbg, vv, vv, vv, 1.0f);
 				gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
 
-				if (drawMask && mask_data) {
+				if (mask_data) {
 
 					// Swap texture with video texture :P
 					// TODO: we'd prefer to have the mask drawn on top
@@ -750,7 +876,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 						gs_clear(GS_CLEAR_COLOR, &black, 1.0f, 0);
 					}
 
-					if (drawVideo && (genThumbs || mask_data->DrawVideoWithMask())) {
+					// draw video to the mask texture?
+					if (genThumbs || mask_data->DrawVideoWithMask()) {
 						// Draw the source video
 						if (mask_data && !demoModeInDelay) {
 							triangulation.autoBGRemoval = autoBGRemoval;
@@ -771,10 +898,30 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 					// Draw regular stuff
 					for (int i = 0; i < faces.length; i++) {
-						gs_matrix_push();
-						setFaceTransform(faces[i], mask_data->IsIntroAnimation());
-						drawMaskData(mask_data, false, false);
-						gs_matrix_pop();
+						if (maskAlpha > 0.0f) {
+							gs_matrix_push();
+							setFaceTransform(faces[i], mask_data->IsIntroAnimation());
+							drawMaskData(mask_data, false, false);
+							gs_matrix_pop();
+						}
+					}
+
+					if (introActive || outroActive)
+						gs_clear(GS_CLEAR_DEPTH, &black, 1.0f, 0);
+
+					for (int i = 0; i < faces.length; i++) {
+						if (introActive) {
+							gs_matrix_push();
+							setFaceTransform(faces[i], true);
+							drawMaskData(introData.get(), false, false);
+							gs_matrix_pop();
+						}
+						if (outroActive) {
+							gs_matrix_push();
+							setFaceTransform(faces[i], true);
+							drawMaskData(outroData.get(), false, false);
+							gs_matrix_pop();
+						}
 					}
 				}
 
@@ -792,20 +939,16 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// render alert to texture
 	gs_texture* alert_tex = nullptr;
 	if (alertsLoaded && alertMaskDatas[currentAlertLocation]) {
-
+		// only render once per video tick
 		if (videoTicked) {
-
+			// render text to texture
 			if (renderedAlertText != alertText) {
-				// get screen extents of text mesh
-				bool got_extents = false;
-				gs_rect r = { 0, 0, 512, 256 };
-				std::shared_ptr<Mask::Resource::Mesh> mesh = std::dynamic_pointer_cast<Mask::Resource::Mesh>
-					(alertMaskDatas[currentAlertLocation]->GetResource("mesh1"));
-				if (mesh) {
-					got_extents = mesh->GetScreenExtents(&r, alertViewport.cx, alertViewport.cy, alertTranslation);
-					r.cx = (int)ALIGN_4(r.cx);
-					r.cy = (int)ALIGN_4(r.cy);
-				}
+
+				// Based on current alerts
+				// TODO: will have to do better
+				gs_rect r;
+				r.cx = (int)ALIGN_4((float)alertViewport.cx * 0.66f);
+				r.cy = (int)ALIGN_4((float)alertViewport.cy * 0.433f);
 
 				// Render text to texture
 				int size = smllTextShaper->GetOptimalSize(*smllFont, r.cx, r.cy);
@@ -820,8 +963,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					img->SwapTexture(tex);
 
 				// done
-				if (got_extents)
-					renderedAlertText = alertText;
+				renderedAlertText = alertText;
 			}
 
 			// draw stuff to texture
@@ -857,14 +999,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		gs_blend_type::GS_BLEND_INVSRCALPHA);
 
 	// Draw the source video:
-	// - if we are drawing the video with the mask, then we need to draw the video
-	//   here if we aren't going to draw it with the mask.
-	// - if we are not drawing the video with the mask, then we definitely need
+	// - if we are not drawing the video with the mask, then we need
 	//   to draw video now.
-	if (drawVideo &&
-		(!mask_data ||
-		(noDrawVideo && mask_data->DrawVideoWithMask()) ||
-		!mask_data->DrawVideoWithMask())) {
+	if (!mask_data ||
+		!mask_data->DrawVideoWithMask()) {
 
 		// Draw the source video
 		if (mask_data && !demoModeInDelay) {
@@ -920,7 +1058,14 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// since we are on the gpu right now anyway, here is 
 	// a good spot to unload mask data if we need to.
+	checkForMaskUnloading();
 
+	// 1 frame only
+	demoModeMaskJustChanged = false;
+	videoTicked = false;
+}
+
+void Plugin::FaceMaskFilter::Instance::checkForMaskUnloading() {
 	// Check for file/folder changes
 	if (maskFilename &&	currentMaskFilename != maskFilename) {
 		maskData = nullptr;
@@ -936,10 +1081,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		introData = nullptr;
 		outroData = nullptr;
 	}
-
-	// 1 frame only
-	demoModeMaskJustChanged = false;
-	videoTicked = false;
 }
 
 
@@ -989,7 +1130,7 @@ void Plugin::FaceMaskFilter::Instance::demoModeRender(gs_texture* vidTex, gs_tex
 		if (demoModeSavingFrames) {
 			// sometimes the red frame is 2 frames
 			if (isRed && previewFrames.size() < 1) {
-				mask_data->RewindAnimations();
+				mask_data->Rewind();
 			}
 			else if (isRed) {
 				// done
@@ -1004,7 +1145,7 @@ void Plugin::FaceMaskFilter::Instance::demoModeRender(gs_texture* vidTex, gs_tex
 		}
 		else if (isRed) {
 			// ready to go
-			mask_data->RewindAnimations();
+			mask_data->Rewind();
 			demoModeSavingFrames = true;
 		}
 	}
@@ -1590,6 +1731,12 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 	f = obs_module_file(kDefaultAlertRB);
 	alertMaskDatas[AlertLocation::RIGHT_BOTTOM] = std::unique_ptr<Mask::MaskData>(LoadMask(f));
 	bfree(f);
+	
+	// make the alerts animations stop
+	for (int i = 0; i < AlertLocation::NUM_ALERT_LOCATIONS; i++) {
+		alertMaskDatas[i]->SetStopOnLastFrame();
+		alertMaskDatas[i]->Stop();
+	}
 
 	alertsLoaded = true;
 
@@ -1632,7 +1779,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 #endif
 					// load mask
 					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);
-					maskData = std::unique_ptr<Mask::MaskData>(LoadMask(maskFn));
+					introData = std::unique_ptr<Mask::MaskData>(LoadMask(maskFn));
 					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_END);
 				}
 
@@ -1650,7 +1797,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 #endif
 					// load mask
 					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);
-					maskData = std::unique_ptr<Mask::MaskData>(LoadMask(maskFn));
+					outroData = std::unique_ptr<Mask::MaskData>(LoadMask(maskFn));
 					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_END);
 				}
 

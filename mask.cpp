@@ -499,7 +499,7 @@ void Mask::MaskData::Tick(float time) {
 		instanceDatas.Pop();
 	}
 	
-	// intro animation?
+	// DO INTRO ANIMATION FADING
 	if (m_isIntroAnim) {
 		std::shared_ptr<Mask::AlphaInstanceData> aid =
 			instanceDatas.GetData<Mask::AlphaInstanceData>(Mask::AlphaInstanceDataId);
@@ -639,6 +639,18 @@ std::shared_ptr<Mask::Part> Mask::MaskData::LoadPart(std::string name, obs_data_
 	return current;
 }
 
+float	Mask::MaskData::GetGlobalAlpha() {
+	std::shared_ptr<Mask::AlphaInstanceData> aid =
+		instanceDatas.GetData<Mask::AlphaInstanceData>(Mask::AlphaInstanceDataId);
+	return aid->alpha;
+}
+
+void	Mask::MaskData::SetGlobalAlpha(float alpha) {
+	std::shared_ptr<Mask::AlphaInstanceData> aid =
+		instanceDatas.GetData<Mask::AlphaInstanceData>(Mask::AlphaInstanceDataId);
+	aid->alpha = alpha;
+}
+
 
 void	Mask::MaskData::Play() {
 	for (auto aakv : m_animations) {
@@ -670,6 +682,10 @@ void	Mask::MaskData::Rewind(bool last) {
 			aakv.second->Rewind(last);
 		}
 	}
+	// reset instance datas
+	ResetInstanceDatas();
+	// reset our time
+	m_elapsedTime = 0.0f;
 }
 
 float	Mask::MaskData::GetDuration() {
@@ -732,6 +748,23 @@ void   Mask::MaskData::Seek(float time) {
 	}
 }
 
+bool	Mask::MaskData::GetStopOnLastFrame() {
+	// just grab first
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			return aakv.second->GetStopOnLastFrame();
+		}
+	}
+	return false;
+}
+
+void	Mask::MaskData::SetStopOnLastFrame(bool stop) {
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			aakv.second->SetStopOnLastFrame(stop);
+		}
+	}
+}
 
 
 Mask::Resource::Morph* Mask::MaskData::GetMorph() {
@@ -780,16 +813,13 @@ bool Mask::MaskData::RenderMorphVideo(gs_texture* vidtex, uint32_t width, uint32
 	return didMorph;
 }
 
-void Mask::MaskData::RewindAnimations() {
+void Mask::MaskData::ResetInstanceDatas() {
 
 	// reset instance datas
 	std::vector<std::shared_ptr<InstanceData>> idatas = instanceDatas.GetInstances();
 	for (auto id : idatas) {
 		id->Reset();
 	}
-
-	// reset our time
-	m_elapsedTime = 0.0f;
 }
 
 

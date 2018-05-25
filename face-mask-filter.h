@@ -124,7 +124,6 @@ namespace Plugin {
 			int32_t			baseWidth, baseHeight;
 			bool			isActive;
 			bool			isVisible;
-			bool			isDisabled;
 			bool			videoTicked;
 			HANDLE			taskHandle;
 
@@ -152,6 +151,8 @@ namespace Plugin {
 			std::string			currentIntroFilename;
 			const char*			outroFilename;
 			std::string			currentOutroFilename;
+
+			void	checkForMaskUnloading();
 
 			// alert params
 			bool				alertActivate;
@@ -186,6 +187,8 @@ namespace Plugin {
 			std::unique_ptr<Mask::MaskData>	alertMaskDatas[AlertLocation::NUM_ALERT_LOCATIONS];
 			float				alertTranslation;
 			float				alertAspectRatio;
+			float				alertElapsedTime;
+			bool				alertTriggered;
 			bool				alertsLoaded;
 			gs_rect				alertViewport;
 			vec2				smoothCenter;
@@ -232,7 +235,6 @@ namespace Plugin {
 			bool				drawFaces;
 			bool				drawMorphTris;
 			bool				drawFDRect;
-			bool				drawVideo;
 			bool				filterPreviewMode;
 			bool				autoBGRemoval;
 			bool				cartoonMode;

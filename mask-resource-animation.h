@@ -76,12 +76,14 @@ namespace Mask {
 			virtual float	GetPlaybackSpeed() = 0;
 			virtual void	SetPlaybackSpeed(float speed) = 0;
 			virtual void    Seek(float time) = 0;
+			virtual bool	GetStopOnLastFrame() = 0;
+			virtual void	SetStopOnLastFrame(bool stop=true) = 0;
 		};
 
 		struct AnimationInstanceData : public InstanceData {
 			float	elapsed;
 			AnimationInstanceData() : elapsed(0.0f) {}
-			void Reset() override { elapsed = 0.0f; }
+			void Reset() override {}
 		};
 
 		struct AnimationChannel {
@@ -104,6 +106,7 @@ namespace Mask {
 			virtual void Update(Mask::Part* part, float time) override;
 			virtual void Render(Mask::Part* part) override;
 
+			// IAnimationControls
 			void	Play() override { m_speed = 1.0f; }
 			void	PlayBackwards() override { m_speed = -1.0f; }
 			void	Stop() override { m_speed = 0.0f; }
@@ -114,12 +117,15 @@ namespace Mask {
 			float	GetPlaybackSpeed() override { return m_speed; }
 			void	SetPlaybackSpeed(float speed) override { m_speed = speed; }
 			void    Seek(float time) override;
+			bool	GetStopOnLastFrame() override { return m_stopOnLastFrame; }
+			void	SetStopOnLastFrame(bool stop = true) override { m_stopOnLastFrame = stop; };
 
 		protected:
 			float							m_speed;
 			float							m_duration;
 			float							m_fps;
 			std::vector<AnimationChannel>	m_channels;
+			bool							m_stopOnLastFrame;
 
 			AnimationChannelType AnimationTypeFromString(const std::string& s);
 			AnimationBehaviour AnimationBehaviourFromString(const std::string& s);

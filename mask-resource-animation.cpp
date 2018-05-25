@@ -92,7 +92,7 @@ float	Mask::Resource::AnimationChannel::GetValue(int frame) {
 
 
 Mask::Resource::Animation::Animation(Mask::MaskData* parent, std::string name, obs_data_t* data)
-	: IBase(parent, name), m_speed(1.0f) {
+	: IBase(parent, name), m_speed(1.0f), m_stopOnLastFrame(false) {
 
 	if (!obs_data_has_user_value(data, S_DURATION)) {
 		PLOG_ERROR("Animation '%s' has no duration.", name.c_str());
@@ -105,6 +105,11 @@ Mask::Resource::Animation::Animation(Mask::MaskData* parent, std::string name, o
 		throw std::logic_error("Animation has no fps.");
 	}
 	m_fps = (float)obs_data_get_double(data, S_FPS);
+
+	// WOOPS - I wrongly assumed the duration would be in seconds. It is in frames.
+	// - By the time I realized this, too many masks were already in circulation.
+	// - Just correct it here
+	m_duration /= m_fps;
 
 	if (!obs_data_has_user_value(data, S_CHANNELS)) {
 		PLOG_ERROR("Animation '%s' has no channels.", name.c_str());
@@ -188,6 +193,22 @@ void Mask::Resource::Animation::Update(Mask::Part* part, float time) {
 
 	// time has elapsed
 	instData->elapsed += time * m_speed;
+
+	// stop on last frame?
+	if (m_stopOnLastFrame) {
+		if (m_speed > 0.0f) {
+			if (instData->elapsed >= LastFrame()) {
+				instData->elapsed = LastFrame();
+				Stop();
+			}
+		}
+		else {
+			if (instData->elapsed <= 0) {
+				instData->elapsed = 0;
+				Stop();
+			}
+		}
+	}
 
 	// process animation channels
 	int frame = (int)(instData->elapsed * m_fps);
