@@ -783,6 +783,9 @@ bool Mask::MaskData::RenderMorphVideo(gs_texture* vidtex, uint32_t width, uint32
 
 	GetMorph();
 
+	std::shared_ptr<Mask::AlphaInstanceData> aid =
+		instanceDatas.GetData<Mask::AlphaInstanceData>(Mask::AlphaInstanceDataId);
+
 	// Add an empty morph resource if they want to use 
 	// other features that depend on it
 	if ((trires.autoBGRemoval || trires.cartoonMode) && m_morph == nullptr) {
@@ -792,7 +795,7 @@ bool Mask::MaskData::RenderMorphVideo(gs_texture* vidtex, uint32_t width, uint32
 		AddResource(n, r);
 	}
 
-	if (m_morph && trires.vertexBuffer) {
+	if (aid->alpha > 0.0f && trires.vertexBuffer) {
 		didMorph = true;
 		m_morph->RenderMorphVideo(vidtex, trires);
 	}
