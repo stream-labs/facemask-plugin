@@ -1,5 +1,3 @@
-Font Sources
-------------
+FONT SOURCES
 
-http://www.blambot.com
-http://www.dafont.com
+ - http://www.blambot.com

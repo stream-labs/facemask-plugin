@@ -63,12 +63,5 @@ static const char* const kDefaultAlertLT = "alerts/alert_LT.json";
 static const char* const kDefaultAlertLB = "alerts/alert_LB.json";
 static const char* const kDefaultAlertRT = "alerts/alert_RT.json";
 static const char* const kDefaultAlertRB = "alerts/alert_RB.json";
-//static const char* const kFontAlertTTF = "fonts/BackIssuesBB_reg.ttf";
-static const char* const kFontAlertTTF = "fonts/BadaboomBB_Reg.ttf";
-//static const char* const kFontAlertTTF = "fonts/amsterdam.ttf";
-//static const char* const kFontAlertTTF = "fonts/Peinture Fraiche.ttf";
-//static const char* const kFontAlertTTF = "fonts/adrip1.ttf";
-//static const char* const kFontAlertTTF = "fonts/Comic Panels.ttf";
-//static const char* const kFontAlertTTF = "fonts/Urban Calligraphy.ttf";
-//static const char* const kFontAlertTTF = "fonts/whoa.ttf";
-//static const char* const kFontAlertTTF = "fonts/ARRRMB__.ttf";
+static const char* const kFontAlertTTF = "fonts/BackIssuesBB_reg.ttf";
+

@@ -280,8 +280,8 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 
 #ifdef PUBLIC_RELEASE	
 	obs_data_set_default_string(data, P_MASK, kDefaultMask);
-	obs_data_set_default_string(data, P_ALERT_INTRO, "");
-	obs_data_set_default_string(data, P_ALERT_OUTRO, "");
+	obs_data_set_default_string(data, P_ALERT_INTRO, kDefaultIntro);
+	obs_data_set_default_string(data, P_ALERT_OUTRO, kDefaultOutro);
 #else
 	std::string jsonWithPath = defMaskFolder;
 	jsonWithPath = jsonWithPath + "/" + kDefaultMask;
