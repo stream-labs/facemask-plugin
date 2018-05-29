@@ -111,20 +111,10 @@ The process of face detection consists of four main operations:
  * **Facial Landmarks** Given a rectangle that locates a face, we can then use Dlib's landmark detection algorithm which uses a trained regression tree solver to find 68 2D facial landmark points, corresponding to the Multi-PIE definition (see links below).
 
  * **3D Pose Estimation** A subset of key points are taken from the 2D facial landmark points, and using 3D points for an arbitrary rest pose, we use openCV's solvePnP method to obtain a 3D transformation. This transform can be used to render 3D objects in the scene that track the head movement.
+ 
+ * **Face Morphing** The 68 landmark points are used to subdivide the video quad into a mesh. Another 11 points are calculated to form the head points, and then catmull rom smoothing is performed to smooth out the contours. Then the mesh is distorted to create face morphs.
 
-The FaceDetect object manages these operations and a current state, so that it performs the face detection, then uses object tracking to follow the face, then does landmark/3d pose estimation. 
-
-The face detection/object tracking are executed according to a frequency setting, so they are not necessarily executed on every frame. The face detection is re-checked according to another frequency setting, to ensure the object tracking is still correct. 
-
-The face detection executes using the detect texture generated in the render thread. The tracking uses the tracking texture, and the landmark/3d pose estimation is done using the high resolution capture texture. If the tracking and detection textures are the same size, they are shared, and only 1 texture is used. Currently, the tracking and detection textures are scaled-down greyscale textures, due to the higher expense of these operations, where as the capture texture is full color and resolution, because the landmarks and pose estimation are inexpensive by comparison.
-
-
-## Advanced Settings
-
-In addition to the obvious settings in the plugin, the face detection code has a swath of config parameters to control the behaviour. 
-
-Sticking with the default values is likely the best option, but they are exposed for development purposes, and to experiment with the various trade offs with accuracy/speed/smoothness/cpu and gpu consumption.
-
+The FaceDetect object manages these operations and a current state, so that it performs the face detection, then uses object tracking to follow the face, then does landmark/3d pose estimation, and then the mesh subdivision for face morphing.
 
 
 ## Useful Links
