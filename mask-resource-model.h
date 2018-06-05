@@ -48,6 +48,9 @@ namespace Mask {
 			std::shared_ptr<Material> GetMaterial() {
 				return m_material;
 			}
+			std::shared_ptr<Mesh> GetMesh() {
+				return m_mesh;
+			}
 
 		protected:
 			std::shared_ptr<Mesh> m_mesh;

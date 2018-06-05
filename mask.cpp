@@ -385,6 +385,25 @@ std::shared_ptr<Mask::Part> Mask::MaskData::RemovePart(const std::string& name) 
 	return el;
 }
 
+size_t Mask::MaskData::GetNumParts() { 
+	return m_parts.size(); 
+}
+
+std::shared_ptr<Mask::Part> Mask::MaskData::GetPart(int index) {
+	int count = 0;
+	std::shared_ptr<Mask::Part> el = nullptr;
+	std::map<std::string, std::shared_ptr<Part>>::iterator kv = m_parts.begin();
+	while (kv != m_parts.end()) {
+		if (count == index)
+			el = kv->second;
+		count++;
+		kv++;
+	}
+	return el;
+}
+
+
+
 void  Mask::MaskData::ClearSortedDrawObjects() {
 	SortedDrawObject** sdo = m_drawBuckets;
 	for (unsigned int i = 0; i < NUM_DRAW_BUCKETS; i++) {
@@ -449,12 +468,14 @@ void  Mask::MaskData::PartCalcMatrix(std::shared_ptr<Mask::Part> _part) {
 
 void Mask::MaskData::Tick(float time) {
 	// update animations with the first Part
+	Part* p = nullptr;
 	for (auto aakv : m_animations) {
 		if (aakv.second) {
-			Part* p = nullptr;
-			for (auto kv : m_parts) {
-				p = kv.second.get();
-				break;
+			if (!p) {
+				for (auto kv : m_parts) {
+					p = kv.second.get();
+					break;
+				}
 			}
 			aakv.second->Update(p, time);
 		}
@@ -478,7 +499,7 @@ void Mask::MaskData::Tick(float time) {
 		instanceDatas.Pop();
 	}
 	
-	// intro animation?
+	// DO INTRO ANIMATION FADING
 	if (m_isIntroAnim) {
 		std::shared_ptr<Mask::AlphaInstanceData> aid =
 			instanceDatas.GetData<Mask::AlphaInstanceData>(Mask::AlphaInstanceDataId);
@@ -525,7 +546,7 @@ void Mask::MaskData::Render(bool depthOnly) {
 		instanceDatas.Push(kv.second->hash_id);
 		gs_matrix_push();
 		gs_matrix_mul(&kv.second->global);
-		for (auto it = kv.second->resources.begin();
+		for (auto  it = kv.second->resources.begin();
 			it != kv.second->resources.end(); it++) {
 			if ((*it)->IsDepthOnly() == depthOnly) {
 				(*it)->Render(kv.second.get());
@@ -618,6 +639,134 @@ std::shared_ptr<Mask::Part> Mask::MaskData::LoadPart(std::string name, obs_data_
 	return current;
 }
 
+float	Mask::MaskData::GetGlobalAlpha() {
+	std::shared_ptr<Mask::AlphaInstanceData> aid =
+		instanceDatas.GetData<Mask::AlphaInstanceData>(Mask::AlphaInstanceDataId);
+	return aid->alpha;
+}
+
+void	Mask::MaskData::SetGlobalAlpha(float alpha) {
+	std::shared_ptr<Mask::AlphaInstanceData> aid =
+		instanceDatas.GetData<Mask::AlphaInstanceData>(Mask::AlphaInstanceDataId);
+	aid->alpha = alpha;
+}
+
+
+void	Mask::MaskData::Play() {
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			aakv.second->Play();
+		}
+	}
+}
+
+void	Mask::MaskData::PlayBackwards() {
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			aakv.second->PlayBackwards();
+		}
+	}
+}
+
+void	Mask::MaskData::Stop() {
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			aakv.second->Stop();
+		}
+	}
+}
+
+void	Mask::MaskData::Rewind(bool last) {
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			aakv.second->Rewind(last);
+		}
+	}
+	// reset instance datas
+	ResetInstanceDatas();
+	// reset our time
+	m_elapsedTime = 0.0f;
+}
+
+float	Mask::MaskData::GetDuration() {
+	// find max
+	float d = 0.0f;
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			if (d < aakv.second->GetDuration())
+				d = aakv.second->GetDuration();
+		}
+	}
+	return d;
+}
+
+float	Mask::MaskData::LastFrame() {
+	// find max
+	float f = 0.0f;
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			if (f < aakv.second->LastFrame())
+				f = aakv.second->LastFrame();
+		}
+	}
+	return f;
+}
+
+float	Mask::MaskData::GetFPS() {
+	// just grab first
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			return aakv.second->GetFPS();
+		}
+	}
+	return 0.0f;
+}
+
+float	Mask::MaskData::GetPlaybackSpeed() {
+	// just grab first
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			return aakv.second->GetPlaybackSpeed();
+		}
+	}
+	return 0.0f;
+}
+
+void	Mask::MaskData::SetPlaybackSpeed(float speed) {
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			aakv.second->SetPlaybackSpeed(speed);
+		}
+	}
+}
+
+void   Mask::MaskData::Seek(float time) {
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			aakv.second->Seek(time);
+		}
+	}
+}
+
+bool	Mask::MaskData::GetStopOnLastFrame() {
+	// just grab first
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			return aakv.second->GetStopOnLastFrame();
+		}
+	}
+	return false;
+}
+
+void	Mask::MaskData::SetStopOnLastFrame(bool stop) {
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			aakv.second->SetStopOnLastFrame(stop);
+		}
+	}
+}
+
+
 Mask::Resource::Morph* Mask::MaskData::GetMorph() {
 	// cache the morph pointer so we dont constantly search for it
 	if (m_morph == nullptr) {
@@ -634,6 +783,9 @@ bool Mask::MaskData::RenderMorphVideo(gs_texture* vidtex, uint32_t width, uint32
 
 	GetMorph();
 
+	std::shared_ptr<Mask::AlphaInstanceData> aid =
+		instanceDatas.GetData<Mask::AlphaInstanceData>(Mask::AlphaInstanceDataId);
+
 	// Add an empty morph resource if they want to use 
 	// other features that depend on it
 	if ((trires.autoBGRemoval || trires.cartoonMode) && m_morph == nullptr) {
@@ -643,7 +795,7 @@ bool Mask::MaskData::RenderMorphVideo(gs_texture* vidtex, uint32_t width, uint32
 		AddResource(n, r);
 	}
 
-	if (m_morph && trires.vertexBuffer) {
+	if (aid->alpha > 0.0f && trires.vertexBuffer) {
 		didMorph = true;
 		m_morph->RenderMorphVideo(vidtex, trires);
 	}
@@ -664,16 +816,13 @@ bool Mask::MaskData::RenderMorphVideo(gs_texture* vidtex, uint32_t width, uint32
 	return didMorph;
 }
 
-void Mask::MaskData::RewindAnimations() {
+void Mask::MaskData::ResetInstanceDatas() {
 
 	// reset instance datas
 	std::vector<std::shared_ptr<InstanceData>> idatas = instanceDatas.GetInstances();
-	for (auto const& id : idatas) {
+	for (auto id : idatas) {
 		id->Reset();
 	}
-
-	// reset our time
-	m_elapsedTime = 0.0f;
 }
 
 

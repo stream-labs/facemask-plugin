@@ -25,6 +25,9 @@
 #include "base64.h"
 
 // ALIGN_xx : macros to align a memory address
+#define ALIGN_2(XXX) ((intptr_t(XXX) & 0x1)  ? ((intptr_t(XXX) + 0x2) & ~0x1)  : intptr_t(XXX))
+#define ALIGN_4(XXX) ((intptr_t(XXX) & 0x3)  ? ((intptr_t(XXX) + 0x4) & ~0x3)  : intptr_t(XXX))
+#define ALIGN_8(XXX) ((intptr_t(XXX) & 0x7)  ? ((intptr_t(XXX) + 0x8) & ~0x7)  : intptr_t(XXX))
 #define ALIGN_16(XXX) ((intptr_t(XXX) & 0xF)  ? ((intptr_t(XXX) + 0x10) & ~0xF)  : intptr_t(XXX))
 #define ALIGN_32(XXX) ((intptr_t(XXX) & 0x1F) ? ((intptr_t(XXX) + 0x20) & ~0x1F) : intptr_t(XXX))
 
@@ -49,4 +52,5 @@ namespace Utils {
 	extern void find_and_replace(std::string& source, std::string const& find, std::string const& replace);
 	extern float hermite(float t, float p1, float p2, float t1 = 0.0f, float t2 = 0.0f);
 	extern void fastMemcpy(void *pvDest, void *pvSrc, size_t nBytes);
+	extern int count_spaces(const std::string& s);
 }

@@ -27,6 +27,10 @@
 #include <algorithm>
 #include <unordered_map>
 #include <tiny_obj_loader.h>
+#include <opencv2/opencv.hpp>
+#include "mask.h"
+#include "mask-resource-model.h"
+
 extern "C" {
 	#pragma warning( push )
 	#pragma warning( disable: 4201 )
@@ -43,7 +47,7 @@ static const char* const S_INDEX_BUFFER = "index-buffer";
 static const char* const S_CENTER = "center";
 
 Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t* data)
-	: IBase(parent, name) {
+	: IBase(parent, name), m_part(nullptr) {
 
 	// We could be an embedded OBJ file, or raw geometry
 
@@ -105,7 +109,7 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 } 
 
 Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, std::string file)
-	: IBase(parent, name) {
+	: IBase(parent, name), m_part(nullptr) {
 	LoadObj(file);
 }
 
@@ -262,4 +266,92 @@ vec3 Mask::Resource::Mesh::CalculateTangent(const GS::Vertex& v1,
 
 	return normalized;
 }
+
+bool Mask::Resource::Mesh::GetScreenExtents(gs_rect* r, int screen_width, int screen_height, float trsZ) {
+	gs_vb_data* vb_data = nullptr;
+	if (m_VertexBuffer)
+		vb_data = m_VertexBuffer->get_data();
+	if (vb_data) {
+		// We need to find our transform
+		matrix4 transform;
+		matrix4_identity(&transform);
+
+		// Find our model
+		if (m_part == nullptr) {
+			size_t numModels = m_parent->GetNumResources(Resource::Type::Model);
+			for (int i = 0; i < numModels; i++) {
+				std::shared_ptr<Mask::Resource::Model> mdl = std::dynamic_pointer_cast<Mask::Resource::Model>
+					(m_parent->GetResource(Resource::Type::Model, i));
+				if (mdl->GetMesh()->GetId() == GetId()) {
+
+					// Found it! Now let's find our part
+					size_t numParts = m_parent->GetNumParts();
+					for (int j = 0; j < numParts; j++) {
+						std::shared_ptr<Mask::Part> part = m_parent->GetPart(j);
+						for (auto const& it : part->resources) {
+							if (it->GetId() == mdl->GetId()) {
+								m_part = part;
+							}
+						}
+					}
+				}
+			}
+		}
+		if (m_part != nullptr) {
+			matrix4_copy(&transform, &(m_part->global));
+		}
+
+		// get points
+		std::vector<cv::Point3f> points;
+		for (int i = 0; i < vb_data->num; i++) {
+			vec4 p, pp;
+			vec4_from_vec3(&p, &(vb_data->points[i]));
+			p.w = 1.0f;
+			vec4_transform(&pp, &p, &transform);
+			points.emplace_back(cv::Point3f(pp.x, pp.y, pp.z));
+		}
+
+		// Approximate focal length.
+		float focal_length = (float)screen_width;
+		cv::Point2f center = cv::Point2f(screen_width / 2.0f, screen_height / 2.0f);
+		cv::Mat camera_matrix =
+			(cv::Mat_<float>(3, 3) <<
+				focal_length, 0, center.x,
+				0, focal_length, center.y,
+				0, 0, 1);
+		// We assume no lens distortion
+		cv::Mat dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<float>::type);
+
+		cv::Mat rot = cv::Mat::zeros(3, 1, cv::DataType<float>::type);
+		cv::Mat trx = (cv::Mat_<float>(3, 1) << 0, 0, trsZ);
+
+		// project
+		std::vector<cv::Point2f> projpoints;
+		cv::projectPoints(points, rot, trx, camera_matrix, dist_coeffs, projpoints);
+
+		// get extents
+		int x_min = screen_width;
+		int x_max = 0;
+		int y_min = screen_height;
+		int y_max = 0;
+		for (int i = 0; i < projpoints.size(); i++) {
+			int x = (int)projpoints[i].x;
+			int y = (int)projpoints[i].y;
+			if (x < x_min) x_min = x;
+			if (y < y_min) y_min = y;
+			if (x > x_max) x_max = x;
+			if (y > y_max) y_max = y;
+		}
+
+		// set rect
+		r->x = x_min;
+		r->y = y_min;
+		r->cx = x_max - x_min;
+		r->cy = y_max - y_min;
+
+		return true;
+	}
+	return false;
+}
+
 

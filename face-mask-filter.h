@@ -31,6 +31,8 @@
 #include "smll/DetectionResults.hpp"
 #include "smll/TriangulationResult.hpp"
 #include "smll/MorphData.hpp"
+#include "smll/TextShaper.hpp"
+
 
 #include "mask.h"
 
@@ -85,64 +87,111 @@ namespace Plugin {
 			static void video_render(void *, gs_effect_t *);
 			void video_render(gs_effect_t *);
 
+			// callbacks
 			static bool rewind_clicked(obs_properties_t *pr, obs_property_t *p, void *data);
-			static bool request_rewind;
+			bool rewind_clicked(obs_properties_t *pr, obs_property_t *p);
+			bool request_rewind;
+
 
 		protected:
+			// face detection thread
 			static int32_t StaticThreadMain(Instance*);
 			int32_t LocalThreadMain();
 
+			// mask data loading thread
 			static int32_t StaticMaskDataThreadMain(Instance*);
 			int32_t LocalMaskDataThreadMain();
 
+			// misc functions
 			Mask::MaskData*	LoadMask(std::string filename);
 			void LoadDemo();
-
-			void texRenderBegin(int width, int height);
-			void texRenderEnd();
-
 			void drawCropRects(int width, int height);
-
 			void updateFaces();
-
-			void drawMaskData(const smll::DetectionResult& face,
-				Mask::MaskData*	maskData, bool depthOnly);
-
+			void setFaceTransform(const smll::DetectionResult& face,
+				bool billboard);
+			void setupRenderingState();
+			void getCanvasInfo();
+			void drawMaskData(Mask::MaskData*	maskData, bool depthOnly, 
+				bool isAlert);
 			gs_texture* RenderSourceTexture(gs_effect_t* effect);
 			bool SendSourceTextureToThread(gs_texture* sourceTexture);
 
 		private:
 			// Filter State
 			obs_source_t*	source;
+			gs_rect			sourceViewport;
+			int32_t			canvasWidth, canvasHeight;
 			int32_t			baseWidth, baseHeight;
 			bool			isActive;
 			bool			isVisible;
-			bool			isDisabled;
 			bool			videoTicked;
 			HANDLE			taskHandle;
-
-			// Options
 
 			// Face detector
 			smll::FaceDetector*		smllFaceDetector;
 			smll::OBSRenderer*		smllRenderer;
 
-			//FONTDEMO
-			//smll::OBSFont*			smllFont1;
+			// Fonts
+			smll::TextShaper*		smllTextShaper;
+			smll::OBSFont*			smllFont;
 
+			// Texture rendering & staging
 			gs_texrender_t*		sourceRenderTarget;
 			gs_texrender_t*		drawTexRender;
+			gs_texrender_t*		alertTexRender;
 			gs_texrender_t*		detectTexRender;
 			gs_stagesurf_t*		detectStage;
 
-			const char*			maskJsonFilename;
-			std::string			currentMaskJsonFilename;
-			std::vector<std::string>	maskJsonList;
+			// mask filenames
+			const char*			maskFolder;
+			std::string			currentMaskFolder;
+			const char*			maskFilename;
+			std::string			currentMaskFilename;
+			const char*			introFilename;
+			std::string			currentIntroFilename;
+			const char*			outroFilename;
+			std::string			currentOutroFilename;
 
+			void	checkForMaskUnloading();
+
+			// alert params
+			bool				alertActivate;
+			bool				alertDoIntro;
+			bool				alertDoOutro;
+			std::string			alertText;
+			std::string			alertAttribution;
+			float				alertDuration;
+			float				alertAttributionDuration;
+
+			// mask data loading thread
 			bool				maskDataShutdown;
 			std::thread			maskDataThread;
 			std::mutex			maskDataMutex;
 			std::unique_ptr<Mask::MaskData>	maskData;
+			std::unique_ptr<Mask::MaskData>	introData;
+			std::unique_ptr<Mask::MaskData>	outroData;
+
+			// alert location
+			enum AlertLocation {
+				LEFT_BOTTOM,
+				LEFT_TOP,
+				RIGHT_BOTTOM,
+				RIGHT_TOP,
+
+				NUM_ALERT_LOCATIONS
+			};
+
+			// alert data
+			std::string			renderedAlertText;
+			AlertLocation		currentAlertLocation;
+			std::unique_ptr<Mask::MaskData>	alertMaskDatas[AlertLocation::NUM_ALERT_LOCATIONS];
+			float				alertTranslation;
+			float				alertAspectRatio;
+			float				alertElapsedTime;
+			bool				alertTriggered;
+			bool				alertsLoaded;
+			gs_rect				alertViewport;
+			vec2				smoothCenter;
 
 			// demo mode
 			bool				demoModeOn;
@@ -183,6 +232,7 @@ namespace Plugin {
 
 			// flags
 			bool				drawMask;
+			bool				drawAlert;
 			bool				drawFaces;
 			bool				drawMorphTris;
 			bool				drawFDRect;
@@ -190,7 +240,7 @@ namespace Plugin {
 			bool				autoBGRemoval;
 			bool				cartoonMode;
 
-			// for testing/thumbs
+			// for testing/thumbs/writing textures to files
 			gs_stagesurf_t*		testingStage;
 
 			// find a cached video frame

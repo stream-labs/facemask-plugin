@@ -40,7 +40,6 @@
 
 #pragma warning( pop )
 
-#define FOCAL_LENGTH_FACTOR		(1.0f)
 #define HULL_POINTS_SCALE		(1.25f)
 // border points = 4 corners + subdivide
 #define NUM_BORDER_POINTS		(4 * 2 * 2 * 2) 
@@ -133,7 +132,7 @@ namespace smll {
 			m_camera_h = h;
 
 			// Approximate focal length.
-			float focal_length = (float)m_camera_w * FOCAL_LENGTH_FACTOR;
+			float focal_length = (float)m_camera_w;
 			cv::Point2f center = cv::Point2f(m_camera_w / 2.0f, m_camera_h / 2.0f);
 			m_camera_matrix =
 				(cv::Mat_<float>(3, 3) <<

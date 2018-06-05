@@ -25,11 +25,14 @@
 //
 #define P_TRANSLATE(x)			obs_module_text(x)
 #define P_DESC(x)				x ".Description"
+#define P_OPTION(x,n)			x ".Option" n
 
 // Properties
 #define P_MASK					"Mask"
+#define P_MASKFOLDER			"maskFolder"
 #define P_DEACTIVATE			"deactivated"
 #define P_DRAWMASK				"drawmask"
+#define P_DRAWALERT				"drawAlert"
 #define P_DRAWFACEDATA			"drawfaces"
 #define P_DRAWMORPHTRIS			"drawmorphtris"
 #define P_DRAWCROPRECT			"drawFDCropRect"
@@ -41,7 +44,25 @@
 #define P_GENTHUMBS				"genpreviews"
 #define P_REWIND				"rewindanims"
 #define P_CARTOON				"cartoonMode"
+#define P_ALERT_TEXT			"alertText"
+#define P_ALERT_ATTRIBUTION		"alertAttribution"
+#define P_ALERT_DURATION		"alertDuration"
+#define P_ALERT_ATTRIBUTIONDURATION		"alertAttributionDuration"
+#define P_ALERT_INTRO			"alertIntro"
+#define P_ALERT_OUTRO			"alertOutro"
+#define P_ALERT_DOINTRO			"alertDoIntro"
+#define P_ALERT_DOOUTRO			"alertDoOutro"
+#define P_ALERT_ACTIVATE		"alertActivate"
+
 
 // Other static strings
-static const char* const kFileDefaultJson = "masks/No Mask.json";
+static const char* const kDefaultMask = "b41214ab-8ef1-4842-924d-be113e2b5566.json";
+static const char* const kDefaultIntro = "f99e23b1-0393-4a01-b4ec-369823528635.json";
+static const char* const kDefaultOutro = "f99e23b1-0393-4a01-b4ec-369823528635.json";
+static const char* const kDefaultMaskFolder = "masks";
+static const char* const kDefaultAlertLT = "alerts/alert_LT.json";
+static const char* const kDefaultAlertLB = "alerts/alert_LB.json";
+static const char* const kDefaultAlertRT = "alerts/alert_RT.json";
+static const char* const kDefaultAlertRB = "alerts/alert_RB.json";
+static const char* const kFontAlertTTF = "fonts/BackIssuesBB_reg.ttf";
 

@@ -86,7 +86,7 @@ namespace Mask {
 		class Animation;
 	}
 
-	class MaskData {
+	class MaskData : public Resource::IAnimationControls {
 	public:
 		MaskData();
 		virtual ~MaskData();
@@ -107,10 +107,30 @@ namespace Mask {
 		void AddPart(const std::string& name, std::shared_ptr<Part> part);
 		std::shared_ptr<Part> GetPart(const std::string& name);
 		std::shared_ptr<Part> RemovePart(const std::string& name);
+		size_t GetNumParts();
+		std::shared_ptr<Part> GetPart(int index);
 
 		// main: tick & render
 		void Tick(float time);
 		void Render(bool depthOnly = false);
+
+		// IAnimationControls
+		void	Play() override;
+		void	PlayBackwards() override;
+		void	Stop() override;
+		void	Rewind(bool last = false) override;
+		float	GetDuration() override;
+		float	LastFrame() override;
+		float	GetFPS() override;
+		float	GetPlaybackSpeed() override;
+		void	SetPlaybackSpeed(float speed) override;
+		void    Seek(float time) override;
+		bool	GetStopOnLastFrame() override;
+		void	SetStopOnLastFrame(bool stop = true) override;
+
+		// Global alpha
+		float	GetGlobalAlpha();
+		void	SetGlobalAlpha(float alpha);
 
 		// sorted draw objects
 		void ClearSortedDrawObjects();
@@ -121,15 +141,17 @@ namespace Mask {
 		bool RenderMorphVideo(gs_texture* vidtex, uint32_t width, uint32_t height,
 			const smll::TriangulationResult& trires);
 
-		// animation
-		void	RewindAnimations();
+		// intro animations
 		bool	IsIntroAnimation() { return m_isIntroAnim; }
+		float	GetIntroFadeTime() { return m_introFadeTime; }
+		float	GetIntroDuration() { return m_introDuration; }
 
 		// rendering flags
 		bool	DrawVideoWithMask() { return m_drawVideoWithMask; }
 
 		// global instance datas
 		MaskInstanceDatas	instanceDatas;
+		void				ResetInstanceDatas();
 
 	private:
 		std::shared_ptr<Part> LoadPart(std::string name, obs_data_t* data);
