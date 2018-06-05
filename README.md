@@ -2,57 +2,70 @@
 
 A libOBS filter plugin that detects faces and draws masks with the detected data.
 
-This plugin relies heavily on Dlib and uses the solvePnP function from openCV.
-
 ## Compiling
 
-* Download cmake, if you don't have it already
+* Download cmake:
 
   [cmake](https://cmake.org/download/)
 
-* Get Visual Studio 2015 (vc14). When you install it, make sure you include the C++ stuff. libOBS is fixed at this version, so make sure.
+* Get Visual Studio 2015 (vc14). When you install it, make sure you include the C++ stuff. libOBS is fixed at this version, so other versions of Visual Studio *will not work*.
 
   [microsoft](https://www.visualstudio.com/vs/older-downloads/)
 
-* Download Dlib
+* Download dlib:
 
   [dlib](https://github.com/davisking/dlib)
 
-* Download OBS Studio source
+* Download our fork of OBS Studio:
 
-  [twitchalerts/obs-studio-fork](https://github.com/twitchalerts/obs-studio_fork)
+  [obs-studio](https://github.com/stream-labs/obs-studio)
 
-  If you don't have access, you could also use the original, but you'll be better off with the twitchalerts fork.
+* Download freetype:
 
-    [jp9000/obs-studio](https://github.com/jp9000/obs-studio)
+  [freetype](https://www.freetype.org/download.html)
+  
+* Build obs-studio
+	* Follow the build instructions here:
+    
+    [build instructions](https://github.com/obsproject/obs-studio/wiki/Install-Instructions#windows-build-directions)
+    
+* Configure freetype.
 
-  *Download the plugin code
+	You will need to turn off a bunch of options in freetype, because we don't need them. 
+    * Edit **freetype/include/freetype/config/ftmodule.h**, and comment out all the lines, except for the truetype driver and smooth rendering modules:
+    
+    ```C
+    FT_USE_MODULE( FT_Module_Class, autofit_module_class )
+    FT_USE_MODULE( FT_Driver_ClassRec, tt_driver_class )
+    //FT_USE_MODULE( FT_Driver_ClassRec, t1_driver_class )
+    //FT_USE_MODULE( FT_Driver_ClassRec, cff_driver_class )
+    //FT_USE_MODULE( FT_Driver_ClassRec, t1cid_driver_class )
+    //FT_USE_MODULE( FT_Driver_ClassRec, pfr_driver_class )
+    //FT_USE_MODULE( FT_Driver_ClassRec, t42_driver_class )
+    //FT_USE_MODULE( FT_Driver_ClassRec, winfnt_driver_class )
+    //FT_USE_MODULE( FT_Driver_ClassRec, pcf_driver_class )
+    //FT_USE_MODULE( FT_Module_Class, psaux_module_class )
+    //FT_USE_MODULE( FT_Module_Class, psnames_module_class )
+    //FT_USE_MODULE( FT_Module_Class, pshinter_module_class )
+    //FT_USE_MODULE( FT_Renderer_Class, ft_raster1_renderer_class )
+    //FT_USE_MODULE( FT_Module_Class, sfnt_module_class )
+    FT_USE_MODULE( FT_Renderer_Class, ft_smooth_renderer_class )
+    FT_USE_MODULE( FT_Renderer_Class, ft_smooth_lcd_renderer_class )
+    FT_USE_MODULE( FT_Renderer_Class, ft_smooth_lcdv_renderer_class )
+    //FT_USE_MODULE( FT_Driver_ClassRec, bdf_driver_class )
+    ```
 
-  [obs-facemask-plugin](https://github.com/twitchalerts/obs-facemask-plugin)
-
-*   Create a build folder in the obs-facemask-plugin folder. For example:
-
-  `obs-facemask-plugin/build64` (for x64)
-
-  *Run `cmake-gui` in the obs-facemask-plugin folder. Set `Where is the source code:` to the obs-facemask-plugin folder, and `Where to build the binaries:` to one of the build foders you just made.
-
-  *Hit the `CONFIGURE` button. Choose `Visual Studio 14 2015 Win64` for 64-bit builds.
-
-  *Fill in these variables as it complains that they are not set, and keep hitting `CONFIGURE` again until it configures without error.
-
-  You will need to set these in order for it to work:
+* Run cmake in the facemasks folder. When you hit `CONFIGURE`, you will get errors on fields you need to fill in:
 
     **PATH_DLIB** Path to the Dlib folder
 
-    **PATH_OBS_STUDIO** Path to the obs-studio[-fork] folder.
+    **PATH_OBS_STUDIO** Path to the obs-studio folder.
+    
+    **PATH_FREETYPE** Path to the freetype folder.
 
-    You will also want to consider enabling one of the following optimizations:
+    You will also want to turn on AVX:
 
     **USE_AVX_INSTRUCTIONS**
-
-    **USE_SSE4_INSTRUCTIONS**
-
-    **USE_SSE2_INSTRUCTIONS**
 
     It will default to SSE2, but setting to SSE4 or AVX is much faster. 
 
@@ -60,38 +73,20 @@ This plugin relies heavily on Dlib and uses the solvePnP function from openCV.
 
     **DLIB_NO_GUI_SUPPORT** - don't need it
 
-    **DLIB_USE_CUDA** - Seems to use more CPU. Turn it off.
+    **DLIB_USE_CUDA** - turn it off.
 
     **BUILD_SLOBS** - Distributes to slobs instead of OBS Studio
 
     **DLIB_GIF_SUPPORT** - don't need it
     **DLIB_JPEG_SUPPORT** - don't need it
 
-    If you have the [Intel Math Kernel Library](https://software.intel.com/en-us/mkl) installed on your system, you might have **DLIB_USE_BLAS** or **DLIB_USE_LAPACK** turned on. Keep in mind that dlib links dynamically with these libs, so the MKL and TBB dlls will need to be found by slobs when it runs (for instance, by copying them into the slobs-client folder). 
+    If you have the [Intel Math Kernel Library](https://software.intel.com/en-us/mkl) installed on your system, you might have **DLIB_USE_BLAS** or **DLIB_USE_LAPACK** turned on. Keep in mind that dlib links dynamically with these libs, so the MKL and TBB dlls will need to be found by slobs when it runs (for instance, by copying them into the slobs-client folder). I don't reccommend using these libs for this reason.
 
-* Hit `GENERATE`. 
+* Once you have successfully configured and generated your Visual Studio project with cmake, you can compile the plugin, which will give you a distribution folder structure that mimics the structure in slobs. For example, if you built your files in the build64 folder:
 
-* At this point, if you haven't already, you should set up your `build64/distribute/` folder correctly. If you are building for slobs, you'll want to make a link to your slobs-client folder, so that when you build the post-build step will copy the plugin stuff into slobs automatically. So, for example (as administrator):
-
-  `mklink /D c:\streamlabs\obs-facemask-plugin\build64\distribute\slobs c:\streamlabs\slobs-client`
-
-* Hit `OPEN PROJECT`
-
-* Select the **RelWithDebInfo** configuration.
-
-* Select the **ALL_BUILD** project in the Solution Explorer, then click on the little wrench icon (*Properties*) to bring up the *Property Pages*. Select the **Debugging** page, and set the following properties to run with the debugger (replace <slobs-client> with your slobs-client folder):
-
-  `Command = <slobs-client>\node-modules\electron\dist\electron.exe`
-
-  `Command Arguments = .`
-
-  `Working Directory = <slobs-client>`
-
-* Compile the plugin. (F7)
-
-* Run it. (F5)
-
-You should now have the face masks filter running in slobs. 
+	`build64/distribute/slobs/RelWithDebInfo/`
+    
+	You can copy the files in manually, or set up symbolic links so you can easily hit F5 and debug from Visual Studio.
 
 ## How It Works
 
@@ -116,20 +111,10 @@ The process of face detection consists of four main operations:
  * **Facial Landmarks** Given a rectangle that locates a face, we can then use Dlib's landmark detection algorithm which uses a trained regression tree solver to find 68 2D facial landmark points, corresponding to the Multi-PIE definition (see links below).
 
  * **3D Pose Estimation** A subset of key points are taken from the 2D facial landmark points, and using 3D points for an arbitrary rest pose, we use openCV's solvePnP method to obtain a 3D transformation. This transform can be used to render 3D objects in the scene that track the head movement.
+ 
+ * **Face Morphing** The 68 landmark points are used to subdivide the video quad into a mesh. Another 11 points are calculated to form the head points, and then catmull rom smoothing is performed to smooth out the contours. Then the mesh is distorted to create face morphs.
 
-The FaceDetect object manages these operations and a current state, so that it performs the face detection, then uses object tracking to follow the face, then does landmark/3d pose estimation. 
-
-The face detection/object tracking are executed according to a frequency setting, so they are not necessarily executed on every frame. The face detection is re-checked according to another frequency setting, to ensure the object tracking is still correct. 
-
-The face detection executes using the detect texture generated in the render thread. The tracking uses the tracking texture, and the landmark/3d pose estimation is done using the high resolution capture texture. If the tracking and detection textures are the same size, they are shared, and only 1 texture is used. Currently, the tracking and detection textures are scaled-down greyscale textures, due to the higher expense of these operations, where as the capture texture is full color and resolution, because the landmarks and pose estimation are inexpensive by comparison.
-
-
-## Advanced Settings
-
-In addition to the obvious settings in the plugin, the face detection code has a swath of config parameters to control the behaviour. 
-
-Sticking with the default values is likely the best option, but they are exposed for development purposes, and to experiment with the various trade offs with accuracy/speed/smoothness/cpu and gpu consumption.
-
+The FaceDetect object manages these operations and a current state, so that it performs the face detection, then uses object tracking to follow the face, then does landmark/3d pose estimation, and then the mesh subdivision for face morphing.
 
 
 ## Useful Links
