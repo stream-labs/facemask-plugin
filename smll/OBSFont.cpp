@@ -137,7 +137,7 @@ namespace smll {
 			// Load font as face
 			FT_Face face;
 			if (FT_New_Face(ft, m_filename.c_str(), 0, &face)) {
-				blog(LOG_ERROR, "ERROR::FREETYPE: Failed to load font");
+				blog(LOG_ERROR, "ERROR::FREETYPE: Failed to load font %s", m_filename.c_str());
 				return;
 			}
 
