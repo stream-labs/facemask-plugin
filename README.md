@@ -32,7 +32,7 @@ A libOBS filter plugin that detects faces and draws masks with the detected data
 * Configure freetype.
 
 	You will need to turn off a bunch of options in freetype, because we don't need them. 
-    * Edit **freetype/include/freetype/config/ftmodule.h**, and comment out all the lines, except for the truetype driver and smooth rendering modules:
+    * Edit **freetype/include/freetype/config/ftmodule.h**, and comment out all the lines, except for the truetype driver, names, and rendering modules:
     
     ```C
     FT_USE_MODULE( FT_Module_Class, autofit_module_class )
@@ -45,15 +45,29 @@ A libOBS filter plugin that detects faces and draws masks with the detected data
     //FT_USE_MODULE( FT_Driver_ClassRec, winfnt_driver_class )
     //FT_USE_MODULE( FT_Driver_ClassRec, pcf_driver_class )
     //FT_USE_MODULE( FT_Module_Class, psaux_module_class )
-    //FT_USE_MODULE( FT_Module_Class, psnames_module_class )
+    FT_USE_MODULE( FT_Module_Class, psnames_module_class )
     //FT_USE_MODULE( FT_Module_Class, pshinter_module_class )
     //FT_USE_MODULE( FT_Renderer_Class, ft_raster1_renderer_class )
-    //FT_USE_MODULE( FT_Module_Class, sfnt_module_class )
+    FT_USE_MODULE( FT_Module_Class, sfnt_module_class )
     FT_USE_MODULE( FT_Renderer_Class, ft_smooth_renderer_class )
-    FT_USE_MODULE( FT_Renderer_Class, ft_smooth_lcd_renderer_class )
-    FT_USE_MODULE( FT_Renderer_Class, ft_smooth_lcdv_renderer_class )
+    //FT_USE_MODULE( FT_Renderer_Class, ft_smooth_lcd_renderer_class )
+    //FT_USE_MODULE( FT_Renderer_Class, ft_smooth_lcdv_renderer_class )
     //FT_USE_MODULE( FT_Driver_ClassRec, bdf_driver_class )
     ```
+	* Edit **freetype/include/freetype/config/ftoption.h**, and comment out the lines:
+    
+    ```C
+    //#define FT_CONFIG_OPTION_USE_LZW
+    
+    ...
+    
+    //#define FT_CONFIG_OPTION_USE_ZLIB
+    
+    ...
+    
+    //#define FT_CONFIG_OPTION_MAC_FONTS
+    ```
+    
 
 * Run cmake in the facemasks folder. When you hit `CONFIGURE`, you will get errors on fields you need to fill in:
 
