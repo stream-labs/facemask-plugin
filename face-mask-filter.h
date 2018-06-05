@@ -232,6 +232,7 @@ namespace Plugin {
 
 			// flags
 			bool				drawMask;
+			bool				drawAlert;
 			bool				drawFaces;
 			bool				drawMorphTris;
 			bool				drawFDRect;

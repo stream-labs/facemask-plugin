@@ -146,7 +146,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	demoModeOn(false), demoModeMaskJustChanged(false), demoModeMaskChanged(false), 
 	demoCurrentMask(0), demoModeInterval(0.0f), demoModeDelay(0.0f), demoModeElapsed(0.0f), 
 	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), 
-	drawMask(true),	drawFaces(false), drawMorphTris(false), drawFDRect(false), 
+	drawMask(true),	drawAlert(false), drawFaces(false), drawMorphTris(false), drawFDRect(false), 
 	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr) {
 
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
@@ -282,7 +282,7 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	obs_data_set_default_string(data, P_MASK, kDefaultMask);
 	obs_data_set_default_string(data, P_ALERT_INTRO, kDefaultIntro);
 	obs_data_set_default_string(data, P_ALERT_OUTRO, kDefaultOutro);
-#else
+#else 
 	std::string jsonWithPath = defMaskFolder;
 	jsonWithPath = jsonWithPath + "/" + kDefaultMask;
 	obs_data_set_default_string(data, P_MASK, jsonWithPath.c_str());
@@ -317,6 +317,7 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 #else
 	obs_data_set_default_bool(data, P_DRAWMASK, true);
 #endif
+	obs_data_set_default_bool(data, P_DRAWALERT, false);
 	obs_data_set_default_bool(data, P_DRAWFACEDATA, false);
 	obs_data_set_default_bool(data, P_DRAWMORPHTRIS, false);
 	obs_data_set_default_bool(data, P_DRAWCROPRECT, false);
@@ -411,6 +412,10 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 
 #if !defined(PUBLIC_RELEASE)
 
+	// force mask/alert drawing
+	add_bool_property(props, P_DRAWMASK);
+	add_bool_property(props, P_DRAWALERT);
+
 	// bg removal
 	add_bool_property(props, P_BGREMOVAL);
 
@@ -433,7 +438,6 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 	add_bool_property(props, P_GENTHUMBS);
 
 	// debug drawing flags
-	add_bool_property(props, P_DRAWMASK);
 	add_bool_property(props, P_DRAWFACEDATA);
 	add_bool_property(props, P_DRAWMORPHTRIS);
 	add_bool_property(props, P_DRAWCROPRECT);
@@ -504,6 +508,18 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 
 	// update our param values
 	drawMask = obs_data_get_bool(data, P_DRAWMASK);
+	if (alertsLoaded) {
+		bool lastDrawAlert = drawAlert;
+		drawAlert = obs_data_get_bool(data, P_DRAWALERT);
+		if (!lastDrawAlert && drawAlert) {
+			for (int i = 0; i < AlertLocation::NUM_ALERT_LOCATIONS; i++) {
+				if (alertMaskDatas[i]) {
+					alertMaskDatas[i]->Rewind();
+					alertMaskDatas[i]->Play();
+				}
+			}
+		}
+	}
 	drawFaces = obs_data_get_bool(data, P_DRAWFACEDATA);
 	drawMorphTris = obs_data_get_bool(data, P_DRAWMORPHTRIS);
 	drawFDRect = obs_data_get_bool(data, P_DRAWCROPRECT);
@@ -606,6 +622,8 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 	}
 	bool maskActive = (alertElapsedTime >= maskActiveTime &&
 		alertElapsedTime <= maskInactiveTime);
+	if (drawMask)
+		maskActive = true;
 
 	// get the right mask data
 	Mask::MaskData* mdat = maskData.get();
@@ -661,7 +679,8 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 		float alertAnimOutTime = alertDuration - dur;
 		if (alertElapsedTime < alertDuration &&
 			alertElapsedTime >= alertAnimOutTime &&
-			lastAlertElapsedTime < alertAnimOutTime) {
+			lastAlertElapsedTime < alertAnimOutTime &&
+			!drawAlert) {
 			for (int i = 0; i < AlertLocation::NUM_ALERT_LOCATIONS; i++) {
 				if (alertMaskDatas[i]) {
 					alertMaskDatas[i]->Rewind(true);
@@ -791,7 +810,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			maskAlpha = 0.0f;
 		else if (alertElapsedTime > t1)
 			maskAlpha = Utils::hermite((alertElapsedTime - t1) / (t2 - t1), 1.0f, 0.0f);
-		if (alertElapsedTime >= (alertDuration - outroData->GetIntroDuration()))
+		if (alertElapsedTime < alertDuration && 
+			alertElapsedTime >= (alertDuration - outroData->GetIntroDuration()))
 			outroActive = true;
 	}
 	else {

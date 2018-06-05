@@ -32,6 +32,7 @@
 #define P_MASKFOLDER			"maskFolder"
 #define P_DEACTIVATE			"deactivated"
 #define P_DRAWMASK				"drawmask"
+#define P_DRAWALERT				"drawAlert"
 #define P_DRAWFACEDATA			"drawfaces"
 #define P_DRAWMORPHTRIS			"drawmorphtris"
 #define P_DRAWCROPRECT			"drawFDCropRect"
