@@ -141,7 +141,8 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	maskFolder(nullptr), maskFilename(nullptr),
 	introFilename(nullptr),	outroFilename(nullptr),	alertActivate(true), alertDoIntro(false),
 	alertDoOutro(false), alertDuration(10.0f), alertAttributionDuration(2.0f),
-	currentAlertLocation(LEFT_TOP), alertTranslation(-35.0f), alertAspectRatio(1.15f), 
+	alertTextTexture(nullptr), alertAttributionTexture(nullptr),
+	currentAlertLocation(LEFT_TOP),  alertTranslation(-35.0f), alertAspectRatio(1.15f),
 	alertElapsedTime(BIG_ASS_FLOAT), alertTriggered(false), alertsLoaded(false),
 	demoModeOn(false), demoModeMaskJustChanged(false), demoModeMaskChanged(false), 
 	demoCurrentMask(0), demoModeInterval(0.0f), demoModeDelay(0.0f), demoModeElapsed(0.0f), 
@@ -236,6 +237,10 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 		gs_stagesurface_destroy(testingStage);
 	if (detectStage)
 		gs_stagesurface_destroy(detectStage);
+	if (alertTextTexture)
+		gs_texture_destroy(alertTextTexture);
+	if (alertAttributionTexture)
+		gs_texture_destroy(alertAttributionTexture);
 	maskData = nullptr;
 	obs_leave_graphics();
 
@@ -898,6 +903,14 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 					// draw video to the mask texture?
 					if (genThumbs || mask_data->DrawVideoWithMask()) {
+						// setup transform state
+						gs_viewport_push();
+						gs_projection_push();
+						gs_matrix_push();
+						gs_set_viewport(0, 0, baseWidth, baseHeight);
+						gs_ortho(0, (float)baseWidth, 0, (float)baseHeight, -1, 1);
+						gs_matrix_identity();
+
 						// Draw the source video
 						if (mask_data && !demoModeInDelay) {
 							triangulation.autoBGRemoval = autoBGRemoval;
@@ -914,6 +927,11 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 								gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
 							}
 						}
+
+						// restore transform state
+						gs_matrix_pop();
+						gs_viewport_pop();
+						gs_projection_pop();
 					}
 
 					// Draw regular stuff
@@ -958,7 +976,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// render alert to texture
 	gs_texture* alert_tex = nullptr;
-	if (alertsLoaded && alertMaskDatas[currentAlertLocation]) {
+	if (!demoModeOn &&
+		alertsLoaded && alertMaskDatas[currentAlertLocation]) {
 		// only render once per video tick
 		if (videoTicked) {
 			// render text to texture
@@ -974,13 +993,15 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				int size = smllTextShaper->GetOptimalSize(*smllFont, r.cx, r.cy);
 				smllFont->RenderBitmapFont(size);
 				std::vector<std::string> lines = smllTextShaper->GetLines(*smllFont, size, r.cx);
-				gs_texture* tex = smllRenderer->RenderTextToTexture(lines, r.cx, r.cy, smllFont);
+				if (alertTextTexture)
+					gs_texture_destroy(alertTextTexture);
+				alertTextTexture = smllRenderer->RenderTextToTexture(lines, r.cx, r.cy, smllFont);
 
 				// Swap texture
 				std::shared_ptr<Mask::Resource::Image> img = std::dynamic_pointer_cast<Mask::Resource::Image>
 					(alertMaskDatas[currentAlertLocation]->GetResource("diffuse-1"));
 				if (img)
-					img->SwapTexture(tex);
+					img->SwapTexture(alertTextTexture);
 
 				// done
 				renderedAlertText = alertText;
@@ -1022,7 +1043,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// - if we are not drawing the video with the mask, then we need
 	//   to draw video now.
 	if (!mask_data ||
-		!mask_data->DrawVideoWithMask()) {
+		(!mask_data->DrawVideoWithMask() &&
+			!genThumbs)) {
 
 		// Draw the source video
 		if (mask_data && !demoModeInDelay) {
@@ -1051,6 +1073,9 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	
 	// Draw the rendered alert
 	if (alert_tex) {
+
+		blog(LOG_DEBUG, "DRAWING ALERT");
+
 		// draw the rendering on top of the video
 		gs_matrix_push();
 		gs_matrix_identity();
@@ -1556,10 +1581,8 @@ void Plugin::FaceMaskFilter::Instance::setupRenderingState() {
 	gs_set_cull_mode(GS_NEITHER);
 	gs_enable_color(true, true, true, true);
 	gs_enable_blending(true);
-	gs_blend_function_separate(gs_blend_type::GS_BLEND_SRCALPHA,
-		gs_blend_type::GS_BLEND_INVSRCALPHA,
-		gs_blend_type::GS_BLEND_ONE,
-		gs_blend_type::GS_BLEND_ZERO);
+	gs_blend_function(gs_blend_type::GS_BLEND_SRCALPHA,
+		gs_blend_type::GS_BLEND_INVSRCALPHA);
 }
 
 
@@ -2126,7 +2149,7 @@ Plugin::FaceMaskFilter::Instance::PreviewFrame::PreviewFrame(gs_texture_t* v,
 	int w, int h) {
 	obs_enter_graphics();
 	gs_color_format fmt = gs_texture_get_color_format(v);
-	vidtex = gs_texture_create(w, h, fmt, 0, 0, 0);
+	vidtex = gs_texture_create(w, h, fmt, 1, 0, 0);
 	gs_copy_texture(vidtex, v);
 	obs_leave_graphics();
 }

@@ -774,7 +774,11 @@ namespace smll {
 		gs_viewport_pop();
 		gs_projection_pop();
 
-		return gs_texrender_get_texture(drawTexRender);
+		// Make a copy of the texture
+		gs_texture* t = gs_texture_create(tex_width, tex_height, GS_RGBA, 1, 0, 0);
+		gs_copy_texture(t, gs_texrender_get_texture(drawTexRender));
+
+		return t; 
 	}
 
 

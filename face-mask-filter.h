@@ -185,6 +185,8 @@ namespace Plugin {
 			std::string			renderedAlertText;
 			AlertLocation		currentAlertLocation;
 			std::unique_ptr<Mask::MaskData>	alertMaskDatas[AlertLocation::NUM_ALERT_LOCATIONS];
+			gs_texture*			alertTextTexture;
+			gs_texture*			alertAttributionTexture;
 			float				alertTranslation;
 			float				alertAspectRatio;
 			float				alertElapsedTime;
