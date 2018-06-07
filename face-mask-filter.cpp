@@ -63,6 +63,9 @@
 // Maximum for number of masks loaded in demo mode
 #define DEMO_MODE_MAX_MASKS				(400)
 
+// Fade time for masks when no intro/outro
+#define MASK_FADE_TIME					(1.0f / 3.0f)
+
 // Big enough
 #define BIG_ASS_FLOAT					(100000.0f)
 
@@ -141,9 +144,10 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	maskFolder(nullptr), maskFilename(nullptr),
 	introFilename(nullptr),	outroFilename(nullptr),	alertActivate(true), alertDoIntro(false),
 	alertDoOutro(false), alertDuration(10.0f), alertAttributionDuration(2.0f),
-	alertTextTexture(nullptr), alertAttributionTexture(nullptr),
+	alertOffsetBig(0.2f), alertOffsetSmall(0.1f), alertMinSize(0.2f), alertMaxSize(0.4f), alertShowDelay(0.0f),
+	alertTextTexture(nullptr), 
 	currentAlertLocation(LEFT_TOP),  alertTranslation(-35.0f), alertAspectRatio(1.15f),
-	alertElapsedTime(BIG_ASS_FLOAT), alertTriggered(false), alertsLoaded(false),
+	alertElapsedTime(BIG_ASS_FLOAT), alertTriggered(false), alertShown(false), alertsLoaded(false),
 	demoModeOn(false), demoModeMaskJustChanged(false), demoModeMaskChanged(false), 
 	demoCurrentMask(0), demoModeInterval(0.0f), demoModeDelay(0.0f), demoModeElapsed(0.0f), 
 	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), 
@@ -239,8 +243,6 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 		gs_stagesurface_destroy(detectStage);
 	if (alertTextTexture)
 		gs_texture_destroy(alertTextTexture);
-	if (alertAttributionTexture)
-		gs_texture_destroy(alertAttributionTexture);
 	maskData = nullptr;
 	obs_leave_graphics();
 
@@ -312,6 +314,12 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	obs_data_set_default_bool(data, P_ALERT_DOINTRO, false);
 	obs_data_set_default_bool(data, P_ALERT_DOOUTRO, false);
 	
+	obs_data_set_default_double(data, P_ALERT_OFFSET_BIG, 0.2f);
+	obs_data_set_default_double(data, P_ALERT_OFFSET_SMALL, 0.1f);
+	obs_data_set_default_double(data, P_ALERT_MIN_SIZE, 0.2f);
+	obs_data_set_default_double(data, P_ALERT_MAX_SIZE, 0.4f);
+	obs_data_set_default_double(data, P_ALERT_SHOW_DELAY, 0.0f);
+
 	obs_data_set_default_bool(data, P_CARTOON, false);
 	obs_data_set_default_bool(data, P_BGREMOVAL, false);
 
@@ -415,6 +423,12 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 	add_bool_property(props, P_ALERT_DOINTRO);
 	add_bool_property(props, P_ALERT_DOOUTRO);
 
+	add_float_slider(props, P_ALERT_OFFSET_BIG, 0.0f, 1.0f, 0.01f);
+	add_float_slider(props, P_ALERT_OFFSET_SMALL, 0.0f, 1.0f, 0.01f);
+	add_float_slider(props, P_ALERT_MIN_SIZE, 0.0f, 1.0f, 0.01f);
+	add_float_slider(props, P_ALERT_MAX_SIZE, 0.0f, 1.0f, 0.01f);
+	add_float_slider(props, P_ALERT_SHOW_DELAY, 0.0f, 10.0f, 0.1f);
+
 #if !defined(PUBLIC_RELEASE)
 
 	// force mask/alert drawing
@@ -499,10 +513,11 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	alertDoOutro = obs_data_get_bool(data, P_ALERT_DOOUTRO);
 	introFilename = (char*)obs_data_get_string(data, P_ALERT_INTRO);
 	outroFilename = (char*)obs_data_get_string(data, P_ALERT_OUTRO);
-
-	// text shaper for alerts
-	smllTextShaper->SetString(alertText);
-	alertText = smllTextShaper->GetString(); // get clean string
+	alertOffsetBig = (float)obs_data_get_double(data, P_ALERT_OFFSET_BIG);
+	alertOffsetSmall = (float)obs_data_get_double(data, P_ALERT_OFFSET_SMALL);
+	alertMinSize = (float)obs_data_get_double(data, P_ALERT_MIN_SIZE);
+	alertMaxSize = (float)obs_data_get_double(data, P_ALERT_MAX_SIZE);
+	alertShowDelay = (float)obs_data_get_double(data, P_ALERT_SHOW_DELAY);
 
 	// demo mode
 	demoModeOn = obs_data_get_bool(data, P_DEMOMODEON);
@@ -521,6 +536,14 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 				if (alertMaskDatas[i]) {
 					alertMaskDatas[i]->Rewind();
 					alertMaskDatas[i]->Play();
+				}
+			}
+		}
+		else if (lastDrawAlert && !drawAlert) {
+			for (int i = 0; i < AlertLocation::NUM_ALERT_LOCATIONS; i++) {
+				if (alertMaskDatas[i]) {
+					alertMaskDatas[i]->Rewind(true);
+					alertMaskDatas[i]->PlayBackwards();
 				}
 			}
 		}
@@ -612,19 +635,25 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 	bool introActive = false;
 	bool outroActive = false;
 	float maskActiveTime = 0.0f;
+	float alertOnTime = MASK_FADE_TIME;
 	if (alertDoIntro && introData) {
+		alertOnTime = introData->GetIntroDuration();
 		maskActiveTime = introData->GetIntroDuration() - 
 			introData->GetIntroFadeTime();
 		if (alertElapsedTime <= introData->GetIntroDuration())
 			introActive = true;
 	}
 	float maskInactiveTime = alertDuration;
+	float alertOffTime = alertDuration - MASK_FADE_TIME;
 	if (alertDoOutro && outroData) {
 		maskInactiveTime -= outroData->GetIntroDuration() -
 			outroData->GetIntroFadeTime();
+		alertOffTime = alertDuration - outroData->GetIntroDuration();
 		if (alertElapsedTime >= (alertDuration - outroData->GetIntroDuration()))
 			outroActive = true;
 	}
+	alertOnTime += alertShowDelay;
+	alertOffTime -= alertAnimationDuration;
 	bool maskActive = (alertElapsedTime >= maskActiveTime &&
 		alertElapsedTime <= maskInactiveTime);
 	if (drawMask)
@@ -647,13 +676,13 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 			introData->Rewind();
 		if (outroData)
 			outroData->Rewind();
-		for (int i = 0; alertsLoaded && i < AlertLocation::NUM_ALERT_LOCATIONS; i++) {
+		alertTriggered = false;
+		alertShown = false;
+		for (int i = 0; i < AlertLocation::NUM_ALERT_LOCATIONS; i++) {
 			if (alertMaskDatas[i]) {
 				alertMaskDatas[i]->Rewind();
-				alertMaskDatas[i]->Play();
 			}
 		}
-		alertTriggered = false;
 	}
 
 	// mask active?
@@ -671,28 +700,38 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 
 	// Tick the alerts
 	if (alertsLoaded) {
-		float dur = 1.0f;
+		alertElapsedTime += timeDelta;
+
 		for (int i = 0; i < AlertLocation::NUM_ALERT_LOCATIONS; i++) {
 			if (alertMaskDatas[i]) {
 				alertMaskDatas[i]->Tick(timeDelta);
-				dur = alertMaskDatas[i]->GetDuration();
 			}
 		}
-		float lastAlertElapsedTime = alertElapsedTime;
-		alertElapsedTime += timeDelta;
+		bool alertOn = (alertElapsedTime >= alertOnTime &&
+			alertElapsedTime <= alertOffTime);
 
-		float alertAnimOutTime = alertDuration - dur;
-		if (alertElapsedTime < alertDuration &&
-			alertElapsedTime >= alertAnimOutTime &&
-			lastAlertElapsedTime < alertAnimOutTime &&
-			!drawAlert) {
-			for (int i = 0; i < AlertLocation::NUM_ALERT_LOCATIONS; i++) {
-				if (alertMaskDatas[i]) {
-					alertMaskDatas[i]->Rewind(true);
-					alertMaskDatas[i]->PlayBackwards();
+		if (!drawAlert) {
+			// show alert bubble?
+			if (alertOn && !alertShown) {
+				alertShown = true;
+				for (int i = 0; i < AlertLocation::NUM_ALERT_LOCATIONS; i++) {
+					if (alertMaskDatas[i]) {
+						alertMaskDatas[i]->Play();
+					}
+				}
+			}
+			// hide alert bubble?
+			else if (!alertOn && alertShown) {
+				alertShown = false;
+				for (int i = 0; i < AlertLocation::NUM_ALERT_LOCATIONS; i++) {
+					if (alertMaskDatas[i]) {
+						alertMaskDatas[i]->Rewind(true);
+						alertMaskDatas[i]->PlayBackwards();
+					}
 				}
 			}
 		}
+
 	}
 
 	// Tick the intro/outro
@@ -805,10 +844,12 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			introActive = true;
 	}
 	else {
-		if (alertElapsedTime < 0.3f)
-			maskAlpha = Utils::hermite(alertElapsedTime / 0.3f, 0.0f, 1.0f);
+		if (alertElapsedTime < MASK_FADE_TIME)
+			maskAlpha = Utils::hermite(alertElapsedTime / MASK_FADE_TIME, 0.0f, 1.0f);
 	}
+	float outroDuration = MASK_FADE_TIME;
 	if (alertDoOutro && outroData) {
+		outroDuration = outroData->GetIntroDuration();
 		float t1 = alertDuration - outroData->GetIntroDuration();
 		float t2 = t1 + outroData->GetIntroFadeTime();
 		if (alertElapsedTime > t2)
@@ -820,17 +861,19 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			outroActive = true;
 	}
 	else {
-		float t = alertDuration - 0.3f;
+		float t = alertDuration - MASK_FADE_TIME;
 		if (alertElapsedTime > alertDuration)
 			maskAlpha = 0.0f;
 		else if (alertElapsedTime > t)
-			maskAlpha = Utils::hermite((alertElapsedTime - 1) / 0.3f, 1.0f, 0.0f);
+			maskAlpha = Utils::hermite((alertElapsedTime - 1) / MASK_FADE_TIME, 1.0f, 0.0f);
 	}
 	if (drawMask)
 		maskAlpha = 1.0f;
 	if (mask_data) {
 		mask_data->SetGlobalAlpha(maskAlpha);
 	}
+	float alertAttributionStartTime = alertDuration -
+		(alertAnimationDuration + alertAttributionDuration + outroDuration);
 
 	// Select the video frame to draw
 	// - since we are already caching frames of video for the
@@ -978,10 +1021,27 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	gs_texture* alert_tex = nullptr;
 	if (!demoModeOn &&
 		alertsLoaded && alertMaskDatas[currentAlertLocation]) {
+
 		// only render once per video tick
 		if (videoTicked) {
+			// what alert text are we drawing?
+			std::string theText = alertText;
+			if (alertAttribution.length() > 0 &&
+				alertElapsedTime >= alertAttributionStartTime) {
+				theText = alertAttribution;
+			}
+
+			// set empty strings to [kevin]...
+			if (theText.length() < 1) {
+				theText = "\200...";
+			}
+
 			// render text to texture
-			if (renderedAlertText != alertText) {
+			if (renderedAlertText != theText) {
+
+				// text shaper for alerts
+				smllTextShaper->SetString(theText);
+				theText = smllTextShaper->GetString(); // get clean string
 
 				// Based on current alerts
 				// TODO: will have to do better
@@ -1004,7 +1064,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					img->SwapTexture(alertTextTexture);
 
 				// done
-				renderedAlertText = alertText;
+				renderedAlertText = theText;
 			}
 
 			// draw stuff to texture
@@ -1016,7 +1076,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				vec4_zero(&black);
 				gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
 
-				// Draw regular stuff
+				// Draw the alert mask
 				gs_matrix_push();
 				gs_matrix_identity();
 				gs_matrix_translate3f(0.0f, 0.0f, alertTranslation);
@@ -1216,6 +1276,9 @@ int Plugin::FaceMaskFilter::Instance::FindCachedFrameIndex(const TimeStamp& ts) 
 		}
 	}
 	
+	// NOTE : not sure if we should do this...bail out
+	return -1;
+
 	// Now look for a valid frame with the closest timestamp
 	long long tst = TIMESTAMP_MS_LL(ts);
 	long long diff = 0;
@@ -1505,8 +1568,8 @@ void Plugin::FaceMaskFilter::Instance::getCanvasInfo() {
 		}
 
 		// calculate alert box size
-		float min = 0.2f * canvasWidth;
-		float max = 0.4f * canvasWidth;
+		float min = alertMinSize * canvasWidth;
+		float max = alertMaxSize * canvasWidth;
 		float alpha = (float)alertText.size() / 140.0f;
 		alpha = (alpha > 1.0f) ? 1.0f : alpha;
 		int alertW = (int)((1.0f - alpha) * min + alpha * max);
@@ -1521,11 +1584,11 @@ void Plugin::FaceMaskFilter::Instance::getCanvasInfo() {
 			renderedAlertText = "";
 		}
 
-		// offset alert box a bit
-		int offset = (int)((float)sourceViewport.cx * 0.2f);
-
 		// calculate alert box position
 		if (ratio > size_threshold) {
+			// offset alert box
+			int offset = (int)((float)sourceViewport.cx * alertOffsetBig);
+
 			if (is_left)
 				alertViewport.x = (int)smoothCenter.x - alertViewport.cx - offset;
 			else
@@ -1536,6 +1599,9 @@ void Plugin::FaceMaskFilter::Instance::getCanvasInfo() {
 				alertViewport.y = (int)smoothCenter.y;
 		}
 		else {
+			// offset alert box
+			int offset = (int)((float)sourceViewport.cx * alertOffsetSmall);
+
 			if (is_left)
 				alertViewport.x = sourceViewport.x - alertViewport.cx - offset;
 			else
@@ -1775,10 +1841,12 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 	alertMaskDatas[AlertLocation::RIGHT_BOTTOM] = std::unique_ptr<Mask::MaskData>(LoadMask(f));
 	bfree(f);
 	
-	// make the alerts animations stop
+	// make the alerts animations stop, get duraiton
+	alertAnimationDuration = 0.0f;
 	for (int i = 0; i < AlertLocation::NUM_ALERT_LOCATIONS; i++) {
 		alertMaskDatas[i]->SetStopOnLastFrame();
 		alertMaskDatas[i]->Stop();
+		alertAnimationDuration = alertMaskDatas[i]->GetDuration();
 	}
 
 	alertsLoaded = true;

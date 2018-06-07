@@ -75,6 +75,7 @@ namespace Mask {
 			virtual float	GetFPS() = 0;
 			virtual float	GetPlaybackSpeed() = 0;
 			virtual void	SetPlaybackSpeed(float speed) = 0;
+			virtual float   GetPosition() = 0;
 			virtual void    Seek(float time) = 0;
 			virtual bool	GetStopOnLastFrame() = 0;
 			virtual void	SetStopOnLastFrame(bool stop=true) = 0;
@@ -119,6 +120,7 @@ namespace Mask {
 			void    Seek(float time) override;
 			bool	GetStopOnLastFrame() override { return m_stopOnLastFrame; }
 			void	SetStopOnLastFrame(bool stop = true) override { m_stopOnLastFrame = stop; };
+			float   GetPosition() override;
 
 		protected:
 			float							m_speed;

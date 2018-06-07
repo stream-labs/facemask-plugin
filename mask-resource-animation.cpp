@@ -240,6 +240,19 @@ void Mask::Resource::Animation::Seek(float t) {
 	m_parent->instanceDatas.Pop();
 }
 
+float   Mask::Resource::Animation::GetPosition() {
+	m_parent->instanceDatas.Push(m_id);
+
+	// get our instance data
+	std::shared_ptr<AnimationInstanceData> instData =
+		m_parent->instanceDatas.GetData<AnimationInstanceData>();
+
+	m_parent->instanceDatas.Pop();
+
+	return instData->elapsed;
+}
+
+
 Mask::Resource::AnimationChannelType 
 Mask::Resource::Animation::AnimationTypeFromString(const std::string& s) {
 

@@ -162,6 +162,11 @@ namespace Plugin {
 			std::string			alertAttribution;
 			float				alertDuration;
 			float				alertAttributionDuration;
+			float				alertOffsetBig;
+			float				alertOffsetSmall;
+			float				alertMinSize;
+			float				alertMaxSize;
+			float				alertShowDelay;
 
 			// mask data loading thread
 			bool				maskDataShutdown;
@@ -186,11 +191,12 @@ namespace Plugin {
 			AlertLocation		currentAlertLocation;
 			std::unique_ptr<Mask::MaskData>	alertMaskDatas[AlertLocation::NUM_ALERT_LOCATIONS];
 			gs_texture*			alertTextTexture;
-			gs_texture*			alertAttributionTexture;
 			float				alertTranslation;
 			float				alertAspectRatio;
 			float				alertElapsedTime;
+			float				alertAnimationDuration;
 			bool				alertTriggered;
+			bool				alertShown;
 			bool				alertsLoaded;
 			gs_rect				alertViewport;
 			vec2				smoothCenter;

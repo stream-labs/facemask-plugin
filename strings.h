@@ -53,7 +53,11 @@
 #define P_ALERT_DOINTRO			"alertDoIntro"
 #define P_ALERT_DOOUTRO			"alertDoOutro"
 #define P_ALERT_ACTIVATE		"alertActivate"
-
+#define P_ALERT_OFFSET_BIG		"alertOffsetWhenBig"
+#define P_ALERT_OFFSET_SMALL	"alertOffsetWhenSmall"
+#define P_ALERT_MIN_SIZE		"alertMinSize"
+#define P_ALERT_MAX_SIZE		"alertMaxSize"
+#define P_ALERT_SHOW_DELAY		"alertShowDelay"
 
 // Other static strings
 static const char* const kDefaultMask = "b41214ab-8ef1-4842-924d-be113e2b5566.json";

@@ -127,6 +127,7 @@ namespace Mask {
 		void    Seek(float time) override;
 		bool	GetStopOnLastFrame() override;
 		void	SetStopOnLastFrame(bool stop = true) override;
+		float	GetPosition() override;
 
 		// Global alpha
 		float	GetGlobalAlpha();

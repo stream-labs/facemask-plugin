@@ -766,6 +766,17 @@ void	Mask::MaskData::SetStopOnLastFrame(bool stop) {
 	}
 }
 
+float	Mask::MaskData::GetPosition() {
+	// just grab first
+	for (auto aakv : m_animations) {
+		if (aakv.second) {
+			return aakv.second->GetPosition();
+		}
+	}
+	return m_elapsedTime;
+}
+
+
 
 Mask::Resource::Morph* Mask::MaskData::GetMorph() {
 	// cache the morph pointer so we dont constantly search for it
