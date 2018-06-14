@@ -9,7 +9,7 @@
     "license": "Copyright 2017 - General Workings Inc. - All rights reserved.",
     "website": "http://streamlabs.com",
     "is_intro": true,
-    "intro_fade_time": 0.333332985639572,
+    "intro_fade_time": 1.3333333,
     "intro_duration": 2.13333010673523,
     "modtime": 1526333724,
     "draw_video_with_mask": false,
@@ -5524,7 +5524,7 @@
             "cols": 4,
             "first": 0,
             "last": 15,
-            "rate": 16.0,
+            "rate": 14.0,
             "delay": 0.0,
             "mode": "repeat",
             "random-start": true
