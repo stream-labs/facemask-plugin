@@ -610,7 +610,7 @@ void Plugin::FaceMaskFilter::Instance::video_tick(void *ptr, float timeDelta) {
 }
 
 void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
-
+	/* This block is executed every frame of the video */
 	videoTicked = true;
 
 	if (!isVisible || !isActive) {
@@ -696,6 +696,16 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 			// tick main mask
 			mdat->Tick(timeDelta);
 		}
+	}
+	else {
+
+		/*  This block is executed when Mask animation ends */
+		PLOG_INFO("maskActive = False");
+
+		// reset filter timestamp so that previously cached frames are not used
+		// when the face mask is triggered again after some time
+		// # Bugfix 1
+		timestamp = NEW_TIMESTAMP;
 	}
 
 	// Tick the alerts
@@ -1124,6 +1134,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// Draw the rendered Mask
 	if (mask_tex) {
+		PLOG(LOG_DEBUG, "DRAWING TEX");
 		while (gs_effect_loop(defaultEffect, "Draw")) {
 			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
 				"image"), mask_tex);
@@ -1272,6 +1283,7 @@ int Plugin::FaceMaskFilter::Instance::FindCachedFrameIndex(const TimeStamp& ts) 
 			detection.frames[i].capture.texture != nullptr &&
 			detection.frames[i].capture.width == baseWidth &&
 			detection.frames[i].capture.height == baseHeight) {
+			blog(LOG_DEBUG, "cached frame idx: %d", i);
 			return i;
 		}
 	}
@@ -1722,9 +1734,11 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 		}
 		if (shutdown) break;
 		if (frame_idx < 0) {
+			//timestamp = NEW_TIMESTAMP;
 			std::this_thread::sleep_for(std::chrono::milliseconds(16));
 			continue;
 		}
+		blog(LOG_DEBUG, "det thread running; frameidx= %d", frame_idx);
 
 		// the read index is always right behind the write
 		frame_idx = (frame_idx + ThreadData::BUFFER_SIZE - 1) % ThreadData::BUFFER_SIZE;
@@ -1755,6 +1769,8 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 
 		if (skipped) {
 			// sleep for 1ms and continue
+			blog(LOG_DEBUG, "SLEEPING DET THREAD");
+
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			continue;
 		}
@@ -1811,6 +1827,13 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 		if (sleepTime > 0)
 			std::this_thread::sleep_for(std::chrono::microseconds(sleepTime));
 	}
+
+
+	/*for (int i = 0; i < ThreadData::BUFFER_SIZE; i++) {
+		if (detection.frames[i].capture.texture) {
+			gs_texture_destroy(detection.frames[i].capture.texture);
+		}
+	}*/
 
 	if (hTask != NULL) {
 		AvRevertMmThreadCharacteristics(hTask);
@@ -1930,7 +1953,6 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(33));
 	}
-
 
 	return 0;
 }
