@@ -656,9 +656,9 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 	alertOffTime -= alertAnimationDuration;
 	bool maskActive = (alertElapsedTime >= maskActiveTime &&
 		alertElapsedTime <= maskInactiveTime);
-	if (drawMask)
+	if (drawMask) 
 		maskActive = true;
-
+	
 	// get the right mask data
 	Mask::MaskData* mdat = maskData.get();
 	if (demoModeOn && !demoModeInDelay) {
@@ -2079,7 +2079,7 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 			}
 
 			// new timestamp
-			timestamp = detection.faces[fidx].timestamp;
+			timestamp = NEW_TIMESTAMP;
 
 			// update our results
 			faces.CorrelateAndUpdateFrom(newFaces);

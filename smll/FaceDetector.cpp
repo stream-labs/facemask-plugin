@@ -983,10 +983,8 @@ namespace smll {
         //
         if ((m_faces.length == 0) || (faces.size() > 0)) {
             // clamp to max faces
-			m_faces.length = (int)faces.size();
-            if (m_faces.length > MAX_FACES)
-				m_faces.length = MAX_FACES;
-
+			m_faces.length = std::min(MAX_FACES, (int)faces.size());
+            
             // copy rects into our faces, start tracking
             for (int i = 0; i < m_faces.length; i++) {
                 // scale rectangle up to video frame size
