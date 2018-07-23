@@ -2079,7 +2079,7 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 			}
 
 			// new timestamp
-			timestamp = detection.faces[fidx].timestamp;
+			timestamp = NEW_TIMESTAMP;
 
 			// update our results
 			faces.CorrelateAndUpdateFrom(newFaces);
