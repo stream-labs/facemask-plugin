@@ -192,9 +192,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 		detection.frameIndex = -1;
 		detection.facesIndex = -1;
 		detection.thread = std::thread(StaticThreadMain, this);
-		for (int i = 0; i < ThreadData::BUFFER_SIZE; i++) {
-			detection.frames[i].active = false;
-		}
+		clearFramesActiveStatus();
 	}
 	
 	// start mask data loading thread
@@ -750,6 +748,15 @@ void Plugin::FaceMaskFilter::Instance::video_render(void *ptr,
 	reinterpret_cast<Instance*>(ptr)->video_render(effect);
 }
 
+/*
+ * Sets frames active status to false
+ */
+void Plugin::FaceMaskFilter::Instance::clearFramesActiveStatus() {
+	for (int i = 0; i < ThreadData::BUFFER_SIZE; i++) {
+		detection.frames[i].active = false;
+	}
+}
+
 void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// Skip rendering if inactive or invisible.
@@ -760,6 +767,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		std::unique_lock<std::mutex> lock(detection.mutex);
 		detection.frameIndex = -1;
 		detection.facesIndex = -1;
+
+		clearFramesActiveStatus();
 		// make sure file loads still happen
 		checkForMaskUnloading();
 		// *** SKIP ***
