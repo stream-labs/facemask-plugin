@@ -58,7 +58,7 @@ namespace Plugin {
 
 	private:
 		obs_source_info filter;
-
+		
 		class Instance {
 		public:
 			Instance(obs_data_t *, obs_source_t *);
@@ -115,6 +115,7 @@ namespace Plugin {
 				bool isAlert);
 			gs_texture* RenderSourceTexture(gs_effect_t* effect);
 			bool SendSourceTextureToThread(gs_texture* sourceTexture);
+			void clearFramesActiveStatus();
 
 		private:
 			// Filter State
