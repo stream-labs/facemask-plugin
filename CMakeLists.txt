@@ -277,6 +277,7 @@ source_group("Mask\\Sources" FILES ${mask_SOURCES})
 
 # Compiler Configuration
 add_definitions(-D_CRT_SECURE_NO_WARNINGS) # Hide Microsofts insecurities
+add_definitions(-DUNICODE -D_UNICODE)      # Use Unicode Charset
 ## All Warnings, Extra Warnings, Pedantic
 if (MSVC)
 	if(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
