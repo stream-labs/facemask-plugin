@@ -59,6 +59,7 @@ public:
 	void DetectFaces(const ImageWrapper& detect, const OBSTexture& capture, DetectionResults& results);
 	void DetectLandmarks(const OBSTexture& capture, DetectionResults& results);
 	void DoPoseEstimation(DetectionResults& results);
+	void ResetFaces();
 
 	void MakeTriangulation(MorphData& morphData, DetectionResults& results, 
 		TriangulationResult& result);
