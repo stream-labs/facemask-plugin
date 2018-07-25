@@ -115,6 +115,7 @@ namespace Plugin {
 				bool isAlert);
 			gs_texture* RenderSourceTexture(gs_effect_t* effect);
 			bool SendSourceTextureToThread(gs_texture* sourceTexture);
+			void clearFramesActiveStatus();
 
 		private:
 			// Filter State
