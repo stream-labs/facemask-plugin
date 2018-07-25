@@ -1323,6 +1323,11 @@ namespace smll {
 		// unstage the surface and leave graphics context
 		gs_stagesurface_unmap(m_captureStage);
 	}
+
+	void FaceDetector::ResetFaces() {
+		m_faces.length = 0;
+		m_detectionTimeout = 0;
+	}
 	
 } // smll namespace
 

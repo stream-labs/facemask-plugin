@@ -760,6 +760,9 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		std::unique_lock<std::mutex> lock(detection.mutex);
 		detection.frameIndex = -1;
 		detection.facesIndex = -1;
+		// reset the detected faces
+		smllFaceDetector->ResetFaces();
+		faces.length = 0;
 		// make sure file loads still happen
 		checkForMaskUnloading();
 		// *** SKIP ***
