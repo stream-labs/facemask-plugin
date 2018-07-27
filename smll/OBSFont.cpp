@@ -142,12 +142,10 @@ namespace smll {
 				blog(LOG_ERROR, "ERROR::FREETYPE: Failed to load font %s", m_filename.c_str());
 				return;
 			}
-
 			inited = true;
 
 			blog(LOG_DEBUG, "Font Family: %s  Style: %s",
 				face->family_name, face->style_name);
-
 		}
 	}
 
@@ -173,7 +171,6 @@ namespace smll {
 				blog(LOG_ERROR, "ERROR::FREETYTPE: Failed to load Glyph");
 				continue;
 			}
-
 			m_advances[charPair] = (float)face->glyph->advance.x / 64.0f; // 26.6 format
 
 			float  glyph_height = (float)face->glyph->metrics.height / 64.0f;
@@ -272,9 +269,10 @@ namespace smll {
 		for (c = text.begin(); c != text.end(); c++) {
 			FT_ULong character = *c;
 			std::pair<FT_ULong, int> charPair(character, m_size);
-			if (m_advances.find(charPair) == m_advances.end()) {
-				if (m_heights.find(size) != m_heights.end())
-					w += m_heights.at(size); // kevin
+			if (m_fontInfos.find(charPair) == m_fontInfos.end()) {
+				if (m_heights.find(size) != m_heights.end()){//kevin
+					w += m_heights.at(size);
+				}
 			}	
 			else {
 				w += m_advances.at(charPair);
@@ -299,9 +297,9 @@ namespace smll {
 		std::wstring text = L"" + character;
 		UpdateFontInfo(text, size);
 		std::pair<FT_ULong, int> charPair(character, m_size);
-		if (m_advances.find(charPair) != m_advances.end())
-			return m_advances.at(charPair); // kevin
-		return GetFontHeight(size);
+		if (m_fontInfos.find(charPair) != m_fontInfos.end())
+			return m_advances.at(charPair); 
+		return GetFontHeight(size);//kevin
 	}
 
 	void OBSFont::UpdateAndDrawVertices(float w, float h, 
