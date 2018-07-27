@@ -53,4 +53,5 @@ namespace Utils {
 	extern float hermite(float t, float p1, float p2, float t1 = 0.0f, float t2 = 0.0f);
 	extern void fastMemcpy(void *pvDest, void *pvSrc, size_t nBytes);
 	extern int count_spaces(const std::string& s);
+	extern std::wstring ConvertStringToWstring(const std::string &str);
 }

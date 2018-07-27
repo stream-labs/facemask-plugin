@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Face Masks for SlOBS
  * Copyright (C) 2017 General Workings Inc
  *
@@ -1051,8 +1051,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			if (renderedAlertText != theText) {
 
 				// text shaper for alerts
-				smllTextShaper->SetString(theText);
-				theText = smllTextShaper->GetString(); // get clean string
+				smllTextShaper->SetString(Utils::ConvertStringToWstring(theText));
 
 				// Based on current alerts
 				// TODO: will have to do better
@@ -1063,11 +1062,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				// Render text to texture
 				int size = smllTextShaper->GetOptimalSize(*smllFont, r.cx, r.cy);
 				smllFont->RenderBitmapFont(size);
-				std::vector<std::string> lines = smllTextShaper->GetLines(*smllFont, size, r.cx);
+				std::vector<std::wstring> lines = smllTextShaper->GetLines(*smllFont, size, r.cx);
 				if (alertTextTexture)
 					gs_texture_destroy(alertTextTexture);
 				alertTextTexture = smllRenderer->RenderTextToTexture(lines, r.cx, r.cy, smllFont);
-
 				// Swap texture
 				std::shared_ptr<Mask::Resource::Image> img = std::dynamic_pointer_cast<Mask::Resource::Image>
 					(alertMaskDatas[currentAlertLocation]->GetResource("diffuse-1"));
@@ -1075,7 +1073,9 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					img->SwapTexture(alertTextTexture);
 
 				// done
-				renderedAlertText = theText;
+				if (alertTextTexture != NULL) {
+					renderedAlertText = theText;
+				}	
 			}
 
 			// draw stuff to texture
@@ -1945,6 +1945,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 
 	return 0;
 }
+
 
 void Plugin::FaceMaskFilter::Instance::LoadDemo() {
 

@@ -729,7 +729,7 @@ namespace smll {
 		gs_projection_pop();
 	}
 
-	gs_texture*	OBSRenderer::RenderTextToTexture(const std::vector<std::string>& lines,
+	gs_texture*	OBSRenderer::RenderTextToTexture(const std::vector<std::wstring>& lines,
 		int tex_width, int tex_height, OBSFont* font) {
 
 		gs_matrix_push();
@@ -777,7 +777,7 @@ namespace smll {
 		// Make a copy of the texture
 		gs_texture* t = gs_texture_create(tex_width, tex_height, GS_RGBA, 1, 0, 0);
 		gs_copy_texture(t, gs_texrender_get_texture(drawTexRender));
-
+		font->Reset();
 		return t; 
 	}
 

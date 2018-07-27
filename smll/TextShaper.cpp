@@ -41,35 +41,21 @@
 
 namespace smll {
 
-	TextShaper::TextShaper(const std::string& s) {
+	TextShaper::TextShaper(const std::wstring& s) {
 		this->SetString(s);
 	}
 
 	TextShaper::~TextShaper() {
 	}
 
-	void TextShaper::SetString(const std::string& s) {
-		m_text = s;
-		bool lastbad = false;
-		for (int i = 0; i < m_text.length(); i++) {
-			int c = (int)m_text[i];
-			if (c < 32 || c > 126) {
-				if (lastbad) {
-					m_text.erase(i, 1);
-					i--;
-					lastbad = false;
-				}
-				else
-					lastbad = true;
-			}
-			else
-				lastbad = false;
-		}
+	void TextShaper::SetString(const std::wstring& s) {		
 		m_words.clear();
+		m_text = s;
 		Word word;
 		bool word_saved = true;
 		int idx = 0;
-		for (const char* p = m_text.data(); *p; p++, idx++) {
+		std::wstring::const_iterator p;
+		for (p = m_text.begin(); p != m_text.end(); *p, p++, idx++) {
 			if (*p == ' ') {
 				if (!word_saved) {
 					m_words.push_back(word);
@@ -91,30 +77,41 @@ namespace smll {
 		}
 	}
 
-	int TextShaper::GetOptimalSize(const OBSFont& font, 
+	int TextShaper::GetOptimalSize(OBSFont& font, 
 		int target_width, int target_height) {
-
-		for (int size = font.GetMaxSize(); size >= font.GetMinSize(); size--) {
+		//Binary Search
+		int min = font.GetMinSize();
+		int max = font.GetMaxSize();
+		int last_fit = min;
+		while(true){
+			int size = (max + min) / 2;
+			if (min + 1 >= max) {
+				break;
+			}
 			if (WillTextFit(font, size, target_width, target_height)) {
-				return size;
+				min = size;
+				last_fit = size;
+			}
+			else {
+				max = size;
 			}
 		}
 
-		return font.GetMinSize();
+		return last_fit;;
 	}
 
-	std::vector<std::string> TextShaper::GetLines(const OBSFont& font, 
+	std::vector<std::wstring> TextShaper::GetLines(OBSFont& font, 
 		int size, int target_width) {
 
 		float line_limit = LINE_LIMIT(target_width);
 		std::vector<Word>	words;
 		GetActualWords(font, size, line_limit, words);
 
-		std::vector<std::string> lines;
+		std::vector<std::wstring> lines;
 
 		float x = 0.0f;
 		float space_width = font.GetCharAdvance(size, ' ');
-		std::string line = "";
+		std::wstring line = L"";
 		for (int i = 0; i < words.size(); i++) {
 			const Word& word = words[i];
 			float w = GetWordWidth(font, size, word);
@@ -130,7 +127,7 @@ namespace smll {
 			}
 			else {
 				if (line.length() > 0)
-					line += " "; 
+					line += L" "; 
 				line += m_text.substr(word.index, word.length);
 				x += d;
 			}
@@ -141,7 +138,7 @@ namespace smll {
 		return lines;
 	}
 
-	bool TextShaper::WillTextFit(const OBSFont& font, int size,
+	bool TextShaper::WillTextFit(OBSFont& font, int size,
 		int target_width, int target_height) {
 
 		float line_limit = LINE_LIMIT(target_width);
@@ -179,7 +176,7 @@ namespace smll {
 		return true;
 	}
 
-	void TextShaper::GetActualWords(const OBSFont& font, int size, 
+	void TextShaper::GetActualWords(OBSFont& font, int size, 
 		float line_limit, std::vector<Word>& words) {
 
 		// build our list of words
@@ -204,7 +201,7 @@ namespace smll {
 	}
 
 
-	float TextShaper::GetWordWidth(const OBSFont& font, int size,
+	float TextShaper::GetWordWidth(OBSFont& font, int size,
 		const Word& word) {
 		int end = word.index + word.length;
 		float len = 0.0f;

@@ -28,11 +28,14 @@ extern "C" {
 #pragma warning( pop )
 }
 
+#include <map>
 #include <vector>
 #include <array>
 #include <string>
 #include "smll/OBSTexture.hpp"
 
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
 namespace smll {
 
@@ -47,38 +50,39 @@ namespace smll {
 		void RenderBitmapFont(int size);
 
 		// For the currently rendered font
-		void RenderText(const std::string& text, float x, float y);
+		void RenderText(const std::wstring& wtext, float x, float y);
 		int GetSize() const { return m_size; }
-		int GetHeight() const { return m_height; }
+		int GetHeight();
 
 		// Font metrics
 		int GetMinSize() const { return m_minSize; }
 		int GetMaxSize() const { return m_maxSize; }
 		float GetFontHeight(int size) const;
-		float GetCharAdvance(int size, char c) const;
-		float GetTextWidth(int size, const std::string& text) const;
-
-		// Constants
-		static const char LOWEST_CHARACTER = 32;
-		static const char HIGHEST_CHARACTER = 126;
-		static const size_t NUM_CHARACTERS = (HIGHEST_CHARACTER - LOWEST_CHARACTER + 1);
+		float GetCharAdvance(int size, FT_ULong c);
+		float GetTextWidth(int size, const std::wstring& text);
+		void  UpdateFontInfo(const std::wstring& text, int size);
+		void  Reset();
 
 	private:
+		FT_Face face;
+		bool inited = false;
 		class FontInfo {
 		public:
 			vec2			pos;
 			vec2			size;
 			vec2			bearing;
 			float			advance;
+			//texture
+			OBSTexture		texture;
 		};
 
 		// the font
-		std::string				m_filename;
-		int						m_minSize;
-		int						m_maxSize;
-		std::vector<std::array<float, NUM_CHARACTERS>> m_advances;
-		std::vector<float>		m_heights;
-
+		std::string				                  m_filename;
+		int						                  m_minSize;
+		int						                  m_maxSize;
+		std::map<std::pair<FT_ULong,int>, float>  m_advances;
+		std::map<int, float>		              m_heights;
+		std::map<int, float>		              m_gl_heights;
 		// rendering
 		gs_effect_t*			m_effect;
 		gs_vb_data*				m_vertexData;
@@ -86,10 +90,8 @@ namespace smll {
 		OBSTexture				m_kevin;
 
 		// rendered bitmap font data
-		OBSTexture				m_texture;
-		std::vector<FontInfo>	m_fontInfos;
-		int						m_size;
-		int						m_height;
+		std::map<std::pair<FT_ULong, int>, FontInfo>	m_fontInfos;
+		int	m_size   = 0;
 
 
 		void SetFont(const std::string& filename, int minSize = 16, int maxSize = 300);

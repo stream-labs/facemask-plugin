@@ -43,10 +43,6 @@
 #include "utils.h"
 #include <opencv2/opencv.hpp>
 
-#define MAX_TEXTURE_WIDTH	(2048)
-#define MAX_TEXTURE_HEIGHT	(4096)
-#define MAX_TEXTURE_SIZE	(MAX_TEXTURE_WIDTH * MAX_TEXTURE_HEIGHT)
-
 #pragma warning( pop )
 
 // FreeType
@@ -89,11 +85,6 @@ namespace smll {
 		m_kevin.height = gs_texture_get_height(m_kevin.texture);
 		obs_leave_graphics();
 
-		// No bitmap font rendered
-		m_texture.width = 0;
-		m_texture.height = 0;
-		m_texture.texture = nullptr;
-
 		SetFont(filename, minSize, maxSize);
 	}
 
@@ -108,25 +99,37 @@ namespace smll {
 		obs_leave_graphics();
 	}
 
+	void OBSFont::Reset() {
+		m_advances.clear();
+		m_heights.clear();
+		m_gl_heights.clear();
+		DestroyFontInfo();
+	}
+
 	void OBSFont::DestroyFontInfo() {
 		obs_enter_graphics();
-		if (m_texture.texture)
-			gs_texture_destroy(m_texture.texture);
 		obs_leave_graphics();
-		m_texture.width = 0;
-		m_texture.height = 0;
-		m_texture.texture = nullptr;
+
+		std::map <std::pair< FT_ULong, int > , FontInfo > ::iterator it;
+		for (it = m_fontInfos.begin(); it != m_fontInfos.end(); ++it)
+			gs_texture_destroy(it->second.texture.texture);
 		m_fontInfos.clear();
 	}
 
 	void OBSFont::SetFont(const std::string& filename, int minSize, int maxSize) {
 		if (m_filename != filename) {
 			// init file info
+			if (inited) {
+				FT_Done_Face(face);
+			}
+			inited = false;
 			m_filename = filename;
 			m_minSize = minSize;
 			m_maxSize = maxSize;
 			m_advances.clear();
-
+			m_fontInfos.clear();
+			m_heights.clear();
+			m_gl_heights.clear();
 			// Init FreeType
 			FT_Library ft;
 			if (FT_Init_FreeType(&ft)) {
@@ -135,166 +138,84 @@ namespace smll {
 			}
 
 			// Load font as face
-			FT_Face face;
 			if (FT_New_Face(ft, m_filename.c_str(), 0, &face)) {
 				blog(LOG_ERROR, "ERROR::FREETYPE: Failed to load font %s", m_filename.c_str());
 				return;
 			}
 
+			inited = true;
+
 			blog(LOG_DEBUG, "Font Family: %s  Style: %s",
 				face->family_name, face->style_name);
 
-			for (int size = minSize; size <= maxSize; size++) {
-				std::array<float, NUM_CHARACTERS> advances;
-
-				// Set size to load glyphs as
-				FT_Set_Pixel_Sizes(face, 0, size);
-
-				float height = 0.0f;
-				for (char c = LOWEST_CHARACTER; c <= HIGHEST_CHARACTER; c++)
-				{
-					// Load character glyph 
-					if (FT_Load_Char(face, c, FT_LOAD_DEFAULT))
-					{
-						blog(LOG_ERROR, "ERROR::FREETYTPE: Failed to load Glyph");
-						continue;
-					}
-
-					int index = (int)c - (int)LOWEST_CHARACTER;
-					advances[index] = (float)face->glyph->advance.x / 64.0f; // 26.6 format
-
-					float  glyph_height = (float)face->glyph->metrics.height / 64.0f;
-					if (glyph_height > height)
-						height = glyph_height;
-				}
-
-				m_heights.emplace_back(height);
-				m_advances.emplace_back(advances);
-			}	
 		}
 	}
 
-	void OBSFont::RenderBitmapFont(int size) {
-
-		// sanity check
-		if (m_filename.size() < 1)
-			return;
-		if (size == m_size)
-			return;
-
-		// save the size
-		m_size = size;
-
-		// Init FreeType
-		FT_Library ft;
-		if (FT_Init_FreeType(&ft)) {
-			blog(LOG_ERROR, "ERROR::FREETYPE: Could not init FreeType Library");
+	void OBSFont::UpdateFontInfo(const std::wstring &text, int size) {
+		if (!inited) {
 			return;
 		}
-
-		// Load font as face
-		FT_Face face;
-		if (FT_New_Face(ft, m_filename.c_str(), 0, &face)) {
-			blog(LOG_ERROR, "ERROR::FREETYPE: Failed to load font");
-			return;
-		}
-
-		// Set size to load glyphs as
+		bool do_render = size == m_size;
 		FT_Set_Pixel_Sizes(face, 0, size);
 
-		DestroyFontInfo();
+		std::wstring::const_iterator c;
+		for (c = text.begin(); c != text.end(); c++) {
+			FT_ULong character = *c;
+			FT_UInt index;
+			std::pair<FT_ULong, int> charPair(character, size);
 
-		// temp buffer for texture data
-		char* textureData = new char[MAX_TEXTURE_SIZE];
-		cv::Mat dstMat = cv::Mat(MAX_TEXTURE_HEIGHT, MAX_TEXTURE_WIDTH, CV_8UC1,
-			textureData);
+			if ((!do_render && m_advances.find(charPair) != m_advances.end()) ||m_fontInfos.find(charPair) != m_fontInfos.end()) { //already in a map
+				continue;
+			}
 
-		// figure a reasonable width
-		int reasonable_width = size * 10;
-
-		// Let's do ascii 32 - 126
-		m_height = 0;
-		int actual_width = 0;
-		int row_height = 0;
-		int x = 0;
-		int y = 1;
-		for (char c = LOWEST_CHARACTER; c <= HIGHEST_CHARACTER; c++)
-		{
-			// Load character glyph 
-			if (FT_Load_Char(face, c, FT_LOAD_RENDER))
+			if (FT_Load_Char(face, character, FT_LOAD_RENDER))
 			{
 				blog(LOG_ERROR, "ERROR::FREETYTPE: Failed to load Glyph");
 				continue;
 			}
 
-			// Maximum heights
-			if (face->glyph->bitmap.rows > m_height)
-				m_height = face->glyph->bitmap.rows;
-			if (face->glyph->bitmap.rows > row_height)
-				row_height = face->glyph->bitmap.rows;
+			m_advances[charPair] = (float)face->glyph->advance.x / 64.0f; // 26.6 format
 
-			// End of line?
-			if ((x + face->glyph->bitmap.width) > reasonable_width) {
-				if (x > actual_width)
-					actual_width = x;
-				x = 0;
-				y += row_height + 1;
-				row_height = 0;
+			float  glyph_height = (float)face->glyph->metrics.height / 64.0f;
+			float  height = m_heights[size];
+			if (m_heights.find(size) == m_heights.end() ||  glyph_height > m_heights[size])
+				m_heights[size] = glyph_height;
+			if (face->glyph->bitmap.rows > m_gl_heights[size])
+				m_gl_heights[size] = face->glyph->bitmap.rows;
+
+			// figure a reasonable width
+			int reasonable_width = size * 10;
+			int actual_width = 0;
+			int row_height = 0;
+			int x = 0;
+			int y = 1;
+			if (do_render) {
+				FontInfo fi;
+				vec2_set(&(fi.size), (float)face->glyph->bitmap.width, (float)face->glyph->bitmap.rows);
+				vec2_set(&(fi.bearing), (float)face->glyph->bitmap_left, (float)-face->glyph->bitmap_top);
+				fi.advance = (float)face->glyph->advance.x / 64.0f; // advance is 1/64 pixels
+
+				vec2_set(&(fi.pos), (float)0, (float)0);
+
+				obs_enter_graphics();
+				fi.texture.width = face->glyph->bitmap.width;
+				fi.texture.height = face->glyph->bitmap.rows;
+				fi.texture.texture = gs_texture_create(face->glyph->bitmap.width, face->glyph->bitmap.rows, GS_R8, 1,
+					(const uint8_t**)&face->glyph->bitmap.buffer, 0);
+				obs_leave_graphics();
+
+				m_fontInfos[charPair] = fi;
 			}
-
-			// Create font info
-			FontInfo fi;
-			vec2_set(&(fi.size), (float)face->glyph->bitmap.width, (float)face->glyph->bitmap.rows);
-			vec2_set(&(fi.bearing), (float)face->glyph->bitmap_left, (float)-face->glyph->bitmap_top);
-			fi.advance = (float)face->glyph->advance.x / 64.0f; // advance is 1/64 pixels
-
-			// Copy bitmap 
-			if (face->glyph->bitmap.rows > 0 && face->glyph->bitmap.width > 0) {
-				cv::Mat srcMat = cv::Mat(face->glyph->bitmap.rows, face->glyph->bitmap.width, CV_8UC1,
-					face->glyph->bitmap.buffer, face->glyph->bitmap.pitch);
-				srcMat.copyTo(dstMat.rowRange(y, y + face->glyph->bitmap.rows).colRange(x, x + face->glyph->bitmap.width));
-				vec2_set(&(fi.pos), (float)x, (float)y);
-			}
-			else {
-				vec2_set(&(fi.pos), (float)-1, (float)-1);
-			}
-
-			x += face->glyph->bitmap.width + 1;
-			m_fontInfos.emplace_back(fi);
 		}
-
-		int actual_height = y + row_height + 1;
-
-		// Create actual texture data
-		actual_width = (int)ALIGN_16(actual_width);
-		actual_height = (int)ALIGN_16(actual_height);
-		char* actualTextureData = new char[actual_width * actual_height];
-		cv::Mat actualMat = cv::Mat(actual_height, actual_width, CV_8UC1,
-			actualTextureData);
-		dstMat.rowRange(0, actual_height).colRange(0, actual_width).copyTo(actualMat);
-
-		// DEBUG: write out image
-		//char temp[256];
-		//snprintf(temp, sizeof(temp), "c:/temp/font-%d.png", size);
-		//cv::imwrite(temp, actualMat);
-
-		// Create the texture
-		obs_enter_graphics();
-		m_texture.width = actual_width;
-		m_texture.height = actual_height;
-		m_texture.texture = gs_texture_create(actual_width, actual_height, GS_R8, 1,
-			(const uint8_t**)&actualTextureData, 0);
-		obs_leave_graphics();
-		delete[] textureData;
-		delete[] actualTextureData;
-
-		// Destroy FreeType once we're finished
-		FT_Done_Face(face);
-		FT_Done_FreeType(ft);
 	}
 
-	void OBSFont::RenderText(const std::string& text, float xx, float y) {
+	void OBSFont::RenderBitmapFont(int size) {
+		Reset();
+		m_size = size;
+	}
 
+	void OBSFont::RenderText(const std::wstring& wtext, float xx, float y) {
+		UpdateFontInfo(wtext, m_size);
 		vec4 color;
 		vec4_set(&color, 0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -304,10 +225,12 @@ namespace smll {
 
 		gs_effect_t* defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
 
-		std::string::const_iterator c;
-		for (c = text.begin(); c != text.end(); c++) {
-			int idx = (int)*c - LOWEST_CHARACTER;
-			if (idx < 0 || idx >= m_fontInfos.size()) {
+		float m_height = GetHeight();
+		std::wstring::const_iterator c;
+		for (c = wtext.begin(); c != wtext.end(); c++) {
+			FT_ULong idx = *c;
+			std::pair<FT_ULong, int> charPair(idx, m_size);
+			if ( m_fontInfos.find(charPair) == m_fontInfos.end()) { // no such symbol
 				gs_matrix_push();
 				gs_matrix_translate3f(xx, y - ((float)m_height * 0.84f), 0.0f);
 				while (gs_effect_loop(defaultEffect, "Draw")) {
@@ -319,13 +242,13 @@ namespace smll {
 				gs_matrix_pop();
 				continue;
 			}
-			const FontInfo& fi = m_fontInfos[idx];
+			const FontInfo& fi = m_fontInfos[charPair];
 
 			if (fi.size.x > 0 && fi.size.y > 0) {
-				float u1 = fi.pos.x / (float)(m_texture.width - 1);
-				float u2 = (fi.pos.x + fi.size.x) / (float)(m_texture.width - 1);
-				float v1 = fi.pos.y / (float)(m_texture.height - 1);
-				float v2 = (fi.pos.y + fi.size.y) / (float)(m_texture.height - 1);
+				float u1 = fi.pos.x / (float)(fi.texture.width);
+				float u2 = (fi.pos.x + fi.size.x) / (float)(fi.texture.width);
+				float v1 = fi.pos.y / (float)(fi.texture.height - 1);
+				float v2 = (fi.pos.y + fi.size.y) / (float)(fi.texture.height);
 
 				gs_matrix_push();
 				gs_matrix_translate3f(xx + fi.bearing.x, y + fi.bearing.y, 0.0f);
@@ -333,7 +256,7 @@ namespace smll {
 					gs_effect_set_vec4(gs_effect_get_param_by_name(m_effect,
 						"color"), &color);
 					gs_effect_set_texture(gs_effect_get_param_by_name(m_effect,
-						"image"), m_texture.texture);
+						"image"), fi.texture.texture);
 					UpdateAndDrawVertices((float)fi.size.x, (float)fi.size.y, u1, u2, v1, v2);
 				}
 				gs_matrix_pop();
@@ -342,35 +265,43 @@ namespace smll {
 		}
 	}
 
-	float OBSFont::GetTextWidth(int size, const std::string& text) const {
+	float OBSFont::GetTextWidth(int size, const std::wstring& text)  {
+		UpdateFontInfo(text, size);
 		float w = 0;
-		std::string::const_iterator c;
-		int aidx = size - m_minSize;
-		if (aidx < 0 || aidx >= m_advances.size())
-			return 0.0f;
-		const std::array<float, NUM_CHARACTERS>& advances = m_advances[aidx];
+		std::wstring::const_iterator c;
 		for (c = text.begin(); c != text.end(); c++) {
-			int idx = (int)*c - LOWEST_CHARACTER;
-			if (idx < 0 || idx >= NUM_CHARACTERS)
-				w += m_heights[aidx]; // kevin
-			else
-				w += advances[idx];
+			FT_ULong character = *c;
+			std::pair<FT_ULong, int> charPair(character, m_size);
+			if (m_advances.find(charPair) == m_advances.end()) {
+				if (m_heights.find(size) != m_heights.end())
+					w += m_heights.at(size); // kevin
+			}	
+			else {
+				w += m_advances.at(charPair);
+			}
 		}
 		return w;
 	}
 
-	float OBSFont::GetFontHeight(int size) const {
-		return m_heights[size - m_minSize];
+	int OBSFont::GetHeight() {
+		if (m_gl_heights.find(m_size) != m_gl_heights.end())
+			return m_gl_heights.at(m_size);
+		return 0;
 	}
 
-	float OBSFont::GetCharAdvance(int size, char c) const {
-		int aidx = size - m_minSize;
-		int cidx = (int)c - LOWEST_CHARACTER;
-		if (aidx < 0 || aidx >= m_advances.size())
-			return 0;
-		if (cidx < 0 || cidx >= NUM_CHARACTERS)
-			return m_heights[aidx]; // kevin
-		return m_advances[aidx][cidx];
+	float OBSFont::GetFontHeight(int size) const {
+		if (m_heights.find(size) != m_heights.end())
+			return m_heights.at(size);
+		return 0;
+	}
+
+	float OBSFont::GetCharAdvance(int size, FT_ULong character) {
+		std::wstring text = L"" + character;
+		UpdateFontInfo(text, size);
+		std::pair<FT_ULong, int> charPair(character, m_size);
+		if (m_advances.find(charPair) != m_advances.end())
+			return m_advances.at(charPair); // kevin
+		return GetFontHeight(size);
 	}
 
 	void OBSFont::UpdateAndDrawVertices(float w, float h, 
