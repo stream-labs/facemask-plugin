@@ -173,7 +173,8 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 
 	// Fonts
 	char* fontname = obs_module_file(kFontAlertTTF);
-	smllFont = new smll::OBSFont(fontname);
+	char* base_fontname = obs_module_file(kBaseFontAlertTTF);
+	smllFont = new smll::OBSFont(fontname, base_fontname);
 	bfree(fontname);
 
 	// set our mm thread task

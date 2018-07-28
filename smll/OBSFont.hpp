@@ -43,7 +43,7 @@ namespace smll {
 	{
 	public:
 
-		OBSFont(const std::string& filename="c:/Windows/Fonts/Arial.ttf", int minSize=16, int maxSize=250);
+		OBSFont(const std::string& filename, const std::string& base_filename, int minSize=16, int maxSize=250);
 		~OBSFont();
 
 		// Render out the font at given size
@@ -65,6 +65,7 @@ namespace smll {
 
 	private:
 		FT_Face face;
+		FT_Face base_face; 
 		bool inited = false;
 		class FontInfo {
 		public:
@@ -78,6 +79,7 @@ namespace smll {
 
 		// the font
 		std::string				                  m_filename;
+		std::string				                  m_base_filename;
 		int						                  m_minSize;
 		int						                  m_maxSize;
 		std::map<std::pair<FT_ULong,int>, float>  m_advances;
@@ -94,7 +96,7 @@ namespace smll {
 		int	m_size   = 0;
 
 
-		void SetFont(const std::string& filename, int minSize = 16, int maxSize = 300);
+		void SetFont(const std::string& filename, const std::string& base_filename, int minSize = 16, int maxSize = 300);
 		void DestroyFontInfo();
 		void UpdateAndDrawVertices(float w, float h, 
 			float u1, float u2, float v1, float v2);

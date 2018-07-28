@@ -68,5 +68,7 @@ static const char* const kDefaultAlertLT = "alerts/alert_LT.json";
 static const char* const kDefaultAlertLB = "alerts/alert_LB.json";
 static const char* const kDefaultAlertRT = "alerts/alert_RT.json";
 static const char* const kDefaultAlertRB = "alerts/alert_RB.json";
-static const char* const kFontAlertTTF = "fonts/DejaVuSans.ttf";
+static const char* const kFontAlertTTF     = "fonts/ComicRelief.ttf";
+static const char* const kBaseFontAlertTTF = "fonts/DejaVuSans.ttf";
+
 
