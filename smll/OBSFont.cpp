@@ -285,7 +285,7 @@ namespace smll {
 		std::wstring::const_iterator c;
 		for (c = text.begin(); c != text.end(); c++) {
 			FT_ULong character = *c;
-			std::pair<FT_ULong, int> charPair(character, m_size);
+			std::pair<FT_ULong, int> charPair(character, size);
 			if (m_fontInfos.find(charPair) == m_fontInfos.end()) {
 				if (m_heights.find(size) != m_heights.end()){//kevin
 					w += m_heights.at(size);
@@ -311,9 +311,9 @@ namespace smll {
 	}
 
 	float OBSFont::GetCharAdvance(int size, FT_ULong character) {
-		std::wstring text = L"" + character;
+		std::wstring text(1, character);
 		UpdateFontInfo(text, size);
-		std::pair<FT_ULong, int> charPair(character, m_size);
+		std::pair<FT_ULong, int> charPair(character, size);
 		if (m_fontInfos.find(charPair) != m_fontInfos.end())
 			return m_advances.at(charPair); 
 		return GetFontHeight(size);//kevin
