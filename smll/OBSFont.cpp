@@ -189,12 +189,14 @@ namespace smll {
 				continue;
 			}
 
-			m_advances[charPair] = (float)curr_face->glyph->advance.x / 64.0f; // 26.6 format
-
 			float  glyph_height = (float)curr_face->glyph->metrics.height / 64.0f;
 			float  height = m_heights[size];
 			if (m_heights.find(size) == m_heights.end() ||  glyph_height > m_heights[size])
 				m_heights[size] = glyph_height;
+
+			if(index_char != 0)
+				m_advances[charPair] = (float)curr_face->glyph->advance.x / 64.0f; // 26.6 format
+
 			if (curr_face->glyph->bitmap.rows > m_gl_heights[size])
 				m_gl_heights[size] = curr_face->glyph->bitmap.rows;
 
@@ -286,7 +288,7 @@ namespace smll {
 		for (c = text.begin(); c != text.end(); c++) {
 			FT_ULong character = *c;
 			std::pair<FT_ULong, int> charPair(character, size);
-			if (m_fontInfos.find(charPair) == m_fontInfos.end()) {
+			if (m_advances.find(charPair) == m_advances.end()) {
 				if (m_heights.find(size) != m_heights.end()){//kevin
 					w += m_heights.at(size);
 				}
@@ -314,7 +316,7 @@ namespace smll {
 		std::wstring text(1, character);
 		UpdateFontInfo(text, size);
 		std::pair<FT_ULong, int> charPair(character, size);
-		if (m_fontInfos.find(charPair) != m_fontInfos.end())
+		if (m_advances.find(charPair) != m_advances.end())
 			return m_advances.at(charPair); 
 		return GetFontHeight(size);//kevin
 	}
