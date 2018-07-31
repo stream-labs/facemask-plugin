@@ -69,21 +69,44 @@ namespace Utils {
 		return fn;
 	}
 
+	/*
+	* Map functions with conversion string to wstring
+	*/
+
 	void DeleteTempFile(std::string filename) {
+		DeleteTempFile(Utils::ConvertStringToWstring(filename));
+	}
+
+
+	std::vector<std::string> ListFolderRecursive(std::string path, std::string glob = "*") {
+		std::vector<std::string> res;
+		std::vector<std::wstring> wres = ListFolderRecursive(ConvertStringToWstring(path), ConvertStringToWstring(glob));
+		for (int i = 0; i < wres.size(); i++)
+		{
+			res.push_back(ConvertWstringToString(wres[i]));
+		}
+		return res;
+	}
+	
+	/*
+	 * Function implementations with wstring
+	 */
+
+	void DeleteTempFile(std::wstring filename) {
 		::DeleteFile(filename.c_str());
 	}
 
-	std::vector<std::string> ListFolder(std::string path, std::string glob) {
-		std::vector<std::string> r;
+	std::vector<std::wstring> ListFolder(std::wstring path, std::wstring glob) {
+		std::vector<std::wstring> r;
 
 		WIN32_FIND_DATA search_data;
 		memset(&search_data, 0, sizeof(WIN32_FIND_DATA));
 
-		std::string ss = path + "\\" + glob;
+		std::wstring ss = path + L"\\" + glob;
 		HANDLE handle = FindFirstFile(ss.c_str(), &search_data);
 		while (handle != INVALID_HANDLE_VALUE)
 		{
-			std::string fn = search_data.cFileName;
+			std::wstring fn = search_data.cFileName;
 			if (search_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
 				continue;
 			}
@@ -97,22 +120,22 @@ namespace Utils {
 		return r;
 	}
 
-	std::vector<std::string> ListFolderRecursive(std::string path, std::string glob) {
-		std::vector<std::string> r = ListFolder(path, glob);
+	std::vector<std::wstring> ListFolderRecursive(std::wstring path, std::wstring glob) {
+		std::vector<std::wstring> r = ListFolder(path, glob);
 
 		WIN32_FIND_DATA search_data;
 		memset(&search_data, 0, sizeof(WIN32_FIND_DATA));
 
-		std::string ss = path + "\\*";
+		std::wstring ss = path + L"\\*";
 		HANDLE handle = FindFirstFile(ss.c_str(), &search_data);
 		while (handle != INVALID_HANDLE_VALUE)
 		{
-			std::string fn = search_data.cFileName;
+			std::wstring fn = search_data.cFileName;
 			if (search_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-				if (fn != "." && fn != "..") {
-					std::vector<std::string> rr = ListFolderRecursive(path + "\\" + fn, glob);
+				if (fn != L"." && fn != L"..") {
+					std::vector<std::wstring> rr = ListFolderRecursive(path + L"\\" + fn, glob);
 					for (int i = 0; i < rr.size(); i++) {
-						rr[i] = fn + "\\" + rr[i];
+						rr[i] = fn + L"\\" + rr[i];
 					}
 					r.insert(r.end(), rr.begin(), rr.end());
 				}
@@ -204,6 +227,35 @@ namespace Utils {
 				count++;
 		}
 		return count;
+	}
+
+	std::wstring ConvertStringToWstring(const std::string &str)
+	{
+		if (str.empty())
+		{
+			return std::wstring();
+		}
+		int num_chars = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, str.c_str(), str.length(), NULL, 0);
+		std::wstring wstrTo;
+		if (num_chars)
+		{
+			wstrTo.resize(num_chars);
+			if (MultiByteToWideChar(CP_UTF8, MB_USEGLYPHCHARS, str.c_str(), str.length(), &wstrTo[0], num_chars))
+			{
+				return wstrTo;
+			}
+		}
+		return std::wstring();
+	}
+
+	std::string ConvertWstringToString(const std::wstring& s)
+	{
+		int len;
+		int slength = (int)s.length() + 1;
+		len = WideCharToMultiByte(CP_UTF8, 0, s.c_str(), slength, 0, 0, 0, 0);
+		std::string r(len, '\0');
+		WideCharToMultiByte(CP_UTF8, 0, s.c_str(), slength, &r[0], len, 0, 0);
+		return r;
 	}
 
 }

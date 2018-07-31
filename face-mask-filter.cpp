@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Face Masks for SlOBS
  * Copyright (C) 2017 General Workings Inc
  *
@@ -1967,7 +1967,7 @@ void Plugin::FaceMaskFilter::Instance::LoadDemo() {
 		bool addMask = true;
 		if (demoModeGenPreviews) {
 			std::string gifname = fn.substr(0, fn.length() - 4) + "gif";
-			addMask = (::PathFileExists(gifname.c_str()) != TRUE);
+			addMask = (::PathFileExists(Utils::ConvertStringToWstring(gifname).c_str()) != TRUE);
 
 			// don't do thumbs on these folders
 			if (fn.find("\\heads\\") != std::string::npos)
@@ -2107,7 +2107,7 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 
 	// if the gif already exists, clean up and bail
 	std::string gifname = demoMaskFilenames[demoCurrentMask].substr(0, demoMaskFilenames[demoCurrentMask].length() - 4) + "gif";
-	if (::PathFileExists(gifname.c_str()) == TRUE) {
+	if (::PathFileExists(Utils::ConvertStringToWstring(gifname).c_str()) == TRUE) {
 		for (int i = 0; i < previewFrames.size(); i++) {
 			const PreviewFrame& frame = previewFrames[i];
 			gs_texture_destroy(frame.vidtex);
@@ -2119,7 +2119,7 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 
 	// create output folder
 	std::string outFolder = demoMaskFilenames[demoCurrentMask] + ".render";
-	::CreateDirectory(outFolder.c_str(), NULL);
+	::CreateDirectory(Utils::ConvertStringToWstring(outFolder).c_str(), NULL);
 
 	// write out frames
 	for (int i = 0; i < previewFrames.size(); i++) {
