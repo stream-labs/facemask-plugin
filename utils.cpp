@@ -206,4 +206,23 @@ namespace Utils {
 		return count;
 	}
 
+	std::wstring ConvertStringToWstring(const std::string &str)
+	{
+		if (str.empty())
+		{
+			return std::wstring();
+		}
+		int num_chars = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, str.c_str(), str.length(), NULL, 0);
+		std::wstring wstrTo;
+		if (num_chars)
+		{
+			wstrTo.resize(num_chars);
+			if (MultiByteToWideChar(CP_UTF8, MB_USEGLYPHCHARS, str.c_str(), str.length(), &wstrTo[0], num_chars))
+			{
+				return wstrTo;
+			}
+		}
+		return std::wstring();
+	}
+
 }
