@@ -44,14 +44,22 @@ namespace Utils {
 	extern const char* GetTempPath();
 	extern const char* GetTempFileName();
 	extern const char* Base64ToTempFile(std::string base64String);
-	extern void DeleteTempFile(std::string filename);
-	extern std::vector<std::string> ListFolder(std::string path, std::string glob = "*");
-	extern std::vector<std::string> ListFolderRecursive(std::string path, std::string glob = "*");
 	extern std::vector<std::string> split(const std::string &s, char delim);
 	extern std::string dirname(const std::string &p);
+	extern int count_spaces(const std::string& s);
 	extern void find_and_replace(std::string& source, std::string const& find, std::string const& replace);
+
+	extern void DeleteTempFile(std::string filename);
+	extern std::vector<std::string> ListFolderRecursive(std::string path, std::string glob);
+
+	//wstring functions
+	extern void DeleteTempFile(std::wstring filename);
+	extern std::vector<std::wstring> ListFolder(std::wstring path, std::wstring glob = L"*");
+	extern std::vector<std::wstring> ListFolderRecursive(std::wstring path, std::wstring glob = L"*");
+
 	extern float hermite(float t, float p1, float p2, float t1 = 0.0f, float t2 = 0.0f);
 	extern void fastMemcpy(void *pvDest, void *pvSrc, size_t nBytes);
-	extern int count_spaces(const std::string& s);
+
 	extern std::wstring ConvertStringToWstring(const std::string &str);
+	extern std::string ConvertWstringToString(const std::wstring& s);
 }
