@@ -59,6 +59,7 @@ namespace Utils {
 
 	extern float hermite(float t, float p1, float p2, float t1 = 0.0f, float t2 = 0.0f);
 	extern void fastMemcpy(void *pvDest, void *pvSrc, size_t nBytes);
+
 	extern std::wstring ConvertStringToWstring(const std::string &str);
 	extern std::string ConvertWstringToString(const std::wstring& s);
 }

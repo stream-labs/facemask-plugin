@@ -85,7 +85,7 @@ namespace smll {
 		void						SetTransform(const DetectionResult& face);
 
 		// Text rendering
-		gs_texture*		RenderTextToTexture(const std::vector<std::string>& lines,
+		gs_texture*		RenderTextToTexture(const std::vector<std::wstring>& lines,
 			int tex_width, int tex_height, OBSFont* font);
 
 	private:

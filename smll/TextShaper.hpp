@@ -38,15 +38,15 @@ namespace smll {
 	{
 	public:
 
-		TextShaper(const std::string& s="");
+		TextShaper(const std::wstring& s=L"");
 		~TextShaper();
 
-		void SetString(const std::string& s);
-		const std::string& GetString() const { return m_text; }
+		void SetString(const std::wstring& s);
+		const std::wstring& GetString() const { return m_text; }
 
-		int GetOptimalSize(const OBSFont& font, 
+		int GetOptimalSize(OBSFont& font, 
 			int target_width, int target_height);
-		std::vector<std::string> GetLines(const OBSFont& font, 
+		std::vector<std::wstring> GetLines(OBSFont& font, 
 			int size, int target_width);
 
 	private:
@@ -57,14 +57,14 @@ namespace smll {
 			Word() : index(0), length(0) {}
 		};
 
-		std::string			m_text;
+		std::wstring			m_text;
 		std::vector<Word>	m_words;
 
-		bool WillTextFit(const OBSFont& font, int size,
+		bool WillTextFit(OBSFont& font, int size,
 			int target_width, int target_height);
-		float GetWordWidth(const OBSFont& font, int size,
+		float GetWordWidth(OBSFont& font, int size,
 			const Word& word);
-		void GetActualWords(const OBSFont& font, int size, 
+		void GetActualWords(OBSFont& font, int size, 
 			float line_limit, std::vector<Word>& words);
 	};
 
