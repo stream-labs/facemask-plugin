@@ -1993,7 +1993,13 @@ Mask::MaskData*
 Plugin::FaceMaskFilter::Instance::LoadMask(std::string filename) {
 
 	PLOG_INFO("Loading mask json '%s'...", filename.c_str());
-
+#ifndef PUBLIC_RELEASE
+	if (filename.find("/") == std::string::npos && filename.find("\\") == std::string::npos) {
+		std::string appdata;
+		appdata = getenv("APPDATA");
+		filename = appdata + "\\slobs-client\\FaceMasks\\" + filename;
+	}
+#endif
 	// new mask data
 	Mask::MaskData* mdat = new Mask::MaskData();
 
