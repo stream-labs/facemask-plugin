@@ -69,6 +69,9 @@
 // Big enough
 #define BIG_ASS_FLOAT					(100000.0f)
 
+// Alert Attribution pre string for format
+#define DONOR_NAME_PRE			"- "
+
 static const int NUM_FONT_SIZES = 8;
 static const int FONT_SIZES[NUM_FONT_SIZES] = { 200, 120, 80, 62, 50, 42, 36, 30 };
 
@@ -139,7 +142,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	taskHandle(NULL), detectStage(nullptr),	maskDataShutdown(false), 
 	maskFolder(nullptr), maskFilename(nullptr),
 	introFilename(nullptr),	outroFilename(nullptr),	alertActivate(true), alertDoIntro(false),
-	alertDoOutro(false), alertDuration(10.0f), alertAttributionDuration(2.0f),
+	alertDoOutro(false), alertDuration(10.0f), donorNameDuration(2.0f),
 	alertOffsetBig(0.2f), alertOffsetSmall(0.1f), alertMinSize(0.2f), alertMaxSize(0.4f), alertShowDelay(0.0f),
 	alertTextTexture(nullptr), 
 	currentAlertLocation(LEFT_TOP),  alertTranslation(-35.0f), alertAspectRatio(1.15f),
@@ -304,8 +307,7 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	obs_data_set_default_bool(data, P_ALERT_ACTIVATE, false);
 	obs_data_set_default_string(data, P_ALERT_TEXT, "");
 	obs_data_set_default_double(data, P_ALERT_DURATION, 10.0f);
-	obs_data_set_default_string(data, P_ALERT_ATTRIBUTION, "");
-	obs_data_set_default_double(data, P_ALERT_ATTRIBUTIONDURATION, 2.0f);
+	obs_data_set_default_string(data, P_ALERT_DONOR_NAME, "");
 	obs_data_set_default_bool(data, P_ALERT_DOINTRO, false);
 	obs_data_set_default_bool(data, P_ALERT_DOOUTRO, false);
 	
@@ -313,7 +315,6 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	obs_data_set_default_double(data, P_ALERT_OFFSET_SMALL, 0.1f);
 	obs_data_set_default_double(data, P_ALERT_MIN_SIZE, 0.2f);
 	obs_data_set_default_double(data, P_ALERT_MAX_SIZE, 0.4f);
-	obs_data_set_default_double(data, P_ALERT_SHOW_DELAY, 0.0f);
 
 	obs_data_set_default_bool(data, P_CARTOON, false);
 	obs_data_set_default_bool(data, P_BGREMOVAL, false);
@@ -412,9 +413,8 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 	// ALERT PROPERTIES
 	add_bool_property(props, P_ALERT_ACTIVATE);
 	add_text_property(props, P_ALERT_TEXT);
-	add_float_slider(props, P_ALERT_DURATION, 5.0f, 60.0f, 0.1f);
-	add_text_property(props, P_ALERT_ATTRIBUTION);
-	add_float_slider(props, P_ALERT_ATTRIBUTIONDURATION, 5.0f, 60.0f, 0.1f);
+	add_float_slider(props, P_ALERT_DURATION, 10.0f, 60.0f, 0.1f);
+	add_text_property(props, P_ALERT_DONOR_NAME);
 	add_bool_property(props, P_ALERT_DOINTRO);
 	add_bool_property(props, P_ALERT_DOOUTRO);
 
@@ -422,7 +422,6 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 	add_float_slider(props, P_ALERT_OFFSET_SMALL, 0.0f, 1.0f, 0.01f);
 	add_float_slider(props, P_ALERT_MIN_SIZE, 0.0f, 1.0f, 0.01f);
 	add_float_slider(props, P_ALERT_MAX_SIZE, 0.0f, 1.0f, 0.01f);
-	add_float_slider(props, P_ALERT_SHOW_DELAY, 0.0f, 10.0f, 0.1f);
 
 #if !defined(PUBLIC_RELEASE)
 
@@ -501,9 +500,9 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	alertActivate = obs_data_get_bool(data, P_ALERT_ACTIVATE);
 	alertTriggered = (!lastAlertActivate && alertActivate);
 	alertText = obs_data_get_string(data, P_ALERT_TEXT);
-	alertAttribution = obs_data_get_string(data, P_ALERT_ATTRIBUTION);
+	donorName = obs_data_get_string(data, P_ALERT_DONOR_NAME);
 	alertDuration = (float)obs_data_get_double(data, P_ALERT_DURATION);
-	alertAttributionDuration = (float)obs_data_get_double(data, P_ALERT_ATTRIBUTIONDURATION);
+	donorNameDuration = 2; //Default value
 	alertDoIntro = obs_data_get_bool(data, P_ALERT_DOINTRO);
 	alertDoOutro = obs_data_get_bool(data, P_ALERT_DOOUTRO);
 	introFilename = (char*)obs_data_get_string(data, P_ALERT_INTRO);
@@ -512,7 +511,15 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	alertOffsetSmall = (float)obs_data_get_double(data, P_ALERT_OFFSET_SMALL);
 	alertMinSize = (float)obs_data_get_double(data, P_ALERT_MIN_SIZE);
 	alertMaxSize = (float)obs_data_get_double(data, P_ALERT_MAX_SIZE);
-	alertShowDelay = (float)obs_data_get_double(data, P_ALERT_SHOW_DELAY);
+	alertShowDelay = 0; //Default value
+
+	//format alert attribution
+	int donorNameLength = donorName.length();
+	int donorNamePreLength = strlen(DONOR_NAME_PRE);
+	//format if it isn't empty          and       if it isn't already formatted
+	if (donorNameLength > 0 && (donorName.substr(0, donorNamePreLength) != DONOR_NAME_PRE)) {
+		donorName.insert(0, DONOR_NAME_PRE); // concatenate in front pre string
+	}
 
 	// demo mode
 	demoModeOn = obs_data_get_bool(data, P_DEMOMODEON);
@@ -705,28 +712,25 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 		bool alertOn = (alertElapsedTime >= alertOnTime &&
 			alertElapsedTime <= alertOffTime);
 
-		if (!drawAlert) {
-			// show alert bubble?
-			if (alertOn && !alertShown) {
-				alertShown = true;
-				for (int i = 0; i < AlertLocation::NUM_ALERT_LOCATIONS; i++) {
-					if (alertMaskDatas[i]) {
-						alertMaskDatas[i]->Play();
-					}
-				}
-			}
-			// hide alert bubble?
-			else if (!alertOn && alertShown) {
-				alertShown = false;
-				for (int i = 0; i < AlertLocation::NUM_ALERT_LOCATIONS; i++) {
-					if (alertMaskDatas[i]) {
-						alertMaskDatas[i]->Rewind(true);
-						alertMaskDatas[i]->PlayBackwards();
-					}
+		// show alert bubble?
+		if (alertOn && !alertShown) {
+			alertShown = true;
+			for (int i = 0; i < AlertLocation::NUM_ALERT_LOCATIONS; i++) {
+				if (alertMaskDatas[i]) {
+					alertMaskDatas[i]->Play();
 				}
 			}
 		}
-
+		// hide alert bubble?
+		else if (!alertOn && alertShown) {
+			alertShown = false;
+			for (int i = 0; i < AlertLocation::NUM_ALERT_LOCATIONS; i++) {
+				if (alertMaskDatas[i]) {
+					alertMaskDatas[i]->Rewind(true);
+					alertMaskDatas[i]->PlayBackwards();
+				}
+			}
+		}
 	}
 
 	// Tick the intro/outro
@@ -880,8 +884,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	if (mask_data) {
 		mask_data->SetGlobalAlpha(maskAlpha);
 	}
-	float alertAttributionStartTime = alertDuration -
-		(alertAnimationDuration + alertAttributionDuration + outroDuration);
+	float donorNameStartTime = alertDuration -
+		(alertAnimationDuration + donorNameDuration + outroDuration);
 
 	// Select the video frame to draw
 	// - since we are already caching frames of video for the
@@ -1034,9 +1038,9 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		if (videoTicked) {
 			// what alert text are we drawing?
 			std::string theText = alertText;
-			if (alertAttribution.length() > 0 &&
-				alertElapsedTime >= alertAttributionStartTime) {
-				theText = alertAttribution;
+			if ((alertElapsedTime <= alertDuration) && donorName.length() > 0 &&
+				alertElapsedTime >= donorNameStartTime) {
+				theText = donorName;
 			}
 
 			// set empty strings to [kevin]...
