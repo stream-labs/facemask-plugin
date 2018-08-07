@@ -148,7 +148,8 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	demoCurrentMask(0), demoModeInterval(0.0f), demoModeDelay(0.0f), demoModeElapsed(0.0f), 
 	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), 
 	drawMask(true),	drawAlert(false), drawFaces(false), drawMorphTris(false), drawFDRect(false), 
-	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr) {
+	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr), 
+	maskData(nullptr), introData(nullptr), outroData(nullptr) {
 
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
 
@@ -238,6 +239,9 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 		gs_stagesurface_destroy(detectStage);
 	if (alertTextTexture)
 		gs_texture_destroy(alertTextTexture);
+	if (!maskData) {
+		delete maskData.get();
+	}
 	maskData = nullptr;
 	obs_leave_graphics();
 
@@ -1181,15 +1185,33 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 void Plugin::FaceMaskFilter::Instance::checkForMaskUnloading() {
 	// Check for file/folder changes
 	if (maskFilename &&	currentMaskFilename != maskFilename) {
+		if (!maskData) {
+			delete maskData.get();
+		}
 		maskData = nullptr;
 	}
 	if (introFilename && currentIntroFilename != introFilename) {
+		if (!introData) {
+			delete introData.get();
+		}
 		introData = nullptr;
 	}
 	if (outroFilename && currentOutroFilename != outroFilename) {
+		if (!outroData) {
+			delete outroData.get();
+		}
 		outroData = nullptr;
 	}
 	if (maskFolder &&	currentMaskFolder != maskFolder) {
+		if (!maskData) {
+			delete maskData.get();
+		}
+		if (!outroData) {
+			delete outroData.get();
+		}
+		if (!introData) {
+			delete introData.get();
+		}
 		maskData = nullptr;
 		introData = nullptr;
 		outroData = nullptr;
