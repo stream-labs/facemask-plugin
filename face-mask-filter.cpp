@@ -308,7 +308,6 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	obs_data_set_default_string(data, P_ALERT_TEXT, "");
 	obs_data_set_default_double(data, P_ALERT_DURATION, 10.0f);
 	obs_data_set_default_string(data, P_ALERT_ATTRIBUTION, "");
-	//obs_data_set_default_double(data, P_ALERT_ATTRIBUTIONDURATION, 2.0f);
 	obs_data_set_default_bool(data, P_ALERT_DOINTRO, false);
 	obs_data_set_default_bool(data, P_ALERT_DOOUTRO, false);
 	
@@ -316,7 +315,6 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	obs_data_set_default_double(data, P_ALERT_OFFSET_SMALL, 0.1f);
 	obs_data_set_default_double(data, P_ALERT_MIN_SIZE, 0.2f);
 	obs_data_set_default_double(data, P_ALERT_MAX_SIZE, 0.4f);
-	//obs_data_set_default_double(data, P_ALERT_SHOW_DELAY, 0.0f);
 
 	obs_data_set_default_bool(data, P_CARTOON, false);
 	obs_data_set_default_bool(data, P_BGREMOVAL, false);
@@ -417,7 +415,6 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 	add_text_property(props, P_ALERT_TEXT);
 	add_float_slider(props, P_ALERT_DURATION, 10.0f, 60.0f, 0.1f);
 	add_text_property(props, P_ALERT_ATTRIBUTION);
-//	add_float_slider(props, P_ALERT_ATTRIBUTIONDURATION, 2.0f, 60.0f, 0.1f);
 	add_bool_property(props, P_ALERT_DOINTRO);
 	add_bool_property(props, P_ALERT_DOOUTRO);
 
@@ -425,7 +422,6 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 	add_float_slider(props, P_ALERT_OFFSET_SMALL, 0.0f, 1.0f, 0.01f);
 	add_float_slider(props, P_ALERT_MIN_SIZE, 0.0f, 1.0f, 0.01f);
 	add_float_slider(props, P_ALERT_MAX_SIZE, 0.0f, 1.0f, 0.01f);
-//	add_float_slider(props, P_ALERT_SHOW_DELAY, 0.0f, 10.0f, 0.1f);
 
 #if !defined(PUBLIC_RELEASE)
 
