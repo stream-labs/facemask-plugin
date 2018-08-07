@@ -160,9 +160,9 @@ namespace Plugin {
 			bool				alertDoIntro;
 			bool				alertDoOutro;
 			std::string			alertText;
-			std::string			alertAttribution;
+			std::string			donorName;
 			float				alertDuration;
-			float				alertAttributionDuration;
+			float				donorNameDuration;
 			float				alertOffsetBig;
 			float				alertOffsetSmall;
 			float				alertMinSize;
