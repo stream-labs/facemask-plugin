@@ -140,7 +140,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	source(source), canvasWidth(0), canvasHeight(0), baseWidth(640), baseHeight(480),
 	isActive(true), isVisible(true), videoTicked(true),
 	taskHandle(NULL), detectStage(nullptr),	maskDataShutdown(false), 
-	maskFolder(nullptr), maskFilename(nullptr),
+	maskFilename(nullptr),
 	introFilename(nullptr),	outroFilename(nullptr),	alertActivate(true), alertDoIntro(false),
 	alertDoOutro(false), alertDuration(10.0f), donorNameDuration(2.0f),
 	alertOffsetBig(0.2f), alertOffsetSmall(0.1f), alertMinSize(0.2f), alertMaxSize(0.4f), alertShowDelay(0.0f),
@@ -284,26 +284,12 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 
 	obs_data_set_default_bool(data, P_DEACTIVATE, false);
 
-	char* defMaskFolder = obs_module_file(kDefaultMaskFolder);
+	char* defMaskFolder = (char*)obs_module_config_path(NULL);
 	obs_data_set_default_string(data, P_MASKFOLDER, defMaskFolder);
 
-#ifdef PUBLIC_RELEASE	
 	obs_data_set_default_string(data, P_MASK, kDefaultMask);
 	obs_data_set_default_string(data, P_ALERT_INTRO, kDefaultIntro);
 	obs_data_set_default_string(data, P_ALERT_OUTRO, kDefaultOutro);
-#else 
-	std::string jsonWithPath = defMaskFolder;
-	jsonWithPath = jsonWithPath + "/" + kDefaultMask;
-	obs_data_set_default_string(data, P_MASK, jsonWithPath.c_str());
-
-	jsonWithPath = defMaskFolder; 
-	jsonWithPath = jsonWithPath + "/" + kDefaultIntro;
-	obs_data_set_default_string(data, P_ALERT_INTRO, jsonWithPath.c_str());
-
-	jsonWithPath = defMaskFolder; 
-	jsonWithPath = jsonWithPath + "/" + kDefaultOutro;
-	obs_data_set_default_string(data, P_ALERT_OUTRO, jsonWithPath.c_str());
-#endif
 
 	bfree(defMaskFolder);
 
@@ -381,6 +367,15 @@ static void add_json_file_property(obs_properties_t *props, const char* name,
 	bfree(defFolder);
 }
 
+static void add_folder_property(obs_properties_t *props, const char* name,
+	const char* folder) {
+	obs_property_t* p = obs_properties_add_path(props, name, P_TRANSLATE(name),
+		obs_path_type::OBS_PATH_DIRECTORY,
+		NULL, folder);
+	std::string n = name; n += ".Description";
+	obs_property_set_long_description(p, P_TRANSLATE(n.c_str()));
+}
+
 static void add_float_slider(obs_properties_t *props, const char* name, float min, float max, float step) {
 	obs_property_t* p = obs_properties_add_float_slider(props, name,
 		P_TRANSLATE(name), min, max, step);
@@ -391,10 +386,8 @@ static void add_float_slider(obs_properties_t *props, const char* name, float mi
 
 void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 
-#if defined(PUBLIC_RELEASE)
-
 	// mask folder
-	add_text_property(props, P_MASKFOLDER);
+	add_folder_property(props, P_MASKFOLDER, NULL);
 
 	// mask 
 	add_text_property(props, P_MASK);
@@ -402,17 +395,6 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 	// alert files
 	add_text_property(props, P_ALERT_INTRO);
 	add_text_property(props, P_ALERT_OUTRO);
-
-#else
-
-	// mask
-	add_json_file_property(props, P_MASK, kDefaultMaskFolder);
-
-	// alert files
-	add_json_file_property(props, P_ALERT_INTRO, kDefaultMaskFolder);
-	add_json_file_property(props, P_ALERT_OUTRO, kDefaultMaskFolder);
-
-#endif
 
 	// ALERT PROPERTIES
 	add_bool_property(props, P_ALERT_ACTIVATE);
@@ -492,7 +474,13 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 #endif
 
 	// mask file names
-	maskFolder = (char*)obs_data_get_string(data, P_MASKFOLDER);
+	maskFolder = obs_data_get_string(data, P_MASKFOLDER);
+	std::replace(maskFolder.begin(), maskFolder.end(), '/', '\\');
+	char lastChar = maskFolder.back();
+	//If slash at the end, remove it
+	if (lastChar == '\\') {
+		maskFolder.pop_back();
+	}
 	maskFilename = (char*)obs_data_get_string(data, P_MASK);
 
 	// Flags
@@ -1206,7 +1194,7 @@ void Plugin::FaceMaskFilter::Instance::checkForMaskUnloading() {
 		}
 		outroData = nullptr;
 	}
-	if (maskFolder &&	currentMaskFolder != maskFolder) {
+	if (maskFolder.length() != 0 &&	currentMaskFolder != maskFolder) {
 		if (!maskData) {
 			delete maskData.get();
 		}
@@ -1899,11 +1887,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 					currentMaskFilename = maskFilename;
 					currentMaskFolder = maskFolder;
 					// mask filename
-#ifdef PUBLIC_RELEASE
 					std::string maskFn = currentMaskFolder + "\\" + currentMaskFilename;
-#else
-					std::string maskFn = currentMaskFilename;
-#endif
 					// load mask
 					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);
 					maskData = std::unique_ptr<Mask::MaskData>(LoadMask(maskFn));
@@ -1917,11 +1901,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 					currentIntroFilename = introFilename;
 					currentMaskFolder = maskFolder;
 					// mask filename
-#ifdef PUBLIC_RELEASE
 					std::string maskFn = currentMaskFolder + "\\" + currentIntroFilename;
-#else
-					std::string maskFn = currentIntroFilename;
-#endif
 					// load mask
 					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);
 					introData = std::unique_ptr<Mask::MaskData>(LoadMask(maskFn));
@@ -1935,11 +1915,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 					currentOutroFilename = outroFilename;
 					currentMaskFolder = maskFolder;
 					// mask filename
-#ifdef PUBLIC_RELEASE
 					std::string maskFn = currentMaskFolder + "\\" + currentOutroFilename;
-#else
-					std::string maskFn = currentOutroFilename;
-#endif
 					// load mask
 					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);
 					outroData = std::unique_ptr<Mask::MaskData>(LoadMask(maskFn));
