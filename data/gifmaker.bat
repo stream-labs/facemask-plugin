@@ -15,10 +15,10 @@ ffmpeg -y -framerate 30 -i frame%%04d.png -i palette.png -filter_complex "fps=15
 ffmpeg -y -r 30 -f image2 -i frame%%04d.png -an -vcodec libx264 -g 300 -preset veryslow -tune zerolatency -profile:v baseline -level 3.0 -crf 28 -pix_fmt yuv420p -vf scale=250x250 %MP4FILE%
 rem gifsicle.exe -O3 -k 64 --batch %GIFFILE%
 rem giflossy.exe -O3 --lossy=160 -k 64 --dither=o8 --batch %GIFFILE%
-giflossy.exe -O3 --lossy=100 --batch %GIFFILE%
+gifsicle.exe -O3 --lossy=100 --batch %GIFFILE%
 
 copy last_frame.png "%PNGFILE%"
-convert "%PNGFILE%" -resize 250x250 "%PNGFILE%"
+magick convert "%PNGFILE%" -resize 250x250 "%PNGFILE%"
 
 cd ..
 

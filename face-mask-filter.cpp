@@ -318,7 +318,7 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	obs_data_set_default_bool(data, P_DRAWCROPRECT, false);
 
 	obs_data_set_default_bool(data, P_DEMOMODEON, false);
-	obs_data_set_default_double(data, P_DEMOINTERVAL, 5.0f);
+	obs_data_set_default_double(data, P_DEMOINTERVAL, 7.0f);
 	obs_data_set_default_double(data, P_DEMODELAY, 3.0f);
 
 #if !defined(PUBLIC_RELEASE)
