@@ -2126,6 +2126,7 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 	// write out frames
 	for (int i = 0; i < previewFrames.size(); i++) {
 		const PreviewFrame& frame = previewFrames[i];
+
 		// skip first frame for more seamless loop
 		size_t last = previewFrames.size() - 2;
 		if (i > 0 && i <= last) {
@@ -2154,7 +2155,6 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 					uint8_t blue = vpixel[2];
 					vpixel[0] = blue;
 					vpixel[2] = red;
-
 					vpixel += 4;
 				}
 
