@@ -144,7 +144,7 @@ namespace Plugin {
 			gs_stagesurf_t*		detectStage;
 
 			// mask filenames
-			const char*			maskFolder;
+			std::string			maskFolder;
 			std::string			currentMaskFolder;
 			const char*			maskFilename;
 			std::string			currentMaskFilename;
