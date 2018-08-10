@@ -332,7 +332,7 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	obs_data_set_default_bool(data, P_DRAWCROPRECT, false);
 
 	obs_data_set_default_bool(data, P_DEMOMODEON, false);
-	obs_data_set_default_double(data, P_DEMOINTERVAL, 5.0f);
+	obs_data_set_default_double(data, P_DEMOINTERVAL, 7.0f);
 	obs_data_set_default_double(data, P_DEMODELAY, 3.0f);
 
 #if !defined(PUBLIC_RELEASE)
@@ -2126,7 +2126,6 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 	// write out frames
 	for (int i = 0; i < previewFrames.size(); i++) {
 		const PreviewFrame& frame = previewFrames[i];
-
 		// skip first frame for more seamless loop
 		size_t last = previewFrames.size() - 2;
 		if (i > 0 && i <= last) {
@@ -2155,6 +2154,7 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 					uint8_t blue = vpixel[2];
 					vpixel[0] = blue;
 					vpixel[2] = red;
+
 					vpixel += 4;
 				}
 

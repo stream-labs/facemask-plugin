@@ -190,3 +190,43 @@ The FaceDetect object manages these operations and a current state, so that it p
 * [Spatial indexing with Quadtrees and Hilbert Curves](http://blog.notdot.net/2009/11/Damn-Cool-Algorithms-Spatial-indexing-with-Quadtrees-and-Hilbert-Curves)
 
 * [Geometric Algorithms](https://www.cs.princeton.edu/~rs/AlgsDS07/16Geometric.pdf)
+
+
+## Generating thumbnails
+
+### Setting up:
+* Install FFmpeg:
+  [ffmpeg](https://www.ffmpeg.org/)
+  **Add a Path** of FFmpeg executable in the Environment Variables:
+  The path should look like: *%PATH_TO_YOUR_DIR%\ffmpeg-%VERSION%\bin*
+
+* Install ImageMagick:
+  [ImageMagick](https://www.imagemagick.org/script/download.php#windows)
+Turn OFF the **Install FFmpeg** option during the instalation
+Turn ON the **Install Legacy Utilities (e.g. convert)** option during the instalation
+
+* Download and build giflossy:
+  [giflossy](https://github.com/kornelski/giflossy)
+ *Note: Gifview is not needed*
+**Add a Path** of the gifsicle executable in the Environment Variables:
+The path should look like: *%PATH_TO_YOUR_DIR%\giflossy\src*
+
+* Install SVN:
+  [SVN](https://tortoisesvn.net/downloads.html)
+Turn ON the **'Command Line Clients Tool'** option during the installation
+
+### Generation:
+* Start/Restart Streamlabs-OBS
+* Add a Media Resource
+    * Ensure that **Loop** option is *ON* and **Hide source when playback ends** is *OFF*
+    * You can choose different background videos by changing *properties->local file*
+    * Local Files are located:
+    *\%PATH_TO_DIR%\streamlabs-obs\node_modules\obs-studio-node\libobs\data\obs-plugins\facemask-plugin\media*
+* Add a filter: Face Mask Plugin
+* Go to Setting of facemask-plugin:
+    * Set the **Demo Mode Folder** Path (where the masks JSON files are located)
+    * Turn On **Demo Mode**
+    * Turn On **Generate Thumbs**
+    * Push **Done** and wait, thumbnails will be generated in the Demo Folder
+
+*Note: if you want to regenerate existing mask, restart the program and remove associated thumbnails from the demo folder*
