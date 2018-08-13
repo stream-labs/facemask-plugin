@@ -219,9 +219,10 @@ Turn ON the **'Command Line Clients Tool'** option during the installation
 * Start/Restart Streamlabs-OBS
 * Add a Media Resource
     * Ensure that **Loop** option is *ON* and **Hide source when playback ends** is *OFF*
-    * You can choose different background videos by changing *properties->local file*
-    * Local Files are located:
-    *\%PATH_TO_DIR%\streamlabs-obs\node_modules\obs-studio-node\libobs\data\obs-plugins\facemask-plugin\media*
+    * Choose video by changing *properties->local file*
+    * Video resource can be downloaded from [here](https://github.com/twitchalerts/slart/blob/master/renders/headturn.mp4)
+	(or you can downlaod [darker background video](https://github.com/twitchalerts/slart/blob/master/renders/headturn.mp4))
+
 * Add a filter: Face Mask Plugin
 * Go to Setting of facemask-plugin:
     * Set the **Demo Mode Folder** Path (where the masks JSON files are located)
