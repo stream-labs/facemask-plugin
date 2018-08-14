@@ -220,8 +220,6 @@ Turn ON the **'Command Line Clients Tool'** option during the installation
 * Add a Media Resource
     * Ensure that **Loop** option is *ON* and **Hide source when playback ends** is *OFF*
     * Choose video by changing *properties->local file*
-    * Video resource can be downloaded from [here](https://github.com/twitchalerts/slart/blob/staging/rendersGrey/headturn.mp4)
-	(or you can downlaod [darker background video](https://github.com/twitchalerts/slart/blob/staging/rendersDarkGrey/headturn.mp4))
 
 * Add a filter: Face Mask Plugin
 * Go to Setting of facemask-plugin:
