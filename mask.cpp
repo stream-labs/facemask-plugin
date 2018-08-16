@@ -210,7 +210,6 @@ void Mask::MaskData::Load(const std::string& file) {
 			file.c_str());
 		return;
 	}
-
 	for (obs_data_item_t* itm = obs_data_first(partData); itm; obs_data_item_next(&itm)) {
 		std::string name = obs_data_item_get_name(itm);
 		GetPart(name);

@@ -121,7 +121,7 @@ Mask::Resource::Animation::Animation(Mask::MaskData* parent, std::string name, o
 		obs_data_t* chand = obs_data_item_get_obj(el);
 		if (!chand)
 			continue;
-
+ 
 		AnimationChannel channel;
 
 		if (!obs_data_has_user_value(chand, S_NAME)) {
