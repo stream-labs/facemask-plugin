@@ -176,10 +176,10 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 			obs_data_t* eld = obs_data_item_get_obj(el);
 			if (!eld)
 				continue;
-			if (!obs_data_has_user_value(eld, "type"))
+			if (!obs_data_has_user_value(eld, "type")|| !obs_data_has_user_value(eld, "value")) {
+				obs_data_release(eld);
 				continue;
-			if (!obs_data_has_user_value(eld, "value"))
-				continue;
+			}
 
 			std::string type = obs_data_get_string(eld, "type");
 			if (type == "texture" || type == "image" || type == "sequence") {
@@ -203,6 +203,7 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 				if (vector) {
 					param.intArray[0] = (int32_t)obs_data_get_int(vector, "x");
 					param.intArray[1] = (int32_t)obs_data_get_int(vector, "y");
+					obs_data_release(vector);
 				}
 				m_parameters.emplace(parameterName, param);
 			} else if (type == "integer3") {
@@ -213,6 +214,7 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 					param.intArray[0] = (int32_t)obs_data_get_int(vector, "x");
 					param.intArray[1] = (int32_t)obs_data_get_int(vector, "y");
 					param.intArray[2] = (int32_t)obs_data_get_int(vector, "z");
+					obs_data_release(vector);
 				}
 				m_parameters.emplace(parameterName, param);
 			} else if (type == "integer4") {
@@ -224,6 +226,7 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 					param.intArray[1] = (int32_t)obs_data_get_int(vector, "y");
 					param.intArray[2] = (int32_t)obs_data_get_int(vector, "z");
 					param.intArray[3] = (int32_t)obs_data_get_int(vector, "w");
+					obs_data_release(vector);
 				}
 				m_parameters.emplace(parameterName, param);
 			} else if (type == "integer[]") {
@@ -240,6 +243,7 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 				if (vector) {
 					param.floatArray[0] = (float_t)obs_data_get_double(vector, "x");
 					param.floatArray[1] = (float_t)obs_data_get_double(vector, "y");
+					obs_data_release(vector);
 				}
 				m_parameters.emplace(parameterName, param);
 			} else if (type == "float3") {
@@ -250,6 +254,7 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 					param.floatArray[0] = (float_t)obs_data_get_double(vector, "x");
 					param.floatArray[1] = (float_t)obs_data_get_double(vector, "y");
 					param.floatArray[2] = (float_t)obs_data_get_double(vector, "z");
+					obs_data_release(vector);
 				}
 				m_parameters.emplace(parameterName, param);
 			} else if (type == "float4") {
@@ -261,6 +266,7 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 					param.floatArray[1] = (float_t)obs_data_get_double(vector, "y");
 					param.floatArray[2] = (float_t)obs_data_get_double(vector, "z");
 					param.floatArray[3] = (float_t)obs_data_get_double(vector, "w");
+					obs_data_release(vector);
 				}
 				m_parameters.emplace(parameterName, param);
 			} else if (type == "float[]") {
@@ -274,10 +280,14 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 					obs_data_get_vec4(vector, "y", &(param.matrix.x));
 					obs_data_get_vec4(vector, "z", &(param.matrix.x));
 					obs_data_get_vec4(vector, "w", &(param.matrix.x));
+					obs_data_release(vector);
 				}
 				m_parameters.emplace(parameterName, param);
 			}
+			obs_data_release(eld);
 		}
+		if(prmd)
+			obs_data_release(prmd);
 	}
 }
 

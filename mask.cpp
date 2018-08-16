@@ -210,9 +210,14 @@ void Mask::MaskData::Load(const std::string& file) {
 			file.c_str());
 		return;
 	}
+
 	for (obs_data_item_t* itm = obs_data_first(partData); itm; obs_data_item_next(&itm)) {
 		std::string name = obs_data_item_get_name(itm);
 		GetPart(name);
+	}
+	obs_data_release(partData);
+	if (partDataItem) {
+		obs_data_item_release(&partDataItem);
 	}
 
 	// yield
@@ -225,13 +230,20 @@ void Mask::MaskData::Load(const std::string& file) {
 		obs_data_t* resd = obs_data_item_get_obj(el);
 		if (!resd)
 			continue;
-		if (!obs_data_has_user_value(resd, JSON_TYPE))
+		if (!obs_data_has_user_value(resd, JSON_TYPE)) {
+			obs_data_release(resd);
 			continue;
+		}
 		std::string resourceType = obs_data_get_string(resd, JSON_TYPE);
 		if (resourceType == "animation") {
 			m_animations.emplace(resourceName, 
 				std::dynamic_pointer_cast<Resource::Animation>(GetResource(resourceName)));
 		}
+		obs_data_release(resd);
+	}
+
+	if (resources) {
+		obs_data_release(resources);
 	}
 }
 
@@ -267,24 +279,51 @@ std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::GetResource(const std::st
 	// Lazy Loaded
 	obs_data_item_t* resources = obs_data_item_byname(m_data, JSON_RESOURCES);
 	if (!resources) return nullptr;
-	if (obs_data_item_gettype(resources) != OBS_DATA_OBJECT) return nullptr;
+	if (obs_data_item_gettype(resources) != OBS_DATA_OBJECT) {
+		obs_data_item_release(&resources);
+		return nullptr;
+	}
 	obs_data_t* resd = obs_data_item_get_obj(resources);
-	if (!resd) return nullptr;
+	if (!resd) {
+		obs_data_item_release(&resources);
+		return nullptr;
+	}
 	obs_data_item_t* element = obs_data_item_byname(resd, name.c_str());
-	if (!element) return nullptr;
+	if (!element) {
+		obs_data_item_release(&resources);
+		obs_data_release(resd);
+		return nullptr;
+	}
 	if (obs_data_item_gettype(element) != OBS_DATA_OBJECT) return nullptr;
 	obs_data_t* elmd = obs_data_item_get_obj(element);
-	if (!elmd) return nullptr;
+	if (!elmd) {
+		obs_data_item_release(&element);
+		obs_data_item_release(&resources);
+		obs_data_release(resd);
+		return nullptr;
+	}
 	try {
 		auto res = Resource::IBase::Load(this, name, elmd);
 		if (res) {
 			this->AddResource(name, res);
+			obs_data_item_release(&element);
+			obs_data_item_release(&resources);
+			obs_data_release(resd);
+			obs_data_release(elmd);
 			return res;
 		}
 	} catch (...) {
 		PLOG_DEBUG("Resource %s has THROWN AN EXCEPTION. MASK DID NOT LOAD CORRECTLY.", name.c_str());
+		obs_data_item_release(&element);
+		obs_data_item_release(&resources);
+		obs_data_release(resd);
+		obs_data_release(elmd);
 		return nullptr;
 	}
+	obs_data_item_release(&element);
+	obs_data_item_release(&resources);
+	obs_data_release(resd);
+	obs_data_release(elmd);
 	return nullptr;
 }
 
@@ -360,16 +399,43 @@ std::shared_ptr<Mask::Part> Mask::MaskData::GetPart(const std::string& name) {
 
 	// Lazy Loaded
 	obs_data_item_t* parts = obs_data_item_byname(m_data, JSON_PARTS);
-	if (!parts) return nullptr;
-	if (obs_data_item_gettype(parts) != OBS_DATA_OBJECT) return nullptr;
+	if (!parts) {
+		return nullptr;
+	}
+	if (obs_data_item_gettype(parts) != OBS_DATA_OBJECT) {
+		obs_data_item_release(&parts);
+		return nullptr;
+	}
 	obs_data_t* resd = obs_data_item_get_obj(parts);
-	if (!resd) return nullptr;
+	if (!resd) {
+		obs_data_item_release(&parts);
+		return nullptr;
+	}
 	obs_data_item_t* element = obs_data_item_byname(resd, name.c_str());
-	if (!element) return nullptr;
-	if (obs_data_item_gettype(element) != OBS_DATA_OBJECT) return nullptr;
+	if (!element) {
+		obs_data_item_release(&parts);
+		obs_data_release(resd);
+		return nullptr;
+	}
+	if (obs_data_item_gettype(element) != OBS_DATA_OBJECT) {
+		obs_data_item_release(&parts);
+		obs_data_item_release(&element);
+		obs_data_release(resd);
+		return nullptr;
+	}
 	obs_data_t* elmd = obs_data_item_get_obj(element);
-	if (!elmd) return nullptr;
-	return LoadPart(name, elmd);
+	if (!elmd) {
+		obs_data_item_release(&parts);
+		obs_data_item_release(&element);
+		obs_data_release(resd);
+		return nullptr;
+	}
+	std::shared_ptr<Mask::Part> res = LoadPart(name, elmd);
+	obs_data_item_release(&parts);
+	obs_data_item_release(&element);
+	obs_data_release(resd);
+	obs_data_release(elmd);
+	return res;
 }
 
 std::shared_ptr<Mask::Part> Mask::MaskData::RemovePart(const std::string& name) {
@@ -618,12 +684,19 @@ std::shared_ptr<Mask::Part> Mask::MaskData::LoadPart(std::string name, obs_data_
 		obs_data_t* rezData = obs_data_item_get_obj(rezItem);
 		if (!rezData) {
 			PLOG_ERROR("Bad resources section in '%s'.", name.c_str());
+			if (rezItem) {
+				obs_data_item_release(&rezItem);
+			}
 			return current;
 		}
 		for (obs_data_item_t* itm = obs_data_first(rezData); itm; obs_data_item_next(&itm)) {
 			std::string resourceName = obs_data_item_get_string(itm);
 			current->resources.push_back(GetResource(resourceName));
 		}
+		if (rezItem) {
+			obs_data_item_release(&rezItem);
+		}
+		obs_data_release(rezData);
 	}
 
 	// Parent 
