@@ -121,16 +121,20 @@ Mask::Resource::Animation::Animation(Mask::MaskData* parent, std::string name, o
 		obs_data_t* chand = obs_data_item_get_obj(el);
 		if (!chand)
 			continue;
-		 
+
 		AnimationChannel channel;
 
 		if (!obs_data_has_user_value(chand, S_NAME)) {
+			obs_data_release(chand);
+			obs_data_release(channels);
 			PLOG_ERROR("Animation '%s' channel has no name.", name.c_str());
 			throw std::logic_error("Animation channel has no name.");
 		}
 		std::string itemName = obs_data_get_string(chand, S_NAME);
 
 		if (!obs_data_has_user_value(chand, S_TYPE)) {
+			obs_data_release(chand);
+			obs_data_release(channels);
 			PLOG_ERROR("Animation '%s' channel has no type.", name.c_str());
 			throw std::logic_error("Animation channel has no type.");
 		}
@@ -148,23 +152,31 @@ Mask::Resource::Animation::Animation(Mask::MaskData* parent, std::string name, o
 		}
 
 		if (!obs_data_has_user_value(chand, S_PRESTATE)) {
+			obs_data_release(chand);
+			obs_data_release(channels);
 			PLOG_ERROR("Animation '%s' channel has no pre state.", name.c_str());
 			throw std::logic_error("Animation channel has no pre state.");
 		}
 		channel.preState = AnimationBehaviourFromString(obs_data_get_string(chand, S_PRESTATE));
 
 		if (!obs_data_has_user_value(chand, S_POSTSTATE)) {
+			obs_data_release(chand);
+			obs_data_release(channels);
 			PLOG_ERROR("Animation '%s' channel has no pose state.", name.c_str());
 			throw std::logic_error("Animation channel has no post state.");
 		}
 		channel.postState = AnimationBehaviourFromString(obs_data_get_string(chand, S_POSTSTATE));
 
 		if (!obs_data_has_user_value(chand, S_VALUES)) {
+			obs_data_release(chand);
+			obs_data_release(channels);
 			PLOG_ERROR("Animation '%s' channel has no values.", name.c_str());
 			throw std::logic_error("Animation channel has no values.");
 		}
 		const char* base64data = obs_data_get_string(chand, S_VALUES);
 		if (base64data[0] == '\0') {
+			obs_data_release(chand);
+			obs_data_release(channels);
 			PLOG_ERROR("Animation '%s' channel has empty values data.", name.c_str());
 			throw std::logic_error("Animation channel has empty values data.");
 		}
@@ -174,7 +186,9 @@ Mask::Resource::Animation::Animation(Mask::MaskData* parent, std::string name, o
 		channel.values.assign((float*)decoded.data(), (float*)decoded.data() + numFloats);
 
 		m_channels.emplace_back(channel);
+		obs_data_release(chand);
 	}
+	obs_data_release(channels);
 }
 
 Mask::Resource::Animation::~Animation() {}

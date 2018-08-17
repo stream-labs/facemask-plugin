@@ -132,6 +132,7 @@ Mask::Resource::SkinnedModel::SkinnedModel(Mask::MaskData* parent, std::string n
 			position.x, position.y, position.z);
 
 		matrix4_identity(&bone.global);
+		obs_data_release(boneData);
 	}
 
 	// Skins list
@@ -187,6 +188,18 @@ Mask::Resource::SkinnedModel::SkinnedModel(Mask::MaskData* parent, std::string n
 		}
 
 		m_skins.emplace_back(skin);
+		obs_data_release(skinData);
+		obs_data_release(skinBonesData);
+		if (skinBonesItem) {
+			obs_data_item_release(&skinBonesItem);
+		}
+	}
+	obs_data_release(skinsData);
+	if (bonesItem) {
+		obs_data_item_release(&bonesItem);
+	}
+	if (skinsItem) {
+		obs_data_item_release(&skinsItem);
 	}
 }
 
