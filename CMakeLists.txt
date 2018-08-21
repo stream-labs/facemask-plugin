@@ -2,12 +2,25 @@ cmake_minimum_required(VERSION 2.8.12)
 PROJECT(facemask-plugin)
 math(EXPR BITS "8*${CMAKE_SIZEOF_VOID_P}")
 
+SET(PATH_DLIB "${CMAKE_CURRENT_SOURCE_DIR}/dlib")
+set (USE_AVX_INSTRUCTIONS TRUE)
+set (DLIB_NO_GUI_SUPPORT FALSE)
+set (DLIB_GIF_SUPPORT FALSE)
+set (DLIB_JPEG_SUPPORT FALSE)
+
+SET(PATH_FREETYPE "${CMAKE_CURRENT_SOURCE_DIR}/freetype2")
+
+if(TARGET libobs)
+	SET(PATH_OBS_STUDIO ${obs-studio_SOURCE_DIR})
+else()
+	SET(PATH_OBS_STUDIO "" CACHE PATH "OBS Studio Source Code Directory")
+endif()
+
 ################################################################################
 # Configuration
 ################################################################################
 
 # dlib
-SET(PATH_DLIB "" CACHE PATH "Dlib Machine Learning C++ Toolkit Source Code Directory")
 if(PATH_DLIB STREQUAL "")
 	message(FATAL_ERROR "PATH_DLIB not set!")
 	return()
@@ -63,7 +76,6 @@ include_directories("thirdparty/tinyobjloader")
 SET(TINYOBJDir "thirdparty/tinyobjloader")
 
 # freetype
-SET(PATH_FREETYPE "" CACHE PATH "FreeType Software Font Rendering Engine")
 if(PATH_FREETYPE STREQUAL "")
 	message(FATAL_ERROR "PATH_FREETYPE not set!")
 	return()
@@ -91,7 +103,6 @@ add_definitions(-DFT2_BUILD_LIBRARY)
 include_directories(${PATH_FREETYPE}/include)
 
 # OBS Studio
-SET(PATH_OBS_STUDIO "" CACHE PATH "OBS Studio Source Code Directory")
 if(PATH_OBS_STUDIO STREQUAL "")
 	message(FATAL_ERROR "PATH_OBS_STUDIO not set!")
 	return()
@@ -305,20 +316,23 @@ TARGET_LINK_LIBRARIES(facemask-plugin
 ################################################################################
 # Installation / Distribution
 ################################################################################
+if(TARGET libobs)
+	install_obs_plugin_with_data(facemask-plugin data)
+else()
 
-
-add_custom_command(TARGET facemask-plugin POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy_directory
-	"${PROJECT_SOURCE_DIR}/data"
-	"${DISTRIBUTE_PATH}/$<CONFIG>/data/obs-plugins/facemask-plugin"
-)
-add_custom_command(TARGET facemask-plugin POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy
-	"$<TARGET_FILE:facemask-plugin>"
-	"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/$<TARGET_FILE_NAME:facemask-plugin>"
-)
-add_custom_command(TARGET facemask-plugin POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy
-	"$<TARGET_FILE_DIR:facemask-plugin>/facemask-plugin.pdb"
-	"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/facemask-plugin.pdb"
-)
+	add_custom_command(TARGET facemask-plugin POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_directory
+		"${PROJECT_SOURCE_DIR}/data"
+		"${DISTRIBUTE_PATH}/$<CONFIG>/data/obs-plugins/facemask-plugin"
+	)
+	add_custom_command(TARGET facemask-plugin POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy
+		"$<TARGET_FILE:facemask-plugin>"
+		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/$<TARGET_FILE_NAME:facemask-plugin>"
+	)
+	add_custom_command(TARGET facemask-plugin POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy
+		"$<TARGET_FILE_DIR:facemask-plugin>/facemask-plugin.pdb"
+		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/facemask-plugin.pdb"
+	)
+endif()
