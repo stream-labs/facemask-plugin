@@ -119,6 +119,20 @@ private:
     void    DoFaceDetection();
     void    StartObjectTracking();
     void    UpdateObjectTracking();
+	
+	struct CropInfo {
+		int x, y;
+		int width, height;
+		int offsetX, offsetY;
+
+		CropInfo(int x, int y, int width, int height) :
+			x(x), y(y), width(width), height(height) {
+			// Cropping Offset
+			offsetX = x - width / 2;
+			offsetY = y - height / 2;
+		}
+	};
+	CropInfo	GetCropInfo();
 
 	// Staging the capture texture
 	void 	StageCaptureTexture();

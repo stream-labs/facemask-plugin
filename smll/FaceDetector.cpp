@@ -916,28 +916,33 @@ namespace smll {
 		}
 	}
 
+	FaceDetector::CropInfo FaceDetector::GetCropInfo() {
+		// get cropping info from config and detect image dimensions
+		int ww = (int)((float)m_detect.w *
+			Config::singleton().get_double(
+				CONFIG_DOUBLE_FACE_DETECT_CROP_WIDTH));
+		int hh = (int)((float)m_detect.h *
+			Config::singleton().get_double(
+				CONFIG_DOUBLE_FACE_DETECT_CROP_HEIGHT));
+		int xx = (int)((float)(m_detect.w / 2) *
+			Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_X)) +
+			(m_detect.w / 2);
+		int yy = (int)((float)(m_detect.h / 2) *
+			Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_Y)) +
+			(m_detect.h / 2);
+
+		CropInfo cropInfo(xx, yy, ww, hh);
+		return cropInfo;
+	}
+
     void FaceDetector::DoFaceDetection() {
 
 		// get cropping info from config and detect image dimensions
-		int ww = (int)((float)m_detect.w * 
-			Config::singleton().get_double(
-				CONFIG_DOUBLE_FACE_DETECT_CROP_WIDTH));
-		int hh = (int)((float)m_detect.h * 
-			Config::singleton().get_double(
-				CONFIG_DOUBLE_FACE_DETECT_CROP_HEIGHT));
-		int xx = (int)((float)(m_detect.w / 2) * 
-			Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_X)) + 
-			(m_detect.w / 2);
-		int yy = (int)((float)(m_detect.h / 2) * 
-			Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_Y)) + 
-			(m_detect.h / 2);
+		CropInfo cropInfo = GetCropInfo();
 
-		// cropping offset
-		int offsetX = xx - (ww / 2);
-		int offsetY = yy - (hh / 2);
 		char* cropdata = m_detect.data +
-			(m_detect.getStride() * offsetY) +
-			(m_detect.getNumElems() * offsetX);
+			(m_detect.getStride() * cropInfo.offsetY) +
+			(m_detect.getNumElems() * cropInfo.offsetX);
 
 		// need to scale back
 		float scale = (float)m_capture.width / m_detect.w;
@@ -946,12 +951,12 @@ namespace smll {
 		std::vector<rectangle> faces;
 		if (m_detect.type == IMAGETYPE_BGR) {
 			dlib_image_wrapper<bgr_pixel> fdimg(cropdata,
-				ww, hh, m_detect.getStride());
+				cropInfo.width, cropInfo.height, m_detect.getStride());
 			faces = m_detector(fdimg);
 		}
 		else if (m_detect.type == IMAGETYPE_RGB) {
 			dlib_image_wrapper<rgb_pixel> fdimg(cropdata,
-				ww, hh, m_detect.getStride());
+				cropInfo.width, cropInfo.height, m_detect.getStride());
 			faces = m_detector(fdimg);
 		}
 		else if (m_detect.type == IMAGETYPE_RGBA) {
@@ -963,7 +968,7 @@ namespace smll {
 		}
 		else if (m_detect.type == IMAGETYPE_LUMA) {
 			dlib_image_wrapper<unsigned char> fdimg(cropdata,
-				ww, hh, m_detect.getStride());
+				cropInfo.width, cropInfo.height, m_detect.getStride());
 			faces = m_detector(fdimg);
 		}
 		else {
@@ -989,13 +994,13 @@ namespace smll {
             for (int i = 0; i < m_faces.length; i++) {
                 // scale rectangle up to video frame size
 				m_faces[i].m_bounds.set_left((long)((float)(faces[i].left() +
-					offsetX) * scale));
+					cropInfo.offsetX) * scale));
                 m_faces[i].m_bounds.set_right((long)((float)(faces[i].right() +
-					offsetX) * scale));
+					cropInfo.offsetX) * scale));
                 m_faces[i].m_bounds.set_top((long)((float)(faces[i].top() +
-					offsetY) * scale));
+					cropInfo.offsetY) * scale));
                 m_faces[i].m_bounds.set_bottom((long)((float)(faces[i].bottom() +
-					offsetY) * scale));
+					cropInfo.offsetY) * scale));
             }
         }
     }
@@ -1004,23 +1009,11 @@ namespace smll {
     void FaceDetector::StartObjectTracking() {
 
 		// get crop info from config and track image dimensions
-		int ww = (int)((float)m_detect.w *
-			Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_WIDTH));
-		int hh = (int)((float)m_detect.h *
-			Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_HEIGHT));
-		int xx = (int)((float)(m_detect.w / 2) *
-			Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_X)) +
-			(m_detect.w / 2);
-		int yy = (int)((float)(m_detect.h / 2) *
-			Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_Y)) +
-			(m_detect.h / 2);
+		CropInfo cropInfo = GetCropInfo();
 
-		// cropping offset
-		int offsetX = xx - (ww / 2);
-		int offsetY = yy - (hh / 2);
 		char* cropdata = m_detect.data +
-			(m_detect.getStride() * offsetY) + 
-			(m_detect.getNumElems() * offsetX);
+			(m_detect.getStride() * cropInfo.offsetY) + 
+			(m_detect.getNumElems() * cropInfo.offsetX);
 
 		// need to scale back
 		float scale = (float)m_capture.width / m_detect.w;
@@ -1030,27 +1023,27 @@ namespace smll {
 		case IMAGETYPE_BGR:
 		{
 			dlib_image_wrapper<bgr_pixel> trimg(cropdata,
-				ww, hh, m_detect.getStride());
+				cropInfo.width, cropInfo.height, m_detect.getStride());
 			for (int i = 0; i < m_faces.length; ++i) {
-				m_faces[i].StartTracking(trimg, scale, offsetX, offsetY);
+				m_faces[i].StartTracking(trimg, scale, cropInfo.offsetX, cropInfo.offsetY);
 			}
 			break;
 		}
 		case IMAGETYPE_RGB:
 		{
 			dlib_image_wrapper<rgb_pixel> trimg(cropdata,
-				ww, hh, m_detect.getStride());
+				cropInfo.width, cropInfo.height, m_detect.getStride());
 			for (int i = 0; i < m_faces.length; ++i) {
-				m_faces[i].StartTracking(trimg, scale, offsetX, offsetY);
+				m_faces[i].StartTracking(trimg, scale, cropInfo.offsetX, cropInfo.offsetY);
 			}
 			break;
 		}
 		case IMAGETYPE_LUMA:
 		{
 			dlib_image_wrapper<unsigned char> trimg(cropdata,
-				ww, hh, m_detect.getStride());
+				cropInfo.width, cropInfo.height, m_detect.getStride());
 			for (int i = 0; i < m_faces.length; ++i) {
-				m_faces[i].StartTracking(trimg, scale, offsetX, offsetY);
+				m_faces[i].StartTracking(trimg, scale, cropInfo.offsetX, cropInfo.offsetY);
 			}
 			break;
 		}
@@ -1067,23 +1060,11 @@ namespace smll {
     void FaceDetector::UpdateObjectTracking() {
 
 		// get crop info from config and track image dimensions
-		int ww = (int)((float)m_detect.w *
-			Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_WIDTH));
-		int hh = (int)((float)m_detect.h *
-			Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_HEIGHT));
-		int xx = (int)((float)(m_detect.w / 2) *
-			Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_X)) +
-			(m_detect.w / 2);
-		int yy = (int)((float)(m_detect.h / 2) *
-			Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_Y)) +
-			(m_detect.h / 2);
+		CropInfo cropInfo = GetCropInfo();
 
-		// cropping offset
-		int offsetX = xx - (ww / 2);
-		int offsetY = yy - (hh / 2);
 		char* cropdata = m_detect.data +
-			(m_detect.getStride() * offsetY) +
-			(m_detect.getNumElems() * offsetX);
+			(m_detect.getStride() * cropInfo.offsetY) +
+			(m_detect.getNumElems() * cropInfo.offsetX);
 
 #define INNER_LOOP for (int i = 0; i < m_faces.length; i++) {\
 			if (i == m_trackingFaceIndex) {\
@@ -1097,32 +1078,34 @@ namespace smll {
 		}\
 
 		// update object tracking
-		if (m_detect.type == IMAGETYPE_BGR) {
+		switch (m_detect.type) {
+		case IMAGETYPE_BGR:
+		{
 			dlib_image_wrapper<bgr_pixel> trimg(cropdata,
-				ww, hh, m_detect.getStride());
+				cropInfo.width, cropInfo.height, m_detect.getStride());
 			INNER_LOOP;
+			break;
 		}
-		else if (m_detect.type == IMAGETYPE_RGB) {
+		case IMAGETYPE_RGB:
+		{
 			dlib_image_wrapper<rgb_pixel> trimg(cropdata,
-				ww, hh, m_detect.getStride());
+				cropInfo.width, cropInfo.height, m_detect.getStride());
 			INNER_LOOP;
+			break;
 		}
-		else if (m_detect.type == IMAGETYPE_RGBA) {
-			throw std::invalid_argument(
-				"bad image type for face detection - alpha not allowed");
-			//dlib_image_wrapper<rgb_alpha_pixel> trimg(cropdata,
-			//	ww, hh, m_detect.getStride());
-			//INNER_LOOP;
-		}
-		else if (m_detect.type == IMAGETYPE_LUMA) {
+		case IMAGETYPE_LUMA:
+		{
 			dlib_image_wrapper<unsigned char> trimg(cropdata,
-				ww, hh, m_detect.getStride());
+				cropInfo.width, cropInfo.height, m_detect.getStride());
 			INNER_LOOP;
+			break;
 		}
-		else {
+		default:
 			throw std::invalid_argument(
 				"bad image type for face detection - handle better");
+			break;
 		}
+		
 	}
     
     
