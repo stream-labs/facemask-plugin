@@ -983,9 +983,7 @@ namespace smll {
         //
         if ((m_faces.length == 0) || (faces.size() > 0)) {
             // clamp to max faces
-			m_faces.length = (int)faces.size();
-            if (m_faces.length > MAX_FACES)
-				m_faces.length = MAX_FACES;
+			m_faces.length = (int)faces.size() > MAX_FACES ? MAX_FACES : (int)faces.size();
 
             // copy rects into our faces, start tracking
             for (int i = 0; i < m_faces.length; i++) {
@@ -1028,40 +1026,41 @@ namespace smll {
 		float scale = (float)m_capture.width / m_detect.w;
 
         // start tracking
-		if (m_detect.type == IMAGETYPE_BGR) {
+		switch (m_detect.type) {
+		case IMAGETYPE_BGR:
+		{
 			dlib_image_wrapper<bgr_pixel> trimg(cropdata,
 				ww, hh, m_detect.getStride());
 			for (int i = 0; i < m_faces.length; ++i) {
 				m_faces[i].StartTracking(trimg, scale, offsetX, offsetY);
 			}
+			break;
 		}
-		else if (m_detect.type == IMAGETYPE_RGB) {
+		case IMAGETYPE_RGB:
+		{
 			dlib_image_wrapper<rgb_pixel> trimg(cropdata,
 				ww, hh, m_detect.getStride());
 			for (int i = 0; i < m_faces.length; ++i) {
 				m_faces[i].StartTracking(trimg, scale, offsetX, offsetY);
 			}
+			break;
 		}
-		else if (m_detect.type == IMAGETYPE_RGBA) {
-			throw std::invalid_argument(
-				"bad image type for face detection - alpha not allowed");
-			//dlib_image_wrapper<rgb_alpha_pixel> trimg(cropdata,
-			//	ww, hh, m_detect.getStride());
-			//for (int i = 0; i < m_faces.length; ++i) {
-			//	m_faces[i].StartTracking(trimg, scale, offsetX, offsetY);
-			//}
-		}
-		else if (m_detect.type == IMAGETYPE_LUMA) {
+		case IMAGETYPE_LUMA:
+		{
 			dlib_image_wrapper<unsigned char> trimg(cropdata,
 				ww, hh, m_detect.getStride());
 			for (int i = 0; i < m_faces.length; ++i) {
 				m_faces[i].StartTracking(trimg, scale, offsetX, offsetY);
 			}
+			break;
 		}
-		else {
+		case IMAGETYPE_RGBA:
+		default:
 			throw std::invalid_argument(
 				"bad image type for face detection - handle better");
+			break;
 		}
+		
 	}
     
     
