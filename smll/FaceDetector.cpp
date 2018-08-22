@@ -949,33 +949,33 @@ namespace smll {
 
         // detect faces
 		std::vector<rectangle> faces;
-		if (m_detect.type == IMAGETYPE_BGR) {
+		switch (m_detect.type) {
+		case IMAGETYPE_BGR:
+		{
 			dlib_image_wrapper<bgr_pixel> fdimg(cropdata,
 				cropInfo.width, cropInfo.height, m_detect.getStride());
 			faces = m_detector(fdimg);
+			break;
 		}
-		else if (m_detect.type == IMAGETYPE_RGB) {
+		case IMAGETYPE_RGB:
+		{
 			dlib_image_wrapper<rgb_pixel> fdimg(cropdata,
 				cropInfo.width, cropInfo.height, m_detect.getStride());
 			faces = m_detector(fdimg);
+			break;
 		}
-		else if (m_detect.type == IMAGETYPE_RGBA) {
-			throw std::invalid_argument(
-				"bad image type for face detection - alpha not allowed");
-			//dlib_image_wrapper<rgb_alpha_pixel> fdimg(cropdata,
-			//	ww, hh, m_detect.getStride());
-			//faces = m_detector(fdimg);
-		}
-		else if (m_detect.type == IMAGETYPE_LUMA) {
+		case IMAGETYPE_LUMA:
+		{
 			dlib_image_wrapper<unsigned char> fdimg(cropdata,
 				cropInfo.width, cropInfo.height, m_detect.getStride());
 			faces = m_detector(fdimg);
+			break;
 		}
-		else {
+		default:
 			throw std::invalid_argument(
 				"bad image type for face detection - handle better");
+			break;
 		}
-
 
 		// only consider the face detection results if:
         //
