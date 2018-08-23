@@ -29,6 +29,7 @@
 
 // Properties
 #define P_MASK					"Mask"
+#define P_MASK_INTERNAL			"MaskInternal"
 #define P_MASKFOLDER			"maskFolder"
 #define P_DEACTIVATE			"deactivated"
 #define P_DRAWMASK				"drawmask"
