@@ -283,7 +283,7 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	obs_data_set_default_string(data, P_MASKFOLDER, defMaskFolder);
 
 	obs_data_set_default_string(data, P_MASK, kDefaultMask);
-	obs_data_set_default_string(data, P_MASK_INTERNAL, kDefaultMask);
+	obs_data_set_default_string(data, P_MASK_BROWSE, kDefaultMask);
 	obs_data_set_default_string(data, P_ALERT_INTRO, kDefaultIntro);
 	obs_data_set_default_string(data, P_ALERT_OUTRO, kDefaultOutro);
 
@@ -382,7 +382,7 @@ static void add_float_slider(obs_properties_t *props, const char* name, float mi
 
 void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 	// mask 
-	add_json_file_property(props, P_MASK, NULL);
+	add_json_file_property(props, P_MASK_BROWSE, NULL);
 
 	// ALERT PROPERTIES
 	add_bool_property(props, P_ALERT_ACTIVATE);
@@ -469,9 +469,9 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 		maskFolder.pop_back();
 	}
 
-	std::string newMaskFilePath = (char*)obs_data_get_string(data, P_MASK);
+	std::string newMaskFilePath = (char*)obs_data_get_string(data, P_MASK_BROWSE);
 	std::replace(newMaskFilePath.begin(), newMaskFilePath.end(), '/', '\\');
-	std::string newMaskInternal = (char*)obs_data_get_string(data, P_MASK_INTERNAL);
+	std::string newMaskInternal = (char*)obs_data_get_string(data, P_MASK);
 	//if mask internal changed
 	if (newMaskInternal != maskInternal) {
 		maskInternal = newMaskInternal;
