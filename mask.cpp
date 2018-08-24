@@ -806,7 +806,7 @@ bool Mask::MaskData::RenderMorphVideo(gs_texture* vidtex, uint32_t width, uint32
 		AddResource(n, r);
 	}
 
-	if (aid->alpha > 0.0f && trires.vertexBuffer) {
+	if (m_morph && aid->alpha > 0.0f && trires.vertexBuffer) {
 		didMorph = true;
 		m_morph->RenderMorphVideo(vidtex, trires);
 	}

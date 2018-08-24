@@ -38,8 +38,6 @@
 #define P_DRAWCROPRECT			"drawFDCropRect"
 #define P_DEMOMODEON			"demoMode"
 #define P_DEMOFOLDER			"demoFolder"
-#define P_DEMOINTERVAL			"demoInterval"
-#define P_DEMODELAY				"demoDelay"
 #define P_BGREMOVAL				"greenscreen"
 #define P_GENTHUMBS				"genpreviews"
 #define P_REWIND				"rewindanims"
