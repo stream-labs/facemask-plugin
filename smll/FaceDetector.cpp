@@ -1121,30 +1121,25 @@ namespace smll {
 
 			// Detect features on full-size frame
 			full_object_detection d68;
-			//full_object_detection d5;
 			if (m_stageWork.type == IMAGETYPE_BGR) {
 				dlib_image_wrapper<bgr_pixel> fcimg(m_stageWork.data, 
 					m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
 				d68 = m_predictor68(fcimg, m_faces[f].m_bounds);
-				//d5 = m_predictor5(fcimg, m_faces[f].m_bounds);
 			}
 			else if (m_stageWork.type == IMAGETYPE_RGB)	{
 				dlib_image_wrapper<rgb_pixel> fcimg(m_stageWork.data,
 					m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
 				d68 = m_predictor68(fcimg, m_faces[f].m_bounds);
-				//d5 = m_predictor5(fcimg, m_faces[f].m_bounds);
 			}
 			else if (m_stageWork.type == IMAGETYPE_RGBA) {
 				dlib_image_wrapper<rgb_alpha_pixel> fcimg(m_stageWork.data,
 					m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
 				d68 = m_predictor68(fcimg, m_faces[f].m_bounds);
-				//d5 = m_predictor5(fcimg, m_faces[f].m_bounds);
 			}
 			else if (m_stageWork.type == IMAGETYPE_LUMA) {
 				dlib_image_wrapper<unsigned char> fcimg(m_stageWork.data, 
 					m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
 				d68 = m_predictor68(fcimg, m_faces[f].m_bounds);
-				//d5 = m_predictor5(fcimg, m_faces[f].m_bounds);
 			}
 			else {
 				throw std::invalid_argument(
@@ -1157,16 +1152,10 @@ namespace smll {
 			if (d68.num_parts() != NUM_FACIAL_LANDMARKS)
 				throw std::invalid_argument(
 					"shape predictor got wrong number of landmarks");
-			//if (d5.num_parts() != FIVE_LANDMARK_NUM_LANDMARKS)
-			//	throw std::invalid_argument(
-			//		"shape predictor got wrong number of landmarks");
 
 			for (int j = 0; j < NUM_FACIAL_LANDMARKS; j++) {
 				results[f].landmarks68[j] = point(d68.part(j).x(), d68.part(j).y());
 			}
-			//for (int j = 0; j < FIVE_LANDMARK_NUM_LANDMARKS; j++) {
-			//	results[f].landmarks5[j] = point(d5.part(j).x(), d5.part(j).y());
-			//}
 		}
 		obs_leave_graphics();
 		results.length = m_faces.length;
@@ -1207,9 +1196,6 @@ namespace smll {
 		model_indices.push_back(NOSE_7);
 		std::vector<cv::Point3f> model_points = GetLandmarkPoints(model_indices);
 
-		//std::vector<cv::Point3f>& mp5 = GetFiveLandmarkPoints();
-		//model_points.insert(model_points.end(), mp5.begin(), mp5.end());
-
 		if (m_poses.length != results.length) {
 			m_poses.length = results.length;
 			for (int i = 0; i < m_poses.length; i++) {
@@ -1229,11 +1215,6 @@ namespace smll {
 				int idx = model_indices[j];
 				image_points.push_back(cv::Point2f((float)p[idx].x(), (float)p[idx].y()));
 			}
-			//p = results[i].landmarks5;
-			//for (int j = 0; j < FIVE_LANDMARK_NUM_LANDMARKS; j++) {
-			//	image_points.push_back(cv::Point2f((float)p->x(), (float)p->y()));
-			//	p++;
-			//}
 
 			// Solve for pose
 			cv::Mat translation = m_poses[i].GetCVTranslation();

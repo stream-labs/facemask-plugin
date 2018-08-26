@@ -99,8 +99,7 @@ private:
 	// dlib HOG face detector
 	dlib::frontal_face_detector		m_detector;
 
-	// dlib landmark predictors (5 and 68 point)
-	//dlib::shape_predictor			m_predictor5;
+	// dlib landmark predictors (68 point)
 	dlib::shape_predictor			m_predictor68;
 
 	// openCV camera (saved for convenience)
