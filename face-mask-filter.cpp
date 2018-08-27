@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Face Masks for SlOBS
  * Copyright (C) 2017 General Workings Inc
  *
@@ -67,7 +67,7 @@
 #define MASK_FADE_TIME					(1.0f / 3.0f)
 
 // Big enough
-#define BIG_ASS_FLOAT					(100000.0f)
+#define BIG_FLOAT					    (100000.0f)
 
 // Alert Attribution pre string for format
 #define DONOR_NAME_PRE			"- "
@@ -146,7 +146,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	alertOffsetBig(0.2f), alertOffsetSmall(0.1f), alertMinSize(0.2f), alertMaxSize(0.4f), alertShowDelay(0.0f),
 	alertTextTexture(nullptr), 
 	currentAlertLocation(LEFT_TOP),  alertTranslation(-35.0f), alertAspectRatio(1.15f),
-	alertElapsedTime(BIG_ASS_FLOAT), alertTriggered(false), alertShown(false), alertsLoaded(false),
+	alertElapsedTime(BIG_FLOAT), alertTriggered(false), alertShown(false), alertsLoaded(false),
 	demoModeOn(false), demoModeMaskJustChanged(false), demoModeMaskChanged(false), 
 	demoCurrentMask(0), demoModeInterval(0.0f), demoModeDelay(0.0f), demoModeElapsed(0.0f), 
 	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), 

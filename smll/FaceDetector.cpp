@@ -50,8 +50,6 @@
 
 static const char* const kFileShapePredictor68 =
 "shape_predictor_68_face_landmarks.dat";
-static const char* const kFileShapePredictor5 =
-"shape_predictor_5_face_landmarks.dat";
 
 
 using namespace dlib;
@@ -75,9 +73,6 @@ namespace smll {
 		char *filename = obs_module_file(kFileShapePredictor68);
 		deserialize(filename) >> m_predictor68;
 		bfree(filename);
-		//filename = obs_module_file(kFileShapePredictor5);
-		//deserialize(filename) >> m_predictor5;
-		//bfree(filename);
 	}
 
 	FaceDetector::~FaceDetector() {
@@ -1184,11 +1179,13 @@ namespace smll {
 
 	void FaceDetector::DoPoseEstimation(DetectionResults& results)
 	{
-		// build set of model points to use for solving 3D pose
-		// note: we use these points because they move the least
+		// Build a set of model points to use for solving 3D pose
+		// NOTE: The keypoints sould be selected w.r.t stability
+		// TODO: Reduce Keypoints, change pose solver,
+		//       change per-frame pose to temporal pose
 		std::vector<int> model_indices;
-		model_indices.push_back(LEFT_INNER_EYE_CORNER);
-		model_indices.push_back(RIGHT_INNER_EYE_CORNER);
+		model_indices.push_back(LEFT_OUTER_EYE_CORNER);
+		model_indices.push_back(RIGHT_OUTER_EYE_CORNER);
 		model_indices.push_back(NOSE_1);
 		model_indices.push_back(NOSE_2);
 		model_indices.push_back(NOSE_3);
