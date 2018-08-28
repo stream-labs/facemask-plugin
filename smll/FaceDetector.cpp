@@ -1164,16 +1164,11 @@ namespace smll {
 		std::vector<cv::Point2f> projectedPoints;
 		cv::projectPoints(model_points, rotation, translation,
 			GetCVCamMatrix(), GetCVDistCoeffs(), projectedPoints);
-
-		float tterr = 0.0f;
-		for (int j = 0; j < model_points.size(); j++) {
-
-			float xerr = fabs(image_points[j].x - projectedPoints[j].x);
-			float yerr = fabs(image_points[j].y - projectedPoints[j].y);
-			float terr = xerr + yerr;
-			tterr += terr;
-		}
-		return tterr;
+		// Compute error
+		std::vector<cv::Point2f> absDiff;
+		cv::absdiff(image_points, projectedPoints, absDiff);
+		float error = cv::sum(cv::mean(absDiff))[0];
+		return error;
 	}
 
 
