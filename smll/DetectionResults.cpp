@@ -143,10 +143,9 @@ namespace smll {
 		for (int i = 0; i < 3; i++) {
 			v += translation[i] * translation[i];
 		}
-		if (v < 1.0)
+		if (v < 1.0 || v > 10000.0)
 			return false;
-		if (v > 10000.0)
-			return false;
+		
 		return true;
 	}
 
