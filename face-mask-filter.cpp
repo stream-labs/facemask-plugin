@@ -865,7 +865,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		if (alertElapsedTime > alertDuration)
 			maskAlpha = 0.0f;
 		else if (alertElapsedTime > t)
-			maskAlpha = Utils::hermite((alertElapsedTime - 1) / MASK_FADE_TIME, 1.0f, 0.0f);
+			maskAlpha = Utils::hermite((alertElapsedTime - t) / MASK_FADE_TIME, 1.0f, 0.0f);
 	}
 	if (drawMask)
 		maskAlpha = 1.0f;
