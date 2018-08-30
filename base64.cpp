@@ -36,46 +36,6 @@ static inline bool is_base64(uint8_t c) {
 	return (isalnum(c) || (c == '+') || (c == '/'));
 }
 
-std::string base64_encode(uint8_t const* buf, size_t bufLen) {
-	std::string ret;
-	int i = 0;
-	int j = 0;
-	uint8_t char_array_3[3];
-	uint8_t char_array_4[4];
-
-	while (bufLen--) {
-		char_array_3[i++] = *(buf++);
-		if (i == 3) {
-			char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
-			char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
-			char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
-			char_array_4[3] = char_array_3[2] & 0x3f;
-
-			for (i = 0; (i < 4); i++)
-				ret += base64_chars[char_array_4[i]];
-			i = 0;
-		}
-	}
-
-	if (i) {
-		for (j = i; j < 3; j++)
-			char_array_3[j] = '\0';
-
-		char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
-		char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
-		char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
-		char_array_4[3] = char_array_3[2] & 0x3f;
-
-		for (j = 0; (j < i + 1); j++)
-			ret += base64_chars[char_array_4[j]];
-
-		while ((i++ < 3))
-			ret += '=';
-	}
-
-	return ret;
-}
-
 void base64_decode(std::string const& encoded_string, std::vector<uint8_t>& ret) {
 	size_t in_len = encoded_string.size();
 	int i = 0;
@@ -117,21 +77,6 @@ void base64_decode(std::string const& encoded_string, std::vector<uint8_t>& ret)
 	::Sleep(0);
 }
 
-std::string base64_encodeZ(uint8_t const* buf, size_t bufLen) {
-	// compress with zlib first
-	zlib::uLongf destLen = zlib::compressBound((zlib::uLongf)bufLen);
-	std::vector<uint8_t> dest(destLen + sizeof(size_t));
-	zlib::compress((zlib::Bytef*)dest.data(), &destLen,
-		(zlib::Bytef*)buf, (zlib::uLongf)bufLen);
-	
-	// add decompressed size to end of data
-	memcpy(dest.data() + destLen, &bufLen, sizeof(size_t));
-	destLen += sizeof(size_t);
-	dest.resize(destLen);
-
-	// now base64 it
-	return base64_encode(dest.data(), dest.size());
-}
 
 void base64_decodeZ(std::string const& encoded, std::vector<uint8_t>& decompressed) {
 	// base64 decode first
