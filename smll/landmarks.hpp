@@ -192,7 +192,7 @@ namespace smll {
 
 
 	// access to 3D landmark points
-	std::vector<cv::Point3f>&	GetLandmarkPoints();
+	void	GetLandmarkPoints();
 	std::vector<cv::Point3f>	GetLandmarkPoints(const std::vector<int>& indices);
 	cv::Point3f					GetLandmarkPoint(int which);
 
