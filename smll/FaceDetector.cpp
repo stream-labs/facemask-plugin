@@ -224,10 +224,9 @@ namespace smll {
 		}
 		results.length = m_faces.length;
 
-		// Still no faces?
+		// If faces are not found
 		if (m_faces.length == 0) {
-            // no faces found...set the do nothing timeout and 
-			// ensure face detection next frame
+            // Wait for 5 frames and do face detection
             m_timeout = Config::singleton().get_int(CONFIG_INT_FACE_DETECT_FREQUENCY);
             m_detectionTimeout = 0;
 		}
