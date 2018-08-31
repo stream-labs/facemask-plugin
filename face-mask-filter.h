@@ -146,7 +146,9 @@ namespace Plugin {
 			// mask filenames
 			std::string			maskFolder;
 			std::string			currentMaskFolder;
-			const char*			maskFilename;
+			std::string			maskFilename;
+			std::string			maskFilePath;
+			std::string			maskInternal;
 			std::string			currentMaskFilename;
 			const char*			introFilename;
 			std::string			currentIntroFilename;
@@ -204,20 +206,14 @@ namespace Plugin {
 
 			// demo mode
 			bool				demoModeOn;
-			bool				demoModeMaskJustChanged;
-			bool				demoModeMaskChanged;
 			std::string			demoModeFolder;
 			int					demoCurrentMask;
-			float				demoModeElapsed;
-			float				demoModeInterval;
-			float				demoModeDelay;
 			bool				demoModeInDelay;
 			bool				demoModeGenPreviews;
 			bool				demoModeSavingFrames;
 			std::vector<std::unique_ptr<Mask::MaskData>>	demoMaskDatas;
 			std::vector<std::string> demoMaskFilenames;
 
-			void demoModeUpdate(float timeDelta);
 			void demoModeRender(gs_texture* vidTex, 
 				gs_texture* maskTex, Mask::MaskData* mask_data);
 
