@@ -140,7 +140,6 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	source(source), canvasWidth(0), canvasHeight(0), baseWidth(640), baseHeight(480),
 	isActive(true), isVisible(true), videoTicked(true),
 	taskHandle(NULL), detectStage(nullptr),	maskDataShutdown(false), 
-	maskFilename(nullptr),
 	introFilename(nullptr),	outroFilename(nullptr),	alertActivate(true), alertDoIntro(false),
 	alertDoOutro(false), alertDuration(10.0f), donorNameDuration(2.0f),
 	alertOffsetBig(0.2f), alertOffsetSmall(0.1f), alertMinSize(0.2f), alertMaxSize(0.4f), alertShowDelay(0.0f),
@@ -284,6 +283,7 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	obs_data_set_default_string(data, P_MASKFOLDER, defMaskFolder);
 
 	obs_data_set_default_string(data, P_MASK, kDefaultMask);
+	obs_data_set_default_string(data, P_MASK_BROWSE, kDefaultMask);
 	obs_data_set_default_string(data, P_ALERT_INTRO, kDefaultIntro);
 	obs_data_set_default_string(data, P_ALERT_OUTRO, kDefaultOutro);
 
@@ -381,16 +381,8 @@ static void add_float_slider(obs_properties_t *props, const char* name, float mi
 
 
 void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
-
-	// mask folder
-	add_folder_property(props, P_MASKFOLDER, NULL);
-
 	// mask 
-	add_text_property(props, P_MASK);
-
-	// alert files
-	add_text_property(props, P_ALERT_INTRO);
-	add_text_property(props, P_ALERT_OUTRO);
+	add_json_file_property(props, P_MASK_BROWSE, NULL);
 
 	// ALERT PROPERTIES
 	add_bool_property(props, P_ALERT_ACTIVATE);
@@ -470,14 +462,35 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 #endif
 
 	// mask file names
-	maskFolder = obs_data_get_string(data, P_MASKFOLDER);
 	std::replace(maskFolder.begin(), maskFolder.end(), '/', '\\');
 	char lastChar = maskFolder.back();
 	//If slash at the end, remove it
 	if (lastChar == '\\') {
 		maskFolder.pop_back();
 	}
-	maskFilename = (char*)obs_data_get_string(data, P_MASK);
+
+	std::string newMaskFilePath = (char*)obs_data_get_string(data, P_MASK_BROWSE);
+	std::replace(newMaskFilePath.begin(), newMaskFilePath.end(), '/', '\\');
+	std::string newMaskInternal = (char*)obs_data_get_string(data, P_MASK);
+	//if mask internal changed
+	if (newMaskInternal != maskInternal) {
+		maskInternal = newMaskInternal;
+		maskFilename = newMaskInternal;
+		maskFolder = obs_data_get_string(data, P_MASKFOLDER);
+	}
+	//if mask file with path changed
+	if(newMaskFilePath != maskFilePath) {
+		std::size_t found = newMaskFilePath.find_last_of("\\");
+		if (found == string::npos) {
+			maskFolder == "";
+			maskFilename = newMaskFilePath;
+		}
+		else {
+			maskFolder = newMaskFilePath.substr(0, found);
+			maskFilename = newMaskFilePath.substr(found + 1);
+		}
+		maskFilePath = newMaskFilePath;
+	}
 
 	// Flags
 	autoBGRemoval = obs_data_get_bool(data, P_BGREMOVAL);
@@ -1172,7 +1185,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 void Plugin::FaceMaskFilter::Instance::checkForMaskUnloading() {
 	// Check for file/folder changes
-	if (maskFilename &&	currentMaskFilename != maskFilename) {
+	if (currentMaskFilename != maskFilename) {
 		maskData = nullptr;
 	}
 	if (introFilename && currentIntroFilename != introFilename) {
@@ -1861,7 +1874,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 
 				// time to load mask?
 				if ((maskData == nullptr) &&
-					maskFilename && maskFilename[0]) {
+					maskFilename.length() > 0) {
 					// save current
 					currentMaskFilename = maskFilename;
 					currentMaskFolder = maskFolder;
