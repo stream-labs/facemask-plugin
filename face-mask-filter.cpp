@@ -458,10 +458,13 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 
 	// mask file names
 	std::replace(maskFolder.begin(), maskFolder.end(), '/', '\\');
-	char lastChar = maskFolder.back();
-	//If slash at the end, remove it
-	if (lastChar == '\\') {
-		maskFolder.pop_back();
+
+	if (!maskFolder.empty()) {
+		char lastChar = maskFolder.back();
+		//If slash at the end, remove it
+		if (lastChar == '\\') {
+			maskFolder.pop_back();
+		}
 	}
 
 	std::string newMaskFilePath = (char*)obs_data_get_string(data, P_MASK_BROWSE);
