@@ -36,6 +36,7 @@
 #include <dlib/opencv.h>
 #include <opencv2/opencv.hpp>
 #include <vector>
+#include <codecvt>
 
 
 #pragma warning( pop )
@@ -73,7 +74,24 @@ namespace smll {
 		m_detector = get_frontal_face_detector();
 
 		char *filename = obs_module_file(kFileShapePredictor68);
+#ifdef _WIN32
+		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+		std::wstring wide_filename(converter.from_bytes(filename));
+
+		/* DLIB will not accept a wifstream or widestring to construct
+		 * an ifstream or wifstream itself. Here we use a non-standard
+		 * constructor provided by Microsoft and then the direct
+		 * serialization function with an ifstream. */
+		std::ifstream predictor68_file(wide_filename.c_str(), std::ios::binary);
+
+		if (!predictor68_file) {
+			throw std::runtime_error("Failed to open predictor68 file");
+		}
+
+		deserialize(m_predictor68, predictor68_file);
+#else
 		deserialize(filename) >> m_predictor68;
+#endif
 		bfree(filename);
 		//filename = obs_module_file(kFileShapePredictor5);
 		//deserialize(filename) >> m_predictor5;
