@@ -944,6 +944,10 @@ namespace smll {
         // detect faces
 		std::vector<rectangle> faces;
 		switch (m_detect.type) {
+			// TODO: OBSRenderer::OBSToSMLL only gives 4 types of supported formats
+			// - IMAGETYPE_RGBA, IMAGETYPE_BGRA, IMAGETYPE_GRAY, IMAGETYPE_INVALID
+			// Remove unnecessary cases.
+			// Also note that Dlib forces users to remove alpha channel before processing
 		case IMAGETYPE_BGR:
 		{
 			dlib_image_wrapper<bgr_pixel> fdimg(cropdata,
@@ -965,6 +969,8 @@ namespace smll {
 			faces = m_detector(fdimg);
 			break;
 		}
+		case IMAGETYPE_RGBA:
+		case IMAGETYPE_BGRA:
 		default:
 			throw std::invalid_argument(
 				"bad image type for face detection - handle better");
@@ -1042,6 +1048,7 @@ namespace smll {
 			break;
 		}
 		case IMAGETYPE_RGBA:
+		case IMAGETYPE_BGRA:
 		default:
 			throw std::invalid_argument(
 				"bad image type for face detection - handle better");
@@ -1094,6 +1101,8 @@ namespace smll {
 			INNER_LOOP;
 			break;
 		}
+		case IMAGETYPE_RGBA:
+		case IMAGETYPE_BGRA:
 		default:
 			throw std::invalid_argument(
 				"bad image type for face detection - handle better");
