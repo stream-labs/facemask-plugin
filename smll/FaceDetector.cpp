@@ -958,7 +958,7 @@ namespace smll {
 			faces = m_detector(fdimg);
 			break;
 		}
-		case IMAGETYPE_LUMA:
+		case IMAGETYPE_GRAY:
 		{
 			dlib_image_wrapper<unsigned char> fdimg(cropdata,
 				cropInfo.width, cropInfo.height, m_detect.getStride());
@@ -1032,7 +1032,7 @@ namespace smll {
 			}
 			break;
 		}
-		case IMAGETYPE_LUMA:
+		case IMAGETYPE_GRAY:
 		{
 			dlib_image_wrapper<unsigned char> trimg(cropdata,
 				cropInfo.width, cropInfo.height, m_detect.getStride());
@@ -1087,7 +1087,7 @@ namespace smll {
 			INNER_LOOP;
 			break;
 		}
-		case IMAGETYPE_LUMA:
+		case IMAGETYPE_GRAY:
 		{
 			dlib_image_wrapper<unsigned char> trimg(cropdata,
 				cropInfo.width, cropInfo.height, m_detect.getStride());
@@ -1130,7 +1130,7 @@ namespace smll {
 					m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
 				d68 = m_predictor68(fcimg, m_faces[f].m_bounds);
 			}
-			else if (m_stageWork.type == IMAGETYPE_LUMA) {
+			else if (m_stageWork.type == IMAGETYPE_GRAY) {
 				dlib_image_wrapper<unsigned char> fcimg(m_stageWork.data, 
 					m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
 				d68 = m_predictor68(fcimg, m_faces[f].m_bounds);
