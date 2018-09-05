@@ -68,8 +68,7 @@ namespace smll {
 		// face detection/tracking
 		dlib::rectangle		bounds;
 
-		// facial landmarks (5 and 68 point)
-		//dlib::point			landmarks5[FIVE_LANDMARK_NUM_LANDMARKS];
+		// facial landmarks (68 point)
 		dlib::point			landmarks68[NUM_FACIAL_LANDMARKS];
 
 		// 3D pose 

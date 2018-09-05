@@ -614,7 +614,7 @@ namespace smll {
 
 	gs_color_format	OBSRenderer::SMLLToOBS(smll::ImageType t) {
 		switch (t) {
-		case ImageType::IMAGETYPE_LUMA:
+		case ImageType::IMAGETYPE_GRAY:
 			return GS_R8;
 		case ImageType::IMAGETYPE_RGBA:
 			return GS_RGBA;
@@ -629,7 +629,7 @@ namespace smll {
 		switch (f) {
 		case GS_A8:
 		case GS_R8:
-			return ImageType::IMAGETYPE_LUMA;
+			return ImageType::IMAGETYPE_GRAY;
 		case GS_RGBA:
 			return ImageType::IMAGETYPE_RGBA;
 		case GS_BGRX:

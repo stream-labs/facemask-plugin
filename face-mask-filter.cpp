@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Face Masks for SlOBS
  * Copyright (C) 2017 General Workings Inc
  *
@@ -67,7 +67,7 @@
 #define MASK_FADE_TIME					(1.0f / 3.0f)
 
 // Big enough
-#define BIG_ASS_FLOAT					(100000.0f)
+#define BIG_FLOAT					    (100000.0f)
 
 // Alert Attribution pre string for format
 #define DONOR_NAME_PRE			"- "
@@ -145,7 +145,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	alertOffsetBig(0.2f), alertOffsetSmall(0.1f), alertMinSize(0.2f), alertMaxSize(0.4f), alertShowDelay(0.0f),
 	alertTextTexture(nullptr), 
 	currentAlertLocation(LEFT_TOP),  alertTranslation(-35.0f), alertAspectRatio(1.15f),
-	alertElapsedTime(BIG_ASS_FLOAT), alertTriggered(false), alertShown(false), alertsLoaded(false),
+	alertElapsedTime(BIG_FLOAT), alertTriggered(false), alertShown(false), alertsLoaded(false),
 	demoModeOn(false), demoCurrentMask(0),
 	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), 
 	drawMask(true),	drawAlert(false), drawFaces(false), drawMorphTris(false), drawFDRect(false), 
@@ -1257,7 +1257,7 @@ gs_texture_t* Plugin::FaceMaskFilter::Instance::FindCachedFrame(const TimeStamp&
 }
 
 int Plugin::FaceMaskFilter::Instance::FindCachedFrameIndex(const TimeStamp& ts) {
-	// Look for a cached video frame with the closest timestamp
+	// Look for a cached video frame with the exact timestamp
 
 	// Return one that matches first
 	for (int i = 0; i < ThreadData::BUFFER_SIZE; i++) {
@@ -1269,33 +1269,8 @@ int Plugin::FaceMaskFilter::Instance::FindCachedFrameIndex(const TimeStamp& ts) 
 		}
 	}
 	
-	// NOTE : not sure if we should do this...bail out
+	// Return -1 if frame with specific timestamp is not found
 	return -1;
-
-	// Now look for a valid frame with the closest timestamp
-	long long tst = TIMESTAMP_MS_LL(ts);
-	long long diff = 0;
-	int nearest = -1;
-	for (int i = 0; i < ThreadData::BUFFER_SIZE; i++) {
-		if (detection.frames[i].capture.texture != nullptr &&
-			detection.frames[i].capture.width > 0 &&
-			detection.frames[i].capture.height > 0) {
-			if (diff == 0) {
-				nearest = i;
-				diff = UNSIGNED_DIFF(TIMESTAMP_MS_LL(detection.frames[i].timestamp), tst);
-			}
-			else {
-				long long d = UNSIGNED_DIFF(TIMESTAMP_MS_LL(detection.frames[i].timestamp), tst);
-				if (d < diff) {
-					diff = d;
-					nearest = i;
-				}
-			}
-		}
-	}
-
-	// Return what we got
-	return nearest;
 }
 
 

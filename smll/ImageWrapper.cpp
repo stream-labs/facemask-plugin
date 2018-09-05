@@ -80,7 +80,7 @@ namespace smll {
 
 	IwiColorFmt smllToIwi(ImageType t) {
 		switch (t) {
-		case IMAGETYPE_LUMA:
+		case IMAGETYPE_GRAY:
 			return iwiColorGray;
 		case IMAGETYPE_RGB:
 			return iwiColorRGB;
