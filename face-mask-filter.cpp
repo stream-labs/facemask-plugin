@@ -262,7 +262,7 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 	if (taskHandle != NULL) {
 		AvRevertMmThreadCharacteristics(taskHandle);
 	}
-	
+
 	PLOG_DEBUG("<%" PRIXPTR "> Finalized.", this);
 	if (T) {
 		T->SendString("filter destroyed");
