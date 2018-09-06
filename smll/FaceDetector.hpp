@@ -44,6 +44,13 @@
 #include <dlib/image_processing/frontal_face_detector.h>
 #include <dlib/image_processing.h>
 #include <libobs/graphics/graphics.h>
+#include "OBSRenderer.hpp"
+#include "DLibImageWrapper.hpp"
+#include <libobs/obs-module.h>
+#include <dlib/opencv.h>
+#include <vector>
+#include <codecvt>
+#include <opencv2/opencv.hpp>
 #pragma warning( pop )
 
 namespace smll {

@@ -19,27 +19,8 @@
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 
-#pragma warning( push )
-#pragma warning( disable: 4127 )
-#pragma warning( disable: 4201 )
-#pragma warning( disable: 4456 )
-#pragma warning( disable: 4458 )
-#pragma warning( disable: 4459 )
-#pragma warning( disable: 4505 )
-
 #include "FaceDetector.hpp"
-#include "OBSRenderer.hpp"
-#include "DLibImageWrapper.hpp"
 
-#include <libobs/obs-module.h>
-
-#include <dlib/opencv.h>
-#include <opencv2/opencv.hpp>
-#include <vector>
-#include <codecvt>
-
-
-#pragma warning( pop )
 
 #define HULL_POINTS_SCALE		(1.25f)
 // border points = 4 corners + subdivide
@@ -49,8 +30,7 @@
 #define NUM_HULL_POINTS			(28 * 2 * 2 * 2)
 #define NUM_HULL_POINT_DIVS		(3)
 
-static const char* const kFileShapePredictor68 =
-"shape_predictor_68_face_landmarks.dat";
+static const char* const kFileShapePredictor68 = "shape_predictor_68_face_landmarks.dat";
 
 
 using namespace dlib;
