@@ -221,7 +221,10 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 	if (T) {
 		T->SendString("stopping threads");
 	}
-	maskDataShutdown = true;
+	{
+		std::unique_lock<std::mutex> lock(maskDataMutex);
+		maskDataShutdown = true;
+	}
 	PLOG_DEBUG("<%" PRIXPTR "> Stopping worker Threads...", this);
 	{
 		std::unique_lock<std::mutex> lock(detection.mutex);
@@ -1893,11 +1896,13 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 
 	// Loading loop
 	bool lastDemoMode = false; 
-	while (!maskDataShutdown) {
+	while (true) {
 		{
 			std::unique_lock<std::mutex> lock(maskDataMutex, std::try_to_lock);
 			if (lock.owns_lock()) {
-
+				if (maskDataShutdown) {
+					break;
+				}
 				// time to load mask?
 				if ((maskData == nullptr) &&
 					maskFilename.length() > 0) {
