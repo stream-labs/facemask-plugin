@@ -325,12 +325,7 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	obs_data_set_default_bool(data, P_TEST_MODE, false);
 
 	obs_data_set_default_bool(data, P_GENTHUMBS, false);
-
-#ifdef PUBLIC_RELEASE
 	obs_data_set_default_bool(data, P_DRAWMASK, false);
-#else
-	obs_data_set_default_bool(data, P_DRAWMASK, true);
-#endif
 	obs_data_set_default_bool(data, P_DRAWALERT, false);
 	obs_data_set_default_bool(data, P_DRAWFACEDATA, false);
 	obs_data_set_default_bool(data, P_DRAWMORPHTRIS, false);
@@ -1049,6 +1044,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		if (faces.length > 0) {
 
 			dlib::point pos = faces[0].GetPosition();
+			smll::ThreeDPose pose = faces[0].pose;
 
 			if (!testingStage) {
 				testingStage = gs_stagesurface_create(baseWidth, baseHeight, GS_RGBA);
@@ -1066,6 +1062,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				char buf[128];
 				snprintf(buf, sizeof(buf), "detected pixel %d,%d,%d,%d",
 					(int)red, (int)green, (int)blue, (int)alpha);
+				smll::TestingPipe::singleton().SendString(buf);
+
+				snprintf(buf, sizeof(buf), "Pose Translations %d,%d,%d,%d",
+					(int)pose.translation[0], (int)pose.translation[1], (int)pose.translation[2]);
 				smll::TestingPipe::singleton().SendString(buf);
 
 				gs_stagesurface_unmap(testingStage);
