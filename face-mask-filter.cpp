@@ -1064,8 +1064,11 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					(int)red, (int)green, (int)blue, (int)alpha);
 				smll::TestingPipe::singleton().SendString(buf);
 
-				snprintf(buf, sizeof(buf), "Pose Translations %d,%d,%d,%d",
+				snprintf(buf, sizeof(buf), "Pose Translations %d,%d,%d",
 					(int)pose.translation[0], (int)pose.translation[1], (int)pose.translation[2]);
+				smll::TestingPipe::singleton().SendString(buf);
+
+				snprintf(buf, sizeof(buf), "Mask %s", maskFilename.c_str());
 				smll::TestingPipe::singleton().SendString(buf);
 
 				gs_stagesurface_unmap(testingStage);
