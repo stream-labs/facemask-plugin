@@ -1072,29 +1072,42 @@ namespace smll {
 
 			// Detect features on full-size frame
 			full_object_detection d68;
-			if (m_stageWork.type == IMAGETYPE_BGR) {
-				dlib_image_wrapper<bgr_pixel> fcimg(m_stageWork.data, 
-					m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
-				d68 = m_predictor68(fcimg, m_faces[f].m_bounds);
+			switch (m_stageWork.type) {
+			case IMAGETYPE_BGR:
+			{
+				cv::Mat bgrImage(m_stageWork.h, m_stageWork.w, CV_8UC3, m_stageWork.data, m_stageWork.getStride());
+				cv::Mat gray; cv::cvtColor(bgrImage, gray, cv::COLOR_BGR2GRAY);
+				dlib::cv_image<unsigned char> img(gray);
+				d68 = m_predictor68(img, m_faces[f].m_bounds);
+				break;
 			}
-			else if (m_stageWork.type == IMAGETYPE_RGB)	{
-				dlib_image_wrapper<rgb_pixel> fcimg(m_stageWork.data,
-					m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
-				d68 = m_predictor68(fcimg, m_faces[f].m_bounds);
+			case IMAGETYPE_RGB:
+			{
+				cv::Mat rgbImage(m_stageWork.h, m_stageWork.w, CV_8UC3, m_stageWork.data, m_stageWork.getStride());
+				cv::Mat gray; cv::cvtColor(rgbImage, gray, cv::COLOR_RGB2GRAY);
+				dlib::cv_image<unsigned char> img(gray);
+				d68 = m_predictor68(img, m_faces[f].m_bounds);
+				break;
 			}
-			else if (m_stageWork.type == IMAGETYPE_RGBA) {
-				dlib_image_wrapper<rgb_alpha_pixel> fcimg(m_stageWork.data,
-					m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
-				d68 = m_predictor68(fcimg, m_faces[f].m_bounds);
+			case IMAGETYPE_RGBA:
+			{
+				cv::Mat rgbaImage(m_stageWork.h, m_stageWork.w, CV_8UC4, m_stageWork.data, m_stageWork.getStride());
+				cv::Mat gray; cv::cvtColor(rgbaImage, gray, cv::COLOR_RGBA2GRAY);
+				dlib::cv_image<unsigned char> img(gray);
+				d68 = m_predictor68(img, m_faces[f].m_bounds);
+				break;
 			}
-			else if (m_stageWork.type == IMAGETYPE_GRAY) {
-				dlib_image_wrapper<unsigned char> fcimg(m_stageWork.data, 
-					m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
-				d68 = m_predictor68(fcimg, m_faces[f].m_bounds);
+			case IMAGETYPE_GRAY:
+			{
+				cv::Mat gray(m_stageWork.h, m_stageWork.w, CV_8UC1, m_stageWork.data, m_stageWork.getStride());
+				dlib::cv_image<unsigned char> img(gray);
+				d68 = m_predictor68(img, m_faces[f].m_bounds);
+				break;
 			}
-			else {
+			default:
 				throw std::invalid_argument(
 					"bad image type for face detection - handle better");
+				break;
 			}
 
 			UnstageCaptureTexture();
