@@ -139,6 +139,9 @@ private:
 		}
 	};
 	CropInfo	GetCropInfo();
+	// Current Image
+	cv::Mat currentImage;
+	void computeCurrentImage(const ImageWrapper& detect);
 
 	// Staging the capture texture
 	void 	StageCaptureTexture();
