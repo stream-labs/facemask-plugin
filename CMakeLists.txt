@@ -20,6 +20,24 @@ endif()
 include(${PATH_DLIB}/dlib/cmake)
 include_directories(${PATH_DLIB})
 
+OPTION(BUILD_UNIT_TESTS "Build Unit tests for facemask plugin" OFF)
+
+if(BUILD_UNIT_TESTS)
+	# CPPUTEST
+	SET(PATH_CPP_UTEST "" CACHE PATH "CPPUtest test framework")
+	if(PATH_CPP_UTEST STREQUAL "")
+		message(FATAL_ERROR "PATH_CPP_UTEST not set!")
+		return()
+	endif()
+	if(NOT EXISTS "${PATH_CPP_UTEST}/include/CppUTest/MemoryLeakDetectorNewMacros.h")
+		message(FATAL_ERROR "PATH_CPP_UTEST is invalid!")
+		return()
+	endif()
+
+	add_subdirectory(${PATH_CPP_UTEST})
+	include_directories(${PATH_CPP_UTEST})
+endif()
+
 # OpenCV
 SET(OpenCV_DIR "${PROJECT_SOURCE_DIR}/thirdparty/opencv")
 SET(OpenCV_VERSION "331" CACHE STRING "Version of OpenCV to use.")
@@ -242,6 +260,13 @@ SET(facemask-plugin_SOURCES
 	"${smll_SOURCES}"
 	"${freetype_SOURCES}"
 )
+if(BUILD_UNIT_TESTS)
+	SET(facemask-plugin_TEST_SOURCES
+		"${PROJECT_SOURCE_DIR}/base64.cpp"
+		"${PROJECT_SOURCE_DIR}/exceptions.cpp"
+		"${PROJECT_SOURCE_DIR}/utils.cpp"
+	)
+endif()
 SET(facemask-plugin_DATA
 	"${PROJECT_SOURCE_DIR}/data/effects/color_alpha_tex.effect"
 	"${PROJECT_SOURCE_DIR}/data/effects/color_conversion.effect"
@@ -301,6 +326,15 @@ TARGET_LINK_LIBRARIES(facemask-plugin
 	${LIBOBS_LIBRARIES}
 	${facemask-plugin_LIBRARIES}
 )
+if(BUILD_UNIT_TESTS)
+	add_executable(facemask-plugin-test
+		${PROJECT_SOURCE_DIR}/test.cpp
+		${facemask-plugin_TEST_SOURCES}
+	)
+	TARGET_LINK_LIBRARIES(facemask-plugin-test
+		${facemask-plugin_LIBRARIES} CppUTest
+	)
+endif()
 
 ################################################################################
 # Installation / Distribution
