@@ -25,6 +25,8 @@ OPTION(BUILD_UNIT_TESTS "Build Unit tests for facemask plugin" OFF)
 if(BUILD_UNIT_TESTS)
 	# CPPUTEST
 	SET(PATH_CPP_UTEST "" CACHE PATH "CPPUtest test framework")
+	SET(EXTENSIONS OFF CACHE BOOL "Use the CppUTest extenstion library" FORCE)
+	SET(TESTS OFF CACHE BOOL "Compile and make tests for the code?" FORCE)
 	if(PATH_CPP_UTEST STREQUAL "")
 		message(FATAL_ERROR "PATH_CPP_UTEST not set!")
 		return()
