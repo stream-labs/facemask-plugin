@@ -22,14 +22,18 @@
 #include <CppUTest/TestHarness.h>
 #include <iostream>
 
-/* Test runner may be provided options, such
-   as to enable colored output, to run only a
-   specific test or a group of tests, etc. This
-   will return the number of failed tests. */
-
 int main(int argc, char ** argv) {
+	
+	char ** argvCopy = new char*[sizeof(char *) * (argc + 2)];
+	size_t i;
+	for (i = 0; i < argc; i++) {
+		argvCopy[i] = argv[i];
+	}
 
-    RUN_ALL_TESTS(argc, argv);
+	argvCopy[i] = "-c"; // enable colored output
+	argvCopy[i + 1] = "-v"; // enable detailed results
+	//run
+    RUN_ALL_TESTS(argc + 2, argvCopy);
 
 	//wait to see and verify results
 	std::cout << "press any key to exit..." << std::endl;
