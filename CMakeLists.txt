@@ -34,7 +34,7 @@ if(BUILD_UNIT_TESTS)
 		return()
 	endif()
 
-	add_subdirectory(${PATH_CPP_UTEST})
+	add_subdirectory(${PATH_CPP_UTEST} ${PATH_CPP_UTEST})
 	include_directories(${PATH_CPP_UTEST})
 endif()
 
@@ -262,9 +262,16 @@ SET(facemask-plugin_SOURCES
 )
 if(BUILD_UNIT_TESTS)
 	SET(facemask-plugin_TEST_SOURCES
+		"${PROJECT_SOURCE_DIR}/test/test.cpp"
+		"${PROJECT_SOURCE_DIR}/test/test-utils.cpp"
+		"${PROJECT_SOURCE_DIR}/test/test-image.cpp"
+		"${PROJECT_SOURCE_DIR}/test/test-kalman.cpp"
+		"${PROJECT_SOURCE_DIR}/test/test-base64.cpp"
 		"${PROJECT_SOURCE_DIR}/base64.cpp"
 		"${PROJECT_SOURCE_DIR}/exceptions.cpp"
 		"${PROJECT_SOURCE_DIR}/utils.cpp"
+		"${SMLLDir}/ImageWrapper.cpp"
+		"${SMLLDir}/SingleValueKalman.cpp"
 	)
 endif()
 SET(facemask-plugin_DATA
@@ -328,7 +335,6 @@ TARGET_LINK_LIBRARIES(facemask-plugin
 )
 if(BUILD_UNIT_TESTS)
 	add_executable(facemask-plugin-test
-		${PROJECT_SOURCE_DIR}/test.cpp
 		${facemask-plugin_TEST_SOURCES}
 	)
 	TARGET_LINK_LIBRARIES(facemask-plugin-test
