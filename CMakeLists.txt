@@ -3,17 +3,17 @@ PROJECT(facemask-plugin)
 math(EXPR BITS "8*${CMAKE_SIZEOF_VOID_P}")
 
 SET(PATH_DLIB "${CMAKE_CURRENT_SOURCE_DIR}/dlib")
-set (USE_AVX_INSTRUCTIONS TRUE)
-set (DLIB_NO_GUI_SUPPORT FALSE)
-set (DLIB_GIF_SUPPORT FALSE)
-set (DLIB_JPEG_SUPPORT FALSE)
+set(USE_AVX_INSTRUCTIONS ON CACHE BOOL "Use AVX instructions" FORCE)
+set(DLIB_NO_GUI_SUPPORT OFF CACHE STRING "DLib GUI support" FORCE)
+set(DLIB_GIF_SUPPORT OFF CACHE STRING "DLib GIF support" FORCE)
+set(DLIB_JPEG_SUPPORT OFF CACHE STRING "DLib JPEG support"  FORCE)
 
 SET(PATH_FREETYPE "${CMAKE_CURRENT_SOURCE_DIR}/freetype2")
 
 if(TARGET libobs)
-	SET(PATH_OBS_STUDIO ${obs-studio_SOURCE_DIR})
+	set(FACEMASK_EXTERNAL FALSE)
 else()
-	SET(PATH_OBS_STUDIO "" CACHE PATH "OBS Studio Source Code Directory")
+	set(FACEMASK_EXTERNAL TRUE)
 endif()
 
 ################################################################################
@@ -103,16 +103,21 @@ add_definitions(-DFT2_BUILD_LIBRARY)
 include_directories(${PATH_FREETYPE}/include)
 
 # OBS Studio
-if(PATH_OBS_STUDIO STREQUAL "")
-	message(FATAL_ERROR "PATH_OBS_STUDIO not set!")
-	return()
+if(FACEMASK_EXTERNAL)
+	SET(PATH_OBS_STUDIO "" CACHE PATH "OBS Studio Source Code Directory")
+	if(PATH_OBS_STUDIO STREQUAL "")
+		message(FATAL_ERROR "PATH_OBS_STUDIO not set!")
+		return()
+	endif()
+	if(NOT EXISTS "${PATH_OBS_STUDIO}/libobs/obs-module.h")
+		message(FATAL_ERROR "PATH_OBS_STUDIO is invalid!")
+		return()
+	endif()
+	SET(obsPath "${PATH_OBS_STUDIO}")
+	INCLUDE("${PATH_OBS_STUDIO}/cmake/external/Findlibobs.cmake")
+else()
+	SET(PATH_OBS_STUDIO ${CMAKE_SOURCE_DIR})
 endif()
-if(NOT EXISTS "${PATH_OBS_STUDIO}/libobs/obs-module.h")
-	message(FATAL_ERROR "PATH_OBS_STUDIO is invalid!")
-	return()
-endif()
-SET(obsPath "${PATH_OBS_STUDIO}")
-INCLUDE("${PATH_OBS_STUDIO}/cmake/external/Findlibobs.cmake")
 
 # Distribute format
 OPTION(BUILD_FOR_PUBLIC "Build for public release" OFF)
@@ -309,18 +314,23 @@ ADD_LIBRARY(facemask-plugin MODULE
 	${facemask-plugin_SOURCES}
 	${facemask-plugin_DATA}
 )
-TARGET_LINK_LIBRARIES(facemask-plugin
-	${LIBOBS_LIBRARIES}
-	${facemask-plugin_LIBRARIES}
-)
+
+if(FACEMASK_EXTERNAL)
+	TARGET_LINK_LIBRARIES(facemask-plugin
+		${LIBOBS_LIBRARIES}
+		${facemask-plugin_LIBRARIES}
+	)
+else()
+	TARGET_LINK_LIBRARIES(facemask-plugin
+		libobs
+		${facemask-plugin_LIBRARIES}
+	)
+endif()
 
 ################################################################################
 # Installation / Distribution
 ################################################################################
-if(TARGET libobs)
-	install_obs_plugin_with_data(facemask-plugin data)
-else()
-
+if(FACEMASK_EXTERNAL)
 	add_custom_command(TARGET facemask-plugin POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_directory
 		"${PROJECT_SOURCE_DIR}/data"
@@ -336,4 +346,6 @@ else()
 		"$<TARGET_FILE_DIR:facemask-plugin>/facemask-plugin.pdb"
 		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/facemask-plugin.pdb"
 	)
+else()
+	install_obs_plugin_with_data(facemask-plugin data)
 endif()
