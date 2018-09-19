@@ -1,0 +1,6 @@
+[submodule "dlib"]
+	path = dlib
+	url = https://github.com/davisking/dlib.git
+[submodule "freetype2"]
+	path = freetype2
+	url = https://github.com/glaba13/freetype2.git
