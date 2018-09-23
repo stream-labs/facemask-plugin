@@ -19,27 +19,8 @@
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 
-#pragma warning( push )
-#pragma warning( disable: 4127 )
-#pragma warning( disable: 4201 )
-#pragma warning( disable: 4456 )
-#pragma warning( disable: 4458 )
-#pragma warning( disable: 4459 )
-#pragma warning( disable: 4505 )
-
 #include "FaceDetector.hpp"
-#include "OBSRenderer.hpp"
-#include "DLibImageWrapper.hpp"
 
-#include <libobs/obs-module.h>
-
-#include <dlib/opencv.h>
-#include <opencv2/opencv.hpp>
-#include <vector>
-#include <codecvt>
-
-
-#pragma warning( pop )
 
 #define HULL_POINTS_SCALE		(1.25f)
 // border points = 4 corners + subdivide
@@ -49,8 +30,7 @@
 #define NUM_HULL_POINTS			(28 * 2 * 2 * 2)
 #define NUM_HULL_POINT_DIVS		(3)
 
-static const char* const kFileShapePredictor68 =
-"shape_predictor_68_face_landmarks.dat";
+static const char* const kFileShapePredictor68 = "shape_predictor_68_face_landmarks.dat";
 
 
 using namespace dlib;
@@ -157,6 +137,56 @@ namespace smll {
 		}
 	}
 
+	void FaceDetector::computeCurrentImage(const ImageWrapper& detect) {
+		// Do image cropping and cv::Mat initialization in single shot
+		CropInfo cropInfo = GetCropInfo();
+
+		char* cropData = detect.data +
+			(detect.getStride() * cropInfo.offsetY) +
+			(detect.getNumElems() * cropInfo.offsetX);
+		switch (detect.type) {
+		case IMAGETYPE_GRAY:
+		{
+			cv::Mat gray(cropInfo.height, cropInfo.width, CV_8UC1, cropData, m_detect.getStride());
+			currentImage = gray.clone();
+			break;
+		}
+		case IMAGETYPE_RGB:
+		{
+			cv::Mat rgbImage(cropInfo.height, cropInfo.width, CV_8UC3, cropData, detect.getStride());
+			cv::Mat gray; cv::cvtColor(rgbImage, gray, cv::COLOR_RGB2GRAY);
+			currentImage = gray.clone();
+			break;
+		}
+		case IMAGETYPE_BGR:
+		{
+			cv::Mat bgrImage(cropInfo.height, cropInfo.width, CV_8UC3, cropData, detect.getStride());
+			cv::Mat gray; cv::cvtColor(bgrImage, gray, cv::COLOR_BGR2GRAY);
+			currentImage = gray.clone();
+			break;
+		}
+		case IMAGETYPE_RGBA:
+		{
+			cv::Mat rgbaImage(cropInfo.height, cropInfo.width, CV_8UC4, cropData, detect.getStride());
+			cv::Mat gray; cv::cvtColor(rgbaImage, gray, cv::COLOR_RGBA2GRAY);
+			currentImage = gray.clone();
+			break;
+		}
+		case IMAGETYPE_BGRA:
+		{
+			cv::Mat bgraImage(cropInfo.height, cropInfo.width, CV_8UC4, cropData, detect.getStride());
+			cv::Mat gray; cv::cvtColor(bgraImage, gray, cv::COLOR_BGRA2GRAY);
+			currentImage = gray.clone();
+			break;
+		}
+		default:
+			throw std::invalid_argument(
+				"INVALID IMAGE TYPE - Check if the frame is valid");
+			break;
+		}
+		
+	}
+
 	void FaceDetector::DetectFaces(const ImageWrapper& detect, const OBSTexture& capture, DetectionResults& results) {
 
 		// do nothing at all timeout
@@ -183,13 +213,15 @@ namespace smll {
 		// save detect for convenience
 		m_detect = detect;
 		m_capture = capture;
+		// Compute GrayScale image.
+		// This will be used for the rest of the Computer Vision.
+		computeCurrentImage(detect);
         
         // what are we doing here
         bool doTracking = (m_faces.length > 0) && (m_trackingTimeout == 0);
         bool doFaceDetection = (m_detectionTimeout == 0);
         
 		// TRACK faces 
-		//
 		if (doTracking) {
 
             UpdateObjectTracking();
@@ -951,49 +983,13 @@ namespace smll {
 
 		// get cropping info from config and detect image dimensions
 		CropInfo cropInfo = GetCropInfo();
-
-		char* cropdata = m_detect.data +
-			(m_detect.getStride() * cropInfo.offsetY) +
-			(m_detect.getNumElems() * cropInfo.offsetX);
-
 		// need to scale back
 		float scale = (float)m_capture.width / m_detect.w;
 
         // detect faces
 		std::vector<rectangle> faces;
-		switch (m_detect.type) {
-			// TODO: OBSRenderer::OBSToSMLL only gives 4 types of supported formats
-			// - IMAGETYPE_RGBA, IMAGETYPE_BGRA, IMAGETYPE_GRAY, IMAGETYPE_INVALID
-			// Remove unnecessary cases.
-			// Also note that Dlib forces users to remove alpha channel before processing
-		case IMAGETYPE_BGR:
-		{
-			dlib_image_wrapper<bgr_pixel> fdimg(cropdata,
-				cropInfo.width, cropInfo.height, m_detect.getStride());
-			faces = m_detector(fdimg);
-			break;
-		}
-		case IMAGETYPE_RGB:
-		{
-			dlib_image_wrapper<rgb_pixel> fdimg(cropdata,
-				cropInfo.width, cropInfo.height, m_detect.getStride());
-			faces = m_detector(fdimg);
-			break;
-		}
-		case IMAGETYPE_GRAY:
-		{
-			dlib_image_wrapper<unsigned char> fdimg(cropdata,
-				cropInfo.width, cropInfo.height, m_detect.getStride());
-			faces = m_detector(fdimg);
-			break;
-		}
-		case IMAGETYPE_RGBA:
-		case IMAGETYPE_BGRA:
-		default:
-			throw std::invalid_argument(
-				"bad image type for face detection - handle better");
-			break;
-		}
+		dlib::cv_image<unsigned char> img(currentImage);
+		faces = m_detector(img);
 
 		// only consider the face detection results if:
         //
@@ -1029,50 +1025,14 @@ namespace smll {
 		// get crop info from config and track image dimensions
 		CropInfo cropInfo = GetCropInfo();
 
-		char* cropdata = m_detect.data +
-			(m_detect.getStride() * cropInfo.offsetY) + 
-			(m_detect.getNumElems() * cropInfo.offsetX);
-
 		// need to scale back
 		float scale = (float)m_capture.width / m_detect.w;
 
         // start tracking
-		switch (m_detect.type) {
-		case IMAGETYPE_BGR:
-		{
-			dlib_image_wrapper<bgr_pixel> trimg(cropdata,
-				cropInfo.width, cropInfo.height, m_detect.getStride());
-			for (int i = 0; i < m_faces.length; ++i) {
-				m_faces[i].StartTracking(trimg, scale, cropInfo.offsetX, cropInfo.offsetY);
-			}
-			break;
+		dlib::cv_image<unsigned char> img(currentImage);
+		for (int i = 0; i < m_faces.length; ++i) {
+			m_faces[i].StartTracking(img, scale, cropInfo.offsetX, cropInfo.offsetY);
 		}
-		case IMAGETYPE_RGB:
-		{
-			dlib_image_wrapper<rgb_pixel> trimg(cropdata,
-				cropInfo.width, cropInfo.height, m_detect.getStride());
-			for (int i = 0; i < m_faces.length; ++i) {
-				m_faces[i].StartTracking(trimg, scale, cropInfo.offsetX, cropInfo.offsetY);
-			}
-			break;
-		}
-		case IMAGETYPE_GRAY:
-		{
-			dlib_image_wrapper<unsigned char> trimg(cropdata,
-				cropInfo.width, cropInfo.height, m_detect.getStride());
-			for (int i = 0; i < m_faces.length; ++i) {
-				m_faces[i].StartTracking(trimg, scale, cropInfo.offsetX, cropInfo.offsetY);
-			}
-			break;
-		}
-		case IMAGETYPE_RGBA:
-		case IMAGETYPE_BGRA:
-		default:
-			throw std::invalid_argument(
-				"bad image type for face detection - handle better");
-			break;
-		}
-		
 	}
     
     
@@ -1085,48 +1045,18 @@ namespace smll {
 			(m_detect.getStride() * cropInfo.offsetY) +
 			(m_detect.getNumElems() * cropInfo.offsetX);
 
-#define INNER_LOOP for (int i = 0; i < m_faces.length; i++) {\
-			if (i == m_trackingFaceIndex) {\
-				double confidence = m_faces[i].UpdateTracking(trimg);\
-				if (confidence < Config::singleton().get_double(\
-					CONFIG_DOUBLE_TRACKING_THRESHOLD)) {\
-					m_faces.length = 0;\
-					break;\
-				}\
-			}\
-		}\
-
 		// update object tracking
-		switch (m_detect.type) {
-		case IMAGETYPE_BGR:
-		{
-			dlib_image_wrapper<bgr_pixel> trimg(cropdata,
-				cropInfo.width, cropInfo.height, m_detect.getStride());
-			INNER_LOOP;
-			break;
+		dlib::cv_image<unsigned char> img(currentImage);
+		for (int i = 0; i < m_faces.length; i++) {
+			if (i == m_trackingFaceIndex) {
+				double confidence = m_faces[i].UpdateTracking(img);
+				if (confidence < Config::singleton().get_double(
+					CONFIG_DOUBLE_TRACKING_THRESHOLD)) {
+					m_faces.length = 0;
+					break;
+				}
+			}
 		}
-		case IMAGETYPE_RGB:
-		{
-			dlib_image_wrapper<rgb_pixel> trimg(cropdata,
-				cropInfo.width, cropInfo.height, m_detect.getStride());
-			INNER_LOOP;
-			break;
-		}
-		case IMAGETYPE_GRAY:
-		{
-			dlib_image_wrapper<unsigned char> trimg(cropdata,
-				cropInfo.width, cropInfo.height, m_detect.getStride());
-			INNER_LOOP;
-			break;
-		}
-		case IMAGETYPE_RGBA:
-		case IMAGETYPE_BGRA:
-		default:
-			throw std::invalid_argument(
-				"bad image type for face detection - handle better");
-			break;
-		}
-		
 	}
     
     
@@ -1142,29 +1072,42 @@ namespace smll {
 
 			// Detect features on full-size frame
 			full_object_detection d68;
-			if (m_stageWork.type == IMAGETYPE_BGR) {
-				dlib_image_wrapper<bgr_pixel> fcimg(m_stageWork.data, 
-					m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
-				d68 = m_predictor68(fcimg, m_faces[f].m_bounds);
+			switch (m_stageWork.type) {
+			case IMAGETYPE_BGR:
+			{
+				cv::Mat bgrImage(m_stageWork.h, m_stageWork.w, CV_8UC3, m_stageWork.data, m_stageWork.getStride());
+				cv::Mat gray; cv::cvtColor(bgrImage, gray, cv::COLOR_BGR2GRAY);
+				dlib::cv_image<unsigned char> img(gray);
+				d68 = m_predictor68(img, m_faces[f].m_bounds);
+				break;
 			}
-			else if (m_stageWork.type == IMAGETYPE_RGB)	{
-				dlib_image_wrapper<rgb_pixel> fcimg(m_stageWork.data,
-					m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
-				d68 = m_predictor68(fcimg, m_faces[f].m_bounds);
+			case IMAGETYPE_RGB:
+			{
+				cv::Mat rgbImage(m_stageWork.h, m_stageWork.w, CV_8UC3, m_stageWork.data, m_stageWork.getStride());
+				cv::Mat gray; cv::cvtColor(rgbImage, gray, cv::COLOR_RGB2GRAY);
+				dlib::cv_image<unsigned char> img(gray);
+				d68 = m_predictor68(img, m_faces[f].m_bounds);
+				break;
 			}
-			else if (m_stageWork.type == IMAGETYPE_RGBA) {
-				dlib_image_wrapper<rgb_alpha_pixel> fcimg(m_stageWork.data,
-					m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
-				d68 = m_predictor68(fcimg, m_faces[f].m_bounds);
+			case IMAGETYPE_RGBA:
+			{
+				cv::Mat rgbaImage(m_stageWork.h, m_stageWork.w, CV_8UC4, m_stageWork.data, m_stageWork.getStride());
+				cv::Mat gray; cv::cvtColor(rgbaImage, gray, cv::COLOR_RGBA2GRAY);
+				dlib::cv_image<unsigned char> img(gray);
+				d68 = m_predictor68(img, m_faces[f].m_bounds);
+				break;
 			}
-			else if (m_stageWork.type == IMAGETYPE_GRAY) {
-				dlib_image_wrapper<unsigned char> fcimg(m_stageWork.data, 
-					m_stageWork.w, m_stageWork.h, m_stageWork.getStride());
-				d68 = m_predictor68(fcimg, m_faces[f].m_bounds);
+			case IMAGETYPE_GRAY:
+			{
+				cv::Mat gray(m_stageWork.h, m_stageWork.w, CV_8UC1, m_stageWork.data, m_stageWork.getStride());
+				dlib::cv_image<unsigned char> img(gray);
+				d68 = m_predictor68(img, m_faces[f].m_bounds);
+				break;
 			}
-			else {
+			default:
 				throw std::invalid_argument(
 					"bad image type for face detection - handle better");
+				break;
 			}
 
 			UnstageCaptureTexture();
