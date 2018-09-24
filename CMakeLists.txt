@@ -47,6 +47,8 @@ SET(OpenCV_LIBS
 	optimized "${OpenCV_DIR}/lib/Release/opencv_imgcodecs${OpenCV_VERSION}.lib"
 	debug "${OpenCV_DIR}/lib/Debug/opencv_imgproc${OpenCV_VERSION}d.lib"
 	optimized "${OpenCV_DIR}/lib/Release/opencv_imgproc${OpenCV_VERSION}.lib"
+	debug "${OpenCV_DIR}/lib/Debug/opencv_video${OpenCV_VERSION}d.lib"
+	optimized "${OpenCV_DIR}/lib/Release/opencv_video${OpenCV_VERSION}.lib"
 	debug "${OpenCV_DIR}/3rdparty/lib/Debug/libpngd.lib"
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libpng.lib"
 	debug "${OpenCV_DIR}/3rdparty/lib/Debug/zlibd.lib"
@@ -58,6 +60,7 @@ SET(OpenCV_LIBS
 	debug "${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_${OpenCV_VERSION}/lib/intel64/ippicvmt.lib"
 	optimized "${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_${OpenCV_VERSION}/lib/intel64/ippicvmt.lib"
 )
+add_definitions(-DHAVE_OPENCV_VIDEO)
 include_directories("${OpenCV_DIR}/include")
 
 # zlib
