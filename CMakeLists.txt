@@ -57,18 +57,17 @@ SET(OpenCV_LIBS
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/ittnotify.lib"
 	debug "${OpenCV_DIR}/3rdparty/lib/Debug/ippiwd.lib"
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/ippiw.lib"
-	debug "${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_${OpenCV_VERSION}/lib/intel64/ippicvmt.lib"
-	optimized "${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_${OpenCV_VERSION}/lib/intel64/ippicvmt.lib"
+	debug "${OpenCV_DIR}/3rdparty/ippicv/ippicv_win/lib/intel64/ippicvmt.lib"
+	optimized "${OpenCV_DIR}/3rdparty/ippicv/ippicv_win/lib/intel64/ippicvmt.lib"
 )
-add_definitions(-DHAVE_OPENCV_VIDEO)
 include_directories("${OpenCV_DIR}/include")
 
 # zlib
 include_directories("${OpenCV_DIR}/3rdparty/include")
 
 # intel IPP
-include_directories("${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_331/include")
-include_directories("${OpenCV_DIR}/3rdparty/ippicv/ippiw_win_331/include")
+include_directories("${OpenCV_DIR}/3rdparty/ippicv/ippicv_win/include")
+include_directories("${OpenCV_DIR}/3rdparty/ippicv/ippiw_win/include")
 
 # smll
 include_directories("smll")
