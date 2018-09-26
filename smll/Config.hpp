@@ -58,17 +58,20 @@ obs_data_set_##TYPE(m_data, name, VALUE); unlock(); }
 namespace smll {
 
 	// Toggle Flag
-	static const char* const CONFIG_BOOL_TOGGLE_SETTINGS = 
+	static const char* const CONFIG_BOOL_TOGGLE_SETTINGS =
 		"toggleFDSettings";
 
-	// Smoothing factor
-	static const char* const CONFIG_FLOAT_SMOOTHING_FACTOR =
-		"smoothingFactor";
+	//Kalman noise factors
+	static const char* const CONFIG_FLOAT_PROCCESS_NOISE =
+		"Process Noise Factor";
+
+	static const char* const CONFIG_FLOAT_MEASURE_NOISE =
+		"Measurment Noise Factor";
 
 	// Face Detection Vars ----------
 
 	// Scale Width
-	static const char* const CONFIG_INT_FACE_DETECT_WIDTH = 
+	static const char* const CONFIG_INT_FACE_DETECT_WIDTH =
 		"faceDetectWidth";
 
 	// Cropping
@@ -76,15 +79,15 @@ namespace smll {
 		"faceDetectCropWidth";
 	static const char* const CONFIG_DOUBLE_FACE_DETECT_CROP_HEIGHT =
 		"faceDetectCropHeight";
-	static const char* const CONFIG_DOUBLE_FACE_DETECT_CROP_X = 
+	static const char* const CONFIG_DOUBLE_FACE_DETECT_CROP_X =
 		"faceDetectCropX";
-	static const char* const CONFIG_DOUBLE_FACE_DETECT_CROP_Y = 
+	static const char* const CONFIG_DOUBLE_FACE_DETECT_CROP_Y =
 		"faceDetectCropY";
 
 	// Execution Frequencies
-	static const char* const CONFIG_INT_FACE_DETECT_FREQUENCY = 
+	static const char* const CONFIG_INT_FACE_DETECT_FREQUENCY =
 		"faceDetectFrequency";
-	static const char* const CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY = 
+	static const char* const CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY =
 		"faceDetectRecheckFrequency";
 
 	// Tracking Vars ----------
@@ -101,7 +104,7 @@ namespace smll {
 		"trackingThreshold";
 
 	// Speed Limit
-	static const char* const CONFIG_INT_SPEED_LIMIT = 
+	static const char* const CONFIG_INT_SPEED_LIMIT =
 		"detectSpeedLimit";
 
 	// Kalman filtering
@@ -117,20 +120,20 @@ namespace smll {
 		static Config& singleton();
 
 		// Helper Get methods
-		inline bool			get_bool(const char* name) 
+		inline bool			get_bool(const char* name)
 			CONFIG_GET(bool);
-		inline int			get_int(const char* name) 
+		inline int			get_int(const char* name)
 			CONFIG_GET(int);
-		inline double		get_double(const char* name) 
+		inline double		get_double(const char* name)
 			CONFIG_GET(double);
 
 		// Helper Set methods
 		inline void			set_bool(const char* name, bool v)
-			CONFIG_SET(bool,v);
+			CONFIG_SET(bool, v);
 		inline void			set_int(const char* name, int v)
-			CONFIG_SET(int,v);
+			CONFIG_SET(int, v);
 		inline void			set_double(const char* name, double v)
-			CONFIG_SET(double,v);
+			CONFIG_SET(double, v);
 
 		// manual access
 		inline obs_data_t*		lock() { m_mutex.lock(); return m_data; }

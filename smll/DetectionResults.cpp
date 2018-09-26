@@ -21,10 +21,8 @@
 #include "DetectionResults.hpp"
 #include "Config.hpp"
 
-
-
 // how many frames before we consider a face "lost"
-#define NUM_FRAMES_TO_LOSE_FACE			(30)
+#define NUM_FRAMES_TO_LOSE_FACE			(1)
 
 
 namespace smll {
@@ -145,7 +143,7 @@ namespace smll {
 		}
 		if (v < 1.0 || v > 10000.0)
 			return false;
-		
+
 		return true;
 	}
 
@@ -162,7 +160,7 @@ namespace smll {
 
 
 
-	DetectionResults::DetectionResults() 
+	DetectionResults::DetectionResults()
 		: sarray<DetectionResult, MAX_FACES>() {
 
 	}
@@ -182,8 +180,7 @@ namespace smll {
 				// find closest
 				int closest = other.findClosest(faces[i]);
 
-				// smooth new face into ours
-				faces[i].UpdateResultsFrom(other[closest]);
+				faces[i].UpdateResultsFrom(other[closest], faces[i].numFramesLost > 0);
 				faces[i].numFramesLost = 0;
 				other[closest].matched = true;
 			}
@@ -211,7 +208,7 @@ namespace smll {
 				int closest = faces.findClosest(other[i]);
 
 				// smooth new face into ours
-				faces[closest].UpdateResultsFrom(other[i]);
+				faces[closest].UpdateResultsFrom(other[i], faces[closest].numFramesLost > 0);
 				faces[closest].numFramesLost = 0;
 				faces[closest].matched = true;
 			}
@@ -276,7 +273,7 @@ namespace smll {
 	}
 
 
-	DetectionResult::DetectionResult() 
+	DetectionResult::DetectionResult()
 		: matched(false), numFramesLost(0), kalmanFiltersInitialized(false) {
 
 	}
@@ -287,13 +284,13 @@ namespace smll {
 	DetectionResult& DetectionResult::operator=(const DetectionResult& r) {
 		bounds = r.bounds;
 		pose.CopyPoseFrom(r.pose);
-		
+
 		for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
 			landmarks68[i] = r.landmarks68[i];
 		}
 		CheckForPoseFlip(pose.rotation, pose.translation);
 
-		kalmanFiltersInitialized = false;
+		//kalmanFiltersInitialized = false;
 
 		return *this;
 	}
@@ -305,12 +302,12 @@ namespace smll {
 
 	void DetectionResult::SetPose(const ThreeDPose& p) {
 		pose.CopyPoseFrom(p);
-		kalmanFiltersInitialized = false;
+		//kalmanFiltersInitialized = false;
 	}
 
 	void DetectionResult::SetPose(cv::Mat cvRot, cv::Mat cvTrs) {
 		pose.SetPose(cvRot, cvTrs);
-		kalmanFiltersInitialized = false;
+		//kalmanFiltersInitialized = false;
 	}
 
 	cv::Mat DetectionResult::GetCVRotation() const {
@@ -337,7 +334,16 @@ namespace smll {
 		pose.ResetPose();
 	}
 
-	void DetectionResult::UpdateResultsFrom(const DetectionResult& r) {
+	void DetectionResult::UpdateResultsFrom(const DetectionResult& r, bool newOne) {
+
+
+
+
+
+		/*		KF.statePre.at<float>(0) = ntx[0];
+		KF.statePre.at<float>(1) = ntx[1];
+		KF.statePre.at<float>(2) = ntx[2];
+		KF.statePre.at<float>(3) = 0;*/
 
 		if (!kalmanFiltersInitialized) {
 			*this = r;
@@ -348,30 +354,83 @@ namespace smll {
 		double nrot[4] = { r.pose.rotation[0], r.pose.rotation[1], r.pose.rotation[2], r.pose.rotation[3] };
 		dlib::rectangle bnd = r.bounds;
 
+
+
+		double processNoise = Config::singleton().get_double(CONFIG_FLOAT_PROCCESS_NOISE);
+		double measNoise = Config::singleton().get_double(CONFIG_FLOAT_MEASURE_NOISE);
+
+		cv::setIdentity(KF.processNoiseCov, cv::Scalar::all(processNoise));
+		cv::setIdentity(KF.measurementNoiseCov, cv::Scalar::all(measNoise));
+
 		CheckForPoseFlip(nrot, ntx);
 
 		// kalman filtering enabled?
 		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE)) {
-			
-			// update smoothing factor
+			if (!kalmanFiltersNewInitialized) {
+				kalmanFiltersNewInitialized = true;
+				KF.statePost.at<float>(0) = ntx[0];
+				KF.statePost.at<float>(1) = ntx[1];
+				KF.statePost.at<float>(2) = ntx[2];
+				KF.statePost.at<float>(3) = nrot[0];
+				KF.statePost.at<float>(4) = nrot[1];
+				KF.statePost.at<float>(5) = nrot[2];
+				KF.statePost.at<float>(6) = nrot[3];
+			}
+			cv::Mat_<float> measurement(7, 1);
+			measurement.setTo(cv::Scalar(0));
+			measurement(0) = ntx[0];
+			measurement(1) = ntx[1];
+			measurement(2) = ntx[2];
+			measurement(3) = nrot[0];
+			measurement(4) = nrot[1];
+			measurement(5) = nrot[2];
+			measurement(6) = nrot[3];
+			predict = KF.predict();
+			estimated = KF.correct(measurement);
+			prP[0] = predict.at<float>(0);
+			prP[1] = predict.at<float>(1);
+			prP[2] = predict.at<float>(2);
+
+			esP[0] = estimated.at<float>(0);
+			esP[1] = estimated.at<float>(1);
+			esP[2] = estimated.at<float>(2);
+			esP[3] = estimated.at<float>(2);
+			esP[4] = estimated.at<float>(2);
+			esP[5] = estimated.at<float>(2);
+
+			ntx[0] = (double)estimated.at<float>(0);
+			ntx[1] = (double)estimated.at<float>(1);
+			ntx[2] = (double)estimated.at<float>(2);
+			nrot[0] = (double)estimated.at<float>(3);
+			nrot[1] = (double)estimated.at<float>(4);
+			nrot[2] = (double)estimated.at<float>(5);
+			nrot[3] = (double)estimated.at<float>(6);
+
+			/*   // update smoothing factor
 			double smoothing = Config::singleton().get_double(CONFIG_FLOAT_SMOOTHING_FACTOR);
 			for (int i = 0; i < KF_NUM_FILTERS; i++) {
-				kalmanFilters[i].SetMeasurementNoiseCovariance(smoothing);
+			kalmanFilters[i].SetMeasurementNoiseCovariance(smoothing);
 			}
 
 			// update the kalman filters
 			ntx[0] = kalmanFilters[KF_TRANS_X].Update(ntx[0]);
 			ntx[1] = kalmanFilters[KF_TRANS_Y].Update(ntx[1]);
-			ntx[2] = kalmanFilters[KF_TRANS_Z].Update(ntx[2]);
-			nrot[0] = kalmanFilters[KF_ROT_X].Update(nrot[0]);
-			nrot[1] = kalmanFilters[KF_ROT_Y].Update(nrot[1]);
-			nrot[2] = kalmanFilters[KF_ROT_Z].Update(nrot[2]);
-			nrot[3] = kalmanFilters[KF_ROT_A].Update(nrot[3]);
+			ntx[2] = kalmanFilters[KF_TRANS_Z].Update(ntx[2]);*/
+
 		}
+
+		//nrot[0] = kalmanFilters[KF_ROT_X].Update(nrot[0]);
+		//nrot[1] = kalmanFilters[KF_ROT_Y].Update(nrot[1]);
+		//nrot[2] = kalmanFilters[KF_ROT_Z].Update(nrot[2]);
+		//nrot[3] = kalmanFilters[KF_ROT_A].Update(nrot[3]);
+
+		//if (newOne) {
+		//	kalmanFiltersInitialized = false;
+		//}
 
 		// copy values
 		bounds = bnd;
-		
+
 		for (int i = 0; i < smll::NUM_FACIAL_LANDMARKS; i++) {
 			landmarks68[i] = r.landmarks68[i];
 		}
@@ -395,6 +454,41 @@ namespace smll {
 			kalmanFilters[KF_ROT_Z].Init(pose.rotation[2]);
 			kalmanFilters[KF_ROT_A].Init(pose.rotation[3]);
 			kalmanFiltersInitialized = true;
+			InitKalmanFilterNew();
+		}
+	}
+
+	void DetectionResult::InitKalmanFilterNew() {
+		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE)) {
+
+			//	cv::KalmanFilter KF;
+			KF.init(14, 7, 0);
+			//	cv::Mat state(9, 3, CV_32F);  (phi, delta_phi)
+			//	cv::Mat processNoise(9, 3, CV_32F);
+			//	cv::Mat measurement = cv::Mat::zeros(3, 3, CV_32F);
+
+
+			cv::setIdentity(KF.transitionMatrix);
+			cv::setIdentity(KF.measurementMatrix);
+
+
+			cv::setIdentity(KF.processNoiseCov, cv::Scalar::all(1e-4));
+			cv::setIdentity(KF.measurementNoiseCov, cv::Scalar::all(1e-5));
+
+			//that !
+			cv::setIdentity(KF.errorCovPre, cv::Scalar::all(1));
+			cv::setIdentity(KF.errorCovPost, cv::Scalar::all(1));
+
+			
+			prP[0] = KF.gain.at<float>(0);
+			prP[0] = KF.gain.at<float>(1);
+			prP[0] = KF.gain.at<float>(2);
+			prP[0] = KF.gain.at<float>(3);
+			prP[0] = KF.gain.at<float>(4);
+			prP[0] = KF.gain.at<float>(5);
+
+			cv::randn(KF.statePost, cv::Scalar::all(0), cv::Scalar::all(0));
+			kalmanFiltersNewInitialized = false;
 		}
 	}
 

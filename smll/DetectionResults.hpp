@@ -26,6 +26,13 @@
 #pragma warning( disable: 4458 )
 #pragma warning( disable: 4459 )
 #pragma warning( disable: 4505 )
+
+#pragma warning( disable: 4127 )
+#pragma warning( disable: 4201 )
+#pragma warning( disable: 4456 )
+#pragma warning( disable: 4458 )
+#pragma warning( disable: 4459 )
+#pragma warning( disable: 4505 )
 #pragma warning( disable: 4267 )
 #pragma warning( disable: 4100 )
 #include <dlib/image_processing.h>
@@ -42,7 +49,7 @@
 
 namespace smll {
 
-	class ThreeDPose{
+	class ThreeDPose {
 	public:
 		ThreeDPose();
 
@@ -88,7 +95,7 @@ namespace smll {
 		void CopyPoseFrom(const DetectionResult& r);
 		void ResetPose();
 		bool PoseValid();
-		void UpdateResultsFrom(const DetectionResult& r);
+		void UpdateResultsFrom(const DetectionResult& r, bool newOne);
 
 		double DistanceTo(const DetectionResult& r) const;
 
@@ -101,7 +108,8 @@ namespace smll {
 		bool matched;
 		int numFramesLost;
 
-
+		bool	kalmanFiltersInitialized;
+		bool	kalmanFiltersNewInitialized = false;
 	private:
 
 		// kalman filters. 
@@ -120,9 +128,13 @@ namespace smll {
 			KF_NUM_FILTERS
 		};
 		std::array<SingleValueKalman, KF_NUM_FILTERS> kalmanFilters;
-
-		bool	kalmanFiltersInitialized;
+		cv::KalmanFilter KF;
+		cv::Mat estimated;
+		cv::Mat predict;
+		float prP[3];
+		float esP[3];
 		void InitKalmanFilters();
+		void InitKalmanFilterNew();
 	};
 
 
