@@ -22,7 +22,7 @@
 #include "Config.hpp"
 
 // how many frames before we consider a face "lost"
-#define NUM_FRAMES_TO_LOSE_FACE			(1)
+#define NUM_FRAMES_TO_LOSE_FACE			(30)
 
 
 namespace smll {
