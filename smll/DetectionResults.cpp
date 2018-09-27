@@ -23,7 +23,7 @@
 
 // how many frames before we consider a face "lost"
 #define NUM_FRAMES_TO_LOSE_FACE			(30)
-
+#define KF_NUM_MEASURED_DATA			(7)
 
 namespace smll {
 
@@ -336,75 +336,73 @@ namespace smll {
 
 	void DetectionResult::UpdateResultsFrom(const DetectionResult& r, bool newOne) {
 
-
-
-
-
-		/*		KF.statePre.at<float>(0) = ntx[0];
-		KF.statePre.at<float>(1) = ntx[1];
-		KF.statePre.at<float>(2) = ntx[2];
-		KF.statePre.at<float>(3) = 0;*/
-
 		if (!kalmanFiltersInitialized) {
 			*this = r;
 			InitKalmanFilters();
 		}
 
-		double ntx[3] = { r.pose.translation[0], r.pose.translation[1], r.pose.translation[2] };
-		double nrot[4] = { r.pose.rotation[0], r.pose.rotation[1], r.pose.rotation[2], r.pose.rotation[3] };
+		double currMeasure[KF_NUM_MEASURED_DATA] = { r.pose.translation[0], r.pose.translation[1], r.pose.translation[2],  r.pose.rotation[0], r.pose.rotation[1], r.pose.rotation[2], r.pose.rotation[3] };
 		dlib::rectangle bnd = r.bounds;
-
-
 
 		double processNoise = Config::singleton().get_double(CONFIG_FLOAT_PROCCESS_NOISE);
 		double measNoise = Config::singleton().get_double(CONFIG_FLOAT_MEASURE_NOISE);
 
-		cv::setIdentity(KF.processNoiseCov, cv::Scalar::all(processNoise));
-		cv::setIdentity(KF.measurementNoiseCov, cv::Scalar::all(measNoise));
-
-		CheckForPoseFlip(nrot, ntx);
+		CheckForPoseFlip(currMeasure + 3, currMeasure);
 
 		// kalman filtering enabled?
 		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE)) {
 			if (!kalmanFiltersNewInitialized) {
 				kalmanFiltersNewInitialized = true;
-				KF.statePost.at<float>(0) = ntx[0];
-				KF.statePost.at<float>(1) = ntx[1];
-				KF.statePost.at<float>(2) = ntx[2];
-				KF.statePost.at<float>(3) = nrot[0];
-				KF.statePost.at<float>(4) = nrot[1];
-				KF.statePost.at<float>(5) = nrot[2];
-				KF.statePost.at<float>(6) = nrot[3];
+				for (size_t i = 0; i < KF_NUM_MEASURED_DATA; i++) {
+					KF.statePost.at<float>(i) = currMeasure[i];
+					prevMeasure[i] = currMeasure[i];
+				}				
 			}
+
+			double errorNoise[KF_NUM_MEASURED_DATA] = {
+				0.4,//0.1,
+				0.4,//0.1,
+				1.5,//0.5,
+
+				0.8,//0.3,
+				0.8,//0.3,
+				0.6,//0.2,
+				0.15,//0.05,
+			};
+
+			cv::setIdentity(KF.processNoiseCov, cv::Scalar::all(processNoise));
+			cv::setIdentity(KF.measurementNoiseCov, cv::Scalar::all(measNoise));
+			for (size_t i = 0; i < KF_NUM_MEASURED_DATA; i++) {
+				if (std::abs(prevMeasure[i] - currMeasure[i]) > errorNoise[i]) {
+					KF.measurementNoiseCov.at<float>(i, i) = 0;
+				}
+			}
+			/*
+			char str[128] = { 0 };
+			sprintf(str,"%f, %f, %f, %f, %f, %f, %f\n",
+				std::abs(prevMeasure[0] - currMeasure[0]),
+				std::abs(prevMeasure[1] - currMeasure[1]),
+				std::abs(prevMeasure[2] - currMeasure[2]),
+				std::abs(prevMeasure[3] - currMeasure[3]),
+				std::abs(prevMeasure[4] - currMeasure[4]),
+				std::abs(prevMeasure[5] - currMeasure[5]),
+				std::abs(prevMeasure[6] - currMeasure[6])
+			
+			);
+			blog(LOG_DEBUG, str);*/
 			cv::Mat_<float> measurement(7, 1);
 			measurement.setTo(cv::Scalar(0));
-			measurement(0) = ntx[0];
-			measurement(1) = ntx[1];
-			measurement(2) = ntx[2];
-			measurement(3) = nrot[0];
-			measurement(4) = nrot[1];
-			measurement(5) = nrot[2];
-			measurement(6) = nrot[3];
+
+			for (size_t i = 0; i < KF_NUM_MEASURED_DATA; i++) {
+				measurement(i) = currMeasure[i];
+			}
+
 			predict = KF.predict();
 			estimated = KF.correct(measurement);
-			prP[0] = predict.at<float>(0);
-			prP[1] = predict.at<float>(1);
-			prP[2] = predict.at<float>(2);
 
-			esP[0] = estimated.at<float>(0);
-			esP[1] = estimated.at<float>(1);
-			esP[2] = estimated.at<float>(2);
-			esP[3] = estimated.at<float>(2);
-			esP[4] = estimated.at<float>(2);
-			esP[5] = estimated.at<float>(2);
-
-			ntx[0] = (double)estimated.at<float>(0);
-			ntx[1] = (double)estimated.at<float>(1);
-			ntx[2] = (double)estimated.at<float>(2);
-			nrot[0] = (double)estimated.at<float>(3);
-			nrot[1] = (double)estimated.at<float>(4);
-			nrot[2] = (double)estimated.at<float>(5);
-			nrot[3] = (double)estimated.at<float>(6);
+			for (size_t i = 0; i < KF_NUM_MEASURED_DATA; i++) {
+				currMeasure[i] = (double)estimated.at<float>(i);
+			}
 
 			/*   // update smoothing factor
 			double smoothing = Config::singleton().get_double(CONFIG_FLOAT_SMOOTHING_FACTOR);
@@ -434,13 +432,17 @@ namespace smll {
 		for (int i = 0; i < smll::NUM_FACIAL_LANDMARKS; i++) {
 			landmarks68[i] = r.landmarks68[i];
 		}
-		pose.translation[0] = ntx[0];
-		pose.translation[1] = ntx[1];
-		pose.translation[2] = ntx[2];
-		pose.rotation[0] = nrot[0];
-		pose.rotation[1] = nrot[1];
-		pose.rotation[2] = nrot[2];
-		pose.rotation[3] = nrot[3];
+		pose.translation[0] = currMeasure[0];
+		pose.translation[1] = currMeasure[1];
+		pose.translation[2] = currMeasure[2];
+		pose.rotation[0] = currMeasure[3];
+		pose.rotation[1] = currMeasure[4];
+		pose.rotation[2] = currMeasure[5];
+		pose.rotation[3] = currMeasure[6];
+
+		for (size_t i = 0; i < KF_NUM_MEASURED_DATA; i++) {
+			prevMeasure[i] = currMeasure[i];
+		}
 	}
 
 

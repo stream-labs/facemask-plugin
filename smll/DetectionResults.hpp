@@ -133,6 +133,7 @@ namespace smll {
 		cv::Mat predict;
 		float prP[3];
 		float esP[3];
+		double prevMeasure[7];
 		void InitKalmanFilters();
 		void InitKalmanFilterNew();
 	};
