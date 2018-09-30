@@ -96,11 +96,7 @@ private:
 
 	// Face detection timeouts
 	int				m_timeout;
-    int             m_trackingTimeout;
     int             m_detectionTimeout;
-
-	// Tracking time-slicer
-	int				m_trackingFaceIndex;
 
 	// dlib HOG face detector
 	dlib::frontal_face_detector		m_detector;

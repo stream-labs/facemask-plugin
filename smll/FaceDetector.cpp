@@ -43,9 +43,7 @@ namespace smll {
 		: m_captureStage(nullptr)
 		, m_stageSize(0)
 		, m_timeout(0)
-        , m_trackingTimeout(0)
         , m_detectionTimeout(0)
-		, m_trackingFaceIndex(0)
 		, m_camera_w(0)
 		, m_camera_h(0) {
 		// Load face detection and pose estimation models.
@@ -198,10 +196,6 @@ namespace smll {
         if (m_detectionTimeout > 0) {
             m_detectionTimeout--;
         }
-        // tracking timeouut
-        if (m_trackingTimeout > 0) {
-            m_trackingTimeout--;
-        }
 
         // better check if the camera res has changed on us
         if ((detect.w != m_detect.w) ||
@@ -218,56 +212,15 @@ namespace smll {
 		computeCurrentImage(detect);
         
         // what are we doing here
-        bool doTracking = (m_faces.length > 0) && (m_trackingTimeout == 0);
         bool doFaceDetection = (m_detectionTimeout == 0);
-        
-		// TRACK faces 
-		if (doTracking) {
-
-            UpdateObjectTracking();
-
-            // Is Tracking is still good?
-            if (m_faces.length > 0) {
-				// next face for tracking time-slicing
-				m_trackingFaceIndex = (m_trackingFaceIndex + 1) % m_faces.length;
-                
-                // tracking frequency
-                m_trackingTimeout = 
-					Config::singleton().get_int(CONFIG_INT_TRACKING_FREQUNCY);
-			} else {
-                // Tracking is bum, do face detect next time
-				m_timeout = 0;
-                m_detectionTimeout = 0;
-                m_trackingFaceIndex = 0;
-            }
-
-			// copy faces to results
-			for (int i = 0; i < m_faces.length; i++) {
-				results[i] = m_faces[i];
-			}
-			results.length = m_faces.length;
-            
-            // If tracking is good, we're done
-            //
-            // If tracking is no good, we STILL don't want to detect faces on
-            // the same frame, so bail and go next time
-            return;
-		}
 
 		// Do FACIAL DETECTION
-        bool startTracking = false;
         if (doFaceDetection) {
             DoFaceDetection();
             m_detectionTimeout = 
 				Config::singleton().get_int(CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY);
-            startTracking = true;
         }
         
-		// Start Object Tracking
-        if (startTracking) {
-            StartObjectTracking();
-        }
-
 		// copy faces to results
 		for (int i = 0; i < m_faces.length; i++) {
 			results[i] = m_faces[i];
@@ -1018,47 +971,7 @@ namespace smll {
             }
         }
     }
-    
         
-    void FaceDetector::StartObjectTracking() {
-
-		// get crop info from config and track image dimensions
-		CropInfo cropInfo = GetCropInfo();
-
-		// need to scale back
-		float scale = (float)m_capture.width / m_detect.w;
-
-        // start tracking
-		dlib::cv_image<unsigned char> img(currentImage);
-		for (int i = 0; i < m_faces.length; ++i) {
-			m_faces[i].StartTracking(img, scale, cropInfo.offsetX, cropInfo.offsetY);
-		}
-	}
-    
-    
-    void FaceDetector::UpdateObjectTracking() {
-
-		// get crop info from config and track image dimensions
-		CropInfo cropInfo = GetCropInfo();
-
-		char* cropdata = m_detect.data +
-			(m_detect.getStride() * cropInfo.offsetY) +
-			(m_detect.getNumElems() * cropInfo.offsetX);
-
-		// update object tracking
-		dlib::cv_image<unsigned char> img(currentImage);
-		for (int i = 0; i < m_faces.length; i++) {
-			if (i == m_trackingFaceIndex) {
-				double confidence = m_faces[i].UpdateTracking(img);
-				if (confidence < Config::singleton().get_double(
-					CONFIG_DOUBLE_TRACKING_THRESHOLD)) {
-					m_faces.length = 0;
-					break;
-				}
-			}
-		}
-	}
-    
     
     void FaceDetector::DetectLandmarks(const OBSTexture& capture, DetectionResults& results)
     {

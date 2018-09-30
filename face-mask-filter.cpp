@@ -1773,11 +1773,13 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			std::chrono::duration_cast<std::chrono::microseconds>
 			(frameEnd - frameStart);
 		long long speedLimit = smll::Config::singleton().get_int(
-			smll::CONFIG_INT_SPEED_LIMIT) * 1000;
+			smll::CONFIG_INT_SPEED_LIMIT);
 		long long sleepTime = max(speedLimit - elapsedMs.count(),
 			(long long)0);
-		if (sleepTime > 0)
-			std::this_thread::sleep_for(std::chrono::microseconds(sleepTime));
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(speedLimit));
+		//if (sleepTime > 0)
+		//	std::this_thread::sleep_for(std::chrono::microseconds(sleepTime));
 	}
 
 	if (hTask != NULL) {

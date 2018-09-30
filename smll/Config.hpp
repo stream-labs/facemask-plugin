@@ -87,19 +87,6 @@ namespace smll {
 	static const char* const CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY = 
 		"faceDetectRecheckFrequency";
 
-	// Tracking Vars ----------
-
-	// NOTE: tracking now uses same image dimensions as face
-	//       detection.
-
-	// Execution Frequency
-	static const char* const CONFIG_INT_TRACKING_FREQUNCY =
-		"trackingFrequency";
-
-	// Threshold
-	static const char* const CONFIG_DOUBLE_TRACKING_THRESHOLD =
-		"trackingThreshold";
-
 	// Speed Limit
 	static const char* const CONFIG_INT_SPEED_LIMIT = 
 		"detectSpeedLimit";
