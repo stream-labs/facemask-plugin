@@ -86,7 +86,8 @@ namespace smll {
 		"faceDetectFrequency";
 	static const char* const CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY = 
 		"faceDetectRecheckFrequency";
-
+	static const char* const CONFIG_INT_ACTIVE_FACE_DETECT_FREQUNCY =
+		"faceActiveDetectFrequency";
 	// Tracking Vars ----------
 
 	// NOTE: tracking now uses same image dimensions as face

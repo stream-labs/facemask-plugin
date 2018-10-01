@@ -45,6 +45,7 @@ namespace smll {
 		, m_timeout(0)
         , m_trackingTimeout(0)
         , m_detectionTimeout(0)
+		, m_activeDetectionTimeout(0)
 		, m_trackingFaceIndex(0)
 		, m_camera_w(0)
 		, m_camera_h(0) {
@@ -203,6 +204,10 @@ namespace smll {
             m_trackingTimeout--;
         }
 
+		if (m_activeDetectionTimeout > 0) {
+			m_activeDetectionTimeout--;
+		}
+
         // better check if the camera res has changed on us
         if ((detect.w != m_detect.w) ||
 			(detect.h != m_detect.h)) {
@@ -218,9 +223,9 @@ namespace smll {
 		computeCurrentImage(detect);
         
         // what are we doing here
-        bool doTracking = (m_faces.length > 0) && (m_trackingTimeout == 0);
-        bool doFaceDetection = (m_detectionTimeout == 0);
-        
+        bool doTracking = (m_faces.length > 0) && (m_trackingTimeout == 0) && (m_activeDetectionTimeout == 0);
+        bool doFaceDetection = (m_detectionTimeout == 0) || (m_activeDetectionTimeout > 0);
+
 		// TRACK faces 
 		if (doTracking) {
 
@@ -239,6 +244,7 @@ namespace smll {
 				m_timeout = 0;
                 m_detectionTimeout = 0;
                 m_trackingFaceIndex = 0;
+				m_activeDetectionTimeout = Config::singleton().get_int(CONFIG_INT_ACTIVE_FACE_DETECT_FREQUNCY);
             }
 
 			// copy faces to results
@@ -275,7 +281,7 @@ namespace smll {
 		results.length = m_faces.length;
 
 		// If faces are not found
-		if (m_faces.length == 0) {
+		if (m_faces.length == 0 && m_activeDetectionTimeout == 0) {
             // Wait for 5 frames and do face detection
             m_timeout = Config::singleton().get_int(CONFIG_INT_FACE_DETECT_FREQUENCY);
             m_detectionTimeout = 0;

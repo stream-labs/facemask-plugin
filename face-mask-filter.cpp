@@ -1775,7 +1775,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 		long long speedLimit = smll::Config::singleton().get_int(
 			smll::CONFIG_INT_SPEED_LIMIT) * 1000;
 		long long sleepTime = max(speedLimit - elapsedMs.count(),
-			(long long)0);
+			(long long)100);
 		if (sleepTime > 0)
 			std::this_thread::sleep_for(std::chrono::microseconds(sleepTime));
 	}
