@@ -18,13 +18,6 @@
  */
 
 #include "gs-rendertarget.h"
-#include "exceptions.h"
-extern "C" {
-	#pragma warning( push )
-	#pragma warning( disable: 4201 )
-	#include <libobs/obs.h>
-	#pragma warning( pop )
-}
 
 GS::RenderTarget::RenderTarget(gs_color_format colorFormat, gs_zstencil_format zsFormat) {
 	obs_enter_graphics();
