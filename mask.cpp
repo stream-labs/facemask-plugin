@@ -26,15 +26,7 @@
 #include "strings.h"
 #include "plugin.h"
 #include "utils.h"
-#include <queue>
-#include <thread>
-extern "C" {
-	#pragma warning( push )
-	#pragma warning( disable: 4201 )
-	#include <libobs/graphics/graphics.h>
-	#include <libobs/graphics/axisang.h>
-	#pragma warning( pop )
-}
+
 
 
 Mask::Part::Part(std::shared_ptr<Part> p_parent,

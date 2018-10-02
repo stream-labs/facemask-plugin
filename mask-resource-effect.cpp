@@ -21,20 +21,10 @@
 #include "exceptions.h"
 #include "plugin.h"
 #include "utils.h"
-extern "C" {
-	#pragma warning( push )
-	#pragma warning( disable: 4201 )
-	#include <libobs/util/platform.h>
-	#include <libobs/obs-module.h>
-	#pragma warning( pop )
-}
-#include <sstream>
-
-static const char* const S_DATA = "data";
 
 Mask::Resource::Effect::Effect(Mask::MaskData* parent, std::string name, obs_data_t* data)
 	: IBase(parent, name) {
-
+	const char* const S_DATA = "data";
 	if (!obs_data_has_user_value(data, S_DATA)) {
 		PLOG_ERROR("Effect '%s' has no data.", name.c_str());
 		throw std::logic_error("Effect has no data.");
@@ -48,15 +38,6 @@ Mask::Resource::Effect::Effect(Mask::MaskData* parent, std::string name, obs_dat
 	// write to temp file
 	m_filename = Utils::Base64ToTempFile(base64data);
 	m_filenameIsTemp = true;
-
-
-	// This code does not work
-	// TODO: make it work! hitting the file system sucks!
-	//
-	//std::vector<uint8_t> decodedData = base64_decodeZ(base64data,
-	//	strlen(base64data), base64_mime_alphabet);
-	//m_Effect = std::make_shared<GS::Effect>(std::string(
-	//	(char*)decodedData.data()), m_name);
 }
 
 Mask::Resource::Effect::Effect(Mask::MaskData* parent, std::string name, std::string filename)
