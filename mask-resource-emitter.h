@@ -19,6 +19,14 @@
 #pragma once
 #include "mask-resource.h"
 #include "mask-resource-model.h"
+extern "C" {
+	#pragma warning( push )
+	#pragma warning( disable: 4201 )
+	#include <libobs/util/platform.h>
+	#include <libobs/obs-module.h>
+	#pragma warning( pop )
+}
+#include <time.h>
 
 namespace Mask {
 	namespace Resource {
@@ -100,6 +108,30 @@ namespace Mask {
 			virtual bool IsDepthOnly() override;
 			
 			bool IsOpaque();
+
+		private:
+			const char* const S_MODEL = "model";
+			const char* const S_RATE = "rate";
+			const char* const S_RATE_MIN = "rate-min";
+			const char* const S_RATE_MAX = "rate-max";
+			const char* const S_INVERSE_RATE = "inverse-rate";
+			const char* const S_LIFETIME = "lifetime";
+			const char* const S_FRICTION = "friction";
+			const char* const S_FRICTION_MIN = "friction-min";
+			const char* const S_FRICTION_MAX = "friction-max";
+			const char* const S_FORCE = "force";
+			const char* const S_FORCE_MIN = "force-min";
+			const char* const S_FORCE_MAX = "force-max";
+			const char* const S_INITIAL_VELOCITY = "initial-velocity";
+			const char* const S_INITIAL_VELOCITY_MIN = "initial-velocity-min";
+			const char* const S_INITIAL_VELOCITY_MAX = "initial-velocity-max";
+			const char* const S_NUM_PARTICLES = "num-particles";
+			const char* const S_SCALE_START = "scale-start";
+			const char* const S_SCALE_END = "scale-end";
+			const char* const S_ALPHA_START = "alpha-start";
+			const char* const S_ALPHA_END = "alpha-end";
+			const char* const S_WORLD_SPACE = "world-space";
+			const char* const S_Z_SORT_OFFSET = "z-sort-offset";
 
 		protected:
 			// allow Particle class to access protected vars

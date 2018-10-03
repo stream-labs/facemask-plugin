@@ -20,9 +20,14 @@
 #pragma once
 #include <inttypes.h>
 #include <string>
+#include "exceptions.h"
+#include <sys/stat.h>
+#include <fstream>
 extern "C" {
 	#pragma warning( push )
 	#pragma warning( disable: 4201 )
+	#include <libobs/util/platform.h>
+	#include <libobs/obs.h>
 	#include <libobs/graphics/graphics.h>
 	#pragma warning( pop )
 }

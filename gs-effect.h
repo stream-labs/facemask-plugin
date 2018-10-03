@@ -23,6 +23,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include "exceptions.h"
 extern "C" {
 	#pragma warning( push )
 	#pragma warning( disable: 4201 )
@@ -31,6 +32,7 @@ extern "C" {
 	#include <libobs/graphics/vec4.h>
 	#include <libobs/graphics/vec3.h>
 	#include <libobs/graphics/vec2.h>
+	#include <libobs/obs.h>
 	#pragma warning( pop )
 }
 

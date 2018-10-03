@@ -20,37 +20,6 @@
 #include "mask-resource-emitter.h"
 #include "exceptions.h"
 #include "plugin.h"
-extern "C" {
-#pragma warning( push )
-#pragma warning( disable: 4201 )
-#include <libobs/util/platform.h>
-#include <libobs/obs-module.h>
-#pragma warning( pop )
-}
-#include <time.h>
-
-static const char* const S_MODEL = "model";
-static const char* const S_RATE = "rate";
-static const char* const S_RATE_MIN = "rate-min";
-static const char* const S_RATE_MAX = "rate-max";
-static const char* const S_INVERSE_RATE = "inverse-rate";
-static const char* const S_LIFETIME = "lifetime";
-static const char* const S_FRICTION = "friction";
-static const char* const S_FRICTION_MIN = "friction-min";
-static const char* const S_FRICTION_MAX = "friction-max";
-static const char* const S_FORCE = "force";
-static const char* const S_FORCE_MIN = "force-min";
-static const char* const S_FORCE_MAX = "force-max";
-static const char* const S_INITIAL_VELOCITY = "initial-velocity";
-static const char* const S_INITIAL_VELOCITY_MIN = "initial-velocity-min";
-static const char* const S_INITIAL_VELOCITY_MAX = "initial-velocity-max";
-static const char* const S_NUM_PARTICLES = "num-particles";
-static const char* const S_SCALE_START = "scale-start";
-static const char* const S_SCALE_END = "scale-end";
-static const char* const S_ALPHA_START = "alpha-start";
-static const char* const S_ALPHA_END = "alpha-end";
-static const char* const S_WORLD_SPACE = "world-space";
-static const char* const S_Z_SORT_OFFSET = "z-sort-offset";
 
 
 Mask::Resource::Emitter::Emitter(Mask::MaskData* parent, std::string name, obs_data_t* data)

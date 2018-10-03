@@ -18,13 +18,6 @@
  */
 
 #include "gs-effect.h"
-#include "exceptions.h"
-extern "C" {
-	#pragma warning( push )
-	#pragma warning( disable: 4201 )
-	#include <libobs/obs.h>
-	#pragma warning( pop )
-}
 
 GS::Effect::Effect(std::string file) {
 	obs_enter_graphics();

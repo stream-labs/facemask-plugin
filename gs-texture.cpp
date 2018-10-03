@@ -18,16 +18,7 @@
  */
 
 #include "gs-texture.h"
-#include "exceptions.h"
-#include <sys/stat.h>
-#include <fstream>
-extern "C" {
-	#pragma warning( push )
-	#pragma warning( disable: 4201 )
-	#include <libobs/util/platform.h>
-	#include <libobs/obs.h>
-	#pragma warning( pop )
-}
+
 
 GS::Texture::Texture(uint32_t width, uint32_t height, gs_color_format format, uint32_t mip_levels, const uint8_t **mip_data, uint32_t flags) : m_destroy(true) {
 	if (width == 0)

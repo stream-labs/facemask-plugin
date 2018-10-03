@@ -21,29 +21,8 @@
 #include "exceptions.h"
 #include "plugin.h"
 #include "utils.h"
-extern "C" {
-	#pragma warning( push )
-	#pragma warning( disable: 4201 )
-	#include <libobs/util/platform.h>
-	#include <libobs/obs-module.h>
-	#pragma warning( pop )
-}
-#include <sstream>
-#include <chrono>
-#include <condition_variable>
-#include <fstream>
-#include <mutex>
-#include <thread>
-
-static const char* const S_DATA = "data";
-static const char* const S_WIDTH = "width";
-static const char* const S_HEIGHT = "height";
-static const char* const S_MIP_LEVELS = "mip-levels";
-static const char* const S_MIP_DATA = "mip-data-%d";
-static const char* const S_BPP = "bpp";
 
 static const unsigned int MAX_MIP_LEVELS = 32;
-
 
 Mask::Resource::Image::Image(Mask::MaskData* parent, std::string name, obs_data_t* data)
 	: IBase(parent, name), m_width(0), m_height(0), m_fmt(GS_RGBA) {
