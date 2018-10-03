@@ -20,6 +20,13 @@
 #include "mask-resource.h"
 #include "mask-instance-data.h"
 #include <vector>
+extern "C" {
+#pragma warning( push )
+#pragma warning( disable: 4201 )
+#include <libobs/util/platform.h>
+#include <libobs/obs-module.h>
+#pragma warning( pop )
+}
 
 namespace Mask {
 
@@ -121,6 +128,16 @@ namespace Mask {
 			bool	GetStopOnLastFrame() override { return m_stopOnLastFrame; }
 			void	SetStopOnLastFrame(bool stop = true) override { m_stopOnLastFrame = stop; };
 			float   GetPosition() override;
+
+		private:
+			const char* const S_DURATION = "duration";
+			const char* const S_FPS = "fps";
+			const char* const S_CHANNELS = "channels";
+			const char* const S_NAME = "name";
+			const char* const S_TYPE = "type";
+			const char* const S_PRESTATE = "pre-state";
+			const char* const S_POSTSTATE = "post-state";
+			const char* const S_VALUES = "values";
 
 		protected:
 			float							m_speed;

@@ -21,6 +21,19 @@
 #include "mask-resource.h"
 #include "gs/gs-texture.h"
 #include "mask.h"
+extern "C" {
+	#pragma warning( push )
+	#pragma warning( disable: 4201 )
+	#include <libobs/util/platform.h>
+	#include <libobs/obs-module.h>
+	#pragma warning( pop )
+}
+#include <sstream>
+#include <chrono>
+#include <condition_variable>
+#include <fstream>
+#include <mutex>
+#include <thread>
 
 namespace Mask {
 	namespace Resource {
@@ -38,6 +51,15 @@ namespace Mask {
 			void SwapTexture(gs_texture* tex, bool mineToDestroy = false) {
 				m_Texture = std::make_shared<GS::Texture>(tex, mineToDestroy);
 			}
+
+		private:
+			const char* const S_DATA = "data";
+			const char* const S_WIDTH = "width";
+			const char* const S_HEIGHT = "height";
+			const char* const S_MIP_LEVELS = "mip-levels";
+			const char* const S_MIP_DATA = "mip-data-%d";
+			const char* const S_BPP = "bpp";
+			
 
 		protected:
 			std::shared_ptr<GS::Texture> m_Texture;

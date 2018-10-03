@@ -22,19 +22,11 @@
 #include "mask-resource-material.h"
 #include "mask-resource-animation.h"
 #include "mask-resource-sequence.h"
-#include "plugin/exceptions.h"
-#include "plugin/strings.h"
-#include "plugin/plugin.h"
-#include "plugin/utils.h"
-#include <queue>
-#include <thread>
-extern "C" {
-	#pragma warning( push )
-	#pragma warning( disable: 4201 )
-	#include <libobs/graphics/graphics.h>
-	#include <libobs/graphics/axisang.h>
-	#pragma warning( pop )
-}
+#include "exceptions.h"
+#include "strings.h"
+#include "plugin.h"
+#include "utils.h"
+
 
 
 Mask::Part::Part(std::shared_ptr<Part> p_parent,

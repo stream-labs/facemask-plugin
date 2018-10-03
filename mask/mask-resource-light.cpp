@@ -18,30 +18,9 @@
 */
 
 #include "mask-resource-light.h"
-#include "plugin/exceptions.h"
-#include "plugin/plugin.h"
-#include "plugin/utils.h"
-extern "C" {
-#pragma warning( push )
-#pragma warning( disable: 4201 )
-#include <libobs/util/platform.h>
-#include <libobs/obs-module.h>
-#pragma warning( pop ) 
-}
-
-static const char* const S_LIGHTTYPE = "light-type";
-static const char* const S_POSITION = "position";
-static const char* const S_DIRECTION = "direction";
-static const char* const S_UP = "up";
-static const char* const S_ATT0 = "att0";
-static const char* const S_ATT1 = "att1";
-static const char* const S_ATT2 = "att2";
-static const char* const S_AMBIENT = "ambient";
-static const char* const S_DIFFUSE = "diffuse";
-static const char* const S_SPECULAR = "specular";
-static const char* const S_INNERANGLE = "inner-angle";
-static const char* const S_OUTERANGLE = "outer-angle";
-static const char* const S_AREASIZE = "area-size";
+#include "exceptions.h"
+#include "plugin.h"
+#include "utils.h"
 
 
 Mask::Resource::LightInstanceData& 

@@ -18,7 +18,15 @@
 */
 #pragma once
 #include "mask-resource.h"
-#include "gs/gs-effect.h"
+#include "gs-effect.h"
+#include <sstream>
+extern "C" {
+	#pragma warning( push )
+	#pragma warning( disable: 4201 )
+	#include <libobs/util/platform.h>
+	#include <libobs/obs-module.h>
+	#pragma warning( pop )
+}
 
 namespace Mask {
 	namespace Resource {

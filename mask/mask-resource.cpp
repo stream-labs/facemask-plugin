@@ -36,46 +36,6 @@
 
 #include <Windows.h>
 
-extern "C" {
-#pragma warning( push )
-#pragma warning( disable: 4201 )
-#include <libobs/obs-module.h>
-#pragma warning( pop )
-}
-
-#include <thread>
-
-static std::map<std::string, std::string> g_defaultImages = {
-	{ "imageNull", "resources/null.png" },
-	{ "imageWhite", "resources/white.png" },
-	{ "imageBlack", "resources/black.png" },
-	{ "imageRed", "resources/red.png" },
-	{ "imageGreen", "resources/green.png" },
-	{ "imageBlue", "resources/blue.png" },
-	{ "imageYellow", "resources/yellow.png" },
-	{ "imageMagenta", "resources/magenta.png" },
-	{ "imageCyan", "resources/cyan.png" },
-};
-
-static std::map<std::string, std::string> g_defaultMeshes = {
-	{ "meshTriangle", "resources/triangle.notobj" },
-	{ "meshQuad", "resources/quad.notobj" },
-	{ "meshCube", "resources/cube.notobj" },
-	{ "meshSphere", "resources/sphere.notobj" },
-	{ "meshCylinder", "resources/cylinder.notobj" },
-	{ "meshPyramid", "resources/pyramid.notobj" },
-	{ "meshTorus", "resources/torus.notobj" },
-	{ "meshCone", "resources/cone.notobj" },
-	{ "meshHead", "resources/head.notobj" },
-};
-
-static std::map<std::string, std::string> g_defaultEffects = {
-	{ "effectDefault", "effects/default.effect" },
-	{ "effectPhong", "effects/phong.effect" },
-};
-
-
-
 
 Mask::Resource::IBase::IBase(Mask::MaskData* parent, std::string name) {
 	m_parent = parent;
@@ -88,9 +48,9 @@ Mask::Resource::IBase::~IBase() {
 
 }
 
-static const char* const S_TYPE = "type";
-
 std::shared_ptr<Mask::Resource::IBase> Mask::Resource::IBase::Load(Mask::MaskData* parent, std::string name, obs_data_t* data) {
+	static const char* const S_TYPE = "type";
+
 	if (!obs_data_has_user_value(data, S_TYPE)) {
 		PLOG_ERROR("Resource '%s' is missing type.", name.c_str());
 		throw std::logic_error("Resource is missing type.");
@@ -154,26 +114,55 @@ std::shared_ptr<Mask::Resource::IBase> Mask::Resource::IBase::Load(Mask::MaskDat
 std::shared_ptr<Mask::Resource::IBase> Mask::Resource::IBase::LoadDefault(Mask::MaskData* parent, std::string name) {
 	std::shared_ptr<Mask::Resource::IBase> p(nullptr);
 
+	static const std::map<std::string, std::string> g_defaultImages = {
+		{ "imageNull", "resources/null.png" },
+		{ "imageWhite", "resources/white.png" },
+		{ "imageBlack", "resources/black.png" },
+		{ "imageRed", "resources/red.png" },
+		{ "imageGreen", "resources/green.png" },
+		{ "imageBlue", "resources/blue.png" },
+		{ "imageYellow", "resources/yellow.png" },
+		{ "imageMagenta", "resources/magenta.png" },
+		{ "imageCyan", "resources/cyan.png" },
+	};
+
+	static const std::map<std::string, std::string> g_defaultMeshes = {
+		{ "meshTriangle", "resources/triangle.notobj" },
+		{ "meshQuad", "resources/quad.notobj" },
+		{ "meshCube", "resources/cube.notobj" },
+		{ "meshSphere", "resources/sphere.notobj" },
+		{ "meshCylinder", "resources/cylinder.notobj" },
+		{ "meshPyramid", "resources/pyramid.notobj" },
+		{ "meshTorus", "resources/torus.notobj" },
+		{ "meshCone", "resources/cone.notobj" },
+		{ "meshHead", "resources/head.notobj" },
+	};
+
+	static const std::map<std::string, std::string> g_defaultEffects = {
+		{ "effectDefault", "effects/default.effect" },
+		{ "effectPhong", "effects/phong.effect" },
+	};
+
 	// yield
 	::Sleep(0);
 
 	// image?
 	if (g_defaultImages.find(name) != g_defaultImages.end()) {
-		char* f = obs_module_file(g_defaultImages[name].c_str());
+		char* f = obs_module_file(g_defaultImages.at(name).c_str());
 		p = std::make_shared<Mask::Resource::Image>
 			(parent, name, std::string(f));
 		bfree(f);
 	}
 	// mesh?
 	if (g_defaultMeshes.find(name) != g_defaultMeshes.end()) {
-		char* f = obs_module_file(g_defaultMeshes[name].c_str());
+		char* f = obs_module_file(g_defaultMeshes.at(name).c_str());
 		p = std::make_shared<Mask::Resource::Mesh>
 			(parent, name, std::string(f));
 		bfree(f);
 	}
 	// effect?
 	if (g_defaultEffects.find(name) != g_defaultEffects.end()) {
-		char* f = obs_module_file(g_defaultEffects[name].c_str());
+		char* f = obs_module_file(g_defaultEffects.at(name).c_str());
 		p = std::make_shared<Mask::Resource::Effect>
 			(parent, name, std::string(f));
 		bfree(f); 

@@ -25,6 +25,8 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <queue>
+#include <thread>
 extern "C" {
 	#pragma warning( push )
 	#pragma warning( disable: 4201 )
@@ -33,6 +35,7 @@ extern "C" {
 	#include <libobs/graphics/matrix4.h>
 	#include <libobs/graphics/quat.h>
 	#include <libobs/graphics/graphics.h>
+	#include <libobs/graphics/axisang.h>
 	#pragma warning( pop )
 }
 

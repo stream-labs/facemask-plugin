@@ -19,25 +19,9 @@
 
 #include "mask.h"
 #include "mask-resource-animation.h"
-#include "plugin/exceptions.h"
-#include "plugin/plugin.h"
-#include "plugin/utils.h"
-extern "C" {
-#pragma warning( push )
-#pragma warning( disable: 4201 )
-#include <libobs/util/platform.h>
-#include <libobs/obs-module.h>
-#pragma warning( pop )
-}
-
-static const char* const S_DURATION = "duration";
-static const char* const S_FPS = "fps";
-static const char* const S_CHANNELS = "channels";
-static const char* const S_NAME = "name";
-static const char* const S_TYPE = "type";
-static const char* const S_PRESTATE = "pre-state";
-static const char* const S_POSTSTATE = "post-state";
-static const char* const S_VALUES = "values";
+#include "exceptions.h"
+#include "plugin.h"
+#include "utils.h"
 
 
 float	Mask::Resource::AnimationChannel::GetValue(int frame) {

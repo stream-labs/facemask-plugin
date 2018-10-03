@@ -21,6 +21,14 @@
 #include "mask-resource.h"
 #include "gs/gs-effect.h"
 
+extern "C" {
+#pragma warning( push )
+#pragma warning( disable: 4201 )
+#include <libobs/util/platform.h>
+#include <libobs/obs-module.h>
+#pragma warning( pop ) 
+}
+
 namespace Mask {
 	namespace Resource {
 
@@ -63,6 +71,21 @@ namespace Mask {
 
 			virtual void Update(Mask::Part* part, float time) override;
 			virtual void Render(Mask::Part* part) override;
+
+		private:
+			const char* const S_LIGHTTYPE = "light-type";
+			const char* const S_POSITION = "position";
+			const char* const S_DIRECTION = "direction";
+			const char* const S_UP = "up";
+			const char* const S_ATT0 = "att0";
+			const char* const S_ATT1 = "att1";
+			const char* const S_ATT2 = "att2";
+			const char* const S_AMBIENT = "ambient";
+			const char* const S_DIFFUSE = "diffuse";
+			const char* const S_SPECULAR = "specular";
+			const char* const S_INNERANGLE = "inner-angle";
+			const char* const S_OUTERANGLE = "outer-angle";
+			const char* const S_AREASIZE = "area-size";
 
 		protected:
 			LightInstanceData m_idat;
