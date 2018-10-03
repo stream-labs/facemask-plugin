@@ -19,9 +19,9 @@
 
 #include "mask-resource-mesh.h"
 #define NOMINMAX
-#include "exceptions.h"
-#include "plugin.h"
-#include "utils.h"
+#include "plugin/exceptions.h"
+#include "plugin/plugin.h"
+#include "plugin/utils.h"
 #include <sstream>
 #include <iterator>
 #include <algorithm>

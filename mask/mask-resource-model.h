@@ -19,7 +19,7 @@
 
 #pragma once
 #include "mask-resource.h"
-#include "gs-vertexbuffer.h"
+#include "gs/gs-vertexbuffer.h"
 #include "mask-resource-mesh.h"
 #include "mask-resource-material.h"
 #include <map>
@@ -28,17 +28,10 @@
 namespace Mask {
 	namespace Resource {
 
-		static const int MAX_BONES_PER_SKIN = 8;
-
-		struct BonesList {
-			int											numBones;
-			std::array<matrix4*, MAX_BONES_PER_SKIN>	bones;
-		};
-
-		class SkinnedModel : public IBase, public SortedDrawObject {
+		class Model : public IBase, public SortedDrawObject {
 		public:
-			SkinnedModel(Mask::MaskData* parent, std::string name, obs_data_t* data);
-			virtual ~SkinnedModel();
+			Model(Mask::MaskData* parent, std::string name, obs_data_t* data);
+			virtual ~Model();
 
 			virtual Type GetType() override;
 			virtual void Update(Mask::Part* part, float time) override;
@@ -55,30 +48,13 @@ namespace Mask {
 			std::shared_ptr<Material> GetMaterial() {
 				return m_material;
 			}
+			std::shared_ptr<Mesh> GetMesh() {
+				return m_mesh;
+			}
 
 		protected:
-
-			struct Bone {
-				std::shared_ptr<Part>	part;
-				matrix4					offset;
-				matrix4					global;
-				//Bone& operator=(const Bone& b) {
-				//	part = b.part;
-				//	matrix4_copy(&offset, &(b.offset));
-				//	matrix4_copy(&global, &(b.global));
-				//	return *this;
-				//}
-			};
-			struct Skin {
-				std::shared_ptr<Mesh>	mesh;
-				std::vector<int>		bones;
-			};
-
-			std::vector<Bone>			m_bones;
-			std::vector<Skin>			m_skins;
-			std::shared_ptr<Material>	m_material;
-
-			std::array<size_t, 8>		m_boneIds;
+			std::shared_ptr<Mesh> m_mesh;
+			std::shared_ptr<Material> m_material;
 		};
 	}
 }

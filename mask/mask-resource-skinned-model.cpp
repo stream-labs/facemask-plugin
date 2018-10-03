@@ -18,9 +18,9 @@
 */
 
 #include "mask-resource-skinned-model.h"
-#include "exceptions.h"
-#include "plugin.h"
-#include "utils.h"
+#include "plugin/exceptions.h"
+#include "plugin/plugin.h"
+#include "plugin/utils.h"
 extern "C" {
 	#pragma warning( push )
 	#pragma warning( disable: 4201 )

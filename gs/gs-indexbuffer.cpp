@@ -18,7 +18,7 @@
  */
 
 #include "gs-indexbuffer.h"
-#include "utils.h"
+#include "plugin/utils.h"
 extern "C" {
 	#pragma warning( push )
 	#pragma warning( disable: 4201 )

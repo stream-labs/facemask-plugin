@@ -18,8 +18,8 @@
 */
 
 #include "mask-resource-emitter.h"
-#include "exceptions.h"
-#include "plugin.h"
+#include "plugin/exceptions.h"
+#include "plugin/plugin.h"
 extern "C" {
 #pragma warning( push )
 #pragma warning( disable: 4201 )

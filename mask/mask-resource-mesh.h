@@ -16,37 +16,51 @@
 * along with this program; if not, write to the Free Software
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-
 #pragma once
 #include "mask-resource.h"
-#include "gs-texture.h"
-#include "mask.h"
+#include "gs/gs-vertexbuffer.h"
+#include "gs/gs-indexbuffer.h"
 
 namespace Mask {
 	namespace Resource {
-		class Image : public IBase {
+		class Mesh : public IBase {
 		public:
-			Image(Mask::MaskData* parent, std::string name, obs_data_t* data);
-			Image(Mask::MaskData* parent, std::string name, std::string filename);
-			virtual ~Image();
+			Mesh(Mask::MaskData* parent, std::string name, std::string file);
+			Mesh(Mask::MaskData* parent, std::string name, obs_data_t* data);
+			virtual ~Mesh();
 
 			virtual Type GetType() override;
-			virtual std::shared_ptr<GS::Texture> GetTexture() { return m_Texture; }
+
 			virtual void Update(Mask::Part* part, float time) override;
 			virtual void Render(Mask::Part* part) override;
 
-			void SwapTexture(gs_texture* tex, bool mineToDestroy = false) {
-				m_Texture = std::make_shared<GS::Texture>(tex, mineToDestroy);
+			std::shared_ptr<GS::VertexBuffer> GetVertexBuffer() {
+				return m_VertexBuffer;
 			}
 
-		protected:
-			std::shared_ptr<GS::Texture> m_Texture;
+			vec4 GetCenter() { return m_center; }
 
-			// delayed gs creation
-			int				m_width, m_height;
-			gs_color_format m_fmt;
-			std::string		m_tempFile;
-			std::vector<std::vector<uint8_t>> m_decoded_mips;
+			bool GetScreenExtents(gs_rect* r, int screen_width, int screen_height, float trsZ);
+
+		private:
+			void LoadObj(std::string file);
+
+		protected:
+			std::shared_ptr<GS::VertexBuffer>	m_VertexBuffer;
+			std::shared_ptr<GS::IndexBuffer>	m_IndexBuffer;
+			vec4								m_center;
+
+			// cached in GetScreenExtents
+			std::shared_ptr<Mask::Part>			m_part;
+
+			// for delayed gs creation
+			std::string				m_tempFile;
+			uint8_t*				m_rawVertices;
+			uint8_t*				m_rawIndices;
+			int						m_numIndices;
+
+			vec3 CalculateTangent(const GS::Vertex& v1,
+				const GS::Vertex& v2, const GS::Vertex& v3);
 		};
 	}
 }

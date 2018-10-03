@@ -18,7 +18,7 @@
  */
 
 #include "gs-texture.h"
-#include "exceptions.h"
+#include "plugin/exceptions.h"
 #include <sys/stat.h>
 #include <fstream>
 extern "C" {

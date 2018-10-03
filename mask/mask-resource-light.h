@@ -19,7 +19,7 @@
 #pragma once
 #include "mask.h"
 #include "mask-resource.h"
-#include "gs-effect.h"
+#include "gs/gs-effect.h"
 
 namespace Mask {
 	namespace Resource {

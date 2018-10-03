@@ -20,7 +20,7 @@
 #include "mask-resource.h"
 #include "mask-resource-effect.h"
 #include "mask-resource-image.h"
-#include "gs-effect.h"
+#include "gs/gs-effect.h"
 #include <string>
 #include <vector>
 #include <array>

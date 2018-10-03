@@ -18,8 +18,8 @@
  */
 
 #include "gs-vertexbuffer.h"
-#include "utils.h"
-#include "exceptions.h"
+#include "plugin/utils.h"
+#include "plugin/exceptions.h"
 extern "C" {
 	#pragma warning( push )
 	#pragma warning( disable: 4201 )
