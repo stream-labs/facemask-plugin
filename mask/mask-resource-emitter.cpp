@@ -18,8 +18,8 @@
 */
 
 #include "mask-resource-emitter.h"
-#include "exceptions.h"
-#include "plugin.h"
+#include "plugin/exceptions.h"
+#include "plugin/plugin.h"
 
 
 Mask::Resource::Emitter::Emitter(Mask::MaskData* parent, std::string name, obs_data_t* data)

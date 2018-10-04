@@ -19,7 +19,7 @@
 
 #pragma once
 #include <inttypes.h>
-#include "exceptions.h"
+#include "plugin/exceptions.h"
 extern "C" {
 	#pragma warning( push )
 	#pragma warning( disable: 4201 )

@@ -18,9 +18,9 @@
 */
 
 #include "mask-resource-effect.h"
-#include "exceptions.h"
-#include "plugin.h"
-#include "utils.h"
+#include "plugin/exceptions.h"
+#include "plugin/plugin.h"
+#include "plugin/utils.h"
 
 Mask::Resource::Effect::Effect(Mask::MaskData* parent, std::string name, obs_data_t* data)
 	: IBase(parent, name) {
