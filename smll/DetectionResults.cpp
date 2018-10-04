@@ -277,7 +277,7 @@ namespace smll {
 
 
 	DetectionResult::DetectionResult() 
-		: matched(false), numFramesLost(0), kalmanFiltersInitialized(false) {
+		: matched(false), numFramesLost(0), kalmanFiltersInitialized(false), initedStartPose(false) {
 
 	}
 
@@ -294,7 +294,7 @@ namespace smll {
 		CheckForPoseFlip(pose.rotation, pose.translation);
 
 		kalmanFiltersInitialized = false;
-
+		initedStartPose = false;
 		return *this;
 	}
 
@@ -335,6 +335,13 @@ namespace smll {
 
 	void DetectionResult::ResetPose() {
 		pose.ResetPose();
+	}
+
+	void DetectionResult::InitStartPose() {
+		if (!initedStartPose) {
+			startPose.CopyPoseFrom(pose);
+			initedStartPose = true;
+		}
 	}
 
 	void DetectionResult::UpdateResultsFrom(const DetectionResult& r) {
