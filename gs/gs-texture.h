@@ -20,7 +20,7 @@
 #pragma once
 #include <inttypes.h>
 #include <string>
-#include "exceptions.h"
+#include "plugin/exceptions.h"
 #include <sys/stat.h>
 #include <fstream>
 extern "C" {

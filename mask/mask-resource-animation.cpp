@@ -19,9 +19,9 @@
 
 #include "mask.h"
 #include "mask-resource-animation.h"
-#include "exceptions.h"
-#include "plugin.h"
-#include "utils.h"
+#include "plugin/exceptions.h"
+#include "plugin/plugin.h"
+#include "plugin/utils.h"
 
 
 float	Mask::Resource::AnimationChannel::GetValue(int frame) {

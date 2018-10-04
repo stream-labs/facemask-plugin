@@ -18,9 +18,9 @@
 */
 
 #include "mask-resource-light.h"
-#include "exceptions.h"
-#include "plugin.h"
-#include "utils.h"
+#include "plugin/exceptions.h"
+#include "plugin/plugin.h"
+#include "plugin/utils.h"
 
 
 Mask::Resource::LightInstanceData& 

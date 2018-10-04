@@ -16,51 +16,45 @@
 * along with this program; if not, write to the Free Software
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
+
 #pragma once
 #include "mask-resource.h"
-#include "gs-vertexbuffer.h"
-#include "gs-indexbuffer.h"
+#include "gs/gs-vertexbuffer.h"
+#include "mask-resource-mesh.h"
+#include "mask-resource-material.h"
+#include <map>
+#include <string>
 
 namespace Mask {
 	namespace Resource {
-		class Mesh : public IBase {
+
+		class Model : public IBase, public SortedDrawObject {
 		public:
-			Mesh(Mask::MaskData* parent, std::string name, std::string file);
-			Mesh(Mask::MaskData* parent, std::string name, obs_data_t* data);
-			virtual ~Mesh();
+			Model(Mask::MaskData* parent, std::string name, obs_data_t* data);
+			virtual ~Model();
 
 			virtual Type GetType() override;
-
 			virtual void Update(Mask::Part* part, float time) override;
 			virtual void Render(Mask::Part* part) override;
+			virtual bool IsDepthOnly() override;
 
-			std::shared_ptr<GS::VertexBuffer> GetVertexBuffer() {
-				return m_VertexBuffer;
+			virtual float	SortDepth() override;
+			virtual void	SortedRender() override;
+
+			void DirectRender(Mask::Part* part);
+
+			bool IsOpaque();
+
+			std::shared_ptr<Material> GetMaterial() {
+				return m_material;
+			}
+			std::shared_ptr<Mesh> GetMesh() {
+				return m_mesh;
 			}
 
-			vec4 GetCenter() { return m_center; }
-
-			bool GetScreenExtents(gs_rect* r, int screen_width, int screen_height, float trsZ);
-
-		private:
-			void LoadObj(std::string file);
-
 		protected:
-			std::shared_ptr<GS::VertexBuffer>	m_VertexBuffer;
-			std::shared_ptr<GS::IndexBuffer>	m_IndexBuffer;
-			vec4								m_center;
-
-			// cached in GetScreenExtents
-			std::shared_ptr<Mask::Part>			m_part;
-
-			// for delayed gs creation
-			std::string				m_tempFile;
-			uint8_t*				m_rawVertices;
-			uint8_t*				m_rawIndices;
-			int						m_numIndices;
-
-			vec3 CalculateTangent(const GS::Vertex& v1,
-				const GS::Vertex& v2, const GS::Vertex& v3);
+			std::shared_ptr<Mesh> m_mesh;
+			std::shared_ptr<Material> m_material;
 		};
 	}
 }

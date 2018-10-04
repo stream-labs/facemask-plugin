@@ -18,8 +18,8 @@
  */
 
 #include "mask-resource.h"
-#include "exceptions.h"
-#include "plugin.h"
+#include "plugin/exceptions.h"
+#include "plugin/plugin.h"
 #include "mask.h"
 #include "mask-resource-effect.h"
 #include "mask-resource-emitter.h"

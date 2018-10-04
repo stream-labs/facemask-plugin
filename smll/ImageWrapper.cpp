@@ -19,7 +19,7 @@
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "imageWrapper.hpp"
-#include "utils.h"
+#include "plugin/utils.h"
 
 #define ICV_BASE  (1)
 

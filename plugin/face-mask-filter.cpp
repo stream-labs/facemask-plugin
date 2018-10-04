@@ -38,10 +38,10 @@
 // Windows AV run time stuff
 #include <avrt.h>
 
-#include "mask-resource-image.h"
-#include "mask-resource-mesh.h"
-#include "mask-resource-morph.h"
-#include "mask-resource-effect.h"
+#include "mask/mask-resource-image.h"
+#include "mask/mask-resource-mesh.h"
+#include "mask/mask-resource-morph.h"
+#include "mask/mask-resource-effect.h"
 
 //
 // SYSTEM MEMCPY STILL SEEMS FASTEST

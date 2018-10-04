@@ -16,10 +16,11 @@
 * along with this program; if not, write to the Free Software
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
+
 #pragma once
 #include "mask-resource.h"
-#include "gs-effect.h"
-#include <sstream>
+#include "gs/gs-texture.h"
+#include "mask.h"
 extern "C" {
 	#pragma warning( push )
 	#pragma warning( disable: 4201 )
@@ -27,26 +28,47 @@ extern "C" {
 	#include <libobs/obs-module.h>
 	#pragma warning( pop )
 }
+#include <sstream>
+#include <chrono>
+#include <condition_variable>
+#include <fstream>
+#include <mutex>
+#include <thread>
 
 namespace Mask {
 	namespace Resource {
-		class Effect : public IBase {
+		class Image : public IBase {
 		public:
-			Effect(Mask::MaskData* parent, std::string name, obs_data_t* data);
-			Effect(Mask::MaskData* parent, std::string name, std::string filename);
-			virtual ~Effect();
+			Image(Mask::MaskData* parent, std::string name, obs_data_t* data);
+			Image(Mask::MaskData* parent, std::string name, std::string filename);
+			virtual ~Image();
 
 			virtual Type GetType() override;
-			virtual std::shared_ptr<GS::Effect> GetEffect() { return m_Effect; }
+			virtual std::shared_ptr<GS::Texture> GetTexture() { return m_Texture; }
 			virtual void Update(Mask::Part* part, float time) override;
 			virtual void Render(Mask::Part* part) override;
 
-		protected:
-			std::shared_ptr<GS::Effect> m_Effect;
+			void SwapTexture(gs_texture* tex, bool mineToDestroy = false) {
+				m_Texture = std::make_shared<GS::Texture>(tex, mineToDestroy);
+			}
 
-			// for delayed gs creation
-			std::string		m_filename;
-			bool			m_filenameIsTemp;
+		private:
+			const char* const S_DATA = "data";
+			const char* const S_WIDTH = "width";
+			const char* const S_HEIGHT = "height";
+			const char* const S_MIP_LEVELS = "mip-levels";
+			const char* const S_MIP_DATA = "mip-data-%d";
+			const char* const S_BPP = "bpp";
+			
+
+		protected:
+			std::shared_ptr<GS::Texture> m_Texture;
+
+			// delayed gs creation
+			int				m_width, m_height;
+			gs_color_format m_fmt;
+			std::string		m_tempFile;
+			std::vector<std::vector<uint8_t>> m_decoded_mips;
 		};
 	}
 }

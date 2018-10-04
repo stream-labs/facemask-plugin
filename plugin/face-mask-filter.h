@@ -34,7 +34,7 @@
 #include "smll/TextShaper.hpp"
 
 
-#include "mask.h"
+#include "mask/mask.h"
 
 extern "C" {
 #pragma warning( push )

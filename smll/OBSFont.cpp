@@ -40,7 +40,7 @@
 #include <libobs/graphics/matrix4.h>
 #include <libobs/graphics/image-file.h>
 #include <tiny_obj_loader.h>
-#include "utils.h"
+#include "plugin/utils.h"
 #include <opencv2/opencv.hpp>
 
 #pragma warning( pop )
