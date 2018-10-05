@@ -49,7 +49,14 @@ namespace smll {
 		, m_camera_w(0)
 		, m_camera_h(0) {
 		// Load face detection and pose estimation models.
-		m_detector = get_frontal_face_detector();
+		// Face detection pyramid levels have been reduced from 6 to 3
+		frontal_face_detector detector = get_frontal_face_detector();
+		typedef dlib::scan_fhog_pyramid<dlib::pyramid_down<6> > image_scanner_type;
+		image_scanner_type scanner;
+		scanner.copy_configuration(detector.get_scanner());
+		scanner.set_max_pyramid_levels(1);
+		m_detector = dlib::object_detector<image_scanner_type>(scanner, detector.get_overlap_tester(), detector.get_w());
+
 
 		char *filename = obs_module_file(kFileShapePredictor68);
 #ifdef _WIN32
