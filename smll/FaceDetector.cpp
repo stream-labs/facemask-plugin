@@ -49,7 +49,7 @@ namespace smll {
 		, m_camera_w(0)
 		, m_camera_h(0) {
 		// Load face detection and pose estimation models.
-		// Face detection pyramid levels have been reduced from 6 to 3
+		// Face detection pyramid levels have been reduced from 6 to 1
 		frontal_face_detector detector = get_frontal_face_detector();
 		typedef dlib::scan_fhog_pyramid<dlib::pyramid_down<6> > image_scanner_type;
 		image_scanner_type scanner;
