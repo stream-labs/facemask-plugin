@@ -35,18 +35,10 @@ include_directories(${PATH_DLIB})
 
 # OpenCV
 SET(OpenCV_DIR "${PROJECT_SOURCE_DIR}/thirdparty/opencv")
-SET(OpenCV_VERSION "331" CACHE STRING "Version of OpenCV to use.")
+SET(OpenCV_VERSION "400" CACHE STRING "Version of OpenCV to use.")
 SET(OpenCV_LIBS
-	debug "${OpenCV_DIR}/lib/Debug/opencv_calib3d${OpenCV_VERSION}d.lib"
-	optimized "${OpenCV_DIR}/lib/Release/opencv_calib3d${OpenCV_VERSION}.lib"
-	debug "${OpenCV_DIR}/lib/Debug/opencv_core${OpenCV_VERSION}d.lib"
-	optimized "${OpenCV_DIR}/lib/Release/opencv_core${OpenCV_VERSION}.lib"
-	debug "${OpenCV_DIR}/lib/Debug/opencv_highgui${OpenCV_VERSION}d.lib"
-	optimized "${OpenCV_DIR}/lib/Release/opencv_highgui${OpenCV_VERSION}.lib"
-	debug "${OpenCV_DIR}/lib/Debug/opencv_imgcodecs${OpenCV_VERSION}d.lib"
-	optimized "${OpenCV_DIR}/lib/Release/opencv_imgcodecs${OpenCV_VERSION}.lib"
-	debug "${OpenCV_DIR}/lib/Debug/opencv_imgproc${OpenCV_VERSION}d.lib"
-	optimized "${OpenCV_DIR}/lib/Release/opencv_imgproc${OpenCV_VERSION}.lib"
+	debug "${OpenCV_DIR}/lib/Debug/opencv_world${OpenCV_VERSION}d.lib"
+	optimized "${OpenCV_DIR}/lib/Release/opencv_world${OpenCV_VERSION}.lib"
 	debug "${OpenCV_DIR}/3rdparty/lib/Debug/libpngd.lib"
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libpng.lib"
 	debug "${OpenCV_DIR}/3rdparty/lib/Debug/zlibd.lib"
@@ -64,8 +56,8 @@ include_directories("${OpenCV_DIR}/include")
 include_directories("${OpenCV_DIR}/3rdparty/include")
 
 # intel IPP
-include_directories("${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_331/include")
-include_directories("${OpenCV_DIR}/3rdparty/ippicv/ippiw_win_331/include")
+include_directories("${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_${OpenCV_VERSION}/include")
+include_directories("${OpenCV_DIR}/3rdparty/ippicv/ippiw_win_${OpenCV_VERSION}/include")
 
 # smll
 include_directories("smll")
