@@ -1094,6 +1094,14 @@ public:
      */
     CV_WRAP void getTriangleList(CV_OUT std::vector<Vec6f>& triangleList) const;
 
+	/** @brief Returns a list of all triangles as indices into vertex list.
+
+	@param triangleIndexList Output vector.
+
+	The function gives each triangle as 3 indices stored in a 3 number vector.
+	*/
+	CV_WRAP void getTriangleIndexList(CV_OUT std::vector<Vec3i>& triangleIndexList) const;
+
     /** @brief Returns a list of all Voroni facets.
 
     @param idx Vector of vertices IDs to consider. For all vertices you can pass empty vector.
