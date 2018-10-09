@@ -136,7 +136,7 @@
 #define HAVE_OPENEXR
 
 /* OpenGL support*/
-#define HAVE_OPENGL
+/* #undef HAVE_OPENGL */
 
 /* OpenNI library */
 /* #undef HAVE_OPENNI */
