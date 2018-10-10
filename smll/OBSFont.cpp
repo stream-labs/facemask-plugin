@@ -40,7 +40,7 @@
 #include <libobs/graphics/matrix4.h>
 #include <libobs/graphics/image-file.h>
 #include <tiny_obj_loader.h>
-#include "utils.h"
+#include "plugin/utils.h"
 #include <opencv2/opencv.hpp>
 
 #pragma warning( pop )
@@ -171,7 +171,6 @@ namespace smll {
 		std::wstring::const_iterator c;
 		for (c = text.begin(); c != text.end(); c++) {
 			FT_ULong character = *c;
-			FT_UInt index;
 			FT_Face curr_face = face;
 			std::pair<FT_ULong, int> charPair(character, size);
 
@@ -190,7 +189,6 @@ namespace smll {
 			}
 
 			float  glyph_height = (float)curr_face->glyph->metrics.height / 64.0f;
-			float  height = m_heights[size];
 			if (m_heights.find(size) == m_heights.end() ||  glyph_height > m_heights[size])
 				m_heights[size] = glyph_height;
 
@@ -201,11 +199,6 @@ namespace smll {
 				m_gl_heights[size] = curr_face->glyph->bitmap.rows;
 
 			// figure a reasonable width
-			int reasonable_width = size * 10;
-			int actual_width = 0;
-			int row_height = 0;
-			int x = 0;
-			int y = 1;
 			if (do_render && index_char != 0) {
 				FontInfo fi;
 				vec2_set(&(fi.size), (float)curr_face->glyph->bitmap.width, (float)curr_face->glyph->bitmap.rows);

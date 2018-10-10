@@ -143,10 +143,9 @@ namespace smll {
 		for (int i = 0; i < 3; i++) {
 			v += translation[i] * translation[i];
 		}
-		if (v < 1.0)
+		if (v < 1.0 || v > 10000.0)
 			return false;
-		if (v > 10000.0)
-			return false;
+		
 		return true;
 	}
 
@@ -278,7 +277,7 @@ namespace smll {
 
 
 	DetectionResult::DetectionResult() 
-		: matched(false), numFramesLost(0), kalmanFiltersInitialized(false) {
+		: matched(false), numFramesLost(0), kalmanFiltersInitialized(false), initedStartPose(false) {
 
 	}
 
@@ -288,16 +287,14 @@ namespace smll {
 	DetectionResult& DetectionResult::operator=(const DetectionResult& r) {
 		bounds = r.bounds;
 		pose.CopyPoseFrom(r.pose);
-		//for (int i = 0; i < FIVE_LANDMARK_NUM_LANDMARKS; i++) {
-		//	landmarks5[i] = r.landmarks5[i];
-		//}
+		
 		for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
 			landmarks68[i] = r.landmarks68[i];
 		}
 		CheckForPoseFlip(pose.rotation, pose.translation);
 
 		kalmanFiltersInitialized = false;
-
+		initedStartPose = false;
 		return *this;
 	}
 
@@ -340,6 +337,13 @@ namespace smll {
 		pose.ResetPose();
 	}
 
+	void DetectionResult::InitStartPose() {
+		if (!initedStartPose) {
+			startPose.CopyPoseFrom(pose);
+			initedStartPose = true;
+		}
+	}
+
 	void DetectionResult::UpdateResultsFrom(const DetectionResult& r) {
 
 		if (!kalmanFiltersInitialized) {
@@ -374,9 +378,7 @@ namespace smll {
 
 		// copy values
 		bounds = bnd;
-		//for (int i = 0; i < FIVE_LANDMARK_NUM_LANDMARKS; i++) {
-		//	landmarks5[i] = r.landmarks5[i];
-		//}
+		
 		for (int i = 0; i < smll::NUM_FACIAL_LANDMARKS; i++) {
 			landmarks68[i] = r.landmarks68[i];
 		}

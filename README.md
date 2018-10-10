@@ -12,87 +12,22 @@ A libOBS filter plugin that detects faces and draws masks with the detected data
 
   [microsoft](https://www.visualstudio.com/vs/older-downloads/)
 
-* Download dlib:
-
-  [dlib](https://github.com/davisking/dlib)
-
 * Download our fork of OBS Studio:
 
   [obs-studio](https://github.com/stream-labs/obs-studio)
-
-* Download freetype:
-
-  [freetype](https://www.freetype.org/download.html)
   
 * Build obs-studio
 	* Follow the build instructions here:
     
     [build instructions](https://github.com/obsproject/obs-studio/wiki/Install-Instructions#windows-build-directions)
     
-* Configure freetype.
-
-	You will need to turn off a bunch of options in freetype, because we don't need them. 
-    * Edit **freetype/include/freetype/config/ftmodule.h**, and comment out all the lines, except for the truetype driver, names, and rendering modules:
-    
-    ```C
-    FT_USE_MODULE( FT_Module_Class, autofit_module_class )
-    FT_USE_MODULE( FT_Driver_ClassRec, tt_driver_class )
-    //FT_USE_MODULE( FT_Driver_ClassRec, t1_driver_class )
-    //FT_USE_MODULE( FT_Driver_ClassRec, cff_driver_class )
-    //FT_USE_MODULE( FT_Driver_ClassRec, t1cid_driver_class )
-    //FT_USE_MODULE( FT_Driver_ClassRec, pfr_driver_class )
-    //FT_USE_MODULE( FT_Driver_ClassRec, t42_driver_class )
-    //FT_USE_MODULE( FT_Driver_ClassRec, winfnt_driver_class )
-    //FT_USE_MODULE( FT_Driver_ClassRec, pcf_driver_class )
-    //FT_USE_MODULE( FT_Module_Class, psaux_module_class )
-    FT_USE_MODULE( FT_Module_Class, psnames_module_class )
-    //FT_USE_MODULE( FT_Module_Class, pshinter_module_class )
-    //FT_USE_MODULE( FT_Renderer_Class, ft_raster1_renderer_class )
-    FT_USE_MODULE( FT_Module_Class, sfnt_module_class )
-    FT_USE_MODULE( FT_Renderer_Class, ft_smooth_renderer_class )
-    //FT_USE_MODULE( FT_Renderer_Class, ft_smooth_lcd_renderer_class )
-    //FT_USE_MODULE( FT_Renderer_Class, ft_smooth_lcdv_renderer_class )
-    //FT_USE_MODULE( FT_Driver_ClassRec, bdf_driver_class )
-    ```
-	* Edit **freetype/include/freetype/config/ftoption.h**, and comment out the lines:
-    
-    ```C
-    //#define FT_CONFIG_OPTION_USE_LZW
-    
-    ...
-    
-    //#define FT_CONFIG_OPTION_USE_ZLIB
-    
-    ...
-    
-    //#define FT_CONFIG_OPTION_MAC_FONTS
-    ```
-    
 
 * Run cmake in the facemasks folder. When you hit `CONFIGURE`, you will get errors on fields you need to fill in:
 
-    **PATH_DLIB** Path to the Dlib folder
 
     **PATH_OBS_STUDIO** Path to the obs-studio folder.
-    
-    **PATH_FREETYPE** Path to the freetype folder.
-
-    You will also want to turn on AVX:
-
-    **USE_AVX_INSTRUCTIONS**
-
-    It will default to SSE2, but setting to SSE4 or AVX is much faster. 
-
-    You'll probably want to set these too:
-
-    **DLIB_NO_GUI_SUPPORT** - don't need it
-
-    **DLIB_USE_CUDA** - turn it off.
 
     **BUILD_SLOBS** - Distributes to slobs instead of OBS Studio
-
-    **DLIB_GIF_SUPPORT** - don't need it
-    **DLIB_JPEG_SUPPORT** - don't need it
 
     If you have the [Intel Math Kernel Library](https://software.intel.com/en-us/mkl) installed on your system, you might have **DLIB_USE_BLAS** or **DLIB_USE_LAPACK** turned on. Keep in mind that dlib links dynamically with these libs, so the MKL and TBB dlls will need to be found by slobs when it runs (for instance, by copying them into the slobs-client folder). I don't reccommend using these libs for this reason.
 
@@ -229,3 +164,14 @@ Turn ON the **'Command Line Clients Tool'** option during the installation
     * Push **Done** and wait, thumbnails will be generated in the Demo Folder
 
 *Note: if you want to regenerate existing mask, restart the program and remove associated thumbnails from the demo folder*
+
+
+## Unit Testing
+
+For Unit Testing CppUtest framework is used.
+* Clone CppUtest:
+	[CppUtest](https://github.com/cpputest/cpputest)
+* During building the facemaks project with CMAKE:
+	* Set **BUILD_UNIT_TESTS** option *ON*
+	* Set **PATH_CPP_UTEST** Path to the cpputest folder
+	* Build and Run the *facemask-plugin-test* project, it will show the report of tests
