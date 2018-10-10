@@ -188,6 +188,7 @@ SET(smll_HEADERS
 	"${SMLLDir}/sarray.hpp"
 	"${SMLLDir}/TextShaper.hpp"
 	"${SMLLDir}/TriangulationResult.hpp"
+	"${SMLLDir}/TestingPipe.hpp"
 	"${SMLLDir}/SingleValueKalman.hpp"
 )
 SET(gs_HEADERS
@@ -240,6 +241,7 @@ SET(smll_SOURCES
 	"${SMLLDir}/MorphData.cpp"
 	"${SMLLDir}/TextShaper.cpp"
 	"${SMLLDir}/TriangulationResult.cpp"
+	"${SMLLDir}/TestingPipe.cpp"
 	"${SMLLDir}/SingleValueKalman.cpp"
 )
 SET(gs_SOURCES

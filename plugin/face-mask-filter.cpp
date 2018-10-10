@@ -24,6 +24,7 @@
 
 #include <smll/Face.hpp>
 #include <smll/Config.hpp>
+#include <smll/TestingPipe.hpp>
 #include <smll/landmarks.hpp>
 
 
@@ -149,7 +150,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	demoModeOn(false), demoCurrentMask(0),
 	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), 
 	drawMask(true),	drawAlert(false), drawFaces(false), drawMorphTris(false), drawFDRect(false), 
-	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr) {
+	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr), testMode(false) {
 
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
 
@@ -210,9 +211,20 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 
 Plugin::FaceMaskFilter::Instance::~Instance() {
 	PLOG_DEBUG("<%" PRIXPTR "> Finalizing...", this);
+	smll::TestingPipe* T = nullptr;
 
+	if (testMode) {
+		T = &smll::TestingPipe::singleton();
+	}
+	
 	// kill the thread
-	maskDataShutdown = true;
+	if (T) {
+		T->SendString("stopping threads");
+	}
+	{
+		std::unique_lock<std::mutex> lock(maskDataMutex);
+		maskDataShutdown = true;
+	}
 	PLOG_DEBUG("<%" PRIXPTR "> Stopping worker Threads...", this);
 	{
 		std::unique_lock<std::mutex> lock(detection.mutex);
@@ -221,6 +233,9 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 	// wait for them to die
 	detection.thread.join();
 	maskDataThread.join();
+	if (T) {
+		T->SendString("threads stopped");
+	}
 	PLOG_DEBUG("<%" PRIXPTR "> Worker Thread stopped.", this);
 
 	obs_enter_graphics();
@@ -252,6 +267,10 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 	}
 
 	PLOG_DEBUG("<%" PRIXPTR "> Finalized.", this);
+	if (T) {
+		T->SendString("filter destroyed");
+		T->ClosePipe();
+	}
 }
 
 uint32_t Plugin::FaceMaskFilter::Instance::get_width(void *ptr) {
@@ -303,14 +322,10 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 
 	obs_data_set_default_bool(data, P_CARTOON, false);
 	obs_data_set_default_bool(data, P_BGREMOVAL, false);
+	obs_data_set_default_bool(data, P_TEST_MODE, false);
 
 	obs_data_set_default_bool(data, P_GENTHUMBS, false);
-
-#ifdef PUBLIC_RELEASE
 	obs_data_set_default_bool(data, P_DRAWMASK, false);
-#else
-	obs_data_set_default_bool(data, P_DRAWMASK, true);
-#endif
 	obs_data_set_default_bool(data, P_DRAWALERT, false);
 	obs_data_set_default_bool(data, P_DRAWFACEDATA, false);
 	obs_data_set_default_bool(data, P_DRAWMORPHTRIS, false);
@@ -394,6 +409,7 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 	add_float_slider(props, P_ALERT_MIN_SIZE, 0.0f, 1.0f, 0.01f);
 	add_float_slider(props, P_ALERT_MAX_SIZE, 0.0f, 1.0f, 0.01f);
 
+	add_bool_property(props, P_TEST_MODE);
 #if !defined(PUBLIC_RELEASE)
 
 	// force mask/alert drawing
@@ -493,6 +509,7 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	// Flags
 	autoBGRemoval = obs_data_get_bool(data, P_BGREMOVAL);
 	cartoonMode = obs_data_get_bool(data, P_CARTOON);
+	testMode = obs_data_get_bool(data, P_TEST_MODE);
 
 	// Alerts
 	bool lastAlertActivate = alertActivate;
@@ -1036,6 +1053,42 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		}
 
 		mask_tex = gs_texrender_get_texture(drawTexRender);
+	}
+
+	if (testMode) {
+		if (faces.length > 0) {
+
+			dlib::point pos = faces[0].GetPosition();
+			smll::ThreeDPose pose = faces[0].pose;
+
+			if (!testingStage) {
+				testingStage = gs_stagesurface_create(baseWidth, baseHeight, GS_RGBA);
+			}
+			gs_stage_texture(testingStage, mask_tex);
+			uint8_t *data; uint32_t linesize;
+			if (gs_stagesurface_map(testingStage, &data, &linesize)) {
+
+				uint8_t* pixel = data + (pos.y() * linesize) + (pos.x() * 4);
+				uint8_t red = *pixel++;
+				uint8_t green = *pixel++;
+				uint8_t blue = *pixel++;
+				uint8_t alpha = *pixel++;
+
+				char buf[128];
+				snprintf(buf, sizeof(buf), "detected pixel %d,%d,%d,%d",
+					(int)red, (int)green, (int)blue, (int)alpha);
+				smll::TestingPipe::singleton().SendString(buf);
+
+				snprintf(buf, sizeof(buf), "Pose Translations %d,%d,%d",
+					(int)pose.translation[0], (int)pose.translation[1], (int)pose.translation[2]);
+				smll::TestingPipe::singleton().SendString(buf);
+
+				snprintf(buf, sizeof(buf), "Mask %s", maskFilename.c_str());
+				smll::TestingPipe::singleton().SendString(buf);
+
+				gs_stagesurface_unmap(testingStage);
+			}
+		}
 	}
 
 	// render alert to texture
@@ -1835,11 +1888,13 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 
 	// Loading loop
 	bool lastDemoMode = false; 
-	while (!maskDataShutdown) {
+	while (true) {
 		{
 			std::unique_lock<std::mutex> lock(maskDataMutex, std::try_to_lock);
 			if (lock.owns_lock()) {
-
+				if (maskDataShutdown) {
+					break;
+				}
 				// time to load mask?
 				if ((maskData == nullptr) &&
 					maskFilename.length() > 0) {
@@ -2023,6 +2078,19 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 
 			// new detected faces
 			smll::DetectionResults& newFaces = detection.faces[fidx].detectionResults;
+
+			// TEST MODE ONLY : output for testing
+			if (testMode) {
+				char b[128];
+				snprintf(b, sizeof(b), "%d faces detected", newFaces.length);
+				smll::TestingPipe::singleton().SendString(b);
+				for (int i = 0; i < newFaces.length; i++) {
+
+					dlib::point pos = newFaces[i].GetPosition();
+					snprintf(b, sizeof(b), "face detected at %ld,%ld", pos.x(), pos.y());
+					smll::TestingPipe::singleton().SendString(b);
+				}
+			}
 
 			if (STUFF_ON_MAIN_THREAD) {
 				// Find the cached frame for these results

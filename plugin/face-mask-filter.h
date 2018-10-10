@@ -204,6 +204,8 @@ namespace Plugin {
 			gs_rect				alertViewport;
 			vec2				smoothCenter;
 
+			//test mode
+			bool				testMode;
 			// demo mode
 			bool				demoModeOn;
 			std::string			demoModeFolder;
