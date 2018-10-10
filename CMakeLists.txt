@@ -33,6 +33,26 @@ endif()
 include(${PATH_DLIB}/dlib/cmake)
 include_directories(${PATH_DLIB})
 
+OPTION(BUILD_UNIT_TESTS "Build Unit tests for facemask plugin" OFF)
+
+if(BUILD_UNIT_TESTS)
+	# CPPUTEST
+	SET(PATH_CPP_UTEST "" CACHE PATH "CPPUtest test framework")
+	SET(EXTENSIONS OFF CACHE BOOL "Use the CppUTest extenstion library" FORCE)
+	SET(TESTS OFF CACHE BOOL "Compile and make tests for the code?" FORCE)
+	if(PATH_CPP_UTEST STREQUAL "")
+		message(FATAL_ERROR "PATH_CPP_UTEST not set!")
+		return()
+	endif()
+	if(NOT EXISTS "${PATH_CPP_UTEST}/include/CppUTest/MemoryLeakDetectorNewMacros.h")
+		message(FATAL_ERROR "PATH_CPP_UTEST is invalid!")
+		return()
+	endif()
+
+	add_subdirectory(${PATH_CPP_UTEST} ${PATH_CPP_UTEST})
+	include_directories(${PATH_CPP_UTEST})
+endif()
+
 # OpenCV
 SET(OpenCV_DIR "${PROJECT_SOURCE_DIR}/thirdparty/opencv")
 SET(OpenCV_VERSION "331" CACHE STRING "Version of OpenCV to use.")
@@ -257,6 +277,20 @@ SET(facemask-plugin_SOURCES
 	"${smll_SOURCES}"
 	"${freetype_SOURCES}"
 )
+if(BUILD_UNIT_TESTS)
+	SET(facemask-plugin_TEST_SOURCES
+		"${PROJECT_SOURCE_DIR}/test/test.cpp"
+		"${PROJECT_SOURCE_DIR}/test/test-utils.cpp"
+		"${PROJECT_SOURCE_DIR}/test/test-image.cpp"
+		"${PROJECT_SOURCE_DIR}/test/test-kalman.cpp"
+		"${PROJECT_SOURCE_DIR}/test/test-base64.cpp"
+		"${PROJECT_SOURCE_DIR}/plugin/base64.cpp"
+		"${PROJECT_SOURCE_DIR}/plugin/exceptions.cpp"
+		"${PROJECT_SOURCE_DIR}/plugin/utils.cpp"
+		"${SMLLDir}/ImageWrapper.cpp"
+		"${SMLLDir}/SingleValueKalman.cpp"
+	)
+endif()
 SET(facemask-plugin_DATA
 	"${PROJECT_SOURCE_DIR}/data/effects/color_alpha_tex.effect"
 	"${PROJECT_SOURCE_DIR}/data/effects/color_conversion.effect"
@@ -314,11 +348,21 @@ ADD_LIBRARY(facemask-plugin MODULE
 	${facemask-plugin_DATA}
 )
 
+
 if(FACEMASK_EXTERNAL)
 	TARGET_LINK_LIBRARIES(facemask-plugin
 		${LIBOBS_LIBRARIES}
 		${facemask-plugin_LIBRARIES}
 	)
+	
+	if(BUILD_UNIT_TESTS)
+		add_executable(facemask-plugin-test
+			${facemask-plugin_TEST_SOURCES}
+		)
+		TARGET_LINK_LIBRARIES(facemask-plugin-test
+			${facemask-plugin_LIBRARIES} CppUTest
+		)
+	endif()	
 else()
 	TARGET_LINK_LIBRARIES(facemask-plugin
 		libobs
