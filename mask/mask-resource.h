@@ -69,6 +69,7 @@ namespace Mask {
 			virtual void Update(Mask::Part* part, float time) = 0;
 			virtual void Render(Mask::Part* part) = 0;
 			virtual bool IsDepthOnly() { return false; }
+			virtual bool IsStatic() { return false; }
 
 		protected:
 			Mask::MaskData* m_parent;

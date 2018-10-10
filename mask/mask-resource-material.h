@@ -42,6 +42,7 @@ namespace Mask {
 			bool Loop(Mask::Part* part, BonesList* bones = nullptr);
 
 			bool IsDepthOnly() override { return m_depthOnly; }
+			bool IsStatic() override { return m_static; }
 			bool IsOpaque() { return m_opaque; }
 			bool WriteAlpha() { return m_alphaWrite; }
 
@@ -79,6 +80,7 @@ namespace Mask {
 			gs_sample_filter m_filter;
 			std::array<size_t, 8> m_lightIds;
 			bool m_depthOnly;
+			bool m_static;
 			bool m_opaque;
 			bool m_alphaWrite;
 
