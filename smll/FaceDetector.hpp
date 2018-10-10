@@ -44,6 +44,12 @@
 #include <dlib/image_processing/frontal_face_detector.h>
 #include <dlib/image_processing.h>
 #include <libobs/graphics/graphics.h>
+#include "OBSRenderer.hpp"
+#include <libobs/obs-module.h>
+#include <dlib/opencv.h>
+#include <vector>
+#include <codecvt>
+#include <opencv2/opencv.hpp>
 #pragma warning( pop )
 
 namespace smll {
@@ -99,8 +105,7 @@ private:
 	// dlib HOG face detector
 	dlib::frontal_face_detector		m_detector;
 
-	// dlib landmark predictors (5 and 68 point)
-	//dlib::shape_predictor			m_predictor5;
+	// dlib landmark predictors (68 point)
 	dlib::shape_predictor			m_predictor68;
 
 	// openCV camera (saved for convenience)
@@ -119,6 +124,23 @@ private:
     void    DoFaceDetection();
     void    StartObjectTracking();
     void    UpdateObjectTracking();
+	
+	struct CropInfo {
+		int x, y;
+		int width, height;
+		int offsetX, offsetY;
+
+		CropInfo(int x, int y, int width, int height) :
+			x(x), y(y), width(width), height(height) {
+			// Cropping Offset
+			offsetX = x - width / 2;
+			offsetY = y - height / 2;
+		}
+	};
+	CropInfo	GetCropInfo();
+	// Current Image
+	cv::Mat currentImage;
+	void computeCurrentImage(const ImageWrapper& detect);
 
 	// Staging the capture texture
 	void 	StageCaptureTexture();

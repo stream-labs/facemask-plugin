@@ -19,7 +19,7 @@
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include <CppUTest/TestHarness.h>
-#include "utils.h"
+#include "Plugin/utils.h"
 #include <cmath>
 
 TEST_GROUP(UtilsTest) {};

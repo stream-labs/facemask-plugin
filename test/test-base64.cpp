@@ -19,7 +19,7 @@
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include <CppUTest/TestHarness.h>
-#include "base64.h"
+#include "Plugin/base64.h"
 #include <cmath>
 
 TEST_GROUP(base64Test) {};

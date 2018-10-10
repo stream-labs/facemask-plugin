@@ -26,7 +26,7 @@ namespace smll {
 
 typedef enum ImageType
 {
-	IMAGETYPE_LUMA,
+	IMAGETYPE_GRAY,
 	IMAGETYPE_RGB,
 	IMAGETYPE_BGR,
 	IMAGETYPE_RGBA,
