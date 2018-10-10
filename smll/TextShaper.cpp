@@ -31,7 +31,7 @@
 #include <libobs/obs-module.h>
 #include <libobs/graphics/matrix4.h>
 #include <libobs/graphics/image-file.h>
-#include "utils.h"
+#include "plugin/utils.h"
 #include <opencv2/opencv.hpp>
 
 #define WORD_SPLIT_SIZE_LIMIT	 (20)

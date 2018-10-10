@@ -2,13 +2,13 @@ cmake_minimum_required(VERSION 2.8.12)
 PROJECT(facemask-plugin)
 math(EXPR BITS "8*${CMAKE_SIZEOF_VOID_P}")
 
-SET(PATH_DLIB "${CMAKE_CURRENT_SOURCE_DIR}/dlib")
+SET(PATH_DLIB "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dlib")
 set(USE_AVX_INSTRUCTIONS ON CACHE BOOL "Use AVX instructions" FORCE)
 set(DLIB_NO_GUI_SUPPORT OFF CACHE STRING "DLib GUI support" FORCE)
 set(DLIB_GIF_SUPPORT OFF CACHE STRING "DLib GIF support" FORCE)
 set(DLIB_JPEG_SUPPORT OFF CACHE STRING "DLib JPEG support"  FORCE)
 
-SET(PATH_FREETYPE "${CMAKE_CURRENT_SOURCE_DIR}/freetype2")
+SET(PATH_FREETYPE "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/freetype2")
 
 if(TARGET libobs)
 	set(FACEMASK_EXTERNAL FALSE)
@@ -171,37 +171,37 @@ SET(smll_HEADERS
 	"${SMLLDir}/SingleValueKalman.hpp"
 )
 SET(gs_HEADERS
-	"${PROJECT_SOURCE_DIR}/gs-effect.h"
-	"${PROJECT_SOURCE_DIR}/gs-vertex.h"
-	"${PROJECT_SOURCE_DIR}/gs-vertexbuffer.h"
-	"${PROJECT_SOURCE_DIR}/gs-indexbuffer.h"
-	"${PROJECT_SOURCE_DIR}/gs-rendertarget.h"
-	"${PROJECT_SOURCE_DIR}/gs-texture.h"
+	"${PROJECT_SOURCE_DIR}/gs/gs-effect.h"
+	"${PROJECT_SOURCE_DIR}/gs/gs-vertex.h"
+	"${PROJECT_SOURCE_DIR}/gs/gs-vertexbuffer.h"
+	"${PROJECT_SOURCE_DIR}/gs/gs-indexbuffer.h"
+	"${PROJECT_SOURCE_DIR}/gs/gs-rendertarget.h"
+	"${PROJECT_SOURCE_DIR}/gs/gs-texture.h"
 )
 SET(mask_HEADERS
-	"${PROJECT_SOURCE_DIR}/mask.h"
-	"${PROJECT_SOURCE_DIR}/mask-instance-data.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource-animation.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource-image.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource-sequence.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource-effect.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource-light.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource-material.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource-mesh.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource-model.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource-morph.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource-skinned-model.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource-sound.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource-emitter.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-instance-data.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-animation.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-image.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-sequence.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-effect.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-light.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-material.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-mesh.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-model.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-morph.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-skinned-model.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-sound.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-emitter.h"
 )
 SET(facemask-plugin_HEADERS
-	"${PROJECT_SOURCE_DIR}/base64.h"
-	"${PROJECT_SOURCE_DIR}/exceptions.h"
-	"${PROJECT_SOURCE_DIR}/face-mask-filter.h"
-	"${PROJECT_SOURCE_DIR}/plugin.h"
-	"${PROJECT_SOURCE_DIR}/strings.h"
-	"${PROJECT_SOURCE_DIR}/utils.h"
+	"${PROJECT_SOURCE_DIR}/plugin/base64.h"
+	"${PROJECT_SOURCE_DIR}/plugin/exceptions.h"
+	"${PROJECT_SOURCE_DIR}/plugin/face-mask-filter.h"
+	"${PROJECT_SOURCE_DIR}/plugin/plugin.h"
+	"${PROJECT_SOURCE_DIR}/plugin/strings.h"
+	"${PROJECT_SOURCE_DIR}/plugin/utils.h"
 	"${PROJECT_BINARY_DIR}/version.h"
 	"${TINYOBJDir}/tiny_obj_loader.h"
 	"${gs_HEADERS}"
@@ -223,34 +223,34 @@ SET(smll_SOURCES
 	"${SMLLDir}/SingleValueKalman.cpp"
 )
 SET(gs_SOURCES
-	"${PROJECT_SOURCE_DIR}/gs-effect.cpp"
-	"${PROJECT_SOURCE_DIR}/gs-indexbuffer.cpp"
-	"${PROJECT_SOURCE_DIR}/gs-vertexbuffer.cpp"
-	"${PROJECT_SOURCE_DIR}/gs-rendertarget.cpp"
-	"${PROJECT_SOURCE_DIR}/gs-texture.cpp"
+	"${PROJECT_SOURCE_DIR}/gs/gs-effect.cpp"
+	"${PROJECT_SOURCE_DIR}/gs/gs-indexbuffer.cpp"
+	"${PROJECT_SOURCE_DIR}/gs/gs-vertexbuffer.cpp"
+	"${PROJECT_SOURCE_DIR}/gs/gs-rendertarget.cpp"
+	"${PROJECT_SOURCE_DIR}/gs/gs-texture.cpp"
 )
 SET(mask_SOURCES
-	"${PROJECT_SOURCE_DIR}/mask.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource-animation.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource-image.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource-sequence.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource-effect.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource-light.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource-material.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource-mesh.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource-model.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource-morph.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource-skinned-model.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource-sound.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource-emitter.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-animation.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-image.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-sequence.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-effect.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-light.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-material.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-mesh.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-model.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-morph.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-skinned-model.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-sound.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-emitter.cpp"
 )
 SET(facemask-plugin_SOURCES
-	"${PROJECT_SOURCE_DIR}/base64.cpp"
-	"${PROJECT_SOURCE_DIR}/exceptions.cpp"
-	"${PROJECT_SOURCE_DIR}/face-mask-filter.cpp"
-	"${PROJECT_SOURCE_DIR}/plugin.cpp"
-	"${PROJECT_SOURCE_DIR}/utils.cpp"
+	"${PROJECT_SOURCE_DIR}/plugin/base64.cpp"
+	"${PROJECT_SOURCE_DIR}/plugin/exceptions.cpp"
+	"${PROJECT_SOURCE_DIR}/plugin/face-mask-filter.cpp"
+	"${PROJECT_SOURCE_DIR}/plugin/plugin.cpp"
+	"${PROJECT_SOURCE_DIR}/plugin/utils.cpp"
 	"${TINYOBJDir}/tiny_obj_loader.cc"
 	"${gs_SOURCES}"
 	"${mask_SOURCES}"
