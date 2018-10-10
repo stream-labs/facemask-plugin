@@ -164,3 +164,14 @@ Turn ON the **'Command Line Clients Tool'** option during the installation
     * Push **Done** and wait, thumbnails will be generated in the Demo Folder
 
 *Note: if you want to regenerate existing mask, restart the program and remove associated thumbnails from the demo folder*
+
+
+## Unit Testing
+
+For Unit Testing CppUtest framework is used.
+* Clone CppUtest:
+	[CppUtest](https://github.com/cpputest/cpputest)
+* During building the facemaks project with CMAKE:
+	* Set **BUILD_UNIT_TESTS** option *ON*
+	* Set **PATH_CPP_UTEST** Path to the cpputest folder
+	* Build and Run the *facemask-plugin-test* project, it will show the report of tests

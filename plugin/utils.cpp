@@ -170,7 +170,7 @@ namespace Utils {
 
 
 	std::string dirname(const std::string &p) {
-		size_t e = p.length() - 1;
+		int e = p.length() - 1;
 		const char* pch = p.c_str();
 		while (e >= 0) {
 			if (pch[e] == '/' || pch[e] == '\\')
@@ -223,7 +223,7 @@ namespace Utils {
 		if (!p) return 0;
 		int count = 0;
 		while (*p) {
-			if (*p == ' ')
+			if (*p++ == ' ')
 				count++;
 		}
 		return count;

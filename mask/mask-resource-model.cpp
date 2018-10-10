@@ -116,6 +116,13 @@ bool Mask::Resource::Model::IsDepthOnly() {
 	return false;
 }
 
+bool Mask::Resource::Model::IsStatic() {
+	if (m_material != nullptr) {
+		return m_material->IsStatic();
+	}
+	return false;
+}
+
 bool Mask::Resource::Model::IsOpaque() {
 	// note: depth only objects are considered opaque
 	if (IsDepthOnly()) {

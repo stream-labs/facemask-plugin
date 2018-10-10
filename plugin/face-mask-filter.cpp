@@ -906,6 +906,11 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		// only render once per video tick
 		if (videoTicked) {
 
+			//init start pose for static masks
+			for (int i = 0; i < faces.length; i++) {
+				faces[i].InitStartPose();
+			}
+
 			// draw mask to texture
 			gs_texrender_reset(drawTexRender);
 			if (gs_texrender_begin(drawTexRender, baseWidth, baseHeight)) {
@@ -935,8 +940,13 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					// Draw depth-only stuff
 					for (int i = 0; i < faces.length; i++) {
 						gs_matrix_push();
-						setFaceTransform(faces[i], mask_data->IsIntroAnimation());
-						drawMaskData(mask_data, true, false);
+						setFaceTransform(faces[i].startPose, mask_data->IsIntroAnimation());
+						drawMaskData(mask_data, true, true, false);
+						gs_matrix_pop();
+
+						gs_matrix_push();
+						setFaceTransform(faces[i].pose, mask_data->IsIntroAnimation());
+						drawMaskData(mask_data, true, false, false);
 						gs_matrix_pop();
 					}
 
@@ -987,8 +997,13 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					for (int i = 0; i < faces.length; i++) {
 						if (maskAlpha > 0.0f) {
 							gs_matrix_push();
-							setFaceTransform(faces[i], mask_data->IsIntroAnimation());
-							drawMaskData(mask_data, false, false);
+							setFaceTransform(faces[i].startPose, mask_data->IsIntroAnimation());
+							drawMaskData(mask_data, false, true, false);
+							gs_matrix_pop();
+
+							gs_matrix_push();
+							setFaceTransform(faces[i].pose, mask_data->IsIntroAnimation());
+							drawMaskData(mask_data, false, false, false);
 							gs_matrix_pop();
 						}
 					}
@@ -999,14 +1014,14 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					for (int i = 0; i < faces.length; i++) {
 						if (introActive) {
 							gs_matrix_push();
-							setFaceTransform(faces[i], true);
-							drawMaskData(introData.get(), false, false);
+							setFaceTransform(faces[i].pose, true);
+							drawMaskData(introData.get(), false, false, false);
 							gs_matrix_pop();
 						}
 						if (outroActive) {
 							gs_matrix_push();
-							setFaceTransform(faces[i], true);
-							drawMaskData(outroData.get(), false, false);
+							setFaceTransform(faces[i].pose, true);
+							drawMaskData(outroData.get(), false, false, false);
 							gs_matrix_pop();
 						}
 					}
@@ -1086,7 +1101,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				gs_matrix_push();
 				gs_matrix_identity();
 				gs_matrix_translate3f(0.0f, 0.0f, alertTranslation);
-				drawMaskData(alertMaskDatas[currentAlertLocation].get(), false, true);
+				drawMaskData(alertMaskDatas[currentAlertLocation].get(), false, false, true);
 				gs_matrix_pop();
 
 				gs_texrender_end(alertTexRender);
@@ -1620,22 +1635,21 @@ void Plugin::FaceMaskFilter::Instance::setupRenderingState() {
 }
 
 
-void Plugin::FaceMaskFilter::Instance::setFaceTransform(const smll::DetectionResult& face, 
+void Plugin::FaceMaskFilter::Instance::setFaceTransform(const smll::ThreeDPose& pose,
 	bool billboard) {
 
 	gs_matrix_identity();
-	gs_matrix_translate3f((float)face.pose.translation[0],
-		(float)face.pose.translation[1], (float)-face.pose.translation[2]);
+	gs_matrix_translate3f((float)pose.translation[0],
+		(float)pose.translation[1], (float)-pose.translation[2]);
 	if (!billboard) {
-		gs_matrix_rotaa4f((float)face.pose.rotation[0], (float)face.pose.rotation[1],
-			(float)-face.pose.rotation[2], (float)-face.pose.rotation[3]);
+		gs_matrix_rotaa4f((float)pose.rotation[0], (float)pose.rotation[1],
+			(float)-pose.rotation[2], (float)-pose.rotation[3]);
 	}
 }
 
 
-
 void Plugin::FaceMaskFilter::Instance::drawMaskData(Mask::MaskData*	_maskData, 
-	bool depthOnly, bool isAlert) {
+	bool depthOnly, bool staticOnly, bool isAlert) {
 
 	gs_viewport_push();
 	gs_projection_push();
@@ -1654,7 +1668,7 @@ void Plugin::FaceMaskFilter::Instance::drawMaskData(Mask::MaskData*	_maskData,
 	float aspect = (float)w / (float)h;
 	gs_perspective(FOVA(aspect), aspect, NEAR_Z, FAR_Z);
 
-	_maskData->Render(depthOnly);
+	_maskData->Render(depthOnly, staticOnly);
 
 	gs_projection_pop();
 	gs_viewport_pop();

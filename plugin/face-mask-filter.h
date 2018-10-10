@@ -107,12 +107,12 @@ namespace Plugin {
 			void LoadDemo();
 			void drawCropRects(int width, int height);
 			void updateFaces();
-			void setFaceTransform(const smll::DetectionResult& face,
+			void setFaceTransform(const smll::ThreeDPose& pose,
 				bool billboard);
 			void setupRenderingState();
 			void getCanvasInfo();
 			void drawMaskData(Mask::MaskData*	maskData, bool depthOnly, 
-				bool isAlert);
+				bool staticOnly, bool isAlert);
 			gs_texture* RenderSourceTexture(gs_effect_t* effect);
 			bool SendSourceTextureToThread(gs_texture* sourceTexture);
 			void clearFramesActiveStatus();

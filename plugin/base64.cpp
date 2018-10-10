@@ -92,8 +92,8 @@ void base64_decodeZ(std::string const& encoded, std::vector<uint8_t>& decompress
 		memcpy(&destLenT,
 			decoded.data() + decoded.size() - sizeof(size_t), sizeof(size_t));
 
-		zlib::uLongf destLen = (zlib::uLongf)destLenT;
-		zlib::uLongf srcLen = (zlib::uLongf)(decoded.size() - sizeof(size_t));
+		zlib::uLongf destLen = zlib_size(decoded);
+		zlib::uLongf srcLen = decoded.size();
 
 		// now decompress with zlib
 		decompressed.resize(destLen);
@@ -110,10 +110,7 @@ size_t zlib_size(const std::vector<uint8_t>& decoded) {
 		((unsigned char*)decoded.data())[1] == ZLIB_BYTE2) {
 
 		// get original size from end of data
-		size_t destLenT;
-		memcpy(&destLenT,
-			decoded.data() + decoded.size() - sizeof(size_t), sizeof(size_t));
-
+		size_t destLenT = (zlib::uLongf)(decoded.size() - sizeof(size_t));;
 		return destLenT;
 	}
 	// not zlib data
@@ -126,12 +123,8 @@ void zlib_decode(const std::vector<uint8_t>& decoded, uint8_t* outbuf) {
 		((unsigned char*)decoded.data())[1] == ZLIB_BYTE2) {
 
 		// get original size from end of data
-		size_t destLenT;
-		memcpy(&destLenT,
-			decoded.data() + decoded.size() - sizeof(size_t), sizeof(size_t));
-
-		zlib::uLongf destLen = (zlib::uLongf)destLenT;
-		zlib::uLongf srcLen = (zlib::uLongf)(decoded.size() - sizeof(size_t));
+		zlib::uLongf destLen = zlib_size(decoded);
+		zlib::uLongf srcLen = decoded.size();
 
 		// now decompress with zlib
 		zlib::uncompress((zlib::Bytef*)outbuf, &destLen,

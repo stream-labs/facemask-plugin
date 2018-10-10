@@ -115,7 +115,7 @@ namespace Mask {
 
 		// main: tick & render
 		void Tick(float time);
-		void Render(bool depthOnly = false);
+		void Render(bool depthOnly = false, bool staticOnly = false);
 
 		// IAnimationControls
 		void	Play() override;
