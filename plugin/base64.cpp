@@ -70,7 +70,7 @@ void base64_decode(std::string const& encoded_string, std::vector<uint8_t>& ret)
 		char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
 		char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
 
-		for (j = 0; (j < i - 1); j++) 
+		for (j = 0; (j < i - 1); j++)
 			ret.push_back(char_array_3[j]);
 	}
 	// yield
@@ -92,8 +92,8 @@ void base64_decodeZ(std::string const& encoded, std::vector<uint8_t>& decompress
 		memcpy(&destLenT,
 			decoded.data() + decoded.size() - sizeof(size_t), sizeof(size_t));
 
-		zlib::uLongf destLen = zlib_size(decoded);
-		zlib::uLongf srcLen = decoded.size();
+		zlib::uLongf destLen = (zlib::uLongf)destLenT;
+		zlib::uLongf srcLen = (zlib::uLongf)(decoded.size() - sizeof(size_t));
 
 		// now decompress with zlib
 		decompressed.resize(destLen);
@@ -110,7 +110,10 @@ size_t zlib_size(const std::vector<uint8_t>& decoded) {
 		((unsigned char*)decoded.data())[1] == ZLIB_BYTE2) {
 
 		// get original size from end of data
-		size_t destLenT = (zlib::uLongf)(decoded.size() - sizeof(size_t));;
+		size_t destLenT;
+		memcpy(&destLenT,
+			decoded.data() + decoded.size() - sizeof(size_t), sizeof(size_t));
+
 		return destLenT;
 	}
 	// not zlib data
@@ -123,8 +126,12 @@ void zlib_decode(const std::vector<uint8_t>& decoded, uint8_t* outbuf) {
 		((unsigned char*)decoded.data())[1] == ZLIB_BYTE2) {
 
 		// get original size from end of data
-		zlib::uLongf destLen = zlib_size(decoded);
-		zlib::uLongf srcLen = decoded.size();
+		size_t destLenT;
+		memcpy(&destLenT,
+			decoded.data() + decoded.size() - sizeof(size_t), sizeof(size_t));
+
+		zlib::uLongf destLen = (zlib::uLongf)destLenT;
+		zlib::uLongf srcLen = (zlib::uLongf)(decoded.size() - sizeof(size_t));
 
 		// now decompress with zlib
 		zlib::uncompress((zlib::Bytef*)outbuf, &destLen,
@@ -133,5 +140,4 @@ void zlib_decode(const std::vector<uint8_t>& decoded, uint8_t* outbuf) {
 	// yield
 	::Sleep(0);
 }
-
 
