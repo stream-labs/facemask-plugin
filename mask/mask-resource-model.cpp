@@ -123,6 +123,13 @@ bool Mask::Resource::Model::IsStatic() {
 	return false;
 }
 
+bool Mask::Resource::Model::IsRotationDisabled() {
+	if (m_material != nullptr) {
+		return m_material->IsRotationDisabled();
+	}
+	return false;
+}
+
 bool Mask::Resource::Model::IsOpaque() {
 	// note: depth only objects are considered opaque
 	if (IsDepthOnly()) {

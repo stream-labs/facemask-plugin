@@ -957,13 +957,15 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					// Draw depth-only stuff
 					for (int i = 0; i < faces.length; i++) {
 						gs_matrix_push();
-						setFaceTransform(faces[i].startPose, mask_data->IsIntroAnimation());
+						setFaceTransform(faces[i].startPose);
 						drawMaskData(mask_data, true, true, false);
-						gs_matrix_pop();
+						setFaceTransform(faces[i].startPose, true);
+						drawMaskData(mask_data, true, true, true);
 
-						gs_matrix_push();
-						setFaceTransform(faces[i].pose, mask_data->IsIntroAnimation());
+						setFaceTransform(faces[i].pose);
 						drawMaskData(mask_data, true, false, false);
+						setFaceTransform(faces[i].pose, true);
+						drawMaskData(mask_data, true, false, true);
 						gs_matrix_pop();
 					}
 
@@ -1014,13 +1016,14 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					for (int i = 0; i < faces.length; i++) {
 						if (maskAlpha > 0.0f) {
 							gs_matrix_push();
-							setFaceTransform(faces[i].startPose, mask_data->IsIntroAnimation());
+							setFaceTransform(faces[i].startPose);
 							drawMaskData(mask_data, false, true, false);
-							gs_matrix_pop();
-
-							gs_matrix_push();
-							setFaceTransform(faces[i].pose, mask_data->IsIntroAnimation());
+							setFaceTransform(faces[i].startPose, true);
+							drawMaskData(mask_data, false, true, true);
+							setFaceTransform(faces[i].pose);
 							drawMaskData(mask_data, false, false, false);
+							setFaceTransform(faces[i].pose, true);
+							drawMaskData(mask_data, false, false, true);
 							gs_matrix_pop();
 						}
 					}
@@ -1032,13 +1035,13 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 						if (introActive) {
 							gs_matrix_push();
 							setFaceTransform(faces[i].pose, true);
-							drawMaskData(introData.get(), false, false, false);
+							drawMaskData(introData.get(), false, false, true);
 							gs_matrix_pop();
 						}
 						if (outroActive) {
 							gs_matrix_push();
 							setFaceTransform(faces[i].pose, true);
-							drawMaskData(outroData.get(), false, false, false);
+							drawMaskData(outroData.get(), false, false, true);
 							gs_matrix_pop();
 						}
 					}
@@ -1702,17 +1705,13 @@ void Plugin::FaceMaskFilter::Instance::setFaceTransform(const smll::ThreeDPose& 
 
 
 void Plugin::FaceMaskFilter::Instance::drawMaskData(Mask::MaskData*	_maskData, 
-	bool depthOnly, bool staticOnly, bool isAlert) {
+	bool depthOnly, bool staticOnly, bool rotationDisable){
 
 	gs_viewport_push();
 	gs_projection_push();
 
 	uint32_t w = baseWidth;
 	uint32_t h = baseHeight;
-	if (isAlert) {
-		w = alertViewport.cx;
-		h = alertViewport.cy;
-	}
 
 	gs_set_viewport(0, 0, w, h);
 	gs_enable_depth_test(true);
@@ -1721,7 +1720,7 @@ void Plugin::FaceMaskFilter::Instance::drawMaskData(Mask::MaskData*	_maskData,
 	float aspect = (float)w / (float)h;
 	gs_perspective(FOVA(aspect), aspect, NEAR_Z, FAR_Z);
 
-	_maskData->Render(depthOnly, staticOnly);
+	_maskData->Render(depthOnly, staticOnly, rotationDisable);
 
 	gs_projection_pop();
 	gs_viewport_pop();
