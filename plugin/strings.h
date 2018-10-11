@@ -39,6 +39,7 @@
 #define P_DRAWCROPRECT			"drawFDCropRect"
 #define P_DEMOMODEON			"demoMode"
 #define P_DEMOFOLDER			"demoFolder"
+#define P_TEST_MODE				"Enable Testing Mode"
 #define P_BGREMOVAL				"greenscreen"
 #define P_GENTHUMBS				"genpreviews"
 #define P_REWIND				"rewindanims"
