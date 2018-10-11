@@ -282,6 +282,13 @@ bool Mask::Resource::SkinnedModel::IsStatic() {
 	return false;
 }
 
+bool Mask::Resource::SkinnedModel::IsRotationDisabled() {
+	if (m_material != nullptr) {
+		return m_material->IsRotationDisabled();
+	}
+	return false;
+}
+
 bool Mask::Resource::SkinnedModel::IsOpaque() {
 	// note: depth only objects are considered opaque
 	if (IsDepthOnly()) {

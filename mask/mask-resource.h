@@ -70,6 +70,7 @@ namespace Mask {
 			virtual void Render(Mask::Part* part) = 0;
 			virtual bool IsDepthOnly() { return false; }
 			virtual bool IsStatic() { return false; }
+			virtual bool IsRotationDisabled() { return false; }
 
 		protected:
 			Mask::MaskData* m_parent;
