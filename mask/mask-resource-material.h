@@ -43,6 +43,7 @@ namespace Mask {
 
 			bool IsDepthOnly() override { return m_depthOnly; }
 			bool IsStatic() override { return m_static; }
+			bool IsRotationDisabled() override { return m_rotationDisable; }
 			bool IsOpaque() { return m_opaque; }
 			bool WriteAlpha() { return m_alphaWrite; }
 
@@ -81,6 +82,7 @@ namespace Mask {
 			std::array<size_t, 8> m_lightIds;
 			bool m_depthOnly;
 			bool m_static;
+			bool m_rotationDisable;
 			bool m_opaque;
 			bool m_alphaWrite;
 
