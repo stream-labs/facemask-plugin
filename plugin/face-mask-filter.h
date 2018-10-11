@@ -108,11 +108,11 @@ namespace Plugin {
 			void drawCropRects(int width, int height);
 			void updateFaces();
 			void setFaceTransform(const smll::ThreeDPose& pose,
-				bool billboard);
+				bool billboard = false);
 			void setupRenderingState();
 			void getCanvasInfo();
 			void drawMaskData(Mask::MaskData*	maskData, bool depthOnly, 
-				bool staticOnly, bool isAlert);
+				bool staticOnly, bool rotationDisable);
 			gs_texture* RenderSourceTexture(gs_effect_t* effect);
 			bool SendSourceTextureToThread(gs_texture* sourceTexture);
 			void clearFramesActiveStatus();
@@ -204,8 +204,6 @@ namespace Plugin {
 			gs_rect				alertViewport;
 			vec2				smoothCenter;
 
-			//test mode
-			bool				testMode;
 			// demo mode
 			bool				demoModeOn;
 			std::string			demoModeFolder;
