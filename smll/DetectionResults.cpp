@@ -339,7 +339,13 @@ namespace smll {
 
 	void DetectionResult::InitStartPose() {
 		if (!initedStartPose) {
-			startPose.CopyPoseFrom(pose);
+			startPose.rotation[0] = 0.0;
+			startPose.rotation[1] = 0.0;
+			startPose.rotation[2] = 0.0;
+			startPose.rotation[3] = 0.0;
+			startPose.translation[0] = 0.0;
+			startPose.translation[1] = 4;  // default X
+			startPose.translation[2] = 34; // default Z
 			initedStartPose = true;
 		}
 	}
