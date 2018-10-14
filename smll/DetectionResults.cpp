@@ -299,7 +299,7 @@ namespace smll {
 	}
 
 	DetectionResult& DetectionResult::operator=(const Face& f) {
-		bounds = f.m_bounds;
+		bounds = const_cast<Face&>(f).getBounds();
 		return *this;
 	}
 

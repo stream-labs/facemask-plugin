@@ -59,26 +59,24 @@ namespace smll {
 
 		template <typename image_type> void
 			StartTracking(const image_type& image, float scale, int x, int y) {
-			m_trackingX = x;
-			m_trackingY = y;
-			m_trackingScale = scale;
-			double invscale = 1.0 / scale;
-			double left = ((double)m_bounds.left() * invscale - x);
-			double right = ((double)m_bounds.right() * invscale - x);
-			double top = ((double)m_bounds.top() * invscale - y);
-			double bottom = ((double)m_bounds.bottom() * invscale - y);
-			dlib::drectangle r(left, top, right, bottom);
-			m_tracker.start_track(image, r);
+			
+			m_tracker.start_track(image, m_bounds);
 		}
 		template <typename image_type> double
 			UpdateTracking(const image_type& image) {
 			double confidence = m_tracker.update(image);
-			dlib::drectangle r = m_tracker.get_position();
-			m_bounds.set_left((long)((r.left() + m_trackingX) * m_trackingScale));
-			m_bounds.set_right((long)((r.right() + m_trackingX) * m_trackingScale));
-			m_bounds.set_top((long)((r.top() + m_trackingY) * m_trackingScale));
-			m_bounds.set_bottom((long)((r.bottom() + m_trackingY) * m_trackingScale));
+			m_bounds = m_tracker.get_position();
+			
 			return confidence;
+		}
+
+		dlib::rectangle getBounds() {
+			dlib::rectangle bounds;
+			bounds.set_left((long)((m_bounds.left() + m_trackingX) * m_trackingScale));
+			bounds.set_right((long)((m_bounds.right() + m_trackingX) * m_trackingScale));
+			bounds.set_top((long)((m_bounds.top() + m_trackingY) * m_trackingScale));
+			bounds.set_bottom((long)((m_bounds.bottom() + m_trackingY) * m_trackingScale));
+			return bounds;
 		}
 	};
 

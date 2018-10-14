@@ -1013,15 +1013,22 @@ namespace smll {
 
             // copy rects into our faces, start tracking
             for (int i = 0; i < m_faces.length; i++) {
+				// Set each face params
+				Face f;
+				f.m_trackingScale = scale;
+				f.m_trackingX = cropInfo.offsetX;
+				f.m_trackingY = cropInfo.offsetY;
+				f.m_bounds = faces[i];
+				m_faces[i] = f;
                 // scale rectangle up to video frame size
-				m_faces[i].m_bounds.set_left((long)((float)(faces[i].left() +
+				/*m_faces[i].m_bounds.set_left((long)((float)(faces[i].left() +
 					cropInfo.offsetX) * scale));
                 m_faces[i].m_bounds.set_right((long)((float)(faces[i].right() +
 					cropInfo.offsetX) * scale));
                 m_faces[i].m_bounds.set_top((long)((float)(faces[i].top() +
 					cropInfo.offsetY) * scale));
                 m_faces[i].m_bounds.set_bottom((long)((float)(faces[i].bottom() +
-					cropInfo.offsetY) * scale));
+					cropInfo.offsetY) * scale));*/
             }
         }
     }
@@ -1089,7 +1096,7 @@ namespace smll {
 				cv::Mat bgrImage(m_stageWork.h, m_stageWork.w, CV_8UC3, m_stageWork.data, m_stageWork.getStride());
 				cv::Mat gray; cv::cvtColor(bgrImage, gray, cv::COLOR_BGR2GRAY);
 				dlib::cv_image<unsigned char> img(gray);
-				d68 = m_predictor68(img, m_faces[f].m_bounds);
+				d68 = m_predictor68(img, m_faces[f].getBounds());
 				break;
 			}
 			case IMAGETYPE_RGB:
@@ -1097,7 +1104,7 @@ namespace smll {
 				cv::Mat rgbImage(m_stageWork.h, m_stageWork.w, CV_8UC3, m_stageWork.data, m_stageWork.getStride());
 				cv::Mat gray; cv::cvtColor(rgbImage, gray, cv::COLOR_RGB2GRAY);
 				dlib::cv_image<unsigned char> img(gray);
-				d68 = m_predictor68(img, m_faces[f].m_bounds);
+				d68 = m_predictor68(img, m_faces[f].getBounds());
 				break;
 			}
 			case IMAGETYPE_RGBA:
@@ -1105,14 +1112,14 @@ namespace smll {
 				cv::Mat rgbaImage(m_stageWork.h, m_stageWork.w, CV_8UC4, m_stageWork.data, m_stageWork.getStride());
 				cv::Mat gray; cv::cvtColor(rgbaImage, gray, cv::COLOR_RGBA2GRAY);
 				dlib::cv_image<unsigned char> img(gray);
-				d68 = m_predictor68(img, m_faces[f].m_bounds);
+				d68 = m_predictor68(img, m_faces[f].getBounds());
 				break;
 			}
 			case IMAGETYPE_GRAY:
 			{
 				cv::Mat gray(m_stageWork.h, m_stageWork.w, CV_8UC1, m_stageWork.data, m_stageWork.getStride());
 				dlib::cv_image<unsigned char> img(gray);
-				d68 = m_predictor68(img, m_faces[f].m_bounds);
+				d68 = m_predictor68(img, m_faces[f].getBounds());
 				break;
 			}
 			default:
