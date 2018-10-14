@@ -58,7 +58,7 @@ namespace smll {
 		dlib::correlation_tracker	m_tracker;
 
 		template <typename image_type> void
-			StartTracking(const image_type& image, float scale, int x, int y) {
+			StartTracking(const image_type& image) {
 			
 			m_tracker.start_track(image, m_bounds);
 		}

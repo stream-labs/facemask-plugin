@@ -1020,15 +1020,6 @@ namespace smll {
 				f.m_trackingY = cropInfo.offsetY;
 				f.m_bounds = faces[i];
 				m_faces[i] = f;
-                // scale rectangle up to video frame size
-				/*m_faces[i].m_bounds.set_left((long)((float)(faces[i].left() +
-					cropInfo.offsetX) * scale));
-                m_faces[i].m_bounds.set_right((long)((float)(faces[i].right() +
-					cropInfo.offsetX) * scale));
-                m_faces[i].m_bounds.set_top((long)((float)(faces[i].top() +
-					cropInfo.offsetY) * scale));
-                m_faces[i].m_bounds.set_bottom((long)((float)(faces[i].bottom() +
-					cropInfo.offsetY) * scale));*/
             }
         }
     }
@@ -1036,32 +1027,15 @@ namespace smll {
         
     void FaceDetector::StartObjectTracking() {
 
-		// TODO: Complete full OpenCV 4.0.0 integration
-		//		Debug and Release and necessary dll's
-		//		Change the Face Data Structure
-		//		Log everything and then peace!
-		// get crop info from config and track image dimensions
-		CropInfo cropInfo = GetCropInfo();
-
-		// need to scale back
-		float scale = (float)m_capture.width / m_detect.w;
-
         // start tracking
 		dlib::cv_image<unsigned char> img(currentImage);
 		for (int i = 0; i < m_faces.length; ++i) {
-			m_faces[i].StartTracking(img, scale, cropInfo.offsetX, cropInfo.offsetY);
+			m_faces[i].StartTracking(img);
 		}
 	}
     
     
     void FaceDetector::UpdateObjectTracking() {
-
-		// get crop info from config and track image dimensions
-		CropInfo cropInfo = GetCropInfo();
-
-		char* cropdata = m_detect.data +
-			(m_detect.getStride() * cropInfo.offsetY) +
-			(m_detect.getNumElems() * cropInfo.offsetX);
 
 		// update object tracking
 		dlib::cv_image<unsigned char> img(currentImage);
