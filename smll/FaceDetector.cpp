@@ -1025,6 +1025,7 @@ namespace smll {
 				f.m_trackingY = cropInfo.offsetY;
 				f.m_bounds = faces[i];
 				m_faces[i] = f;
+				m_faces[i].tracker->clear();
             }
         }
     }
