@@ -34,6 +34,7 @@
 #pragma warning( disable: 4100 )
 #include <dlib/image_processing.h>
 #include <opencv2/opencv.hpp>
+#include <opencv2/tracking.hpp>
 #pragma warning( pop )
 
 #include "landmarks.hpp"
@@ -56,18 +57,20 @@ namespace smll {
 		int							m_trackingY;
 		double						m_trackingScale;
 		dlib::correlation_tracker	m_tracker;
+		cv::Ptr<cv::Tracker> tracker;
 
-		template <typename image_type> void
-			StartTracking(const image_type& image) {
-			
-			m_tracker.start_track(image, m_bounds);
+		void StartTracking(const cv::Mat& image) {
+			cv::Rect2d bounds = cv::Rect2d(cv::Point2d(m_bounds.left(), m_bounds.top()),
+										   cv::Point2d(m_bounds.right(), m_bounds.bottom()));
+			tracker->init(image, bounds);
 		}
-		template <typename image_type> double
-			UpdateTracking(const image_type& image) {
-			double confidence = m_tracker.update(image);
-			m_bounds = m_tracker.get_position();
-			
-			return confidence;
+
+		bool UpdateTracking(const cv::Mat& image) {
+			cv::Rect2d bounds;
+			bool trackingSuccess = tracker->update(image, bounds);
+			m_bounds = dlib::rectangle(bounds.tl().x, bounds.tl().y, bounds.br().x, bounds.br().y);
+
+			return trackingSuccess;
 		}
 
 		dlib::rectangle getBounds() {

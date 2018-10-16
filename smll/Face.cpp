@@ -38,6 +38,7 @@ Face::Face()
 	: m_trackingX(0)
 	, m_trackingY(0)
 	, m_trackingScale(1.0) {
+	tracker = cv::TrackerMOSSE::create();
 }
 
 

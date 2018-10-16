@@ -1026,24 +1026,19 @@ namespace smll {
     
         
     void FaceDetector::StartObjectTracking() {
-
         // start tracking
-		dlib::cv_image<unsigned char> img(currentImage);
 		for (int i = 0; i < m_faces.length; ++i) {
-			m_faces[i].StartTracking(img);
+			m_faces[i].StartTracking(currentImage);
 		}
 	}
     
     
     void FaceDetector::UpdateObjectTracking() {
-
 		// update object tracking
-		dlib::cv_image<unsigned char> img(currentImage);
 		for (int i = 0; i < m_faces.length; i++) {
 			if (i == m_trackingFaceIndex) {
-				double confidence = m_faces[i].UpdateTracking(img);
-				if (confidence < Config::singleton().get_double(
-					CONFIG_DOUBLE_TRACKING_THRESHOLD)) {
+				bool trackingSuccess = m_faces[i].UpdateTracking(currentImage);
+				if (!trackingSuccess) {
 					m_faces.length = 0;
 					break;
 				}
