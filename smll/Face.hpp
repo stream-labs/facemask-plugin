@@ -56,7 +56,6 @@ namespace smll {
 		int							m_trackingX;
 		int							m_trackingY;
 		double						m_trackingScale;
-		dlib::correlation_tracker	m_tracker;
 		cv::Ptr<cv::Tracker> tracker;
 
 		void StartTracking(const cv::Mat& image) {
