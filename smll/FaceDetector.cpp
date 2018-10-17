@@ -249,10 +249,10 @@ namespace smll {
             }
 
 			// copy faces to results
+			results.length = m_faces.length;
 			for (int i = 0; i < m_faces.length; i++) {
 				results[i] = m_faces[i];
 			}
-			results.length = m_faces.length;
             
             // If tracking is good, we're done
             //
