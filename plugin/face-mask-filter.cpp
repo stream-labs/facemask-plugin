@@ -957,15 +957,12 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					// Draw depth-only stuff
 					for (int i = 0; i < faces.length; i++) {
 						gs_matrix_push();
-						setFaceTransform(faces[i].startPose);
-						drawMaskData(mask_data, true, true, false);
-						setFaceTransform(faces[i].startPose, true);
-						drawMaskData(mask_data, true, true, true);
-
 						setFaceTransform(faces[i].pose);
 						drawMaskData(mask_data, true, false, false);
+						drawMaskData(mask_data, true, true, false);
 						setFaceTransform(faces[i].pose, true);
 						drawMaskData(mask_data, true, false, true);
+						drawMaskData(mask_data, true, true, true);
 						gs_matrix_pop();
 					}
 
