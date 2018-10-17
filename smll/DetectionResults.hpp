@@ -131,7 +131,6 @@ namespace smll {
 	public:
 		DetectionResults();
 		void CorrelateAndUpdateFrom(DetectionResults& other);
-		void CorrelateAndCopyPosesFrom(DetectionResults& other);
 		int findClosest(const smll::DetectionResult& result);
 
 	private:
