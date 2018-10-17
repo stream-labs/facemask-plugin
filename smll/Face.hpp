@@ -59,6 +59,7 @@ namespace smll {
 		cv::Ptr<cv::Tracker> tracker;
 
 		void StartTracking(const cv::Mat& image) {
+			tracker->clear();
 			cv::Rect2d bounds = cv::Rect2d(cv::Point2d(m_bounds.left(), m_bounds.top()),
 										   cv::Point2d(m_bounds.right(), m_bounds.bottom()));
 			tracker->init(image, bounds);
