@@ -49,12 +49,12 @@ namespace smll {
 		, m_camera_w(0)
 		, m_camera_h(0) {
 		// Load face detection and pose estimation models.
-		// Face detection pyramid levels have been reduced from 6 to 1
+		// Face detection pyramid levels have been reduced from 6 to 4
 		frontal_face_detector detector = get_frontal_face_detector();
 		typedef dlib::scan_fhog_pyramid<dlib::pyramid_down<6> > image_scanner_type;
 		image_scanner_type scanner;
 		scanner.copy_configuration(detector.get_scanner());
-		scanner.set_max_pyramid_levels(1);
+		scanner.set_max_pyramid_levels(4);
 		m_detector = dlib::object_detector<image_scanner_type>(scanner, detector.get_overlap_tester(), detector.get_w());
 
 
@@ -155,6 +155,7 @@ namespace smll {
 		case IMAGETYPE_GRAY:
 		{
 			cv::Mat gray(cropInfo.height, cropInfo.width, CV_8UC1, cropData, m_detect.getStride());
+			cv::equalizeHist(gray, gray);
 			currentImage = gray.clone();
 			break;
 		}
@@ -162,6 +163,7 @@ namespace smll {
 		{
 			cv::Mat rgbImage(cropInfo.height, cropInfo.width, CV_8UC3, cropData, detect.getStride());
 			cv::Mat gray; cv::cvtColor(rgbImage, gray, cv::COLOR_RGB2GRAY);
+			cv::equalizeHist(gray, gray);
 			currentImage = gray.clone();
 			break;
 		}
@@ -169,6 +171,7 @@ namespace smll {
 		{
 			cv::Mat bgrImage(cropInfo.height, cropInfo.width, CV_8UC3, cropData, detect.getStride());
 			cv::Mat gray; cv::cvtColor(bgrImage, gray, cv::COLOR_BGR2GRAY);
+			cv::equalizeHist(gray, gray);
 			currentImage = gray.clone();
 			break;
 		}
@@ -176,6 +179,7 @@ namespace smll {
 		{
 			cv::Mat rgbaImage(cropInfo.height, cropInfo.width, CV_8UC4, cropData, detect.getStride());
 			cv::Mat gray; cv::cvtColor(rgbaImage, gray, cv::COLOR_RGBA2GRAY);
+			cv::equalizeHist(gray, gray);
 			currentImage = gray.clone();
 			break;
 		}
@@ -183,6 +187,7 @@ namespace smll {
 		{
 			cv::Mat bgraImage(cropInfo.height, cropInfo.width, CV_8UC4, cropData, detect.getStride());
 			cv::Mat gray; cv::cvtColor(bgraImage, gray, cv::COLOR_BGRA2GRAY);
+			cv::equalizeHist(gray, gray);
 			currentImage = gray.clone();
 			break;
 		}
@@ -1028,19 +1033,17 @@ namespace smll {
         
     void FaceDetector::StartObjectTracking() {
         // start tracking
-		cv::Mat gray; cv::equalizeHist(currentImage, gray);
 		for (int i = 0; i < m_faces.length; ++i) {
-			m_faces[i].StartTracking(gray);
+			m_faces[i].StartTracking(currentImage);
 		}
 	}
     
     
     void FaceDetector::UpdateObjectTracking() {
 		// update object tracking
-		cv::Mat gray; cv::equalizeHist(currentImage, gray);
 		for (int i = 0; i < m_faces.length; i++) {
 			if (i == m_trackingFaceIndex) {
-				bool trackingSuccess = m_faces[i].UpdateTracking(gray);
+				bool trackingSuccess = m_faces[i].UpdateTracking(currentImage);
 				if (!trackingSuccess) {
 					m_faces.length = 0;
 					break;
