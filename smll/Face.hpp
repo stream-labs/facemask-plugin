@@ -58,21 +58,11 @@ namespace smll {
 		double						m_trackingScale;
 		cv::Ptr<cv::Tracker>		m_tracker;
 
-		void StartTracking(const cv::Mat& image, float scale, int x, int y) {
-			m_trackingX = x;
-			m_trackingY = y;
-			m_trackingScale = scale;
-			double invscale = 1.0 / scale;
-			double left = ((double)m_bounds.left() * invscale - x);
-			double right = ((double)m_bounds.right() * invscale - x);
-			double top = ((double)m_bounds.top() * invscale - y);
-			double bottom = ((double)m_bounds.bottom() * invscale - y);
-			dlib::drectangle r(left, top, right, bottom);
+		void StartTracking(const cv::Mat& image) {
 			// Initialize Tracker
 			m_tracker = cv::TrackerMOSSE::create();
-			cv::Rect2d bounds = cv::Rect2d(cv::Point2d(left, top),
-										   cv::Point2d(right, bottom));
-			
+			cv::Rect2d bounds = cv::Rect2d(cv::Point2d(m_bounds.left(), m_bounds.top()),
+										   cv::Point2d(m_bounds.right(), m_bounds.bottom()));
 			m_tracker->init(image, bounds);
 			
 		}
@@ -81,12 +71,17 @@ namespace smll {
 			cv::Rect2d bounds;
 			bool trackingSuccess = m_tracker->update(image, bounds);
 			
-			dlib::drectangle r = dlib::rectangle(bounds.tl().x, bounds.tl().y, bounds.br().x, bounds.br().y);
-			m_bounds.set_left((long)((r.left() + m_trackingX) * m_trackingScale));
-			m_bounds.set_right((long)((r.right() + m_trackingX) * m_trackingScale));
-			m_bounds.set_top((long)((r.top() + m_trackingY) * m_trackingScale));
-			m_bounds.set_bottom((long)((r.bottom() + m_trackingY) * m_trackingScale));
+			m_bounds = dlib::rectangle(bounds.tl().x, bounds.tl().y, bounds.br().x, bounds.br().y);
 			return trackingSuccess;
+		}
+
+		dlib::rectangle getBounds() {
+			dlib::rectangle bounds;
+			bounds.set_left((long)((m_bounds.left() + m_trackingX) * m_trackingScale));
+			bounds.set_right((long)((m_bounds.right() + m_trackingX) * m_trackingScale));
+			bounds.set_top((long)((m_bounds.top() + m_trackingY) * m_trackingScale));
+			bounds.set_bottom((long)((m_bounds.bottom() + m_trackingY) * m_trackingScale));
+			return bounds;
 		}
 	};
 
