@@ -46,38 +46,10 @@ git clone --recursive https://github.com/stream-labs/obs-studio.git
 
   `build64/distribute/slobs/RelWithDebInfo/obs-plugins`
 
-        Make sure to build it as RelWithDebInfo configuration. You can set this in Visual Studio.
+       If you are going to debug facemask code make sure to build it as RelWithDebInfo configuration. You can set this in Visual Studio.
 
-    
-  You will need to copy the files into your stremlabs-obs folder. More on that in the next section. 
+* You can copy the files in manually, or set up symbolic links so you can easily hit F5 and debug from Visual Studio. You can also modify the CMakeLists to copy the files to a desired location with each build.
 
-# Debugging
-
-In order to be able to debug the plugin as is in SLOBS, you will have to download and install SLOBS
-
-## Installing SLOBS
-
-* Clone SLOBS: https://github.com/stream-labs/streamlabs-obs using --recursive option for submodules
-
-* Install as it is in the slobs readme
-
-* After installing you can copy/replace your facemask build version to here `streamlabs-obs\node_modules\obs-studio-node\obs-plugins`. You need to copy the contents of the `build64\distribute\slobs\RelWithDebInfo\obs-plugins` folder (dll and pdb files) into that folder or its subfolder for 64bit build version.
-
-## Using electron.sln
-
-* In order to be able to debug the code on your computer you will need electron.sln file from facemask-plugin/electron folder. 
-
-* Before you start using it you need to replace Executable and StartingDirectory values to point to the right local locations in your slobs directory.
-* After that, you can open electron.sln using Visual Studio. 
-* Some of the files in the solution explorer may not be the ones used in the build. You can remove them and add the real source files manually.
-
-* If you are using Visual Studio 2017 you will need to do an extra step in order to be able to use breakpoints in the facemask plugin code: 
-
- Download Microsoft Child Process Debugging Tool: https://marketplace.visualstudio.com/items?itemName=vsdbgplat.MicrosoftChildProcessDebuggingPowerTool and enable it by following the instructions on the link. 
-
- This is due to the fact that facemask code runs on a child process.
-
-Now you are good to go!
 
 ## How It Works
 
