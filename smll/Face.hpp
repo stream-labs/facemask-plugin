@@ -68,7 +68,8 @@ namespace smll {
 			double top = ((double)m_bounds.top() * invscale - y);
 			double bottom = ((double)m_bounds.bottom() * invscale - y);
 			dlib::drectangle r(left, top, right, bottom);
-			m_tracker->clear();
+			// Initialize Tracker
+			m_tracker = cv::TrackerMOSSE::create();
 			cv::Rect2d bounds = cv::Rect2d(cv::Point2d(left, top),
 										   cv::Point2d(right, bottom));
 			
