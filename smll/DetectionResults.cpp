@@ -183,7 +183,7 @@ namespace smll {
 				int closest = other.findClosest(faces[i]);
 
 				// smooth new face into ours
-				faces[i].UpdateResultsFrom(other[closest]);
+				faces[i] = other[closest];
 				faces[i].numFramesLost = 0;
 				other[closest].matched = true;
 			}
@@ -211,7 +211,7 @@ namespace smll {
 				int closest = faces.findClosest(other[i]);
 
 				// smooth new face into ours
-				faces[closest].UpdateResultsFrom(other[i]);
+				faces[closest] = other[i];
 				faces[closest].numFramesLost = 0;
 				faces[closest].matched = true;
 			}
