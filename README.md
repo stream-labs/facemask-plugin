@@ -4,38 +4,80 @@ A libOBS filter plugin that detects faces and draws masks with the detected data
 
 ## Compiling
 
+* Clone this repository with submodules: 
+```git clone --recursive https://github.com/stream-labs/facemask-plugin
+```
+
 * Download cmake:
 
   [cmake](https://cmake.org/download/)
 
-* Get Visual Studio 2015 (vc14). When you install it, make sure you include the C++ stuff. libOBS is fixed at this version, so other versions of Visual Studio *will not work*.
+
+* Get Visual Studio 2015 (vc14) or Visual Studio 2017. When you install it, make sure you include the C++ stuff. 
 
   [microsoft](https://www.visualstudio.com/vs/older-downloads/)
 
 * Download our fork of OBS Studio:
-
++
   [obs-studio](https://github.com/stream-labs/obs-studio)
-  
+
+  Do not forget the submodules:
+```
+git clone --recursive https://github.com/stream-labs/obs-studio.git
+```
 * Build obs-studio
-	* Follow the build instructions here:
+  * Follow the build instructions here:
     
     [build instructions](https://github.com/obsproject/obs-studio/wiki/Install-Instructions#windows-build-directions)
+
+  **Note**: You do not need to install Qt5 as a dependency, just make sure ENABLE\_UI in CMake GUI is not checked before Configure/Generate. You can also handle this by setting ENABLE\_UI to OFF in CMakeLists in the obs-studio folder.
     
 
 * Run cmake in the facemasks folder. When you hit `CONFIGURE`, you will get errors on fields you need to fill in:
 
 
-    **PATH_OBS_STUDIO** Path to the obs-studio folder.
+    **PATH\_OBS\_STUDIO** Path to the obs-studio folder.
 
     **BUILD_SLOBS** - Distributes to slobs instead of OBS Studio
 
-    If you have the [Intel Math Kernel Library](https://software.intel.com/en-us/mkl) installed on your system, you might have **DLIB_USE_BLAS** or **DLIB_USE_LAPACK** turned on. Keep in mind that dlib links dynamically with these libs, so the MKL and TBB dlls will need to be found by slobs when it runs (for instance, by copying them into the slobs-client folder). I don't reccommend using these libs for this reason.
+    If you have the [Intel Math Kernel Library](https://software.intel.com/en-us/mkl) installed on your system, you might have **DLIB\_USE\_BLAS** or **DLIB\_USE\_LAPACK** turned on. Keep in mind that dlib links dynamically with these libs, so the MKL and TBB dlls will need to be found by slobs when it runs (for instance, by copying them into the slobs-client folder). I don't reccommend using these libs for this reason.
 
-* Once you have successfully configured and generated your Visual Studio project with cmake, you can compile the plugin, which will give you a distribution folder structure that mimics the structure in slobs. For example, if you built your files in the build64 folder:
+* Once you have successfully configured and generated your Visual Studio project with cmake, you can open the facemask-plugin.sln file in Visual Studio. You can now compile the plugin, which will give you a distribution folder structure that mimics the structure in slobs. For example, if you built your files in the build64 folder:
 
-	`build64/distribute/slobs/RelWithDebInfo/`
+  `build64/distribute/slobs/RelWithDebInfo/obs-plugins`
+
+        Make sure to build it as RelWithDebInfo configuration. You can set this in Visual Studio.
+
     
-	You can copy the files in manually, or set up symbolic links so you can easily hit F5 and debug from Visual Studio.
+  You will need to copy the files into your stremlabs-obs folder. More on that in the next section. 
+
+# Debugging
+
+In order to be able to debug the plugin as is in SLOBS, you will have to download and install SLOBS
+
+## Installing SLOBS
+
+* Clone SLOBS: https://github.com/stream-labs/streamlabs-obs using --recursive option for submodules
+
+* Install as it is in the slobs readme
+
+* After installing you can copy/replace your facemask build version to here `streamlabs-obs\node_modules\obs-studio-node\obs-plugins`. You need to copy the contents of the `build64\distribute\slobs\RelWithDebInfo\obs-plugins` folder (dll and pdb files) into that folder or its subfolder for 64bit build version.
+
+## Using electron.sln
+
+* In order to be able to debug the code on your computer you will need electron.sln file from facemask-plugin/electron folder. 
+
+* Before you start using it you need to replace Executable and StartingDirectory values to point to the right local locations in your slobs directory.
+* After that, you can open electron.sln using Visual Studio. 
+* Some of the files in the solution explorer may not be the ones used in the build. You can remove them and add the real source files manually.
+
+* If you are using Visual Studio 2017 you will need to do an extra step in order to be able to use breakpoints in the facemask plugin code: 
+
+ Download Microsoft Child Process Debugging Tool: https://marketplace.visualstudio.com/items?itemName=vsdbgplat.MicrosoftChildProcessDebuggingPowerTool and enable it by following the instructions on the link. 
+
+ This is due to the fact that facemask code runs on a child process.
+
+Now you are good to go!
 
 ## How It Works
 
@@ -170,8 +212,8 @@ Turn ON the **'Command Line Clients Tool'** option during the installation
 
 For Unit Testing CppUtest framework is used.
 * Clone CppUtest:
-	[CppUtest](https://github.com/cpputest/cpputest)
+  [CppUtest](https://github.com/cpputest/cpputest)
 * During building the facemaks project with CMAKE:
-	* Set **BUILD_UNIT_TESTS** option *ON*
-	* Set **PATH_CPP_UTEST** Path to the cpputest folder
-	* Build and Run the *facemask-plugin-test* project, it will show the report of tests
+  * Set **BUILD_UNIT_TESTS** option *ON*
+  * Set **PATH_CPP_UTEST** Path to the cpputest folder
+  * Build and Run the *facemask-plugin-test* project, it will show the report of tests
