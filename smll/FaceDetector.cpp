@@ -1033,7 +1033,7 @@ namespace smll {
     
         
     void FaceDetector::StartObjectTracking() {
-
+		//TimeStamp start = NEW_TIMESTAMP;
 		// TODO: Complete full OpenCV 4.0.0 integration
 		//		Debug and Release and necessary dll's
 		//		Change the Face Data Structure
@@ -1045,15 +1045,17 @@ namespace smll {
 		float scale = (float)m_capture.width / m_detect.w;
 
         // start tracking
-		dlib::cv_image<unsigned char> img(currentImage);
 		for (int i = 0; i < m_faces.length; ++i) {
-			m_faces[i].StartTracking(img, scale, cropInfo.offsetX, cropInfo.offsetY);
+			m_faces[i].StartTracking(currentImage, scale, cropInfo.offsetX, cropInfo.offsetY);
 		}
+		/*TimeStamp stop = NEW_TIMESTAMP;
+		auto us = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count();
+		blog(LOG_DEBUG, "Start Tracking: TIME TAKEN = %ld", us);*/
 	}
     
     
     void FaceDetector::UpdateObjectTracking() {
-
+		//TimeStamp start = NEW_TIMESTAMP;
 		// get crop info from config and track image dimensions
 		CropInfo cropInfo = GetCropInfo();
 
@@ -1062,17 +1064,18 @@ namespace smll {
 			(m_detect.getNumElems() * cropInfo.offsetX);
 
 		// update object tracking
-		dlib::cv_image<unsigned char> img(currentImage);
 		for (int i = 0; i < m_faces.length; i++) {
 			if (i == m_trackingFaceIndex) {
-				double confidence = m_faces[i].UpdateTracking(img);
-				if (confidence < Config::singleton().get_double(
-					CONFIG_DOUBLE_TRACKING_THRESHOLD)) {
+				bool isTrackingCorrect = m_faces[i].UpdateTracking(currentImage);
+				if (!isTrackingCorrect) {
 					m_faces.length = 0;
 					break;
 				}
 			}
 		}
+		/*TimeStamp stop = NEW_TIMESTAMP;
+		auto us = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count();
+		blog(LOG_DEBUG, "UpdateTracking: TIME TAKEN = %ld", us);*/
 	}
     
     

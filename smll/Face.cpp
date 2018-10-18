@@ -38,6 +38,8 @@ Face::Face()
 	: m_trackingX(0)
 	, m_trackingY(0)
 	, m_trackingScale(1.0) {
+	// Initialize Tracker
+	m_tracker = cv::TrackerKCF::create();
 }
 
 
