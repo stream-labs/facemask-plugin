@@ -313,54 +313,6 @@ namespace smll {
 		pose.ResetPose();
 	}
 
-	void DetectionResult::UpdateResultsFrom(const DetectionResult& r) {
-
-		if (!kalmanFiltersInitialized) {
-			*this = r;
-			InitKalmanFilters();
-		}
-
-		double ntx[3] = { r.pose.translation[0], r.pose.translation[1], r.pose.translation[2] };
-		double nrot[4] = { r.pose.rotation[0], r.pose.rotation[1], r.pose.rotation[2], r.pose.rotation[3] };
-		dlib::rectangle bnd = r.bounds;
-
-		CheckForPoseFlip(nrot, ntx);
-
-		// kalman filtering enabled?
-		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE)) {
-			
-			// update smoothing factor
-			double smoothing = Config::singleton().get_double(CONFIG_FLOAT_SMOOTHING_FACTOR);
-			for (int i = 0; i < KF_NUM_FILTERS; i++) {
-				kalmanFilters[i].SetMeasurementNoiseCovariance(smoothing);
-			}
-
-			// update the kalman filters
-			ntx[0] = kalmanFilters[KF_TRANS_X].Update(ntx[0]);
-			ntx[1] = kalmanFilters[KF_TRANS_Y].Update(ntx[1]);
-			ntx[2] = kalmanFilters[KF_TRANS_Z].Update(ntx[2]);
-			nrot[0] = kalmanFilters[KF_ROT_X].Update(nrot[0]);
-			nrot[1] = kalmanFilters[KF_ROT_Y].Update(nrot[1]);
-			nrot[2] = kalmanFilters[KF_ROT_Z].Update(nrot[2]);
-			nrot[3] = kalmanFilters[KF_ROT_A].Update(nrot[3]);
-		}
-
-		// copy values
-		bounds = bnd;
-		
-		for (int i = 0; i < smll::NUM_FACIAL_LANDMARKS; i++) {
-			landmarks68[i] = r.landmarks68[i];
-		}
-		pose.translation[0] = ntx[0];
-		pose.translation[1] = ntx[1];
-		pose.translation[2] = ntx[2];
-		pose.rotation[0] = nrot[0];
-		pose.rotation[1] = nrot[1];
-		pose.rotation[2] = nrot[2];
-		pose.rotation[3] = nrot[3];
-	}
-
-
 	void DetectionResult::InitKalmanFilters() {
 		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE)) {
 			kalmanFilters[KF_TRANS_X].Init(pose.translation[0]);
