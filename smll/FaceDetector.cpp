@@ -214,7 +214,7 @@ namespace smll {
         if ((detect.w != m_detect.w) ||
 			(detect.h != m_detect.h)) {
             // forget whatever we thought were faces
-			ResetFaces();
+            m_faces.length = 0;
         }
 
 		// save detect for convenience
@@ -1042,7 +1042,7 @@ namespace smll {
 			if (i == m_trackingFaceIndex) {
 				bool trackingSuccess = m_faces[i].UpdateTracking(gray);
 				if (!trackingSuccess) {
-					ResetFaces();
+					m_faces.length = 0;
 					break;
 				}
 			}
@@ -1241,9 +1241,6 @@ namespace smll {
 	void FaceDetector::ResetFaces() {
 		m_faces.length = 0;
 		m_detectionTimeout = 0;
-		for (int i = 0; i < m_faces.length; i++) {
-			m_faces[i].tracker->clear();
-		}
 	}
 	
 } // smll namespace
