@@ -155,6 +155,7 @@ namespace smll {
 		case IMAGETYPE_GRAY:
 		{
 			cv::Mat gray(cropInfo.height, cropInfo.width, CV_8UC1, cropData, m_detect.getStride());
+			cv::equalizeHist(gray, gray);
 			currentImage = gray.clone();
 			break;
 		}
@@ -162,6 +163,7 @@ namespace smll {
 		{
 			cv::Mat rgbImage(cropInfo.height, cropInfo.width, CV_8UC3, cropData, detect.getStride());
 			cv::Mat gray; cv::cvtColor(rgbImage, gray, cv::COLOR_RGB2GRAY);
+			cv::equalizeHist(gray, gray);
 			currentImage = gray.clone();
 			break;
 		}
@@ -169,6 +171,7 @@ namespace smll {
 		{
 			cv::Mat bgrImage(cropInfo.height, cropInfo.width, CV_8UC3, cropData, detect.getStride());
 			cv::Mat gray; cv::cvtColor(bgrImage, gray, cv::COLOR_BGR2GRAY);
+			cv::equalizeHist(gray, gray);
 			currentImage = gray.clone();
 			break;
 		}
@@ -176,6 +179,7 @@ namespace smll {
 		{
 			cv::Mat rgbaImage(cropInfo.height, cropInfo.width, CV_8UC4, cropData, detect.getStride());
 			cv::Mat gray; cv::cvtColor(rgbaImage, gray, cv::COLOR_RGBA2GRAY);
+			cv::equalizeHist(gray, gray);
 			currentImage = gray.clone();
 			break;
 		}
@@ -183,6 +187,7 @@ namespace smll {
 		{
 			cv::Mat bgraImage(cropInfo.height, cropInfo.width, CV_8UC4, cropData, detect.getStride());
 			cv::Mat gray; cv::cvtColor(bgraImage, gray, cv::COLOR_BGRA2GRAY);
+			cv::equalizeHist(gray, gray);
 			currentImage = gray.clone();
 			break;
 		}
