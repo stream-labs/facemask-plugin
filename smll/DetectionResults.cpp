@@ -232,30 +232,6 @@ namespace smll {
 		}
 	}
 
-	void DetectionResults::CorrelateAndCopyPosesFrom(DetectionResults& other) {
-
-		DetectionResults& faces = *this;
-
-		// clear matched flags
-		for (int i = 0; i < other.length; i++) {
-			other[i].matched = false;
-		}
-		// match our faces to the other ones
-		for (int i = 0; i < faces.length; i++) {
-			// find closest
-			int closest = other.findClosest(faces[i]);
-
-			// copy pose
-			if (closest >= 0) {
-				faces[i].CopyPoseFrom(other[closest]);
-				other[closest].matched = true;
-			}
-			else {
-				faces[i].ResetPose();
-			}
-		}
-	}
-
 	int DetectionResults::findClosest(const smll::DetectionResult& result) {
 
 		DetectionResults& results = *this;
