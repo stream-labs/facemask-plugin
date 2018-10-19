@@ -132,6 +132,8 @@ namespace Plugin {
 			smll::FaceDetector*		smllFaceDetector;
 			smll::OBSRenderer*		smllRenderer;
 
+			gs_effect_t*		my_effect = nullptr;
+
 			// Fonts
 			smll::TextShaper*		smllTextShaper;
 			smll::OBSFont*			smllFont;

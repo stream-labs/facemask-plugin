@@ -150,7 +150,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	demoModeOn(false), demoCurrentMask(0),
 	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), 
 	drawMask(true),	drawAlert(false), drawFaces(false), drawMorphTris(false), drawFDRect(false), 
-	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr), testMode(false) {
+	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr), testMode(false), my_effect(nullptr){
 
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
 
@@ -917,6 +917,16 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// flags
 	bool genThumbs = mask_data && demoModeOn && demoModeGenPreviews && demoModeSavingFrames;
 
+	// Draw the source video
+	gs_enable_depth_test(false);
+	gs_set_cull_mode(GS_NEITHER);
+	while (gs_effect_loop(defaultEffect, "Draw")) {
+		gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+			"image"), vidTex);
+		gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
+	}
+
+
 	// render mask to texture
 	gs_texture* mask_tex = nullptr;
 	if (faces.length > 0) {
@@ -987,20 +997,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 						gs_matrix_identity();
 
 						// Draw the source video
-						if (mask_data) {
+						if (mask_data && autoBGRemoval && cartoonMode) {
 							triangulation.autoBGRemoval = autoBGRemoval;
 							triangulation.cartoonMode = cartoonMode;
 							mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
-						}
-						else {
-							// Draw the source video
-							gs_enable_depth_test(false);
-							gs_set_cull_mode(GS_NEITHER);
-							while (gs_effect_loop(defaultEffect, "Draw")) {
-								gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
-									"image"), vidTex);
-								gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
-							}
 						}
 
 						// restore transform state
@@ -1053,6 +1053,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		}
 
 		mask_tex = gs_texrender_get_texture(drawTexRender);
+
 	}
 
 	if (testMode) {
@@ -1196,10 +1197,39 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		}
 	}
 
+	// TEST DRAW EFFECT
+	if (my_effect == nullptr) {
+		char* f = obs_module_file("effects/test.effect");
+		char* errorMessage = nullptr;
+		std::string error("FACEMASK SHADER ERROR: Error Loading shader : ");
+		my_effect = gs_effect_create_from_file(f, &errorMessage);
+		if (!my_effect || errorMessage) {
+			blog(LOG_DEBUG, ">>>>>>>>>>>");
+			if (errorMessage) {
+				char* start = errorMessage;
+				while (*start) {
+					if (*start == '\n') {
+						*start = 0;
+						break;
+					}
+					start++;
+				}
+				error.append(errorMessage);
+			}
+			else {	
+				error.append("No message available");
+			}
+			blog(LOG_DEBUG, error.c_str());
+			obs_leave_graphics();
+			throw std::runtime_error(error);
+		}
+		bfree(f);
+	}
+
 	// Draw the rendered Mask
 	if (mask_tex) {
-		while (gs_effect_loop(defaultEffect, "Draw")) {
-			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+		while (gs_effect_loop(my_effect, "Draw")) {
+			gs_effect_set_texture(gs_effect_get_param_by_name(my_effect,
 				"image"), mask_tex);
 			gs_draw_sprite(mask_tex, 0, baseWidth, baseHeight);
 		}
