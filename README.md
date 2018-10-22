@@ -5,7 +5,8 @@ A libOBS filter plugin that detects faces and draws masks with the detected data
 ## Compiling
 
 * Clone this repository with submodules: 
-```git clone --recursive https://github.com/stream-labs/facemask-plugin
+```console 
+	git clone --recursive https://github.com/stream-labs/facemask-plugin
 ```
 
 * Download cmake:
@@ -22,7 +23,7 @@ A libOBS filter plugin that detects faces and draws masks with the detected data
   [obs-studio](https://github.com/stream-labs/obs-studio)
 
   Do not forget the submodules:
-```
+```console
 git clone --recursive https://github.com/stream-labs/obs-studio.git
 ```
 * Build obs-studio
@@ -44,9 +45,11 @@ git clone --recursive https://github.com/stream-labs/obs-studio.git
 
 * Once you have successfully configured and generated your Visual Studio project with cmake, you can open the facemask-plugin.sln file in Visual Studio. You can now compile the plugin, which will give you a distribution folder structure that mimics the structure in slobs. For example, if you built your files in the build64 folder:
 
-  `build64/distribute/slobs/RelWithDebInfo/obs-plugins`
+  ```console 
+  build64/distribute/slobs/RelWithDebInfo/obs-plugins
+  ```
 
-       If you are going to debug facemask code make sure to build it as RelWithDebInfo configuration. You can set this in Visual Studio.
+   If you are going to debug facemask code make sure to build it as RelWithDebInfo configuration. You can set this in Visual Studio.
 
 * You can copy the files in manually, or set up symbolic links so you can easily hit F5 and debug from Visual Studio. You can also modify the CMakeLists to copy the files to a desired location with each build.
 
