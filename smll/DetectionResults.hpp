@@ -38,7 +38,6 @@
 
 #include "landmarks.hpp"
 #include "Face.hpp"
-#include "SingleValueKalman.hpp"
 #include <opencv2/opencv.hpp>
 
 namespace smll {
@@ -105,11 +104,11 @@ namespace smll {
 
 	private:
 		// Kalman Filter variables
-		cv::KalmanFilter kalmanFilter; // Initialize the Kalman Filter
-		int nStates = 18; // 18
-		int nMeasurements = 6; // 6
-		int nInputs = 0; // 0
-		double dt = 0.125; // 1/FPS - TODO: Get it from current FPS
+		cv::KalmanFilter kalmanFilter;
+		int nStates;
+		int nMeasurements;
+		int nInputs;
+		double dt;
 		bool kalmanFilterInitialized;
 		// Kalman Filter methods
 		void InitKalmanFilter(cv::KalmanFilter &kalmanFilter, int nStates, int nMeasurements, int nInputs, double dt);
