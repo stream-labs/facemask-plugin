@@ -70,7 +70,7 @@ void base64_decode(std::string const& encoded_string, std::vector<uint8_t>& ret)
 		char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
 		char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
 
-		for (j = 0; (j < i - 1); j++) 
+		for (j = 0; (j < i - 1); j++)
 			ret.push_back(char_array_3[j]);
 	}
 	// yield
@@ -140,5 +140,4 @@ void zlib_decode(const std::vector<uint8_t>& decoded, uint8_t* outbuf) {
 	// yield
 	::Sleep(0);
 }
-
 

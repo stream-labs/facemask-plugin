@@ -49,12 +49,12 @@ namespace smll {
 		, m_camera_w(0)
 		, m_camera_h(0) {
 		// Load face detection and pose estimation models.
-		// Face detection pyramid levels have been reduced from 6 to 1
+		// Face detection pyramid levels have been reduced from 6 to 4
 		frontal_face_detector detector = get_frontal_face_detector();
 		typedef dlib::scan_fhog_pyramid<dlib::pyramid_down<6> > image_scanner_type;
 		image_scanner_type scanner;
 		scanner.copy_configuration(detector.get_scanner());
-		scanner.set_max_pyramid_levels(1);
+		scanner.set_max_pyramid_levels(4);
 		m_detector = dlib::object_detector<image_scanner_type>(scanner, detector.get_overlap_tester(), detector.get_w());
 
 
@@ -191,31 +191,22 @@ namespace smll {
 				"INVALID IMAGE TYPE - Check if the frame is valid");
 			break;
 		}
-		
 	}
 
 	void FaceDetector::DetectFaces(const ImageWrapper& detect, const OBSTexture& capture, DetectionResults& results) {
 
-		// do nothing at all timeout
+		// Wait for CONFIG_INT_FACE_DETECT_FREQUENCY after all faces are lost before trying to detect them again
 		if (m_timeout > 0) {
 			m_timeout--;
 			return;
 		}
-        // face detection timeout
-        if (m_detectionTimeout > 0) {
-            m_detectionTimeout--;
-        }
-        // tracking timeouut
-        if (m_trackingTimeout > 0) {
-            m_trackingTimeout--;
-        }
 
-        // better check if the camera res has changed on us
-        if ((detect.w != m_detect.w) ||
+		// better check if the camera res has changed on us
+		if ((detect.w != m_detect.w) ||
 			(detect.h != m_detect.h)) {
-            // forget whatever we thought were faces
-            m_faces.length = 0;
-        }
+			// forget whatever we thought were faces
+			m_faces.length = 0;
+		}
 
 		// save detect for convenience
 		m_detect = detect;
@@ -223,57 +214,47 @@ namespace smll {
 		// Compute GrayScale image.
 		// This will be used for the rest of the Computer Vision.
 		computeCurrentImage(detect);
-        
-        // what are we doing here
-        bool doTracking = (m_faces.length > 0) && (m_trackingTimeout == 0);
-        bool doFaceDetection = (m_detectionTimeout == 0);
-        
-		// TRACK faces 
-		if (doTracking) {
 
-            UpdateObjectTracking();
+		bool trackingFailed = false;
+		// if number of frames before the last detection is bigger than the threshold or if there are no faces to track
+		if (m_detectionTimeout == 0 || m_faces.length == 0) {
+			DoFaceDetection();
+			m_detectionTimeout =
+				Config::singleton().get_int(CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY);
+			StartObjectTracking();
+		}
+		else if (m_trackingTimeout == 0) {
+			m_detectionTimeout--;
 
-            // Is Tracking is still good?
-            if (m_faces.length > 0) {
+			UpdateObjectTracking();
+
+			// Is Tracking is still good?
+			if (m_faces.length > 0) {
 				// next face for tracking time-slicing
 				m_trackingFaceIndex = (m_trackingFaceIndex + 1) % m_faces.length;
-                
-                // tracking frequency
-                m_trackingTimeout = 
+
+				// tracking frequency
+				m_trackingTimeout =
 					Config::singleton().get_int(CONFIG_INT_TRACKING_FREQUNCY);
-			} else {
-                // Tracking is bum, do face detect next time
-				m_timeout = 0;
-                m_detectionTimeout = 0;
-                m_trackingFaceIndex = 0;
-            }
+			}
+			else {
+				m_trackingFaceIndex = 0;
+				// force detection on the next frame, do not wait for 5 frames
+				m_timeout == 0;
+				trackingFailed = true;
+			}
 
 			// copy faces to results
 			for (int i = 0; i < m_faces.length; i++) {
 				results[i] = m_faces[i];
 			}
 			results.length = m_faces.length;
-            
-            // If tracking is good, we're done
-            //
-            // If tracking is no good, we STILL don't want to detect faces on
-            // the same frame, so bail and go next time
-            return;
 		}
-
-		// Do FACIAL DETECTION
-        bool startTracking = false;
-        if (doFaceDetection) {
-            DoFaceDetection();
-            m_detectionTimeout = 
-				Config::singleton().get_int(CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY);
-            startTracking = true;
-        }
-        
-		// Start Object Tracking
-        if (startTracking) {
-            StartObjectTracking();
-        }
+		else
+		{
+			m_detectionTimeout--;
+			m_trackingTimeout--;
+		}
 
 		// copy faces to results
 		for (int i = 0; i < m_faces.length; i++) {
@@ -282,13 +263,11 @@ namespace smll {
 		results.length = m_faces.length;
 
 		// If faces are not found
-		if (m_faces.length == 0) {
+		if (m_faces.length == 0 && !trackingFailed) {
             // Wait for 5 frames and do face detection
             m_timeout = Config::singleton().get_int(CONFIG_INT_FACE_DETECT_FREQUENCY);
-            m_detectionTimeout = 0;
 		}
 	}
-
 
 	void FaceDetector::MakeTriangulation(MorphData& morphData, 
 		DetectionResults& results,
@@ -887,7 +866,7 @@ namespace smll {
 		}
 	}
 
-	// Curve Fitting - Catmull-Rom spline 
+	// Curve Fitting - Catmull-Rom spline
 	// https://gist.github.com/pr0digy/1383576
 	// - converted to C++
 	// - modified for my uses

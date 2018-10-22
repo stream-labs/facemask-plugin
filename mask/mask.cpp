@@ -585,7 +585,7 @@ void Mask::MaskData::Tick(float time) {
 	m_elapsedTime += time;
 }
 
-void Mask::MaskData::Render(bool depthOnly) {
+void Mask::MaskData::Render(bool depthOnly, bool staticOnly, bool rotationDisable) {
 
 	ClearSortedDrawObjects();
 
@@ -605,7 +605,7 @@ void Mask::MaskData::Render(bool depthOnly) {
 		gs_matrix_mul(&kv.second->global);
 		for (auto  it = kv.second->resources.begin();
 			it != kv.second->resources.end(); it++) {
-			if ((*it)->IsDepthOnly() == depthOnly) {
+			if ((*it)->IsDepthOnly() == depthOnly && (*it)->IsStatic() == staticOnly && (*it)->IsRotationDisabled() == rotationDisable) {
 				(*it)->Render(kv.second.get());
 			}
 		}

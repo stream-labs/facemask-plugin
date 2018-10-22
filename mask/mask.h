@@ -115,7 +115,7 @@ namespace Mask {
 
 		// main: tick & render
 		void Tick(float time);
-		void Render(bool depthOnly = false);
+		void Render(bool depthOnly = false, bool staticOnly = false, bool rotationDisable = false);
 
 		// IAnimationControls
 		void	Play() override;
@@ -146,7 +146,6 @@ namespace Mask {
 			const smll::TriangulationResult& trires);
 
 		// intro animations
-		bool	IsIntroAnimation() { return m_isIntroAnim; }
 		float	GetIntroFadeTime() { return m_introFadeTime; }
 		float	GetIntroDuration() { return m_introDuration; }
 
