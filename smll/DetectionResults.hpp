@@ -57,6 +57,7 @@ namespace smll {
 
 		double		translation[3];
 		double		rotation[4];
+
 	};
 
 	typedef sarray<ThreeDPose, MAX_FACES> ThreeDPoses;
@@ -73,6 +74,9 @@ namespace smll {
 
 		// 3D pose 
 		ThreeDPose			pose;
+		// Start Pose
+		ThreeDPose			startPose;
+		bool				initedStartPose;
 
 		DetectionResult();
 		DetectionResult(const DetectionResult& r) { *this = r; }
@@ -87,6 +91,7 @@ namespace smll {
 
 		void CopyPoseFrom(const DetectionResult& r);
 		void ResetPose();
+		void InitStartPose();
 		bool PoseValid();
 		void UpdateResultsFrom(const DetectionResult& r);
 
@@ -131,7 +136,6 @@ namespace smll {
 	public:
 		DetectionResults();
 		void CorrelateAndUpdateFrom(DetectionResults& other);
-		void CorrelateAndCopyPosesFrom(DetectionResults& other);
 		int findClosest(const smll::DetectionResult& result);
 
 	private:

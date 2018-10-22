@@ -232,30 +232,6 @@ namespace smll {
 		}
 	}
 
-	void DetectionResults::CorrelateAndCopyPosesFrom(DetectionResults& other) {
-
-		DetectionResults& faces = *this;
-
-		// clear matched flags
-		for (int i = 0; i < other.length; i++) {
-			other[i].matched = false;
-		}
-		// match our faces to the other ones
-		for (int i = 0; i < faces.length; i++) {
-			// find closest
-			int closest = other.findClosest(faces[i]);
-
-			// copy pose
-			if (closest >= 0) {
-				faces[i].CopyPoseFrom(other[closest]);
-				other[closest].matched = true;
-			}
-			else {
-				faces[i].ResetPose();
-			}
-		}
-	}
-
 	int DetectionResults::findClosest(const smll::DetectionResult& result) {
 
 		DetectionResults& results = *this;
@@ -277,7 +253,7 @@ namespace smll {
 
 
 	DetectionResult::DetectionResult() 
-		: matched(false), numFramesLost(0), kalmanFiltersInitialized(false) {
+		: matched(false), numFramesLost(0), kalmanFiltersInitialized(false), initedStartPose(false) {
 
 	}
 
@@ -294,7 +270,7 @@ namespace smll {
 		CheckForPoseFlip(pose.rotation, pose.translation);
 
 		kalmanFiltersInitialized = false;
-
+		initedStartPose = false;
 		return *this;
 	}
 
@@ -335,6 +311,19 @@ namespace smll {
 
 	void DetectionResult::ResetPose() {
 		pose.ResetPose();
+	}
+
+	void DetectionResult::InitStartPose() {
+		if (!initedStartPose) {
+			startPose.rotation[0] = 0.0;
+			startPose.rotation[1] = 0.0;
+			startPose.rotation[2] = 0.0;
+			startPose.rotation[3] = 0.0;
+			startPose.translation[0] = 0.0;
+			startPose.translation[1] = 4;  // default X
+			startPose.translation[2] = 34; // default Z
+			initedStartPose = true;
+		}
 	}
 
 	void DetectionResult::UpdateResultsFrom(const DetectionResult& r) {
