@@ -866,7 +866,7 @@ namespace smll {
 		}
 	}
 
-	// Curve Fitting - Catmull-Rom spline Dete
+	// Curve Fitting - Catmull-Rom spline
 	// https://gist.github.com/pr0digy/1383576
 	// - converted to C++
 	// - modified for my uses
