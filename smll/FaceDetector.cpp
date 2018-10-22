@@ -215,6 +215,7 @@ namespace smll {
 		// This will be used for the rest of the Computer Vision.
 		computeCurrentImage(detect);
 
+		bool trackingFailed = false;
 		// if number of frames before the last detection is bigger than the threshold or if there are no faces to track
 		if (m_detectionTimeout == 0 || m_faces.length == 0) {
 			DoFaceDetection();
@@ -238,6 +239,9 @@ namespace smll {
 			}
 			else {
 				m_trackingFaceIndex = 0;
+				// force detection on the next frame, do not wait for 5 frames
+				m_timeout == 0;
+				trackingFailed = true;
 			}
 
 			// copy faces to results
@@ -259,7 +263,7 @@ namespace smll {
 		results.length = m_faces.length;
 
 		// If faces are not found
-		if (m_faces.length == 0) {
+		if (m_faces.length == 0 && !trackingFailed) {
             // Wait for 5 frames and do face detection
             m_timeout = Config::singleton().get_int(CONFIG_INT_FACE_DETECT_FREQUENCY);
 		}
