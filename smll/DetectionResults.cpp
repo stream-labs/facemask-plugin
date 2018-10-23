@@ -360,7 +360,7 @@ namespace smll {
 			// update the kalman filters
 			// update the Kalman filter with good measurements
 			cv::Mat translation_estimated(3, 1, CV_64F), eulers_estimated(3, 1, CV_64F);
-			UpdateKalmanFilter(kalmanFilter, measurements, translation_estimated, eulers_estimated);
+			UpdateKalmanFilter(measurements, translation_estimated, eulers_estimated);
 			// Update Pose
 			pose.SetPose(eulers_estimated, translation_estimated);
 		}
@@ -393,26 +393,26 @@ namespace smll {
 			cv::setIdentity(kalmanFilter.errorCovPost, cv::Scalar::all(1));             // error covariance
 			/* DYNAMIC MODEL */
 
-  //  [1 0 0 dt  0  0 dt2   0   0 0 0 0  0  0  0   0   0   0]
-  //  [0 1 0  0 dt  0   0 dt2   0 0 0 0  0  0  0   0   0   0]
-  //  [0 0 1  0  0 dt   0   0 dt2 0 0 0  0  0  0   0   0   0]
-  //  [0 0 0  1  0  0  dt   0   0 0 0 0  0  0  0   0   0   0]
-  //  [0 0 0  0  1  0   0  dt   0 0 0 0  0  0  0   0   0   0]
-  //  [0 0 0  0  0  1   0   0  dt 0 0 0  0  0  0   0   0   0]
-  //  [0 0 0  0  0  0   1   0   0 0 0 0  0  0  0   0   0   0]
-  //  [0 0 0  0  0  0   0   1   0 0 0 0  0  0  0   0   0   0]
-  //  [0 0 0  0  0  0   0   0   1 0 0 0  0  0  0   0   0   0]
-  //  [0 0 0  0  0  0   0   0   0 1 0 0 dt  0  0 dt2   0   0]
-  //  [0 0 0  0  0  0   0   0   0 0 1 0  0 dt  0   0 dt2   0]
-  //  [0 0 0  0  0  0   0   0   0 0 0 1  0  0 dt   0   0 dt2]
-  //  [0 0 0  0  0  0   0   0   0 0 0 0  1  0  0  dt   0   0]
-  //  [0 0 0  0  0  0   0   0   0 0 0 0  0  1  0   0  dt   0]
-  //  [0 0 0  0  0  0   0   0   0 0 0 0  0  0  1   0   0  dt]
-  //  [0 0 0  0  0  0   0   0   0 0 0 0  0  0  0   1   0   0]
-  //  [0 0 0  0  0  0   0   0   0 0 0 0  0  0  0   0   1   0]
-  //  [0 0 0  0  0  0   0   0   0 0 0 0  0  0  0   0   0   1]
+			//  [1 0 0 dt  0  0 dt2   0   0 0 0 0  0  0  0   0   0   0]
+			//  [0 1 0  0 dt  0   0 dt2   0 0 0 0  0  0  0   0   0   0]
+			//  [0 0 1  0  0 dt   0   0 dt2 0 0 0  0  0  0   0   0   0]
+			//  [0 0 0  1  0  0  dt   0   0 0 0 0  0  0  0   0   0   0]
+			//  [0 0 0  0  1  0   0  dt   0 0 0 0  0  0  0   0   0   0]
+			//  [0 0 0  0  0  1   0   0  dt 0 0 0  0  0  0   0   0   0]
+			//  [0 0 0  0  0  0   1   0   0 0 0 0  0  0  0   0   0   0]
+			//  [0 0 0  0  0  0   0   1   0 0 0 0  0  0  0   0   0   0]
+			//  [0 0 0  0  0  0   0   0   1 0 0 0  0  0  0   0   0   0]
+			//  [0 0 0  0  0  0   0   0   0 1 0 0 dt  0  0 dt2   0   0]
+			//  [0 0 0  0  0  0   0   0   0 0 1 0  0 dt  0   0 dt2   0]
+			//  [0 0 0  0  0  0   0   0   0 0 0 1  0  0 dt   0   0 dt2]
+			//  [0 0 0  0  0  0   0   0   0 0 0 0  1  0  0  dt   0   0]
+			//  [0 0 0  0  0  0   0   0   0 0 0 0  0  1  0   0  dt   0]
+			//  [0 0 0  0  0  0   0   0   0 0 0 0  0  0  1   0   0  dt]
+			//  [0 0 0  0  0  0   0   0   0 0 0 0  0  0  0   1   0   0]
+			//  [0 0 0  0  0  0   0   0   0 0 0 0  0  0  0   0   1   0]
+			//  [0 0 0  0  0  0   0   0   0 0 0 0  0  0  0   0   0   1]
 
-  // position
+			// position
 			kalmanFilter.transitionMatrix.at<double>(0, 3) = dt;
 			kalmanFilter.transitionMatrix.at<double>(1, 4) = dt;
 			kalmanFilter.transitionMatrix.at<double>(2, 5) = dt;
@@ -436,12 +436,12 @@ namespace smll {
 
 			/* MEASUREMENT MODEL */
 
-  //  [1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
-  //  [0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
-  //  [0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
-  //  [0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0]
-  //  [0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0]
-  //  [0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0]
+			//  [1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
+			//  [0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
+			//  [0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
+			//  [0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0]
+			//  [0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0]
+			//  [0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0]
 
 			
 			kalmanFilter.measurementMatrix.at<double>(0, 0) = 1;  // x
@@ -455,15 +455,15 @@ namespace smll {
 		}
 	}
 
-	void DetectionResult::UpdateKalmanFilter(cv::KalmanFilter &KF, cv::Mat &measurement,
+	void DetectionResult::UpdateKalmanFilter(cv::Mat &measurement,
 		cv::Mat &translation_estimated, cv::Mat &eulers_estimated)
 	{
 
 		// First predict, to update the internal statePre variable
-		cv::Mat prediction = KF.predict();
+		cv::Mat prediction = kalmanFilter.predict();
 
 		// The "correct" phase that is going to use the predicted value and our measurement
-		cv::Mat estimated = KF.correct(measurement);
+		cv::Mat estimated = kalmanFilter.correct(measurement);
 
 		// Estimated translation
 		translation_estimated.at<double>(0) = estimated.at<double>(0);
