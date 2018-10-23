@@ -386,13 +386,13 @@ namespace smll {
 
 	void DetectionResult::InitKalmanFilter() {
 		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE)) {
-			kalmanFilter.init(nStates, nMeasurements, nInputs, CV_64F); // init Kalman Filter
+			kalmanFilter.init(nStates, nMeasurements, nInputs, CV_64F);					// Init Kalman Filter
 
-			cv::setIdentity(kalmanFilter.processNoiseCov, cv::Scalar::all(1e-5)); // set process noise
-			cv::setIdentity(kalmanFilter.measurementNoiseCov, cv::Scalar::all(1e-4));   // set measurement noise
-			cv::setIdentity(kalmanFilter.errorCovPost, cv::Scalar::all(1));             // error covariance
+			cv::setIdentity(kalmanFilter.processNoiseCov, cv::Scalar::all(1e-5));		// Set process noise
+			cv::setIdentity(kalmanFilter.measurementNoiseCov, cv::Scalar::all(1e-4));   // Set measurement noise
+			cv::setIdentity(kalmanFilter.errorCovPost, cv::Scalar::all(1));             // Error covariance
+
 			/* DYNAMIC MODEL */
-
 			//  [1 0 0 dt  0  0 dt2   0   0 0 0 0  0  0  0   0   0   0]
 			//  [0 1 0  0 dt  0   0 dt2   0 0 0 0  0  0  0   0   0   0]
 			//  [0 0 1  0  0 dt   0   0 dt2 0 0 0  0  0  0   0   0   0]
@@ -412,7 +412,7 @@ namespace smll {
 			//  [0 0 0  0  0  0   0   0   0 0 0 0  0  0  0   0   1   0]
 			//  [0 0 0  0  0  0   0   0   0 0 0 0  0  0  0   0   0   1]
 
-			// position
+			// Position
 			kalmanFilter.transitionMatrix.at<double>(0, 3) = dt;
 			kalmanFilter.transitionMatrix.at<double>(1, 4) = dt;
 			kalmanFilter.transitionMatrix.at<double>(2, 5) = dt;
@@ -423,7 +423,7 @@ namespace smll {
 			kalmanFilter.transitionMatrix.at<double>(1, 7) = 0.5*pow(dt, 2);
 			kalmanFilter.transitionMatrix.at<double>(2, 8) = 0.5*pow(dt, 2);
 
-			// orientation
+			// Orientation
 			kalmanFilter.transitionMatrix.at<double>(9, 12) = dt;
 			kalmanFilter.transitionMatrix.at<double>(10, 13) = dt;
 			kalmanFilter.transitionMatrix.at<double>(11, 14) = dt;
@@ -435,15 +435,12 @@ namespace smll {
 			kalmanFilter.transitionMatrix.at<double>(11, 17) = 0.5*pow(dt, 2);
 
 			/* MEASUREMENT MODEL */
-
 			//  [1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
 			//  [0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
 			//  [0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
 			//  [0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0]
 			//  [0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0]
 			//  [0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0]
-
-			
 			kalmanFilter.measurementMatrix.at<double>(0, 0) = 1;  // x
 			kalmanFilter.measurementMatrix.at<double>(1, 1) = 1;  // y
 			kalmanFilter.measurementMatrix.at<double>(2, 2) = 1;  // z
@@ -455,25 +452,20 @@ namespace smll {
 		}
 	}
 
-	void DetectionResult::UpdateKalmanFilter(cv::Mat &measurement,
-		cv::Mat &translation_estimated, cv::Mat &eulers_estimated)
+	void DetectionResult::UpdateKalmanFilter(cv::Mat &measurement, cv::Mat &estimatedTranslation, cv::Mat &estimatedEulers)
 	{
-
-		// First predict, to update the internal statePre variable
 		cv::Mat prediction = kalmanFilter.predict();
-
-		// The "correct" phase that is going to use the predicted value and our measurement
 		cv::Mat estimated = kalmanFilter.correct(measurement);
 
 		// Estimated translation
-		translation_estimated.at<double>(0) = estimated.at<double>(0);
-		translation_estimated.at<double>(1) = estimated.at<double>(1);
-		translation_estimated.at<double>(2) = estimated.at<double>(2);
+		estimatedTranslation.at<double>(0) = estimated.at<double>(0);
+		estimatedTranslation.at<double>(1) = estimated.at<double>(1);
+		estimatedTranslation.at<double>(2) = estimated.at<double>(2);
 
 		// Estimated euler angles
-		eulers_estimated.at<double>(0) = estimated.at<double>(9);
-		eulers_estimated.at<double>(1) = estimated.at<double>(10);
-		eulers_estimated.at<double>(2) = estimated.at<double>(11);
+		estimatedEulers.at<double>(0) = estimated.at<double>(9);
+		estimatedEulers.at<double>(1) = estimated.at<double>(10);
+		estimatedEulers.at<double>(2) = estimated.at<double>(11);
 	}
 
 }

@@ -117,7 +117,7 @@ namespace smll {
 		bool kalmanFilterInitialized;
 		// Kalman Filter methods
 		void InitKalmanFilter();
-		void UpdateKalmanFilter(cv::Mat &measurement, cv::Mat &translation_estimated, cv::Mat &rotation_estimated);
+		void UpdateKalmanFilter(cv::Mat &measurement, cv::Mat &estimatedTranslation, cv::Mat &estimatedEulers);
 	};
 
 
@@ -127,9 +127,6 @@ namespace smll {
 		DetectionResults();
 		void CorrelateAndUpdateFrom(DetectionResults& other);
 		int findClosest(const smll::DetectionResult& result);
-
-	private:
-
 	};
 
 }
