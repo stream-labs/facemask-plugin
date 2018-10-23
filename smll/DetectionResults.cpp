@@ -361,8 +361,13 @@ namespace smll {
 			// update the Kalman filter with good measurements
 			cv::Mat translation_estimated(3, 1, CV_64F), eulers_estimated(3, 1, CV_64F);
 			UpdateKalmanFilter(measurements, translation_estimated, eulers_estimated);
+			// Smooth update: for reducing the jitter in face mask rendering
+			// Creating a dynamic smooth update based on the current FPS
+			// We only need to smooth Eulers. The translation is pretty much stable.
+			cv::Mat smoothEulers = pose.GetCVRotation();
+			smoothEulers += 0.8 * dt * (eulers_estimated - smoothEulers);
 			// Update Pose
-			pose.SetPose(eulers_estimated, translation_estimated);
+			pose.SetPose(smoothEulers, translation_estimated);
 		}
 		else {
 			pose.translation[0] = ntx[0];
