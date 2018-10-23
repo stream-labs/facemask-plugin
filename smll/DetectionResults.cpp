@@ -330,7 +330,7 @@ namespace smll {
 
 		if (!kalmanFilterInitialized) {
 			*this = r;
-			InitKalmanFilter(kalmanFilter, nStates, nMeasurements, nInputs, dt);
+			InitKalmanFilter();
 		}
 
 		double ntx[3] = { r.pose.translation[0], r.pose.translation[1], r.pose.translation[2] };
@@ -384,7 +384,7 @@ namespace smll {
 	}
 
 
-	void DetectionResult::InitKalmanFilter(cv::KalmanFilter &kalmanFilter, int nStates, int nMeasurements, int nInputs, double dt) {
+	void DetectionResult::InitKalmanFilter() {
 		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE)) {
 			kalmanFilter.init(nStates, nMeasurements, nInputs, CV_64F); // init Kalman Filter
 

@@ -116,7 +116,7 @@ namespace smll {
 		double dt;
 		bool kalmanFilterInitialized;
 		// Kalman Filter methods
-		void InitKalmanFilter(cv::KalmanFilter &kalmanFilter, int nStates, int nMeasurements, int nInputs, double dt);
+		void InitKalmanFilter();
 		void UpdateKalmanFilter(cv::KalmanFilter &KF, cv::Mat &measurement,
 			cv::Mat &translation_estimated, cv::Mat &rotation_estimated);
 	};
