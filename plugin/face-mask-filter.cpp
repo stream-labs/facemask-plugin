@@ -165,6 +165,10 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	obs_leave_graphics();
 
 	// Make the smll stuff
+	for (size_t i = 0; i < 8; i++)
+	{
+		smllFaceDetectors[i] = new smll::FaceDetector();
+	}
 	smllFaceDetector = new smll::FaceDetector();
 	smllRenderer = new smll::OBSRenderer(); 
 	smllTextShaper = new smll::TextShaper();
@@ -1758,6 +1762,91 @@ int32_t Plugin::FaceMaskFilter::Instance::StaticThreadMain(Instance *ptr) {
 	return ptr->LocalThreadMain();
 }
 
+int32_t Plugin::FaceMaskFilter::Instance::StartFrameProc(FrameThreadData *s_ptr) {
+	int32_t res =  s_ptr->ptr->FrameThread(s_ptr->lastTimestamp, s_ptr->frame_idx);
+	delete s_ptr;
+	return res;
+}
+
+
+
+int32_t Plugin::FaceMaskFilter::Instance::FrameThread(TimeStamp lastTimestamp, int frame_idx) {
+
+	smll::DetectionResults detect_results;
+
+	{
+		std::unique_lock<std::mutex> lock(detection.frames[frame_idx].mutex);
+		// new frame - do the face detection
+		int num_seconds;
+
+		char str[128] = { 0 };
+
+		auto pre = std::chrono::system_clock::now();
+
+		smllFaceDetectors[frame_idx]->DetectFaces(detection.frames[frame_idx].detect, detection.frames[frame_idx].capture, detect_results);
+
+		auto after = std::chrono::system_clock::now();
+		auto elapsedMs =
+			std::chrono::duration_cast<std::chrono::milliseconds>
+			(after - pre);
+
+		num_seconds = elapsedMs.count();
+		sprintf(str, "time After: %d", num_seconds);
+		blog(LOG_DEBUG, str);
+
+
+		if (!STUFF_ON_MAIN_THREAD) {
+			// Now do the landmark detection & pose estimation
+			smllFaceDetectors[frame_idx]->DetectLandmarks(detection.frames[frame_idx].capture, detect_results);
+			smllFaceDetectors[frame_idx]->DoPoseEstimation(detect_results);
+		}
+
+	}
+
+
+	// get the index into the faces buffer
+	int face_idx;
+	{
+		std::unique_lock<std::mutex> lock(detection.mutex);
+		face_idx = detection.facesIndex;
+	}
+	if (face_idx < 0)
+		face_idx = 0;
+
+	{
+		std::unique_lock<std::mutex> facelock(detection.faces[face_idx].mutex);
+
+		// pass on timestamp to results
+		detection.faces[face_idx].timestamp = lastTimestamp;
+
+		if (!STUFF_ON_MAIN_THREAD) {
+			std::unique_lock<std::mutex> framelock(detection.frames[frame_idx].mutex);
+
+			// Make the triangulation
+			detection.faces[face_idx].triangulationResults.buildLines = drawMorphTris;
+			smllFaceDetectors[frame_idx]->MakeTriangulation(detection.frames[frame_idx].morphData,
+				detect_results, detection.faces[face_idx].triangulationResults);
+
+			detection.frames[frame_idx].active = false;
+		}
+
+		// Copy our detection results
+		for (int i = 0; i < detect_results.length; i++) {
+			detection.faces[face_idx].detectionResults[i] = detect_results[i];
+		}
+		detection.faces[face_idx].detectionResults.length = detect_results.length;
+	}
+
+	{
+		std::unique_lock<std::mutex> lock(detection.mutex);
+
+		// increment face buffer index
+		detection.facesIndex = (face_idx + 1) % ThreadData::BUFFER_SIZE;
+	}
+	return 0;
+}
+
+
 int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 
 	HANDLE hTask = NULL;
@@ -1769,6 +1858,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 
 	// run until we're shut down
 	TimeStamp lastTimestamp;
+	int last_frame_idx =-1;
 	while (true) {
 
 		auto frameStart = std::chrono::system_clock::now();
@@ -1790,75 +1880,26 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 		// the read index is always right behind the write
 		frame_idx = (frame_idx + ThreadData::BUFFER_SIZE - 1) % ThreadData::BUFFER_SIZE;
 
-		smll::DetectionResults detect_results;
-
-		bool skipped = false;
-		{
-			std::unique_lock<std::mutex> lock(detection.frames[frame_idx].mutex);
-
-			// check to see if we are detecting the same frame as last time
-			if (lastTimestamp == detection.frames[frame_idx].timestamp) {
-				// same frame, skip
-				skipped = true;
-			}
-			else {
-				// new frame - do the face detection
-				smllFaceDetector->DetectFaces(detection.frames[frame_idx].detect, detection.frames[frame_idx].capture, detect_results);
-				if (!STUFF_ON_MAIN_THREAD) {
-					// Now do the landmark detection & pose estimation
-					smllFaceDetector->DetectLandmarks(detection.frames[frame_idx].capture, detect_results);
-					smllFaceDetector->DoPoseEstimation(detect_results);
-				}
-
-				lastTimestamp = detection.frames[frame_idx].timestamp;
-			}
-		}
-
-		if (skipped) {
-			// sleep for 1ms and continue
+		if (last_frame_idx == frame_idx) {
+			// same frame, skip
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			continue;
 		}
 
-		// get the index into the faces buffer
-		int face_idx;
 		{
-			std::unique_lock<std::mutex> lock(detection.mutex);
-			face_idx = detection.facesIndex;
-		}
-		if (face_idx < 0)
-			face_idx = 0;
-
-		{
-			std::unique_lock<std::mutex> facelock(detection.faces[face_idx].mutex);
-
-			// pass on timestamp to results
-			detection.faces[face_idx].timestamp = lastTimestamp;
-
-			if (!STUFF_ON_MAIN_THREAD) {
-				std::unique_lock<std::mutex> framelock(detection.frames[frame_idx].mutex);
-
-				// Make the triangulation
-				detection.faces[face_idx].triangulationResults.buildLines = drawMorphTris;
-				smllFaceDetector->MakeTriangulation(detection.frames[frame_idx].morphData,
-					detect_results, detection.faces[face_idx].triangulationResults);
-
-				detection.frames[frame_idx].active = false;
-			}
-
-			// Copy our detection results
-			for (int i = 0; i < detect_results.length; i++) {
-				detection.faces[face_idx].detectionResults[i] = detect_results[i];
-			}
-			detection.faces[face_idx].detectionResults.length = detect_results.length;
+			std::unique_lock<std::mutex> lock(detection.frames[frame_idx].mutex);
+ 			lastTimestamp = detection.frames[frame_idx].timestamp;
 		}
 
-		{
-			std::unique_lock<std::mutex> lock(detection.mutex);
+		last_frame_idx = frame_idx;
 
-			// increment face buffer index
-			detection.facesIndex = (face_idx + 1) % ThreadData::BUFFER_SIZE;
-		}
+		//HERE THREAD
+		FrameThreadData  * s_ptr = new  FrameThreadData();
+		s_ptr->ptr = this;
+		s_ptr->lastTimestamp = lastTimestamp;
+		s_ptr->frame_idx = frame_idx;
+		std::thread  t(StartFrameProc, s_ptr);
+		t.detach();
 
 		// don't go too fast and eat up all the cpu
 		auto frameEnd = std::chrono::system_clock::now();
