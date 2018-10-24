@@ -101,7 +101,7 @@ public:
     /**
      * @return The index type
      */
-    flann_algorithm_t getType() const CV_OVERRIDE
+    flann_algorithm_t getType() const
     {
         return FLANN_INDEX_COMPOSITE;
     }
@@ -109,7 +109,7 @@ public:
     /**
      * @return Size of the index
      */
-    size_t size() const CV_OVERRIDE
+    size_t size() const
     {
         return kdtree_index_->size();
     }
@@ -117,7 +117,7 @@ public:
     /**
      * \returns The dimensionality of the features in this index.
      */
-    size_t veclen() const CV_OVERRIDE
+    size_t veclen() const
     {
         return kdtree_index_->veclen();
     }
@@ -125,7 +125,7 @@ public:
     /**
      * \returns The amount of memory (in bytes) used by the index.
      */
-    int usedMemory() const CV_OVERRIDE
+    int usedMemory() const
     {
         return kmeans_index_->usedMemory() + kdtree_index_->usedMemory();
     }
@@ -133,7 +133,7 @@ public:
     /**
      * \brief Builds the index
      */
-    void buildIndex() CV_OVERRIDE
+    void buildIndex()
     {
         Logger::info("Building kmeans tree...\n");
         kmeans_index_->buildIndex();
@@ -145,7 +145,7 @@ public:
      * \brief Saves the index to a stream
      * \param stream The stream to save the index to
      */
-    void saveIndex(FILE* stream) CV_OVERRIDE
+    void saveIndex(FILE* stream)
     {
         kmeans_index_->saveIndex(stream);
         kdtree_index_->saveIndex(stream);
@@ -155,7 +155,7 @@ public:
      * \brief Loads the index from a stream
      * \param stream The stream from which the index is loaded
      */
-    void loadIndex(FILE* stream) CV_OVERRIDE
+    void loadIndex(FILE* stream)
     {
         kmeans_index_->loadIndex(stream);
         kdtree_index_->loadIndex(stream);
@@ -164,7 +164,7 @@ public:
     /**
      * \returns The index parameters
      */
-    IndexParams getParameters() const CV_OVERRIDE
+    IndexParams getParameters() const
     {
         return index_params_;
     }
@@ -172,7 +172,7 @@ public:
     /**
      * \brief Method that searches for nearest-neighbours
      */
-    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams) CV_OVERRIDE
+    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams)
     {
         kmeans_index_->findNeighbors(result, vec, searchParams);
         kdtree_index_->findNeighbors(result, vec, searchParams);

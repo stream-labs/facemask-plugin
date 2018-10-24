@@ -276,8 +276,8 @@ namespace cv { namespace cuda { namespace device
             static __device__ void reduce(Pointer smem, Reference val, unsigned int tid, Op op)
             {
             #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 300
-                CV_UNUSED(smem);
-                CV_UNUSED(tid);
+                (void) smem;
+                (void) tid;
 
                 Unroll<N / 2, Pointer, Reference, Op>::loopShfl(val, op, N);
             #else
