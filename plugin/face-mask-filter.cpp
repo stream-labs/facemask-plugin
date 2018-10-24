@@ -1020,7 +1020,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 						gs_matrix_identity();
 
 						// Draw the source video
-						if (mask_data && autoBGRemoval && cartoonMode) {
+						if (mask_data && (autoBGRemoval || cartoonMode || demoModeOn)) {
 							triangulation.autoBGRemoval = autoBGRemoval;
 							triangulation.cartoonMode = cartoonMode;
 							mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
