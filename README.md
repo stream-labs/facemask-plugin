@@ -4,38 +4,55 @@ A libOBS filter plugin that detects faces and draws masks with the detected data
 
 ## Compiling
 
+* Clone this repository with submodules: 
+```console 
+	git clone --recursive https://github.com/stream-labs/facemask-plugin
+```
+
 * Download cmake:
 
   [cmake](https://cmake.org/download/)
 
-* Get Visual Studio 2015 (vc14). When you install it, make sure you include the C++ stuff. libOBS is fixed at this version, so other versions of Visual Studio *will not work*.
+
+* Get Visual Studio 2015 (vc14) or Visual Studio 2017. When you install it, make sure you include the C++ stuff. 
 
   [microsoft](https://www.visualstudio.com/vs/older-downloads/)
 
 * Download our fork of OBS Studio:
-
++
   [obs-studio](https://github.com/stream-labs/obs-studio)
-  
+
+  Do not forget the submodules:
+```console
+git clone --recursive https://github.com/stream-labs/obs-studio.git
+```
 * Build obs-studio
-	* Follow the build instructions here:
+  * Follow the build instructions here:
     
     [build instructions](https://github.com/obsproject/obs-studio/wiki/Install-Instructions#windows-build-directions)
+
+  **Note**: You do not need to install Qt5 as a dependency, just make sure ENABLE\_UI in CMake GUI is not checked before Configure/Generate. You can also handle this by setting ENABLE\_UI to OFF in CMakeLists in the obs-studio folder.
     
 
 * Run cmake in the facemasks folder. When you hit `CONFIGURE`, you will get errors on fields you need to fill in:
 
 
-    **PATH_OBS_STUDIO** Path to the obs-studio folder.
+    **PATH\_OBS\_STUDIO** Path to the obs-studio folder.
 
     **BUILD_SLOBS** - Distributes to slobs instead of OBS Studio
 
-    If you have the [Intel Math Kernel Library](https://software.intel.com/en-us/mkl) installed on your system, you might have **DLIB_USE_BLAS** or **DLIB_USE_LAPACK** turned on. Keep in mind that dlib links dynamically with these libs, so the MKL and TBB dlls will need to be found by slobs when it runs (for instance, by copying them into the slobs-client folder). I don't reccommend using these libs for this reason.
+    If you have the [Intel Math Kernel Library](https://software.intel.com/en-us/mkl) installed on your system, you might have **DLIB\_USE\_BLAS** or **DLIB\_USE\_LAPACK** turned on. Keep in mind that dlib links dynamically with these libs, so the MKL and TBB dlls will need to be found by slobs when it runs (for instance, by copying them into the slobs-client folder). I don't reccommend using these libs for this reason.
 
-* Once you have successfully configured and generated your Visual Studio project with cmake, you can compile the plugin, which will give you a distribution folder structure that mimics the structure in slobs. For example, if you built your files in the build64 folder:
+* Once you have successfully configured and generated your Visual Studio project with cmake, you can open the facemask-plugin.sln file in Visual Studio. You can now compile the plugin, which will give you a distribution folder structure that mimics the structure in slobs. For example, if you built your files in the build64 folder:
 
-	`build64/distribute/slobs/RelWithDebInfo/`
-    
-	You can copy the files in manually, or set up symbolic links so you can easily hit F5 and debug from Visual Studio.
+  ```console 
+  build64/distribute/slobs/RelWithDebInfo/obs-plugins
+  ```
+
+   If you are going to debug facemask code make sure to build it as RelWithDebInfo configuration. You can set this in Visual Studio.
+
+* You can copy the files in manually, or set up symbolic links so you can easily hit F5 and debug from Visual Studio. You can also modify the CMakeLists to copy the files to a desired location with each build.
+
 
 ## How It Works
 
@@ -170,8 +187,8 @@ Turn ON the **'Command Line Clients Tool'** option during the installation
 
 For Unit Testing CppUtest framework is used.
 * Clone CppUtest:
-	[CppUtest](https://github.com/cpputest/cpputest)
+  [CppUtest](https://github.com/cpputest/cpputest)
 * During building the facemaks project with CMAKE:
-	* Set **BUILD_UNIT_TESTS** option *ON*
-	* Set **PATH_CPP_UTEST** Path to the cpputest folder
-	* Build and Run the *facemask-plugin-test* project, it will show the report of tests
+  * Set **BUILD_UNIT_TESTS** option *ON*
+  * Set **PATH_CPP_UTEST** Path to the cpputest folder
+  * Build and Run the *facemask-plugin-test* project, it will show the report of tests

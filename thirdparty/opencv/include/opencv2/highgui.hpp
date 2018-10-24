@@ -442,12 +442,23 @@ The function getWindowProperty returns properties of a window.
  */
 CV_EXPORTS_W double getWindowProperty(const String& winname, int prop_id);
 
+/** @brief Provides rectangle of image in the window.
+
+The function getWindowImageRect returns the client screen coordinates, width and height of the image rendering area.
+
+@param winname Name of the window.
+
+@sa resizeWindow moveWindow
+ */
+CV_EXPORTS_W Rect getWindowImageRect(const String& winname);
+
+/** @example samples/cpp/create_mask.cpp
+This program demonstrates using mouse events and how to make and use a mask image (black and white) .
+*/
 /** @brief Sets mouse handler for the specified window
 
 @param winname Name of the window.
-@param onMouse Mouse callback. See OpenCV samples, such as
-<https://github.com/opencv/opencv/tree/master/samples/cpp/ffilldemo.cpp>, on how to specify and
-use the callback.
+@param onMouse Callback function for mouse events. See OpenCV samples on how to specify and use the callback.
 @param userdata The optional parameter passed to the callback.
  */
 CV_EXPORTS void setMouseCallback(const String& winname, MouseCallback onMouse, void* userdata = 0);
@@ -826,9 +837,5 @@ CV_EXPORTS int createButton( const String& bar_name, ButtonCallback on_change,
 //! @} highgui
 
 } // cv
-
-#ifndef DISABLE_OPENCV_24_COMPATIBILITY
-#include "opencv2/highgui/highgui_c.h"
-#endif
 
 #endif

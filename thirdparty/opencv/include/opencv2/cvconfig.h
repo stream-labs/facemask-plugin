@@ -46,16 +46,13 @@
 /* Cocoa API */
 /* #undef HAVE_COCOA */
 
-/* C= */
-/* #undef HAVE_CSTRIPES */
-
-/* NVidia Cuda Basic Linear Algebra Subprograms (BLAS) API*/
+/* NVIDIA CUDA Basic Linear Algebra Subprograms (BLAS) API*/
 /* #undef HAVE_CUBLAS */
 
-/* NVidia Cuda Runtime API*/
+/* NVIDIA CUDA Runtime API*/
 /* #undef HAVE_CUDA */
 
-/* NVidia Cuda Fast Fourier Transform (FFT) API*/
+/* NVIDIA CUDA Fast Fourier Transform (FFT) API*/
 /* #undef HAVE_CUFFT */
 
 /* IEEE1394 capturing support */
@@ -65,20 +62,20 @@
 /* #undef HAVE_DC1394_2 */
 
 /* DirectX */
-/* #undef HAVE_DIRECTX */
-/* #undef HAVE_DIRECTX_NV12 */
-/* #undef HAVE_D3D11 */
-/* #undef HAVE_D3D10 */
-/* #undef HAVE_D3D9 */
+#define HAVE_DIRECTX
+#define HAVE_DIRECTX_NV12
+#define HAVE_D3D11
+#define HAVE_D3D10
+#define HAVE_D3D9
 
 /* DirectShow Video Capture library */
-/* #undef HAVE_DSHOW */
+#define HAVE_DSHOW
 
 /* Eigen Matrix & Linear Algebra Library */
 /* #undef HAVE_EIGEN */
 
 /* FFMpeg video library */
-/* #undef HAVE_FFMPEG */
+#define HAVE_FFMPEG
 
 /* Geospatial Data Abstraction Library */
 /* #undef HAVE_GDAL */
@@ -96,7 +93,7 @@
 /* #undef HAVE_HALIDE */
 
 /* Define to 1 if you have the <inttypes.h> header file. */
-/* #undef HAVE_INTTYPES_H */
+#define HAVE_INTTYPES_H 1
 
 /* Intel Perceptual Computing SDK library */
 /* #undef HAVE_INTELPERC */
@@ -106,14 +103,11 @@
 #define HAVE_IPP_ICV
 #define HAVE_IPP_IW
 
-/* Intel IPP Async */
-/* #undef HAVE_IPP_A */
-
 /* JPEG-2000 codec */
-/* #undef HAVE_JASPER */
+#define HAVE_JASPER
 
 /* IJG JPEG codec */
-/* #undef HAVE_JPEG */
+#define HAVE_JPEG
 
 /* libpng/png.h needs to be included */
 /* #undef HAVE_LIBPNG_PNG_H */
@@ -125,12 +119,12 @@
 /* #undef HAVE_LIBV4L */
 
 /* Microsoft Media Foundation Capture library */
-/* #undef HAVE_MSMF */
+#define HAVE_MSMF
 
-/* NVidia Video Decoding API*/
+/* NVIDIA Video Decoding API*/
 /* #undef HAVE_NVCUVID */
 
-/* NVidia Video Encoding API*/
+/* NVIDIA Video Encoding API*/
 /* #undef HAVE_NVCUVENC */
 
 /* OpenCL Support */
@@ -139,7 +133,7 @@
 /* #undef HAVE_OPENCL_SVM */
 
 /* OpenEXR codec */
-/* #undef HAVE_OPENEXR */
+#define HAVE_OPENEXR
 
 /* OpenGL support*/
 /* #undef HAVE_OPENGL */
@@ -149,6 +143,9 @@
 
 /* OpenNI library */
 /* #undef HAVE_OPENNI2 */
+
+/* librealsense library */
+/* #undef HAVE_LIBREALSENSE */
 
 /* PNG codec */
 #define HAVE_PNG
@@ -172,22 +169,25 @@
 /* #undef HAVE_QTKIT */
 
 /* Intel Threading Building Blocks */
-/* #undef HAVE_TBB */
+#define HAVE_TBB
+
+/* Ste||ar Group High Performance ParallelX */
+/* #undef HAVE_HPX */
 
 /* TIFF codec */
-/* #undef HAVE_TIFF */
+#define HAVE_TIFF
 
 /* Unicap video capture library */
 /* #undef HAVE_UNICAP */
 
 /* Video for Windows support */
-/* #undef HAVE_VFW */
+#define HAVE_VFW
 
 /* V4L2 capturing support in videoio.h */
 /* #undef HAVE_VIDEOIO */
 
 /* Win32 UI */
-/* #undef HAVE_WIN32UI */
+#define HAVE_WIN32UI
 
 /* XIMEA camera support */
 /* #undef HAVE_XIMEA */
