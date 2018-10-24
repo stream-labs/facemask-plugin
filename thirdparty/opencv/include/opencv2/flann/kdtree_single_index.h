@@ -114,7 +114,7 @@ public:
     /**
      * Builds the index
      */
-    void buildIndex() CV_OVERRIDE
+    void buildIndex()
     {
         computeBoundingBox(root_bbox_);
         root_node_ = divideTree(0, (int)size_, root_bbox_ );   // construct the tree
@@ -133,13 +133,13 @@ public:
         }
     }
 
-    flann_algorithm_t getType() const CV_OVERRIDE
+    flann_algorithm_t getType() const
     {
         return FLANN_INDEX_KDTREE_SINGLE;
     }
 
 
-    void saveIndex(FILE* stream) CV_OVERRIDE
+    void saveIndex(FILE* stream)
     {
         save_value(stream, size_);
         save_value(stream, dim_);
@@ -154,7 +154,7 @@ public:
     }
 
 
-    void loadIndex(FILE* stream) CV_OVERRIDE
+    void loadIndex(FILE* stream)
     {
         load_value(stream, size_);
         load_value(stream, dim_);
@@ -179,7 +179,7 @@ public:
     /**
      *  Returns size of index.
      */
-    size_t size() const CV_OVERRIDE
+    size_t size() const
     {
         return size_;
     }
@@ -187,7 +187,7 @@ public:
     /**
      * Returns the length of an index feature.
      */
-    size_t veclen() const CV_OVERRIDE
+    size_t veclen() const
     {
         return dim_;
     }
@@ -196,7 +196,7 @@ public:
      * Computes the inde memory usage
      * Returns: memory used by the index
      */
-    int usedMemory() const CV_OVERRIDE
+    int usedMemory() const
     {
         return (int)(pool_.usedMemory+pool_.wastedMemory+dataset_.rows*sizeof(int));  // pool memory and vind array memory
     }
@@ -210,7 +210,7 @@ public:
      * \param[in] knn Number of nearest neighbors to return
      * \param[in] params Search parameters
      */
-    void knnSearch(const Matrix<ElementType>& queries, Matrix<int>& indices, Matrix<DistanceType>& dists, int knn, const SearchParams& params) CV_OVERRIDE
+    void knnSearch(const Matrix<ElementType>& queries, Matrix<int>& indices, Matrix<DistanceType>& dists, int knn, const SearchParams& params)
     {
         assert(queries.cols == veclen());
         assert(indices.rows >= queries.rows);
@@ -225,7 +225,7 @@ public:
         }
     }
 
-    IndexParams getParameters() const CV_OVERRIDE
+    IndexParams getParameters() const
     {
         return index_params_;
     }
@@ -239,7 +239,7 @@ public:
      *     vec = the vector for which to search the nearest neighbors
      *     maxCheck = the maximum number of restarts (in a best-bin-first manner)
      */
-    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams) CV_OVERRIDE
+    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams)
     {
         float epsError = 1+get_param(searchParams,"eps",0.0f);
 
