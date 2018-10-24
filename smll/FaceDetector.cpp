@@ -196,10 +196,13 @@ namespace smll {
 
 	void FaceDetector::DetectFaces(const ImageWrapper& detect, const OBSTexture& capture, DetectionResults& results) {
 
+
+
+
 		// do nothing at all timeout
 		if (m_timeout > 0) {
 			m_timeout--;
-			return;
+
 		}
         // face detection timeout
         if (m_detectionTimeout > 0) {
@@ -225,8 +228,8 @@ namespace smll {
 		computeCurrentImage(detect);
         
         // what are we doing here
-        bool doTracking = (m_faces.length > 0) && (m_trackingTimeout == 0);
-        bool doFaceDetection = (m_detectionTimeout == 0);
+		bool doTracking = false;// (m_faces.length > 0) && (m_trackingTimeout == 0);
+		bool doFaceDetection = true; // (m_detectionTimeout == 0);
         
 		// TRACK faces 
 		if (doTracking) {
@@ -267,7 +270,7 @@ namespace smll {
             DoFaceDetection();
             m_detectionTimeout = 
 				Config::singleton().get_int(CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY);
-            startTracking = true;
+			startTracking = false;;
         }
         
 		// Start Object Tracking
@@ -1007,7 +1010,7 @@ namespace smll {
         // otherwise, we are tracking faces, and the tracking is still trusted, so don't trust
         // the FD results
         //
-        if ((m_faces.length == 0) || (faces.size() > 0)) {
+        if (true) {
             // clamp to max faces
 			m_faces.length = (int)faces.size() > MAX_FACES ? MAX_FACES : (int)faces.size();
 
