@@ -77,6 +77,7 @@ namespace smll {
 		// Start Pose
 		ThreeDPose			startPose;
 		bool				initedStartPose;
+		bool updatePose;
 
 		DetectionResult();
 		DetectionResult(const DetectionResult& r) { *this = r; }

@@ -255,6 +255,8 @@ namespace smll {
 		nMeasurements = 6;
 		nInputs = 0;
 		dt = 0.125; // 1/FPS - TODO: Get it from current FPS
+		// Pose related boolean
+		updatePose = true;
 	}
 
 	DetectionResult::~DetectionResult() {
