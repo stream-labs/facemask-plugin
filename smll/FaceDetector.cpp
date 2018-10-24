@@ -1106,9 +1106,21 @@ namespace smll {
 			if (d68.num_parts() != NUM_FACIAL_LANDMARKS)
 				throw std::invalid_argument(
 					"shape predictor got wrong number of landmarks");
-
+			// Smooth d68
+			// If a point in d68 moves beyond a limit in x and y,
+			// then add the point, or conitnue
+			long xLimit = 3, yLimit = 3;
 			for (int j = 0; j < NUM_FACIAL_LANDMARKS; j++) {
-				results[f].landmarks68[j] = point(d68.part(j).x(), d68.part(j).y());
+				long newPointX = d68.part(j).x();
+				long oldPointX = results[f].landmarks68[j].x();
+				bool didCrossXLimit = (newPointX > oldPointX + xLimit) || (newPointX < oldPointX - xLimit);
+				long newPointY = d68.part(j).y();
+				long oldPointY = results[f].landmarks68[j].y();
+				bool didCrossYLimit = (newPointY > oldPointY + yLimit) || (newPointY < oldPointY - yLimit);
+				if (didCrossXLimit || didCrossYLimit) {
+					// Update the points
+					results[f].landmarks68[j] = point(d68.part(j).x(), d68.part(j).y());
+				}
 			}
 		}
 		obs_leave_graphics();
