@@ -94,9 +94,16 @@ namespace Plugin {
 
 
 		protected:
+			struct FrameThreadData {
+				Instance *ptr;
+				TimeStamp lastTimestamp;
+				int frame_idx;
+			};
+			static int32_t StartFrameProc(FrameThreadData *s_ptr);
 			// face detection thread
 			static int32_t StaticThreadMain(Instance*);
 			int32_t LocalThreadMain();
+			int32_t FrameThread(TimeStamp lastTimestamp, int frame_idx);
 
 			// mask data loading thread
 			static int32_t StaticMaskDataThreadMain(Instance*);
@@ -130,6 +137,7 @@ namespace Plugin {
 
 			// Face detector
 			smll::FaceDetector*		smllFaceDetector;
+			smll::FaceDetector*		smllFaceDetectors[8];
 			smll::OBSRenderer*		smllRenderer;
 
 			gs_effect_t*		my_effect = nullptr;
