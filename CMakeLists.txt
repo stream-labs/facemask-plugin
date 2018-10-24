@@ -53,9 +53,13 @@ if(BUILD_UNIT_TESTS)
 	include_directories(${PATH_CPP_UTEST})
 endif()
 
+
+
 # OpenCV
 SET(OpenCV_DIR "${PROJECT_SOURCE_DIR}/thirdparty/opencv")
-SET(OpenCV_VERSION "331" CACHE STRING "Version of OpenCV to use.")
+
+SET(OpenCV_VERSION "400" CACHE STRING "Version of OpenCV to use.")
+
 SET(OpenCV_LIBS
 	debug "${OpenCV_DIR}/lib/Debug/opencv_calib3d${OpenCV_VERSION}d.lib"
 	optimized "${OpenCV_DIR}/lib/Release/opencv_calib3d${OpenCV_VERSION}.lib"
@@ -392,10 +396,16 @@ if(FACEMASK_EXTERNAL)
 		"$<TARGET_FILE:facemask-plugin>"
 		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/$<TARGET_FILE_NAME:facemask-plugin>"
 	)
+
 	add_custom_command(TARGET facemask-plugin POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy
 		"$<TARGET_FILE_DIR:facemask-plugin>/facemask-plugin.pdb"
 		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/facemask-plugin.pdb"
+	)
+	add_custom_command(TARGET facemask-plugin POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy
+		"${OpenCV_DIR}/3rdparty/bin/Release/tbb.dll"
+		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/tbb.dll"
 	)
 else()
 	install_obs_plugin_with_data(facemask-plugin data)
