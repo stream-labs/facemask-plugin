@@ -1229,6 +1229,9 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			gs_effect_set_float(gs_effect_get_param_by_name(custom_effect, "inv_width"), 1.0f / (baseWidth*m_scale_rate));
 			gs_effect_set_float(gs_effect_get_param_by_name(custom_effect, "inv_height"), 1.0f / (baseHeight*m_scale_rate));
 		}
+		if (f) {
+			bfree(f);
+		}
 	}
 
 	gs_effect_set_int(gs_effect_get_param_by_name(custom_effect, "antialiasing_method"), antialiasing_method);
