@@ -59,6 +59,10 @@ namespace Plugin {
 	private:
 		obs_source_info filter;
 
+		static const int NO_ANTI_ALIASING = 0;
+		static const int SSAA_ANTI_ALIASING = 1;
+		static const int FXAA_ANTI_ALIASING = 2;
+
 		class Instance {
 		public:
 			Instance(obs_data_t *, obs_source_t *);
@@ -132,7 +136,9 @@ namespace Plugin {
 			smll::FaceDetector*		smllFaceDetector;
 			smll::OBSRenderer*		smllRenderer;
 
-			gs_effect_t*		my_effect = nullptr;
+			gs_effect_t*		custom_effect = nullptr;
+			int					m_scale_rate = 1;
+			int					antialiasing_method = SSAA_ANTI_ALIASING;
 
 			// Fonts
 			smll::TextShaper*		smllTextShaper;
