@@ -1224,37 +1224,17 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	if (custom_effect == nullptr) {
 		char* f = obs_module_file("effects/aa.effect");
 		char* errorMessage = nullptr;
-		std::string error("FACEMASK SHADER ERROR: Error Loading shader : ");
 		custom_effect = gs_effect_create_from_file(f, &errorMessage);
-		gs_effect_set_float(gs_effect_get_param_by_name(custom_effect,"inv_width"), 1.0f/(baseWidth*m_scale_rate));
-		gs_effect_set_float(gs_effect_get_param_by_name(custom_effect,"inv_height"), 1.0f/(baseHeight*m_scale_rate));
-		if (!custom_effect || errorMessage) {
-			blog(LOG_DEBUG, ">>>>>>>>>>>");
-			if (errorMessage) {
-				char* start = errorMessage;
-				while (*start) {
-					if (*start == '\n') {
-						*start = 0;
-						break;
-					}
-					start++;
-				}
-				error.append(errorMessage);
-			}
-			else {	
-				error.append("No message available");
-			}
-			blog(LOG_DEBUG, error.c_str());
-			obs_leave_graphics();
-			throw std::runtime_error(error);
+		if (custom_effect) {
+			gs_effect_set_float(gs_effect_get_param_by_name(custom_effect, "inv_width"), 1.0f / (baseWidth*m_scale_rate));
+			gs_effect_set_float(gs_effect_get_param_by_name(custom_effect, "inv_height"), 1.0f / (baseHeight*m_scale_rate));
 		}
-		bfree(f);
 	}
 
 	gs_effect_set_int(gs_effect_get_param_by_name(custom_effect, "antialiasing_method"), antialiasing_method);
 
 	// Draw the rendered Mask
-	if (mask_tex) {
+	if (mask_tex && custom_effect) {
 		while (gs_effect_loop(custom_effect, "Draw")) {
 			gs_effect_set_texture(gs_effect_get_param_by_name(custom_effect,
 				"image"), mask_tex);
