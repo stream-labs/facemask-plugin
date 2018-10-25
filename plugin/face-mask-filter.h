@@ -250,10 +250,6 @@ namespace Plugin {
 			// for testing/thumbs/writing textures to files
 			gs_stagesurf_t*		testingStage;
 
-			// find a cached video frame
-			int					FindCachedFrameIndex(const TimeStamp& ts);
-			gs_texture_t*		FindCachedFrame(const TimeStamp& ts);
-
 			// Detection
 			struct ThreadData {
 
@@ -264,7 +260,7 @@ namespace Plugin {
 				bool shutdown;
 
 				// frames circular buffer (video_render()'s thread -> detection thread)
-				struct CachedFrame {
+				struct Frame {
 					smll::OBSTexture	capture;
 					smll::ImageWrapper	detect;
 					smll::MorphData     morphData;
@@ -272,8 +268,7 @@ namespace Plugin {
 					TimeStamp			timestamp;
 					bool				active;
 				};
-				int frameIndex;
-				std::array<struct CachedFrame, BUFFER_SIZE> frames;
+				Frame frame;
 
 				// faces circular buffer (detection thread -> video_tick()'s thread)
 				struct CachedResult {
