@@ -288,6 +288,9 @@ namespace smll {
 			return;
 		DetectionResult& face = results[0];
 
+		if (!face.updatePose)
+			return;
+
 		// get angle of face pose
 		const cv::Mat& m = face.GetCVRotation();
 		double angle = sqrt(m.dot(m));
@@ -1129,24 +1132,6 @@ namespace smll {
 			else {
 				results[f].updatePose = false;
 			}
-			
-				//long newPointX = d68.part(j).x();
-				//long oldPointX = results[f].landmarks68[j].x();
-				//bool didCrossXLimit = (newPointX > oldPointX + xLimit) || (newPointX < oldPointX - xLimit);
-				//long newPointY = d68.part(j).y();
-				//long oldPointY = results[f].landmarks68[j].y();
-				//bool didCrossYLimit = (newPointY > oldPointY + yLimit) || (newPointY < oldPointY - yLimit);
-				//if (didCrossXLimit || didCrossYLimit) {
-				//	// Update the point only when they cross the limit -> face deformation
-					
-				//	// NOTE: If any of these landmarks are in pose equation,
-				//	// then only we need to update pose, or else continue
-				//	if (j == LEFT_OUTER_EYE_CORNER || j == RIGHT_OUTER_EYE_CORNER
-				//		|| j == NOSE_1 || j == NOSE_2 || j == NOSE_3 || j == NOSE_4 || j == NOSE_7) {
-				//		results[f].updatePose = true;
-				//	}
-				//}
-			
 		}
 		obs_leave_graphics();
 		results.length = m_faces.length;
@@ -1235,9 +1220,6 @@ namespace smll {
 			// Save it
 			m_poses[i].SetPose(rotation, translation);
 			results[i].SetPose(m_poses[i]);
-			// Reset update pose to false after pose update
-			// TODO: Restrict Kalman update pose params 
-			results[i].updatePose = false;
 		}
 
 		if (resultsBad) {
