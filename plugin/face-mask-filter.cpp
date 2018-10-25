@@ -1698,13 +1698,12 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 
 		// get the frame index
 		bool shutdown;
-		int frame_idx;
 		{
 			std::unique_lock<std::mutex> lock(detection.mutex);
 			shutdown = detection.shutdown;
 		}
 		if (shutdown) break;
-		if (frame_idx < 0) {
+		if (!detection.frame.active) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(16));
 			continue;
 		}
