@@ -1107,21 +1107,42 @@ namespace smll {
 				throw std::invalid_argument(
 					"shape predictor got wrong number of landmarks");
 			// Smooth d68
-			// If a point in d68 moves beyond a limit in x and y,
-			// then add the point, or conitnue
-			long xLimit = 3, yLimit = 3;
-			for (int j = 0; j < NUM_FACIAL_LANDMARKS; j++) {
-				long newPointX = d68.part(j).x();
-				long oldPointX = results[f].landmarks68[j].x();
-				bool didCrossXLimit = (newPointX > oldPointX + xLimit) || (newPointX < oldPointX - xLimit);
-				long newPointY = d68.part(j).y();
-				long oldPointY = results[f].landmarks68[j].y();
-				bool didCrossYLimit = (newPointY > oldPointY + yLimit) || (newPointY < oldPointY - yLimit);
-				if (didCrossXLimit || didCrossYLimit) {
-					// Update the points
+			// Compute error and change it with respect to error threshold
+			double errors = 0;
+			for (int j = 0; j < 68; j++) {
+				double newPointX = d68.part(j).x();
+				double oldPointX = results[f].landmarks68[j].x();
+				double newPointY = d68.part(j).y();
+				double oldPointY = results[f].landmarks68[j].y();
+				errors += (std::abs(newPointX - oldPointX) + std::abs(newPointY - oldPointY)) / 2;
+			}
+			errors /= 68;
+			double errorThreshold = 0.46;
+
+			if (errors >= errorThreshold) {
+				// Change landmarks only if error exceeds threshold
+				for (int j = 0; j < NUM_FACIAL_LANDMARKS; j++) {
 					results[f].landmarks68[j] = point(d68.part(j).x(), d68.part(j).y());
 				}
 			}
+			
+				//long newPointX = d68.part(j).x();
+				//long oldPointX = results[f].landmarks68[j].x();
+				//bool didCrossXLimit = (newPointX > oldPointX + xLimit) || (newPointX < oldPointX - xLimit);
+				//long newPointY = d68.part(j).y();
+				//long oldPointY = results[f].landmarks68[j].y();
+				//bool didCrossYLimit = (newPointY > oldPointY + yLimit) || (newPointY < oldPointY - yLimit);
+				//if (didCrossXLimit || didCrossYLimit) {
+				//	// Update the point only when they cross the limit -> face deformation
+					
+				//	// NOTE: If any of these landmarks are in pose equation,
+				//	// then only we need to update pose, or else continue
+				//	if (j == LEFT_OUTER_EYE_CORNER || j == RIGHT_OUTER_EYE_CORNER
+				//		|| j == NOSE_1 || j == NOSE_2 || j == NOSE_3 || j == NOSE_4 || j == NOSE_7) {
+				//		results[f].updatePose = true;
+				//	}
+				//}
+			
 		}
 		obs_leave_graphics();
 		results.length = m_faces.length;
@@ -1171,6 +1192,10 @@ namespace smll {
 
 		bool resultsBad = false;
 		for (int i = 0; i < results.length; i++) {
+			// Check if we actually need to update pose, if not continue
+			if (!results[i].updatePose) {
+				continue;
+			}
 			std::vector<cv::Point2f> image_points;
 			// copy 2D image points. 
 			point* p = results[i].landmarks68;
@@ -1206,6 +1231,9 @@ namespace smll {
 			// Save it
 			m_poses[i].SetPose(rotation, translation);
 			results[i].SetPose(m_poses[i]);
+			// Reset update pose to false after pose update
+			// TODO: Restrict Kalman update pose params 
+			results[i].updatePose = false;
 		}
 
 		if (resultsBad) {

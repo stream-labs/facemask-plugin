@@ -342,7 +342,7 @@ namespace smll {
 		CheckForPoseFlip(nrot, ntx);
 
 		// kalman filtering enabled?
-		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE)) {
+		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE)/* && r.updatePose*/) {
 			// Get the measured translation
 			cv::Mat translation_measured = r.pose.GetCVTranslation();
 
@@ -365,11 +365,27 @@ namespace smll {
 			UpdateKalmanFilter(measurements, translation_estimated, eulers_estimated);
 			// Smooth update: for reducing the jitter in face mask rendering
 			// Creating a dynamic smooth update based on the current FPS
-			// We only need to smooth Eulers. The translation is pretty much stable.
+			// Considering the small updates in eulers and translation as noise, clipping them.
 			cv::Mat smoothEulers = pose.GetCVRotation();
-			smoothEulers += 0.8 * dt * (eulers_estimated - smoothEulers);
+			cv::Mat smoothTranslation = pose.GetCVTranslation();
+			cv::Mat eulersDiff; cv::absdiff(eulers_estimated, smoothEulers, eulersDiff);
+			double eulerUpdateValue = cv::sum(eulersDiff)[0]/3.0;
+			cv::Mat translationDiff; cv::absdiff(translation_estimated, smoothTranslation, translationDiff);
+			double translationUpdateValue = cv::sum(translationDiff)[0] / 3.0;
+
+			double eulerUpdateThreshold = 0.05; // < 3 degrees is considered as noise
+			double translationUpdateThreshold = 0.09; // Reduces noise to an extent (not fully)
+													  // Higher values can reduce the jittery nature,
+													  // but updates will no longer be smooth.
+			if (eulerUpdateValue > eulerUpdateThreshold) {
+				smoothEulers += 0.8 * dt * (eulers_estimated - smoothEulers);
+			}
+			if (translationUpdateValue > translationUpdateThreshold) {
+				smoothTranslation += 0.86 * (translation_estimated - smoothTranslation);
+			}
+			
 			// Update Pose
-			pose.SetPose(smoothEulers, translation_estimated);
+			pose.SetPose(smoothEulers, smoothTranslation);
 		}
 		else {
 			pose.translation[0] = ntx[0];
