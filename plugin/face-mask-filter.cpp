@@ -527,8 +527,8 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	alertShowDelay = 0; //Default value
 
 	//format alert attribution
-	int donorNameLength = donorName.length();
-	int donorNamePreLength = strlen(DONOR_NAME_PRE);
+	int donorNameLength = (int)donorName.length();
+	int donorNamePreLength = (int)strlen(DONOR_NAME_PRE);
 	//format if it isn't empty          and       if it isn't already formatted
 	if (donorNameLength > 0 && (donorName.substr(0, donorNamePreLength) != DONOR_NAME_PRE)) {
 		donorName.insert(0, DONOR_NAME_PRE); // concatenate in front pre string
