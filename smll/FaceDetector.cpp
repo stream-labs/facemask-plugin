@@ -1123,7 +1123,11 @@ namespace smll {
 				// Change landmarks only if error exceeds threshold
 				for (int j = 0; j < NUM_FACIAL_LANDMARKS; j++) {
 					results[f].landmarks68[j] = point(d68.part(j).x(), d68.part(j).y());
+					results[f].updatePose = true;
 				}
+			}
+			else {
+				results[f].updatePose = false;
 			}
 			
 				//long newPointX = d68.part(j).x();

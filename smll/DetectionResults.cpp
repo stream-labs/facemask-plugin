@@ -342,7 +342,7 @@ namespace smll {
 		CheckForPoseFlip(nrot, ntx);
 
 		// kalman filtering enabled?
-		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE)/* && r.updatePose*/) {
+		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE) && r.updatePose) {
 			// Get the measured translation
 			cv::Mat translation_measured = r.pose.GetCVTranslation();
 
@@ -388,22 +388,27 @@ namespace smll {
 			pose.SetPose(smoothEulers, smoothTranslation);
 		}
 		else {
-			pose.translation[0] = ntx[0];
-			pose.translation[1] = ntx[1];
-			pose.translation[2] = ntx[2];
-			pose.rotation[0] = nrot[0];
-			pose.rotation[1] = nrot[1];
-			pose.rotation[2] = nrot[2];
-			pose.rotation[3] = nrot[3];
+			if (r.updatePose) {
+				pose.translation[0] = ntx[0];
+				pose.translation[1] = ntx[1];
+				pose.translation[2] = ntx[2];
+				pose.rotation[0] = nrot[0];
+				pose.rotation[1] = nrot[1];
+				pose.rotation[2] = nrot[2];
+				pose.rotation[3] = nrot[3];
+			}
 		}
 		
 
-		// copy values
-		bounds = bnd;
-		
-		for (int i = 0; i < smll::NUM_FACIAL_LANDMARKS; i++) {
-			landmarks68[i] = r.landmarks68[i];
+		// copy values only if update pose
+		if (r.updatePose) {
+			bounds = bnd;
+
+			for (int i = 0; i < smll::NUM_FACIAL_LANDMARKS; i++) {
+				landmarks68[i] = r.landmarks68[i];
+			}
 		}
+		
 	}
 
 
