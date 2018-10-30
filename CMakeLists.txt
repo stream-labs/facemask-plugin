@@ -300,6 +300,7 @@ SET(facemask-plugin_DATA
 	"${PROJECT_SOURCE_DIR}/data/effects/denoise.effect"
 	"${PROJECT_SOURCE_DIR}/data/effects/merge.effect"
 	"${PROJECT_SOURCE_DIR}/data/effects/phong.effect"
+	"${PROJECT_SOURCE_DIR}/data/effects/aa.effect"
 	"${PROJECT_SOURCE_DIR}/data/locale/en-US.ini"
 )
 SET(facemask-plugin_LIBRARIES

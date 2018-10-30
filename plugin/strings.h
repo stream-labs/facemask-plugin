@@ -57,6 +57,10 @@
 #define P_ALERT_MIN_SIZE		"alertMinSize"
 #define P_ALERT_MAX_SIZE		"alertMaxSize"
 #define P_ALERT_SHOW_DELAY		"alertShowDelay"
+#define P_ANTI_ALIASING			"antialiasing"
+#define P_NO_ANTI_ALIASING		"noAntialiasing"
+#define P_SSAA_ANTI_ALIASING	"ssaaAntialiasing"
+#define P_FXAA_ANTI_ALIASING	"fxaaAntialiasing"
 
 // Other static strings
 static const char* const kDefaultMask = "b41214ab-8ef1-4842-924d-be113e2b5566.json";

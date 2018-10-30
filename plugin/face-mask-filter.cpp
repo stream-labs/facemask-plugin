@@ -150,7 +150,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	demoModeOn(false), demoCurrentMask(0),
 	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), 
 	drawMask(true),	drawAlert(false), drawFaces(false), drawMorphTris(false), drawFDRect(false), 
-	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr), testMode(false) {
+	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr), testMode(false), custom_effect(nullptr){
 
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
 
@@ -357,6 +357,13 @@ static void add_bool_property(obs_properties_t *props, const char* name) {
 	obs_property_set_long_description(p, P_TRANSLATE(n.c_str()));
 }
 
+static obs_property_t *add_int_list_property(obs_properties_t *props, const char* name) {
+	obs_property_t* p = obs_properties_add_list(props, name, P_TRANSLATE(name), OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
+	std::string n = name; n += ".Description";
+	obs_property_set_long_description(p, P_TRANSLATE(n.c_str()));
+	return p;
+}
+
 static void add_text_property(obs_properties_t *props, const char* name) {
 	obs_property_t* p = p = obs_properties_add_text(props, name, P_TRANSLATE(name),
 		obs_text_type::OBS_TEXT_DEFAULT);
@@ -415,6 +422,12 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 	// force mask/alert drawing
 	add_bool_property(props, P_DRAWMASK);
 	add_bool_property(props, P_DRAWALERT);
+
+	// anti-aliasing
+	obs_property_t *list = add_int_list_property(props, P_ANTI_ALIASING);
+	obs_property_list_add_int(list, P_TRANSLATE(P_NO_ANTI_ALIASING), NO_ANTI_ALIASING);
+	obs_property_list_add_int(list, P_TRANSLATE(P_SSAA_ANTI_ALIASING), SSAA_ANTI_ALIASING);
+	obs_property_list_add_int(list, P_TRANSLATE(P_FXAA_ANTI_ALIASING), FXAA_ANTI_ALIASING);
 
 	// bg removal
 	add_bool_property(props, P_BGREMOVAL);
@@ -510,6 +523,9 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	autoBGRemoval = obs_data_get_bool(data, P_BGREMOVAL);
 	cartoonMode = obs_data_get_bool(data, P_CARTOON);
 	testMode = obs_data_get_bool(data, P_TEST_MODE);
+
+	// Anti-aliasing
+	antialiasing_method = obs_data_get_int(data, P_ANTI_ALIASING);
 
 	// Alerts
 	bool lastAlertActivate = alertActivate;
@@ -917,6 +933,23 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// flags
 	bool genThumbs = mask_data && demoModeOn && demoModeGenPreviews && demoModeSavingFrames;
 
+	// Draw the source video
+	gs_enable_depth_test(false);
+	gs_set_cull_mode(GS_NEITHER);
+	while (gs_effect_loop(defaultEffect, "Draw")) {
+		gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+			"image"), vidTex);
+		gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
+	}
+
+	// Get current method to use for anti-aliasing
+	if (antialiasing_method == NO_ANTI_ALIASING ||
+		antialiasing_method == FXAA_ANTI_ALIASING)
+		m_scale_rate = 1;
+	else
+		m_scale_rate = 2;
+
+
 	// render mask to texture
 	gs_texture* mask_tex = nullptr;
 	if (faces.length > 0) {
@@ -930,7 +963,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 			// draw mask to texture
 			gs_texrender_reset(drawTexRender);
-			if (gs_texrender_begin(drawTexRender, baseWidth, baseHeight)) {
+			if (gs_texrender_begin(drawTexRender, baseWidth*m_scale_rate, baseHeight*m_scale_rate)) {
 
 				// clear
 				vec4 black, thumbbg;
@@ -987,20 +1020,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 						gs_matrix_identity();
 
 						// Draw the source video
-						if (mask_data) {
+						if (mask_data && (autoBGRemoval || cartoonMode || demoModeOn)) {
 							triangulation.autoBGRemoval = autoBGRemoval;
 							triangulation.cartoonMode = cartoonMode;
 							mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
-						}
-						else {
-							// Draw the source video
-							gs_enable_depth_test(false);
-							gs_set_cull_mode(GS_NEITHER);
-							while (gs_effect_loop(defaultEffect, "Draw")) {
-								gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
-									"image"), vidTex);
-								gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
-							}
 						}
 
 						// restore transform state
@@ -1053,6 +1076,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		}
 
 		mask_tex = gs_texrender_get_texture(drawTexRender);
+
 	}
 
 	if (testMode) {
@@ -1196,12 +1220,28 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		}
 	}
 
+	// TEST DRAW EFFECT
+	if (custom_effect == nullptr) {
+		char* f = obs_module_file("effects/aa.effect");
+		char* errorMessage = nullptr;
+		custom_effect = gs_effect_create_from_file(f, &errorMessage);
+		if (custom_effect) {
+			gs_effect_set_float(gs_effect_get_param_by_name(custom_effect, "inv_width"), 1.0f / (baseWidth*m_scale_rate));
+			gs_effect_set_float(gs_effect_get_param_by_name(custom_effect, "inv_height"), 1.0f / (baseHeight*m_scale_rate));
+		}
+		if (f) {
+			bfree(f);
+		}
+	}
+
 	// Draw the rendered Mask
-	if (mask_tex) {
-		while (gs_effect_loop(defaultEffect, "Draw")) {
-			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+	if (mask_tex && custom_effect) {
+		gs_effect_set_int(gs_effect_get_param_by_name(custom_effect, "antialiasing_method"), antialiasing_method);
+
+		while (gs_effect_loop(custom_effect, "Draw")) {
+			gs_effect_set_texture(gs_effect_get_param_by_name(custom_effect,
 				"image"), mask_tex);
-			gs_draw_sprite(mask_tex, 0, baseWidth, baseHeight);
+			gs_draw_sprite(mask_tex, 0, baseWidth*m_scale_rate, baseHeight*m_scale_rate);
 		}
 	}
 	
