@@ -188,7 +188,6 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	{
 		std::unique_lock<std::mutex> lock(detection.mutex);
 		detection.shutdown = false;
-		detection.frameIndex = -1;
 		detection.facesIndex = -1;
 		detection.thread = std::thread(StaticThreadMain, this);
 		clearFramesActiveStatus();
@@ -243,10 +242,8 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 	gs_texrender_destroy(drawTexRender);
 	gs_texrender_destroy(alertTexRender);
 	gs_texrender_destroy(detectTexRender);
-	for (int i = 0; i < ThreadData::BUFFER_SIZE; i++) {
-		if (detection.frames[i].capture.texture) {
-			gs_texture_destroy(detection.frames[i].capture.texture);
-		}
+	if (detection.frame.capture.texture) {
+		gs_texture_destroy(detection.frame.capture.texture);
 	}
 	if (testingStage)
 		gs_stagesurface_destroy(testingStage);
@@ -546,8 +543,8 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	alertShowDelay = 0; //Default value
 
 	//format alert attribution
-	int donorNameLength = donorName.length();
-	int donorNamePreLength = strlen(DONOR_NAME_PRE);
+	int donorNameLength = (int)donorName.length();
+	int donorNamePreLength = (int)strlen(DONOR_NAME_PRE);
 	//format if it isn't empty          and       if it isn't already formatted
 	if (donorNameLength > 0 && (donorName.substr(0, donorNamePreLength) != DONOR_NAME_PRE)) {
 		donorName.insert(0, DONOR_NAME_PRE); // concatenate in front pre string
@@ -630,7 +627,6 @@ void Plugin::FaceMaskFilter::Instance::hide() {
 	{
 		// reset the buffer
 		std::unique_lock<std::mutex> lock(detection.mutex);
-		detection.frameIndex = -1;
 		detection.facesIndex = -1;
 	}
 }
@@ -774,9 +770,7 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
  * Sets frames active status to false
  */
 void Plugin::FaceMaskFilter::Instance::clearFramesActiveStatus() {
-	for (int i = 0; i < ThreadData::BUFFER_SIZE; i++) {
-		detection.frames[i].active = false;
-	}
+	detection.frame.active = false;
 }
 
 void Plugin::FaceMaskFilter::Instance::video_render(void *ptr,
@@ -794,7 +788,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		(!drawMask && alertElapsedTime > alertDuration)) {
 		// reset the buffer
 		std::unique_lock<std::mutex> lock(detection.mutex);
-		detection.frameIndex = -1;
 		detection.facesIndex = -1;
 		// reset the detected faces
 		clearFramesActiveStatus();
@@ -915,15 +908,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	float donorNameStartTime = alertDuration -
 		(alertAnimationDuration + donorNameDuration + outroDuration);
 
-	// Select the video frame to draw
-	// - since we are already caching frames of video for the
-	//   face detection thread to consume, we can likely find
-	//   the frame of video that matches the timestamp of the
-	//   current detection data.
-	gs_texture_t* vidTex = FindCachedFrame(timestamp);
-	if (vidTex == nullptr) {
-		vidTex = sourceTexture;
-	}
+	// Draw always current frame to be up to date, even it's processing is delayd
+	gs_texture_t* vidTex = sourceTexture;
 
 	// some reasons triangulation should be destroyed
 	if (!mask_data || faces.length == 0) {
@@ -1357,32 +1343,6 @@ void Plugin::FaceMaskFilter::Instance::demoModeRender(gs_texture* vidTex, gs_tex
 	}
 }
 
-gs_texture_t* Plugin::FaceMaskFilter::Instance::FindCachedFrame(const TimeStamp& ts) {
-	int i = FindCachedFrameIndex(ts);
-	if (i >= 0)
-		return detection.frames[i].capture.texture;
-	return nullptr;
-}
-
-int Plugin::FaceMaskFilter::Instance::FindCachedFrameIndex(const TimeStamp& ts) {
-	// Look for a cached video frame with the exact timestamp
-
-	// Return one that matches first
-	for (int i = 0; i < ThreadData::BUFFER_SIZE; i++) {
-		if (detection.frames[i].timestamp == ts &&
-			detection.frames[i].capture.texture != nullptr &&
-			detection.frames[i].capture.width == baseWidth &&
-			detection.frames[i].capture.height == baseHeight) {
-			return i;
-		}
-	}
-	
-	// Return -1 if frame with specific timestamp is not found
-	return -1;
-}
-
-
-
 bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sourceTexture) {
 
 	// only if first render after video tick
@@ -1393,28 +1353,22 @@ bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sou
 	TimeStamp sourceTimestamp = NEW_TIMESTAMP;
 	bool frameSent = false;
 
-	// Get the index
-	int fidx = detection.frameIndex;
-	if (fidx < 0)
-		fidx = 0;
-
 	// if there's already an active frame, bail
-	int last_idx = (fidx - 1 + ThreadData::BUFFER_SIZE) % ThreadData::BUFFER_SIZE;
-	if (detection.frames[last_idx].active)
+	if (detection.frame.active)
 		return false;
 
 	// lock current frame
 	{
-		std::unique_lock<std::mutex> lock(detection.frames[fidx].mutex,
+		std::unique_lock<std::mutex> lock(detection.frame.mutex,
 			std::try_to_lock);
 		if (lock.owns_lock()) {
 			frameSent = true;
 
-			smll::OBSTexture& capture = detection.frames[fidx].capture;
-			smll::ImageWrapper& detect = detection.frames[fidx].detect;
+			smll::OBSTexture& capture = detection.frame.capture;
+			smll::ImageWrapper& detect = detection.frame.detect;
 
-			detection.frames[fidx].active = true;
-			detection.frames[fidx].timestamp = sourceTimestamp;
+			detection.frame.active = true;
+			detection.frame.timestamp = sourceTimestamp;
 
 			// (re) allocate capture texture if necessary
 			if (capture.width != baseWidth ||
@@ -1494,13 +1448,13 @@ bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sou
 
 			// (possibly) update morph buffer
 			if (morph) {
-				if (morph->GetMorphData().IsNewerThan(detection.frames[fidx].morphData) || demoModeOn) {
-					detection.frames[fidx].morphData = morph->GetMorphData();
+				if (morph->GetMorphData().IsNewerThan(detection.frame.morphData) || demoModeOn) {
+					detection.frame.morphData = morph->GetMorphData();
 				}
 			}
 			else {
 				// Make sure current is invalid
-				detection.frames[fidx].morphData.Invalidate();
+				detection.frame.morphData.Invalidate();
 			}
 		}
 	}
@@ -1508,7 +1462,6 @@ bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sou
 	// Advance frame index if we copied a frame
 	if (frameSent) {
 		std::unique_lock<std::mutex> lock(detection.mutex);
-		detection.frameIndex = (fidx + 1) % ThreadData::BUFFER_SIZE;
 	}
 
 	return frameSent;
@@ -1785,42 +1738,37 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 
 		// get the frame index
 		bool shutdown;
-		int frame_idx;
 		{
 			std::unique_lock<std::mutex> lock(detection.mutex);
-			frame_idx = detection.frameIndex;
 			shutdown = detection.shutdown;
 		}
 		if (shutdown) break;
-		if (frame_idx < 0) {
+		if (!detection.frame.active) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(16));
 			continue;
 		}
-
-		// the read index is always right behind the write
-		frame_idx = (frame_idx + ThreadData::BUFFER_SIZE - 1) % ThreadData::BUFFER_SIZE;
 
 		smll::DetectionResults detect_results;
 
 		bool skipped = false;
 		{
-			std::unique_lock<std::mutex> lock(detection.frames[frame_idx].mutex);
+			std::unique_lock<std::mutex> lock(detection.frame.mutex);
 
 			// check to see if we are detecting the same frame as last time
-			if (lastTimestamp == detection.frames[frame_idx].timestamp) {
+			if (lastTimestamp == detection.frame.timestamp) {
 				// same frame, skip
 				skipped = true;
 			}
 			else {
 				// new frame - do the face detection
-				smllFaceDetector->DetectFaces(detection.frames[frame_idx].detect, detection.frames[frame_idx].capture, detect_results);
+				smllFaceDetector->DetectFaces(detection.frame.detect, detection.frame.capture, detect_results);
 				if (!STUFF_ON_MAIN_THREAD) {
 					// Now do the landmark detection & pose estimation
-					smllFaceDetector->DetectLandmarks(detection.frames[frame_idx].capture, detect_results);
+					smllFaceDetector->DetectLandmarks(detection.frame.capture, detect_results);
 					smllFaceDetector->DoPoseEstimation(detect_results);
 				}
 
-				lastTimestamp = detection.frames[frame_idx].timestamp;
+				lastTimestamp = detection.frame.timestamp;
 			}
 		}
 
@@ -1846,14 +1794,14 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			detection.faces[face_idx].timestamp = lastTimestamp;
 
 			if (!STUFF_ON_MAIN_THREAD) {
-				std::unique_lock<std::mutex> framelock(detection.frames[frame_idx].mutex);
+				std::unique_lock<std::mutex> framelock(detection.frame.mutex);
 
 				// Make the triangulation
 				detection.faces[face_idx].triangulationResults.buildLines = drawMorphTris;
-				smllFaceDetector->MakeTriangulation(detection.frames[frame_idx].morphData,
+				smllFaceDetector->MakeTriangulation(detection.frame.morphData,
 					detect_results, detection.faces[face_idx].triangulationResults);
 
-				detection.frames[frame_idx].active = false;
+				detection.frame.active = false;
 			}
 
 			// Copy our detection results
@@ -2125,24 +2073,6 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 					dlib::point pos = newFaces[i].GetPosition();
 					snprintf(b, sizeof(b), "face detected at %ld,%ld", pos.x(), pos.y());
 					smll::TestingPipe::singleton().SendString(b);
-				}
-			}
-
-			if (STUFF_ON_MAIN_THREAD) {
-				// Find the cached frame for these results
-				int cfi = FindCachedFrameIndex(detection.faces[fidx].timestamp);
-				if (cfi >= 0) {
-
-					// Now do the landmark detection & pose estimation
-					smllFaceDetector->DetectLandmarks(detection.frames[cfi].capture, detection.faces[fidx].detectionResults);
-					smllFaceDetector->DoPoseEstimation(detection.faces[fidx].detectionResults);
-
-					// Make the triangulation
-					detection.faces[fidx].triangulationResults.buildLines = drawMorphTris;
-					smllFaceDetector->MakeTriangulation(detection.frames[cfi].morphData,
-						detection.faces[fidx].detectionResults, detection.faces[fidx].triangulationResults);
-
-					detection.frames[fidx].active = false;
 				}
 			}
 
