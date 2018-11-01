@@ -250,14 +250,14 @@ namespace smll {
 		drawLines(points, MOUTH_INNER_1, MOUTH_INNER_8, true);
 	}
 
-	void OBSRenderer::DrawRect(const dlib::rectangle& r) {
+	void OBSRenderer::DrawRect(const dlib::rectangle& r, int width) {
 		// rect
 		dlib::point p[4];
 		p[0] = dlib::point(r.left(), r.top());
 		p[1] = dlib::point(r.right(), r.top());
 		p[2] = dlib::point(r.right(), r.bottom());
 		p[3] = dlib::point(r.left(), r.bottom());
-		drawLines(p, 0, 3, true);
+		drawLines(p, 0, width, true);
 	}
 
 	void   OBSRenderer::DrawGlasses(const DetectionResult& face, int texture) {

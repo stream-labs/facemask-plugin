@@ -68,7 +68,7 @@ namespace smll {
 		void	DrawFaces(const DetectionResults& faces);
 		void	DrawLandmarks(const dlib::point* points, uint8_t r, 
 			uint8_t g, uint8_t b);
-		void	DrawRect(const dlib::rectangle& r);
+		void	DrawRect(const dlib::rectangle& r, int width = 3);
 
 		void    DrawGlasses(const DetectionResult& face, int texture);
 		void    DrawMask(const DetectionResult& face, int texture);
