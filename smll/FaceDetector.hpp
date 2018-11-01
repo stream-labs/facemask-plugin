@@ -141,6 +141,16 @@ private:
 	// Current Image
 	cv::Mat currentImage;
 	void computeCurrentImage(const ImageWrapper& detect);
+	void computeDifference(const ImageWrapper& detect, DetectionResults& results);
+
+	cv::Mat prevImage;
+	cv::Mat diffImage;
+	cv::Mat diff;
+	bool isPrevInit;
+	int minX;
+	int minY;
+	int maxX;
+	int maxY;
 
 	// Staging the capture texture
 	void 	StageCaptureTexture();

@@ -47,7 +47,8 @@ namespace smll {
         , m_detectionTimeout(0)
 		, m_trackingFaceIndex(0)
 		, m_camera_w(0)
-		, m_camera_h(0) {
+		, m_camera_h(0)
+		, isPrevInit(false) {
 		// Load face detection and pose estimation models.
 		// Face detection pyramid levels have been reduced from 6 to 4
 		frontal_face_detector detector = get_frontal_face_detector();
@@ -55,7 +56,7 @@ namespace smll {
 		image_scanner_type scanner;
 		scanner.copy_configuration(detector.get_scanner());
 		scanner.set_max_pyramid_levels(4);
-		m_detector = dlib::object_detector<image_scanner_type>(scanner, detector.get_overlap_tester(), detector.get_w());
+		m_detector = get_frontal_face_detector();
 
 
 		char *filename = obs_module_file(kFileShapePredictor68);
@@ -143,6 +144,55 @@ namespace smll {
 			m_dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<float>::type);
 		}
 	}
+	void FaceDetector::computeDifference(const ImageWrapper& detect, DetectionResults& results) {
+		cv::Mat currImage(detect.h, detect.w, CV_8UC1, detect.data, detect.getStride());
+
+		if (!isPrevInit) {
+			isPrevInit = true;
+			prevImage = currImage.clone();
+			return;
+		}
+
+		cv::Mat diffImage;
+		cv::absdiff(prevImage, currImage, diffImage);
+		cv::GaussianBlur(diffImage, diffImage, cv::Size(3, 3), 0, 0);
+
+		prevImage = currImage.clone();
+		float threshold = 30.0f;
+		float dist;
+		minX = diffImage.rows;
+		minY = diffImage.cols;
+		maxX = 0;
+		maxY = 0;
+	
+		for (int j = 0; j<diffImage.rows; ++j){
+			std:string res;
+			for (int i = 0; i < diffImage.cols; ++i) 
+			{
+				int pix = (int)diffImage.at<uchar>(j, i);
+
+				res+= std::to_string(pix);
+				res += ",";
+				//blog(LOG_DEBUG, "Compute dist: %f", dist);
+				if (pix > threshold)
+				{
+					
+					minY = std::min(i, minY);
+					minX = std::min(j, minX);
+					maxY = std::max(i, maxY);
+					maxX = std::max(j, maxX);
+				}
+			}
+			//blog(LOG_DEBUG, res.c_str());	
+		}
+		results.r = minY;
+		results.l = maxY;
+		results.t = minX;
+		results.b = maxX;
+		blog(LOG_DEBUG, "Compute crop: x0: %d x1: %d y0: %d y1: %d", minX,  maxX, minY, maxY);
+
+	}
+
 
 	void FaceDetector::computeCurrentImage(const ImageWrapper& detect) {
 		// Do image cropping and cv::Mat initialization in single shot
@@ -213,6 +263,7 @@ namespace smll {
 		m_capture = capture;
 		// Compute GrayScale image.
 		// This will be used for the rest of the Computer Vision.
+		computeDifference(detect, results);
 		computeCurrentImage(detect);
 
 		bool trackingFailed = false;
