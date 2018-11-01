@@ -230,6 +230,11 @@ namespace smll {
 				}
 			}
 		}
+
+		faces.t = other.t;
+		faces.b = other.b;
+		faces.l = other.l;
+		faces.r = other.r;
 	}
 
 	int DetectionResults::findClosest(const smll::DetectionResult& result) {

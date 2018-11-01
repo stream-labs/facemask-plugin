@@ -137,7 +137,10 @@ namespace smll {
 		DetectionResults();
 		void CorrelateAndUpdateFrom(DetectionResults& other);
 		int findClosest(const smll::DetectionResult& result);
-
+		int t = 0;
+		int b = 0;
+		int l = 0;
+		int r = 0;
 	private:
 
 	};
