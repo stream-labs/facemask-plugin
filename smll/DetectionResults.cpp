@@ -231,10 +231,7 @@ namespace smll {
 			}
 		}
 
-		faces.t = other.t;
-		faces.b = other.b;
-		faces.l = other.l;
-		faces.r = other.r;
+		faces.motionRect = other.motionRect;
 	}
 
 	int DetectionResults::findClosest(const smll::DetectionResult& result) {
