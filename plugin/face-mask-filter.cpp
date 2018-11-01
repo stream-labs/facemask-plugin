@@ -1254,7 +1254,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// draw crop rectangles
 	drawCropRects(baseWidth, baseHeight);
-
+	drawDetectRects(baseWidth, baseHeight);
 	// demo mode render stuff
 	demoModeRender(vidTex, mask_tex, mask_data);
 
@@ -1809,6 +1809,11 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 				detection.faces[face_idx].detectionResults[i] = detect_results[i];
 			}
 			detection.faces[face_idx].detectionResults.length = detect_results.length;
+			detection.faces[face_idx].detectionResults.t = detect_results.t;
+			detection.faces[face_idx].detectionResults.b = detect_results.b;
+			detection.faces[face_idx].detectionResults.l = detect_results.l;
+			detection.faces[face_idx].detectionResults.r = detect_results.r;
+			blog(LOG_DEBUG, "face results: x0: %d x1: %d y0: %d y1: %d", detect_results.t, detect_results.b, detect_results.l, detect_results.r);
 		}
 
 		{
@@ -2034,6 +2039,27 @@ void Plugin::FaceMaskFilter::Instance::drawCropRects(int width, int height) {
 		r.set_left(x);
 		r.set_right(x + w);
 		smllRenderer->SetDrawColor(255, 0, 255);
+		smllRenderer->DrawRect(r);
+	}
+}
+
+void Plugin::FaceMaskFilter::Instance::drawDetectRects(int width, int height) {
+	if (drawFDRect) {
+		dlib::rectangle r;
+
+		float k = (float)width / (float)smll::Config::singleton().get_int(
+			smll::CONFIG_INT_FACE_DETECT_WIDTH);
+		blog(LOG_DEBUG, "final results: x0: %d x1: %d y0: %d y1: %d", faces.t, faces.b, faces.l, faces.r);
+		int t = k*faces.t;
+		int b = k*faces.b;
+		int l = k*faces.l;
+		int ri = k*faces.r;
+		
+		r.set_top(t);
+		r.set_bottom(b);
+		r.set_left(l);
+		r.set_right(ri);
+		smllRenderer->SetDrawColor(255, 255, 0);
 		smllRenderer->DrawRect(r);
 	}
 }

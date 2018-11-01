@@ -110,6 +110,7 @@ namespace Plugin {
 			Mask::MaskData*	LoadMask(std::string filename);
 			void LoadDemo();
 			void drawCropRects(int width, int height);
+			void drawDetectRects(int width, int height);
 			void updateFaces();
 			void setFaceTransform(const smll::ThreeDPose& pose,
 				bool billboard = false);
