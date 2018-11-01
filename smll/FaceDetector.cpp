@@ -185,12 +185,23 @@ namespace smll {
 			}
 			//blog(LOG_DEBUG, res.c_str());	
 		}
-		results.r = minY;
-		results.l = maxY;
-		results.t = minX;
-		results.b = maxX;
+		results.motionRect.set_left(minY);
+		results.motionRect.set_right(maxY);
+		results.motionRect.set_top(minX);
+		results.motionRect.set_bottom(maxX);
 		blog(LOG_DEBUG, "Compute crop: x0: %d x1: %d y0: %d y1: %d", minX,  maxX, minY, maxY);
 
+	}
+	void FaceDetector::addFaceRectangles(DetectionResults& results) {
+		float scale = (float)m_detect.w / m_capture.width;
+
+		for (int i = 0; i < m_faces.length; i++) {
+			// scale rectangle up to video frame size
+			results.motionRect.set_left(std::min((int)results.motionRect.left(), (int)(m_faces[i].m_bounds.left() * scale)));
+			results.motionRect.set_right(std::max((int)results.motionRect.right(), (int)(m_faces[i].m_bounds.right() * scale)));
+			results.motionRect.set_top(std::min((int)results.motionRect.top(), (int)(m_faces[i].m_bounds.top() * scale)));
+			results.motionRect.set_bottom(std::max((int)results.motionRect.bottom(), (int)(m_faces[i].m_bounds.bottom() * scale)));
+		}
 	}
 
 
@@ -264,6 +275,7 @@ namespace smll {
 		// Compute GrayScale image.
 		// This will be used for the rest of the Computer Vision.
 		computeDifference(detect, results);
+		addFaceRectangles(results);
 		computeCurrentImage(detect);
 
 		bool trackingFailed = false;
