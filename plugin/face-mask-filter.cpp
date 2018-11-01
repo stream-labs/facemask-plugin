@@ -149,7 +149,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	alertElapsedTime(BIG_FLOAT), alertTriggered(false), alertShown(false), alertsLoaded(false),
 	demoModeOn(false), demoCurrentMask(0),
 	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), 
-	drawMask(true),	drawAlert(false), drawFaces(false), drawMorphTris(false), drawFDRect(false), 
+	drawMask(true),	drawAlert(false), drawFaces(false), drawMorphTris(false), drawFDRect(false), drawMotionRect(false),
 	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr), testMode(false), custom_effect(nullptr){
 
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
@@ -327,6 +327,7 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	obs_data_set_default_bool(data, P_DRAWFACEDATA, false);
 	obs_data_set_default_bool(data, P_DRAWMORPHTRIS, false);
 	obs_data_set_default_bool(data, P_DRAWCROPRECT, false);
+	obs_data_set_default_bool(data, P_DRAWMOTIONRECT, false);
 
 	obs_data_set_default_bool(data, P_DEMOMODEON, false);
 
@@ -446,6 +447,7 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 	add_bool_property(props, P_GENTHUMBS);
 
 	// debug drawing flags
+	add_bool_property(props, P_DRAWMOTIONRECT);
 	add_bool_property(props, P_DRAWFACEDATA);
 	add_bool_property(props, P_DRAWMORPHTRIS);
 	add_bool_property(props, P_DRAWCROPRECT);
@@ -580,6 +582,7 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	drawFaces = obs_data_get_bool(data, P_DRAWFACEDATA);
 	drawMorphTris = obs_data_get_bool(data, P_DRAWMORPHTRIS);
 	drawFDRect = obs_data_get_bool(data, P_DRAWCROPRECT);
+	drawMotionRect = obs_data_get_bool(data, P_DRAWMOTIONRECT);
 }
 
 void Plugin::FaceMaskFilter::Instance::activate(void *ptr) {
@@ -1254,7 +1257,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// draw crop rectangles
 	drawCropRects(baseWidth, baseHeight);
-	drawDetectRects(baseWidth, baseHeight);
+	
+	// draw motion rectangle
+	drawMotionRects(baseWidth, baseHeight);
+	
 	// demo mode render stuff
 	demoModeRender(vidTex, mask_tex, mask_data);
 
@@ -1809,11 +1815,8 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 				detection.faces[face_idx].detectionResults[i] = detect_results[i];
 			}
 			detection.faces[face_idx].detectionResults.length = detect_results.length;
-			detection.faces[face_idx].detectionResults.t = detect_results.t;
-			detection.faces[face_idx].detectionResults.b = detect_results.b;
-			detection.faces[face_idx].detectionResults.l = detect_results.l;
-			detection.faces[face_idx].detectionResults.r = detect_results.r;
-			blog(LOG_DEBUG, "face results: x0: %d x1: %d y0: %d y1: %d", detect_results.t, detect_results.b, detect_results.l, detect_results.r);
+			detection.faces[face_idx].detectionResults.motionRect = detect_results.motionRect;
+			blog(LOG_DEBUG, "face results: t: %d b: %d l: %d r: %d", detect_results.motionRect.top(), detect_results.motionRect.bottom(), detect_results.motionRect.left(), detect_results.motionRect.right());
 		}
 
 		{
@@ -2043,24 +2046,22 @@ void Plugin::FaceMaskFilter::Instance::drawCropRects(int width, int height) {
 	}
 }
 
-void Plugin::FaceMaskFilter::Instance::drawDetectRects(int width, int height) {
-	if (drawFDRect) {
+void Plugin::FaceMaskFilter::Instance::drawMotionRects(int width, int height) {
+	if (drawMotionRect) {
 		dlib::rectangle r;
-
 		float k = (float)width / (float)smll::Config::singleton().get_int(
 			smll::CONFIG_INT_FACE_DETECT_WIDTH);
-		blog(LOG_DEBUG, "final results: x0: %d x1: %d y0: %d y1: %d", faces.t, faces.b, faces.l, faces.r);
-		int t = k*faces.t;
-		int b = k*faces.b;
-		int l = k*faces.l;
-		int ri = k*faces.r;
+		int t = k*faces.motionRect.top();
+		int b = k*faces.motionRect.bottom();
+		int l = k*faces.motionRect.left();
+		int ri = k*faces.motionRect.right();
 		
 		r.set_top(t);
 		r.set_bottom(b);
 		r.set_left(l);
 		r.set_right(ri);
-		smllRenderer->SetDrawColor(255, 255, 0);
-		smllRenderer->DrawRect(r);
+		smllRenderer->SetDrawColor(0, 0, 255);
+		smllRenderer->DrawRect(r, 6);
 	}
 }
 
