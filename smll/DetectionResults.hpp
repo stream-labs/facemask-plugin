@@ -39,6 +39,7 @@
 #include "landmarks.hpp"
 #include "Face.hpp"
 #include "SingleValueKalman.hpp"
+#include <opencv2/opencv.hpp>
 
 namespace smll {
 
@@ -108,26 +109,17 @@ namespace smll {
 
 
 	private:
-
-		// kalman filters. 
-		// see: 'An Introduction to the Kalman Filter' - Gary Bishop
-		//      http://www.cs.unc.edu/~tracker/media/pdf/SIGGRAPH2001_CoursePack_08.pdf
-		//
-		enum FilterIndex : uint32_t {
-			KF_TRANS_X,
-			KF_TRANS_Y,
-			KF_TRANS_Z,
-			KF_ROT_X,
-			KF_ROT_Y,
-			KF_ROT_Z,
-			KF_ROT_A,
-
-			KF_NUM_FILTERS
-		};
-		std::array<SingleValueKalman, KF_NUM_FILTERS> kalmanFilters;
-
-		bool	kalmanFiltersInitialized;
-		void InitKalmanFilters();
+		// Kalman Filter variables
+		cv::KalmanFilter kalmanFilter; // Initialize Kalman Filter
+		int nStates = 18;
+		int nMeasurements = 6;
+		int nInputs = 0;
+		double dt = 0.125; // 1/FPS - TODO: Get it from current FPS
+		bool kalmanFilterInitialized;
+		// Kalman filter methods
+		void InitKalmanFilter();
+		void UpdateKalmanFilter(cv::KalmanFilter &KF, cv::Mat& measurement,
+			cv::Mat& translation_estimated, cv::Mat& rotation_estimated);
 	};
 
 
