@@ -2,27 +2,28 @@ cmake_minimum_required (VERSION 2.6)
 project (MaskMaker)
 
 # assimp
-SET(PATH_ASSIMP "" CACHE PATH "Assimp - Open Asset Import Library")
-if(PATH_ASSIMP STREQUAL "")
-	message(FATAL_ERROR "PATH_ASSIMP not set!")
-	return()
-endif()
+SET(PATH_ASSIMP "${PROJECT_SOURCE_DIR}/../../thirdparty/assimp")
 if(NOT EXISTS "${PATH_ASSIMP}/include/assimp/Importer.hpp")
 	message(FATAL_ERROR "PATH_ASSIMP is invalid!")
 	return()
 endif()
+
+add_subdirectory(${PATH_ASSIMP} ${PATH_ASSIMP}/build)
+
+# assimp include files
 include_directories(${PATH_ASSIMP}/include)
+include_directories(${PATH_ASSIMP}/build/include)
 
 # For Zlib
 SET(OPENCV_TP_DIR "${PROJECT_SOURCE_DIR}/../../thirdparty/opencv/3rdparty")
 SET(ZLIB_LIBS
-	debug "${OPENCV_TP_DIR}/lib/Debug/zlibd"
-	optimized "${OPENCV_TP_DIR}/lib/Release/zlib"
+	debug "${OPENCV_TP_DIR}/lib/Debug/zlibd.lib"
+	optimized "${OPENCV_TP_DIR}/lib/Release/zlib.lib"
 )
 include_directories(${OPENCV_TP_DIR}/include)
 
 # For Base64
-SET(FACEMASK_PLUGIN_DIR "${PROJECT_SOURCE_DIR}/../..")
+SET(FACEMASK_PLUGIN_DIR "${PROJECT_SOURCE_DIR}/../../plugin")
 include_directories(${FACEMASK_PLUGIN_DIR})
 
 SET(MaskMaker_HEADERS
@@ -63,6 +64,7 @@ SET(MaskMaker_SOURCES
 
 add_executable(MaskMaker ${MaskMaker_HEADERS} ${MaskMaker_SOURCES})
 target_link_libraries(MaskMaker
-	${PATH_ASSIMP}/build64/code/$<CONFIG>/assimp-vc140-mt.lib
+	${PATH_ASSIMP}/build/code/$<CONFIG>/assimp-vc140-mt.lib
 	${ZLIB_LIBS}
 )
+

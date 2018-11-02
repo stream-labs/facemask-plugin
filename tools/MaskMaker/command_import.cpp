@@ -366,26 +366,6 @@ string getMaterialTexture(aiMaterial* mtl, aiTextureType tt) {
 	return p;
 }
 
-string getTextureName(aiTextureType tt) {
-	switch (tt) {
-	case aiTextureType_AMBIENT:
-		return "ambient";
-	case aiTextureType_DIFFUSE:
-		return "diffuse";
-	case aiTextureType_SPECULAR:
-		return "specular";
-	case aiTextureType_EMISSIVE:
-		return "emissive";
-	case aiTextureType_HEIGHT:
-	case aiTextureType_NORMALS:
-		return "normal";
-	case aiTextureType_LIGHTMAP:
-	case aiTextureType_REFLECTION:
-		return "reflect";
-	}
-	return "";
-}
-
 string lightTypeToString(aiLightSourceType t) {
 	switch (t) {
 	case aiLightSource_DIRECTIONAL:
@@ -474,30 +454,6 @@ vec3 GetCenter(const GSVertexBuffer& vertices) {
 }
 
 
-
-
-#define GETTEXTURE(_TEXTYPE_) {\
-imgfile = getMaterialTexture(scene->mMaterials[i], _TEXTYPE_);\
-if (imgfile.length() > 0) {\
-snprintf(temp, sizeof(temp), "%s-%d", getTextureName(_TEXTYPE_).c_str(), i);\
-textureFiles[temp] = imgfile;\
-}}
-
-#define SETTEXPARAM(_TEXTYPE_) {\
-imgfile = getMaterialTexture(scene->mMaterials[i], _TEXTYPE_);\
-if (imgfile.length() > 0) {\
-string paramName = getTextureName(_TEXTYPE_);\
-snprintf(temp, sizeof(temp), "%s-%d", paramName.c_str(), i);\
-textureFiles[temp] = imgfile;\
-json parm;\
-parm["type"] = "texture";\
-parm["value"] = temp;\
-params[paramName + "Tex"] = parm;\
-parm["type"] = "integer";\
-parm["value"] = 1;\
-params[paramName + "Map"] = parm;\
-}}
-
 void command_import(Args& args) {
 
 	// get filename
@@ -532,18 +488,13 @@ void command_import(Args& args) {
 	}
 
 	// Get a list of all the textures
-	map<string, string> textureFiles;
+	map<std::tuple<string,unsigned int>, string> textureFiles;
 	for (unsigned int i = 0; i < scene->mNumMaterials; i++) {
-		char temp[256];
-		string imgfile;
-		GETTEXTURE(aiTextureType_AMBIENT);
-		GETTEXTURE(aiTextureType_DIFFUSE);
-		GETTEXTURE(aiTextureType_SPECULAR);
-		GETTEXTURE(aiTextureType_EMISSIVE);
-		GETTEXTURE(aiTextureType_HEIGHT);
-		GETTEXTURE(aiTextureType_NORMALS);
-		GETTEXTURE(aiTextureType_LIGHTMAP);
-		GETTEXTURE(aiTextureType_REFLECTION);
+		auto tex_map = scene->mMaterials[i]->GetAllTextures();
+		for (auto &kv : tex_map)
+		{
+			textureFiles[std::make_tuple(kv.first,i)] = kv.second;
+		}
 	}
 
 	json rez;
@@ -916,13 +867,13 @@ void command_import(Args& args) {
 	// Add all the textures
 	int count = 0;
 	cout << "Importing textures..." << endl;
-	map<string, bool> textureHasAlpha;
+	map<std::tuple<string, unsigned int>, bool> textureHasAlpha;
 	for (auto it = textureFiles.begin(); it != textureFiles.end(); it++, count++) {
 		json o = args.createImageResourceFromFile(it->second);
 		textureHasAlpha[it->first] = args.lastImageHadAlpha;
 		if (args.lastImageHadAlpha)
-			cout << it->first << " " << " has alpha" << endl;
-		rez[it->first] = o;
+			cout << std::get<string>(it->first) << " " << " has alpha" << endl;
+		rez[std::get<string>(it->first)+"-"+std::to_string(std::get<unsigned int>(it->first))] = o;
 	}
 	cout << "Imported " << count << " textures." << endl;
 
@@ -951,36 +902,41 @@ void command_import(Args& args) {
 		mtl->Get(AI_MATKEY_SHININESS, shininess);
 
 		// Texture params
-		SETTEXPARAM(aiTextureType_AMBIENT);
-		SETTEXPARAM(aiTextureType_DIFFUSE);
-		SETTEXPARAM(aiTextureType_SPECULAR);
-		SETTEXPARAM(aiTextureType_EMISSIVE);
-		SETTEXPARAM(aiTextureType_HEIGHT);
-		SETTEXPARAM(aiTextureType_NORMALS);
-		SETTEXPARAM(aiTextureType_LIGHTMAP);
-		SETTEXPARAM(aiTextureType_REFLECTION);
+		for (auto &kv : textureFiles)
+		{
+			if (std::get<unsigned int>(kv.first) == i) {
+				string key = std::get<string>(kv.first) + "-" + std::to_string(std::get<unsigned int>(kv.first));
+				json parm;
+				parm["type"] = "texture";
+				parm["value"] = key;
+				params[std::get<string>(kv.first) + "Tex"] = parm;
+				parm["type"] = "integer";
+				parm["value"] = 1;
+				params[std::get<string>(kv.first) + "Map"] = parm;
+			}
+		}
 
 		// Opaque flag, set based on textures
 		bool opaque = true;
-		vector<aiTextureType> ttypes = { aiTextureType_AMBIENT, aiTextureType_DIFFUSE,
-			aiTextureType_SPECULAR, aiTextureType_EMISSIVE, aiTextureType_REFLECTION };
-		for (int tt = 0; tt < ttypes.size(); tt++) {
-			imgfile = getMaterialTexture(scene->mMaterials[i], ttypes[tt]);
-			if (imgfile.length() > 0) {
-				string paramName = getTextureName(ttypes[tt]);
-				snprintf(temp, sizeof(temp), "%s-%d", paramName.c_str(), i);
-				if (textureHasAlpha[temp]) {
+		vector<aiTextureType> ttypes = { aiTextureType_AMBIENT(), aiTextureType_DIFFUSE(),
+			aiTextureType_SPECULAR(), aiTextureType_EMISSIVE(), aiTextureType_REFLECTION() };
+
+		for (auto &kv : textureFiles)
+		{
+			if (std::get<unsigned int>(kv.first) == i) {
+				if (textureHasAlpha[kv.first]) {
 					opaque = false;
 					break;
 				}
+
 			}
 		}
 
 		// Only set colors if textures aren't set
-		int namb = mtl->GetTextureCount(aiTextureType_AMBIENT);
-		int ndff = mtl->GetTextureCount(aiTextureType_DIFFUSE);
-		int nspc = mtl->GetTextureCount(aiTextureType_SPECULAR);
-		int nemm = mtl->GetTextureCount(aiTextureType_EMISSIVE);
+		int namb = mtl->GetTextureCount(aiTextureType_AMBIENT());
+		int ndff = mtl->GetTextureCount(aiTextureType_DIFFUSE());
+		int nspc = mtl->GetTextureCount(aiTextureType_SPECULAR());
+		int nemm = mtl->GetTextureCount(aiTextureType_EMISSIVE());
 
 		// Color Params
 		aiColor4D dcolor = aiColor4D(0.8f, 0.8f, 0.8f, 1.0f);
