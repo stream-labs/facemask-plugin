@@ -61,8 +61,6 @@ SET(OpenCV_VERSION "400" CACHE STRING "Version of OpenCV to use.")
 SET(OpenCV_LIBS
 	debug "${OpenCV_DIR}/lib/Debug/opencv_world${OpenCV_VERSION}d.lib"
 	optimized "${OpenCV_DIR}/lib/Release/opencv_world${OpenCV_VERSION}.lib"
-	debug "${OpenCV_DIR}/3rdparty/lib/Debug/tbb_debug.lib"
-	optimized "${OpenCV_DIR}/3rdparty/lib/Release/tbb.lib"
 	debug "${OpenCV_DIR}/3rdparty/lib/Debug/zlibd.lib"
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/zlib.lib"
 	debug "${OpenCV_DIR}/3rdparty/lib/Debug/libpngd.lib"
