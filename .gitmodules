@@ -4,3 +4,6 @@
 [submodule "freetype2"]
 	path = thirdparty/freetype2
 	url = https://github.com/glaba13/freetype2.git
+[submodule "thirdparty/assimp"]
+	path = thirdparty/assimp
+	url = git@github.com:kamyarinfinity/assimp.git
