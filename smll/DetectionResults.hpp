@@ -111,10 +111,10 @@ namespace smll {
 	private:
 		// Kalman Filter variables
 		cv::KalmanFilter kalmanFilter; // Initialize Kalman Filter
-		int nStates = 18;
-		int nMeasurements = 6;
-		int nInputs = 0;
-		double dt = 0.125; // 1/FPS - TODO: Get it from current FPS
+		int nStates;
+		int nMeasurements;
+		int nInputs;
+		double dt; // 1/FPS - TODO: Get it from current FPS
 		bool kalmanFilterInitialized;
 		// Kalman filter methods
 		void InitKalmanFilter();

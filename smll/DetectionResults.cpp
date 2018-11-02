@@ -251,7 +251,10 @@ namespace smll {
 
 	DetectionResult::DetectionResult() 
 		: matched(false), numFramesLost(0), kalmanFilterInitialized(false), initedStartPose(false) {
-
+		nStates = 18;
+		nMeasurements = 6;
+		nInputs = 0;
+		dt = 0.125; // 1/FPS - TODO: Get it from current FPS
 	}
 
 	DetectionResult::~DetectionResult() {
