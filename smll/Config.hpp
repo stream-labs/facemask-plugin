@@ -66,7 +66,12 @@ namespace smll {
 		"smoothingFactor";
 
 	// Face Detection Vars ----------
-
+	// Movement threshold
+	static const char* const CONFIG_DOUBLE_MOVEMENT_THRESHOLD =
+		"movementThreshold";
+	static const char* const CONFIG_DOUBLE_BLUR_FACTOR =
+		"movementBlurFactor";
+	
 	// Scale Width
 	static const char* const CONFIG_INT_FACE_DETECT_WIDTH = 
 		"faceDetectWidth";
