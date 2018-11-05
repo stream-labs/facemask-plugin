@@ -204,7 +204,10 @@ namespace smll {
 	}
 
 
-	void FaceDetector::computeCurrentImage(const ImageWrapper& detect) {
+	void FaceDetector::computeCurrentImage(const ImageWrapper& detect, DetectionResults& results) {
+		computeDifference(detect, results);
+		addFaceRectangles(results);
+		SetCropInfo(results);
 		// Do image cropping and cv::Mat initialization in single shot
 		CropInfo cropInfo = GetCropInfo();
 		cv::Mat cropped = currentImage(cv::Rect(cropInfo.offsetX, cropInfo.offsetY, cropInfo.width, cropInfo.height));
@@ -279,15 +282,10 @@ namespace smll {
 		// This will be used for the rest of the Computer Vision.
 		convertToGrey(detect);
 
-
 		bool trackingFailed = false;
 		// if number of frames before the last detection is bigger than the threshold or if there are no faces to track
 		if (m_detectionTimeout == 0 || m_faces.length == 0) {
-
-			computeDifference(detect, results);
-			addFaceRectangles(results);
-			SetCropInfo(results);
-			computeCurrentImage(detect);
+			computeCurrentImage(detect, results);
 			DoFaceDetection();
 			m_detectionTimeout =
 				Config::singleton().get_int(CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY);

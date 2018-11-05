@@ -143,7 +143,7 @@ private:
 	// Current Image
 	cv::Mat currentImage;
 	cv::Mat currentOrigImage;
-	void computeCurrentImage(const ImageWrapper& detect);
+	void computeCurrentImage(const ImageWrapper& detect, DetectionResults& results);
 	void convertToGrey(const ImageWrapper& detect);
 	void addFaceRectangles(DetectionResults& results);
 	void computeDifference(const ImageWrapper& detect, DetectionResults& results);
