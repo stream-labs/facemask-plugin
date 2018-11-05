@@ -1236,9 +1236,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	
 	// Draw the rendered alert
 	if (alert_tex) {
-
-		blog(LOG_DEBUG, "DRAWING ALERT");
-
 		// draw the rendering on top of the video
 		gs_matrix_push();
 		gs_matrix_identity();
@@ -1816,7 +1813,6 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			}
 			detection.faces[face_idx].detectionResults.length = detect_results.length;
 			detection.faces[face_idx].detectionResults.motionRect = detect_results.motionRect;
-			blog(LOG_DEBUG, "face results: t: %d b: %d l: %d r: %d", detect_results.motionRect.top(), detect_results.motionRect.bottom(), detect_results.motionRect.left(), detect_results.motionRect.right());
 		}
 
 		{
@@ -2048,20 +2044,21 @@ void Plugin::FaceMaskFilter::Instance::drawCropRects(int width, int height) {
 
 void Plugin::FaceMaskFilter::Instance::drawMotionRects(int width, int height) {
 	if (drawMotionRect) {
-		dlib::rectangle r;
+		dlib::rectangle rect;
 		float k = (float)width / (float)smll::Config::singleton().get_int(
 			smll::CONFIG_INT_FACE_DETECT_WIDTH);
 		int t = k*faces.motionRect.top();
 		int b = k*faces.motionRect.bottom();
 		int l = k*faces.motionRect.left();
-		int ri = k*faces.motionRect.right();
-		
-		r.set_top(t);
-		r.set_bottom(b);
-		r.set_left(l);
-		r.set_right(ri);
-		smllRenderer->SetDrawColor(0, 0, 255);
-		smllRenderer->DrawRect(r, 6);
+		int r = k*faces.motionRect.right();
+		if (t < b && l < r) {
+			rect.set_top(t);
+			rect.set_bottom(b);
+			rect.set_left(l);
+			rect.set_right(r);
+			smllRenderer->SetDrawColor(0, 0, 255);
+			smllRenderer->DrawRect(rect, 3);
+		}
 	}
 }
 
