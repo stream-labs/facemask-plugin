@@ -230,8 +230,10 @@ namespace smll {
 				}
 			}
 		}
-
-		faces.motionRect = other.motionRect;
+		dlib::rectangle rect = other.motionRect;
+		if (rect.left() < rect.right() && rect.top() < rect.bottom()) {
+			faces.motionRect = rect;
+		}
 	}
 
 	int DetectionResults::findClosest(const smll::DetectionResult& result) {
