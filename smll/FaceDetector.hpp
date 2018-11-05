@@ -137,10 +137,14 @@ private:
 			offsetY = y - height / 2;
 		}
 	};
+	CropInfo    cropInfo;
 	CropInfo	GetCropInfo();
+	void		SetCropInfo(DetectionResults& results);
 	// Current Image
 	cv::Mat currentImage;
+	cv::Mat currentOrigImage;
 	void computeCurrentImage(const ImageWrapper& detect);
+	void convertToGrey(const ImageWrapper& detect);
 	void addFaceRectangles(DetectionResults& results);
 	void computeDifference(const ImageWrapper& detect, DetectionResults& results);
 
@@ -148,10 +152,6 @@ private:
 	cv::Mat diffImage;
 	cv::Mat diff;
 	bool isPrevInit;
-	int minX;
-	int minY;
-	int maxX;
-	int maxY;
 
 	// Staging the capture texture
 	void 	StageCaptureTexture();
