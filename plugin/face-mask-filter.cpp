@@ -397,6 +397,7 @@ static void add_float_slider(obs_properties_t *props, const char* name, float mi
 
 
 void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
+#if !defined(PUBLIC_RELEASE)
 	// mask 
 	add_json_file_property(props, P_MASK_BROWSE, NULL);
 
@@ -414,7 +415,6 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 	add_float_slider(props, P_ALERT_MAX_SIZE, 0.0f, 1.0f, 0.01f);
 
 	add_bool_property(props, P_TEST_MODE);
-#if !defined(PUBLIC_RELEASE)
 
 	// force mask/alert drawing
 	add_bool_property(props, P_DRAWMASK);
