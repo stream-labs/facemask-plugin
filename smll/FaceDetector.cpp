@@ -143,8 +143,8 @@ namespace smll {
 
 		if (!isPrevInit) {
 			isPrevInit = true;
-			results.motionRect.set_bottom(diffImage.rows);
-			results.motionRect.set_left(diffImage.cols);
+			results.motionRect.set_bottom(currentImage.rows);
+			results.motionRect.set_left(currentImage.cols);
 			results.motionRect.set_top(0);
 			results.motionRect.set_right(0);
 			prevImage = currentImage.clone();
@@ -195,6 +195,10 @@ namespace smll {
 			results.motionRect.set_top(std::min((int)results.motionRect.top(), (int)(m_faces[i].m_bounds.top() * scale)));
 			results.motionRect.set_bottom(std::max((int)results.motionRect.bottom(), (int)(m_faces[i].m_bounds.bottom() * scale)));
 		}
+		results.motionRect.set_left(std::max((int)results.motionRect.left(), 0));
+		results.motionRect.set_right(std::min((int)results.motionRect.right(), currentImage.cols - 1));
+		results.motionRect.set_top(std::max((int)results.motionRect.top(), 0));
+		results.motionRect.set_bottom(std::min((int)results.motionRect.bottom(), currentImage.rows - 1));
 	}
 
 
