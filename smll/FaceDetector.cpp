@@ -1101,8 +1101,28 @@ namespace smll {
 				throw std::invalid_argument(
 					"shape predictor got wrong number of landmarks");
 
-			for (int j = 0; j < NUM_FACIAL_LANDMARKS; j++) {
-				results[f].landmarks68[j] = point(d68.part(j).x(), d68.part(j).y());
+			// Smooth d68
+			// Compute error and change it w.r.t error threshold
+			double error = 0;
+			for (int j = 0; j < 68; j++) {
+				double newPointX = d68.part(j).x();
+				double oldPointX = results[f].landmarks68[j].x();
+				double newPointY = d68.part(j).y();
+				double oldPointY = results[f].landmarks68[j].y();
+				error += (std::abs(newPointX - oldPointX) + std::abs(newPointY - oldPointY)) / 2;
+			}
+			error /= 68;
+			double errorThreshold = 0.46;
+
+			if (error >= errorThreshold) {
+				// Change landmarks if error exceeds threshold
+				for (int j = 0; j < NUM_FACIAL_LANDMARKS; j++) {
+					results[f].landmarks68[j] = point(d68.part(j).x(), d68.part(j).y());
+				}
+				results[f].updatePose = true;
+			}
+			else {
+				results[f].updatePose = false;
 			}
 		}
 		obs_leave_graphics();
@@ -1153,6 +1173,10 @@ namespace smll {
 
 		bool resultsBad = false;
 		for (int i = 0; i < results.length; i++) {
+			// Check if we actually need to update pose, if not continue
+			if (!results[i].updatePose) {
+				continue;
+			}
 			std::vector<cv::Point2f> image_points;
 			// copy 2D image points. 
 			point* p = results[i].landmarks68;
