@@ -30,7 +30,13 @@
 #define NUM_HULL_POINTS			(28 * 2 * 2 * 2)
 #define NUM_HULL_POINT_DIVS		(3)
 
+#define RECORD_TRACKING_TIME true
+#define RECORD_DETECTION_TIME true
+#define RECORD_TRACK_LENGTH false
+
 static const char* const kFileShapePredictor68 = "shape_predictor_68_face_landmarks.dat";
+
+static int trackedFrames = 0;
 
 
 using namespace dlib;
@@ -212,15 +218,58 @@ namespace smll {
 		bool trackingFailed = false;
 		// if number of frames before the last detection is bigger than the threshold or if there are no faces to track
 		if (m_detectionTimeout == 0 || m_faces.length == 0) {
-			DoFaceDetection();
+			if (RECORD_DETECTION_TIME) {
+				ofstream detectFacesLog("C:\\Users\\brank\\kpi_log\\detectionTimeMsecs.txt", ios::app);
+				clock_t begin = clock();
+				DoFaceDetection();
+				clock_t end = clock();
+				double elapsed_micsecs = double(end - begin) / CLOCKS_PER_SEC * 1000;
+				detectFacesLog << elapsed_micsecs << "\n";
+				detectFacesLog.close();
+			}
+			else
+			{
+				DoFaceDetection();
+			}
+
 			m_detectionTimeout =
 				Config::singleton().get_int(CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY);
-			StartObjectTracking();
+
+			if (RECORD_TRACKING_TIME) {
+				ofstream detectFacesLog("C:\\Users\\brank\\kpi_log\\detectionStartTrackingMsecs.txt", ios::app);
+				clock_t begin = clock();
+				StartObjectTracking();
+				clock_t end = clock();
+				double elapsed_micsecs = double(end - begin) / CLOCKS_PER_SEC * 1000;
+				detectFacesLog << elapsed_micsecs << "\n";
+				detectFacesLog.close();
+			}
+			else {
+				StartObjectTracking();
+			}
+
+			if (RECORD_TRACK_LENGTH) {
+				ofstream trackLengths("C:\\Users\\brank\\kpi_log\\trackLengths.txt", ios::app);
+				trackLengths << trackedFrames << endl;
+				trackLengths.close();
+				trackedFrames = 0;
+			}
 		}
 		else if (m_trackingTimeout == 0) {
 			m_detectionTimeout--;
 
-			UpdateObjectTracking();
+			if (RECORD_TRACKING_TIME) {
+				ofstream detectFacesLog("C:\\Users\\brank\\kpi_log\\detectionUpdateTrackingMsecs.txt", ios::app);
+				clock_t begin = clock();
+				UpdateObjectTracking();
+				clock_t end = clock();
+				double elapsed_micsecs = double(end - begin) / CLOCKS_PER_SEC * 1000;
+				detectFacesLog << elapsed_micsecs << "\n";
+				detectFacesLog.close();
+			}
+			else {
+				UpdateObjectTracking();
+			}
 
 			// Is Tracking is still good?
 			if (m_faces.length > 0) {
@@ -230,12 +279,17 @@ namespace smll {
 				// tracking frequency
 				m_trackingTimeout =
 					Config::singleton().get_int(CONFIG_INT_TRACKING_FREQUNCY);
+
+				if (RECORD_TRACK_LENGTH) {
+					trackedFrames++;
+				}
 			}
 			else {
 				m_trackingFaceIndex = 0;
 				// force detection on the next frame, do not wait for 5 frames
 				m_timeout == 0;
 				trackingFailed = true;
+				
 			}
 
 			// copy faces to results
@@ -969,7 +1023,16 @@ namespace smll {
         // detect faces
 		std::vector<rectangle> faces;
 		dlib::cv_image<unsigned char> img(currentImage);
+
+		ofstream detectFacesLog("C:\\Users\\brank\\kpi_log\\m_detectorMsecs.txt", ios::app);
+		clock_t begin = clock();
+
 		faces = m_detector(img);
+
+		clock_t end = clock();
+		double elapsed_micsecs = double(end - begin) / CLOCKS_PER_SEC * 1000;
+		detectFacesLog << elapsed_micsecs << "\n";
+		detectFacesLog.close();
 
 		// only consider the face detection results if:
         //

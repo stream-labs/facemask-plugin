@@ -36,6 +36,10 @@
 #include <codecvt>
 #include <tchar.h>
 
+#include <ctime>
+#include <fstream>
+
+
 // Windows AV run time stuff
 #include <avrt.h>
 
@@ -72,6 +76,8 @@
 
 // Alert Attribution pre string for format
 #define DONOR_NAME_PRE			"- "
+
+#define RECORD_DETECT_FACE_TIME false
 
 static const int NUM_FONT_SIZES = 8;
 static const int FONT_SIZES[NUM_FONT_SIZES] = { 200, 120, 80, 62, 50, 42, 36, 30 };
@@ -1761,7 +1767,20 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			}
 			else {
 				// new frame - do the face detection
-				smllFaceDetector->DetectFaces(detection.frame.detect, detection.frame.capture, detect_results);
+				if (RECORD_DETECT_FACE_TIME) {
+					ofstream detectFacesLog("C:\\Users\\brank\\kpi_log\\detectFacesTimeMsecs.txt", ios::app);
+					clock_t begin = clock();
+					smllFaceDetector->DetectFaces(detection.frame.detect, detection.frame.capture, detect_results);
+					clock_t end = clock();
+					double elapsed_micsecs = double(end - begin) / CLOCKS_PER_SEC * 1000;
+					detectFacesLog << elapsed_micsecs << "\n";
+					detectFacesLog.close();
+				}
+				else
+				{
+					smllFaceDetector->DetectFaces(detection.frame.detect, detection.frame.capture, detect_results);
+				}
+
 				if (!STUFF_ON_MAIN_THREAD) {
 					// Now do the landmark detection & pose estimation
 					smllFaceDetector->DetectLandmarks(detection.frame.capture, detect_results);
@@ -1834,7 +1853,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 	if (hTask != NULL) {
 		AvRevertMmThreadCharacteristics(hTask);
 	}
-
+	
 	return 0;
 }
 
