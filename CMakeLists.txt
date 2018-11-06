@@ -4,9 +4,11 @@ math(EXPR BITS "8*${CMAKE_SIZEOF_VOID_P}")
 
 SET(PATH_DLIB "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dlib")
 set(USE_AVX_INSTRUCTIONS ON CACHE BOOL "Use AVX instructions" FORCE)
+set(USE_SSE4_INSTRUCTIONS ON CACHE BOOL "Use SSE4 instructions" FORCE)
 set(DLIB_NO_GUI_SUPPORT OFF CACHE STRING "DLib GUI support" FORCE)
 set(DLIB_GIF_SUPPORT OFF CACHE STRING "DLib GIF support" FORCE)
 set(DLIB_JPEG_SUPPORT OFF CACHE STRING "DLib JPEG support"  FORCE)
+set(DLIB_PNG_SUPPORT OFF CACHE STRING "DLib PNG support"  FORCE)
 
 SET(PATH_FREETYPE "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/freetype2")
 
@@ -55,26 +57,28 @@ endif()
 
 # OpenCV
 SET(OpenCV_DIR "${PROJECT_SOURCE_DIR}/thirdparty/opencv")
-SET(OpenCV_VERSION "331" CACHE STRING "Version of OpenCV to use.")
+SET(OpenCV_VERSION "400" CACHE STRING "Version of OpenCV to use.")
 SET(OpenCV_LIBS
-	debug "${OpenCV_DIR}/lib/Debug/opencv_calib3d${OpenCV_VERSION}d.lib"
-	optimized "${OpenCV_DIR}/lib/Release/opencv_calib3d${OpenCV_VERSION}.lib"
-	debug "${OpenCV_DIR}/lib/Debug/opencv_core${OpenCV_VERSION}d.lib"
-	optimized "${OpenCV_DIR}/lib/Release/opencv_core${OpenCV_VERSION}.lib"
-	debug "${OpenCV_DIR}/lib/Debug/opencv_highgui${OpenCV_VERSION}d.lib"
-	optimized "${OpenCV_DIR}/lib/Release/opencv_highgui${OpenCV_VERSION}.lib"
-	debug "${OpenCV_DIR}/lib/Debug/opencv_imgcodecs${OpenCV_VERSION}d.lib"
-	optimized "${OpenCV_DIR}/lib/Release/opencv_imgcodecs${OpenCV_VERSION}.lib"
-	debug "${OpenCV_DIR}/lib/Debug/opencv_imgproc${OpenCV_VERSION}d.lib"
-	optimized "${OpenCV_DIR}/lib/Release/opencv_imgproc${OpenCV_VERSION}.lib"
-	debug "${OpenCV_DIR}/3rdparty/lib/Debug/libpngd.lib"
-	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libpng.lib"
+	debug "${OpenCV_DIR}/lib/Debug/opencv_world${OpenCV_VERSION}d.lib"
+	optimized "${OpenCV_DIR}/lib/Release/opencv_world${OpenCV_VERSION}.lib"
 	debug "${OpenCV_DIR}/3rdparty/lib/Debug/zlibd.lib"
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/zlib.lib"
+	debug "${OpenCV_DIR}/3rdparty/lib/Debug/libpngd.lib"
+	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libpng.lib"
 	debug "${OpenCV_DIR}/3rdparty/lib/Debug/ittnotifyd.lib"
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/ittnotify.lib"
 	debug "${OpenCV_DIR}/3rdparty/lib/Debug/ippiwd.lib"
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/ippiw.lib"
+	debug "${OpenCV_DIR}/3rdparty/lib/Debug/IlmImfd.lib"
+	optimized "${OpenCV_DIR}/3rdparty/lib/Release/IlmImf.lib"
+	debug "${OpenCV_DIR}/3rdparty/lib/Debug/libjpeg-turbod.lib"
+	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libjpeg-turbo.lib"
+	debug "${OpenCV_DIR}/3rdparty/lib/Debug/libtiffd.lib"
+	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libtiff.lib"
+	debug "${OpenCV_DIR}/3rdparty/lib/Debug/libjasperd.lib"
+	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libjasper.lib"
+	debug "${OpenCV_DIR}/3rdparty/lib/Debug/libwebpd.lib"
+	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libwebp.lib"
 	debug "${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_${OpenCV_VERSION}/lib/intel64/ippicvmt.lib"
 	optimized "${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_${OpenCV_VERSION}/lib/intel64/ippicvmt.lib"
 )
@@ -84,8 +88,8 @@ include_directories("${OpenCV_DIR}/include")
 include_directories("${OpenCV_DIR}/3rdparty/include")
 
 # intel IPP
-include_directories("${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_331/include")
-include_directories("${OpenCV_DIR}/3rdparty/ippicv/ippiw_win_331/include")
+include_directories("${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_${OpenCV_VERSION}/include")
+include_directories("${OpenCV_DIR}/3rdparty/ippicv/ippiw_win_${OpenCV_VERSION}/include")
 
 # smll
 include_directories("smll")
