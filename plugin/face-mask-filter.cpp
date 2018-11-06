@@ -70,12 +70,6 @@
 // Big enough
 #define BIG_FLOAT					    (100000.0f)
 
-// Alert Attribution pre string for format
-#define DONOR_NAME_PRE			"- "
-
-static const int NUM_FONT_SIZES = 8;
-static const int FONT_SIZES[NUM_FONT_SIZES] = { 200, 120, 80, 62, 50, 42, 36, 30 };
-
 static float FOVA(float aspect) {
 	// field of view angle matched to focal length for solvePNP
 	return 56.0f / aspect;
@@ -142,10 +136,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	isActive(true), isVisible(true), videoTicked(true),
 	taskHandle(NULL), detectStage(nullptr),	maskDataShutdown(false), 
 	introFilename(nullptr),	outroFilename(nullptr),	alertActivate(true), alertDoIntro(false),
-	alertDoOutro(false), alertDuration(10.0f), donorNameDuration(2.0f),
-	alertOffsetBig(0.2f), alertOffsetSmall(0.1f), alertMinSize(0.2f), alertMaxSize(0.4f), alertShowDelay(0.0f),
-	alertTextTexture(nullptr), 
-	currentAlertLocation(LEFT_TOP),  alertTranslation(-35.0f), alertAspectRatio(1.15f),
+	alertDoOutro(false), alertDuration(10.0f),
 	alertElapsedTime(BIG_FLOAT), alertTriggered(false), alertShown(false), alertsLoaded(false),
 	demoModeOn(false), demoCurrentMask(0),
 	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), 
@@ -153,9 +144,6 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr), testMode(false), custom_effect(nullptr){
 
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
-
-	memset(&alertViewport, 0, sizeof(gs_rect));
-	vec2_zero(&smoothCenter);
 
 	obs_enter_graphics();
 	sourceRenderTarget = gs_texrender_create(GS_RGBA, GS_ZS_NONE);
@@ -167,13 +155,6 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	// Make the smll stuff
 	smllFaceDetector = new smll::FaceDetector();
 	smllRenderer = new smll::OBSRenderer(); 
-	smllTextShaper = new smll::TextShaper();
-
-	// Fonts
-	char* fontname = obs_module_file(kFontAlertTTF);
-	char* base_fontname = obs_module_file(kBaseFontAlertTTF);
-	smllFont = new smll::OBSFont(fontname, base_fontname);
-	bfree(fontname);
 
 	// set our mm thread task
 	if (!taskHandle) {
@@ -249,15 +230,11 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 		gs_stagesurface_destroy(testingStage);
 	if (detectStage)
 		gs_stagesurface_destroy(detectStage);
-	if (alertTextTexture)
-		gs_texture_destroy(alertTextTexture);
 	maskData = nullptr;
 	obs_leave_graphics();
 
 	delete smllFaceDetector;
 	delete smllRenderer;
-	delete smllFont;
-	delete smllTextShaper;
 
 	if (taskHandle != NULL) {
 		AvRevertMmThreadCharacteristics(taskHandle);
@@ -306,16 +283,9 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 
 	// ALERTS
 	obs_data_set_default_bool(data, P_ALERT_ACTIVATE, false);
-	obs_data_set_default_string(data, P_ALERT_TEXT, "");
 	obs_data_set_default_double(data, P_ALERT_DURATION, 10.0f);
-	obs_data_set_default_string(data, P_ALERT_DONOR_NAME, "");
 	obs_data_set_default_bool(data, P_ALERT_DOINTRO, false);
 	obs_data_set_default_bool(data, P_ALERT_DOOUTRO, false);
-	
-	obs_data_set_default_double(data, P_ALERT_OFFSET_BIG, 0.2f);
-	obs_data_set_default_double(data, P_ALERT_OFFSET_SMALL, 0.1f);
-	obs_data_set_default_double(data, P_ALERT_MIN_SIZE, 0.2f);
-	obs_data_set_default_double(data, P_ALERT_MAX_SIZE, 0.4f);
 
 	obs_data_set_default_bool(data, P_CARTOON, false);
 	obs_data_set_default_bool(data, P_BGREMOVAL, false);
@@ -402,16 +372,9 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 
 	// ALERT PROPERTIES
 	add_bool_property(props, P_ALERT_ACTIVATE);
-	add_text_property(props, P_ALERT_TEXT);
 	add_float_slider(props, P_ALERT_DURATION, 10.0f, 60.0f, 0.1f);
-	add_text_property(props, P_ALERT_DONOR_NAME);
 	add_bool_property(props, P_ALERT_DOINTRO);
 	add_bool_property(props, P_ALERT_DOOUTRO);
-
-	add_float_slider(props, P_ALERT_OFFSET_BIG, 0.0f, 1.0f, 0.01f);
-	add_float_slider(props, P_ALERT_OFFSET_SMALL, 0.0f, 1.0f, 0.01f);
-	add_float_slider(props, P_ALERT_MIN_SIZE, 0.0f, 1.0f, 0.01f);
-	add_float_slider(props, P_ALERT_MAX_SIZE, 0.0f, 1.0f, 0.01f);
 
 	add_bool_property(props, P_TEST_MODE);
 #if !defined(PUBLIC_RELEASE)
@@ -528,27 +491,12 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	bool lastAlertActivate = alertActivate;
 	alertActivate = obs_data_get_bool(data, P_ALERT_ACTIVATE);
 	alertTriggered = (!lastAlertActivate && alertActivate);
-	alertText = obs_data_get_string(data, P_ALERT_TEXT);
-	donorName = obs_data_get_string(data, P_ALERT_DONOR_NAME);
 	alertDuration = (float)obs_data_get_double(data, P_ALERT_DURATION);
-	donorNameDuration = 2; //Default value
 	alertDoIntro = obs_data_get_bool(data, P_ALERT_DOINTRO);
 	alertDoOutro = obs_data_get_bool(data, P_ALERT_DOOUTRO);
 	introFilename = (char*)obs_data_get_string(data, P_ALERT_INTRO);
 	outroFilename = (char*)obs_data_get_string(data, P_ALERT_OUTRO);
-	alertOffsetBig = (float)obs_data_get_double(data, P_ALERT_OFFSET_BIG);
-	alertOffsetSmall = (float)obs_data_get_double(data, P_ALERT_OFFSET_SMALL);
-	alertMinSize = (float)obs_data_get_double(data, P_ALERT_MIN_SIZE);
-	alertMaxSize = (float)obs_data_get_double(data, P_ALERT_MAX_SIZE);
 	alertShowDelay = 0; //Default value
-
-	//format alert attribution
-	int donorNameLength = (int)donorName.length();
-	int donorNamePreLength = (int)strlen(DONOR_NAME_PRE);
-	//format if it isn't empty          and       if it isn't already formatted
-	if (donorNameLength > 0 && (donorName.substr(0, donorNamePreLength) != DONOR_NAME_PRE)) {
-		donorName.insert(0, DONOR_NAME_PRE); // concatenate in front pre string
-	}
 
 	// demo mode
 	demoModeOn = obs_data_get_bool(data, P_DEMOMODEON);
@@ -558,24 +506,7 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	// update our param values
 	drawMask = obs_data_get_bool(data, P_DRAWMASK);
 	if (alertsLoaded) {
-		bool lastDrawAlert = drawAlert;
 		drawAlert = obs_data_get_bool(data, P_DRAWALERT);
-		if (!lastDrawAlert && drawAlert) {
-			for (int i = 0; i < AlertLocation::NUM_ALERT_LOCATIONS; i++) {
-				if (alertMaskDatas[i]) {
-					alertMaskDatas[i]->Rewind();
-					alertMaskDatas[i]->Play();
-				}
-			}
-		}
-		else if (lastDrawAlert && !drawAlert) {
-			for (int i = 0; i < AlertLocation::NUM_ALERT_LOCATIONS; i++) {
-				if (alertMaskDatas[i]) {
-					alertMaskDatas[i]->Rewind(true);
-					alertMaskDatas[i]->PlayBackwards();
-				}
-			}
-		}
 	}
 	drawFaces = obs_data_get_bool(data, P_DRAWFACEDATA);
 	drawMorphTris = obs_data_get_bool(data, P_DRAWMORPHTRIS);
@@ -678,7 +609,6 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 			outroActive = true;
 	}
 	alertOnTime += alertShowDelay;
-	alertOffTime -= alertAnimationDuration;
 	bool maskActive = (alertElapsedTime >= maskActiveTime &&
 		alertElapsedTime <= maskInactiveTime);
 	if (drawMask)
@@ -704,11 +634,6 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 			outroData->Rewind();
 		alertTriggered = false;
 		alertShown = false;
-		for (int i = 0; i < AlertLocation::NUM_ALERT_LOCATIONS; i++) {
-			if (alertMaskDatas[i]) {
-				alertMaskDatas[i]->Rewind();
-			}
-		}
 	}
 
 	// mask active?
@@ -727,34 +652,6 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 	// Tick the alerts
 	if (alertsLoaded) {
 		alertElapsedTime += timeDelta;
-
-		for (int i = 0; i < AlertLocation::NUM_ALERT_LOCATIONS; i++) {
-			if (alertMaskDatas[i]) {
-				alertMaskDatas[i]->Tick(timeDelta);
-			}
-		}
-		bool alertOn = (alertElapsedTime >= alertOnTime &&
-			alertElapsedTime <= alertOffTime);
-
-		// show alert bubble?
-		if (alertOn && !alertShown) {
-			alertShown = true;
-			for (int i = 0; i < AlertLocation::NUM_ALERT_LOCATIONS; i++) {
-				if (alertMaskDatas[i]) {
-					alertMaskDatas[i]->Play();
-				}
-			}
-		}
-		// hide alert bubble?
-		else if (!alertOn && alertShown) {
-			alertShown = false;
-			for (int i = 0; i < AlertLocation::NUM_ALERT_LOCATIONS; i++) {
-				if (alertMaskDatas[i]) {
-					alertMaskDatas[i]->Rewind(true);
-					alertMaskDatas[i]->PlayBackwards();
-				}
-			}
-		}
 	}
 
 	// Tick the intro/outro
@@ -817,9 +714,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		obs_source_skip_video_filter(source);
 		return;
 	}
-
-	// Canvas info
-	getCanvasInfo();
 
 	// Effects
 	gs_effect_t* defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
@@ -905,8 +799,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	if (mask_data) {
 		mask_data->SetGlobalAlpha(maskAlpha);
 	}
-	float donorNameStartTime = alertDuration -
-		(alertAnimationDuration + donorNameDuration + outroDuration);
 
 	// Draw always current frame to be up to date, even it's processing is delayd
 	gs_texture_t* vidTex = sourceTexture;
@@ -1101,78 +993,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		}
 	}
 
-	// render alert to texture
-	gs_texture* alert_tex = nullptr;
-	if (!demoModeOn &&
-		alertsLoaded && alertMaskDatas[currentAlertLocation]) {
-
-		// only render once per video tick
-		if (videoTicked) {
-			// what alert text are we drawing?
-			std::string theText = alertText;
-			if ((alertElapsedTime <= alertDuration) && donorName.length() > 0 &&
-				alertElapsedTime >= donorNameStartTime) {
-				theText = donorName;
-			}
-
-			// set empty strings to [kevin]...
-			if (theText.length() < 1) {
-				theText = "\200...";
-			}
-
-			// render text to texture
-			if (renderedAlertText != theText) {
-
-				// text shaper for alerts
-				smllTextShaper->SetString(Utils::ConvertStringToWstring(theText));
-
-				// Based on current alerts
-				// TODO: will have to do better
-				gs_rect r;
-				r.cx = (int)ALIGN_4((float)alertViewport.cx * 0.66f);
-				r.cy = (int)ALIGN_4((float)alertViewport.cy * 0.433f);
-
-				// Render text to texture
-				int size = smllTextShaper->GetOptimalSize(*smllFont, r.cx, r.cy);
-				smllFont->RenderBitmapFont(size);
-				std::vector<std::wstring> lines = smllTextShaper->GetLines(*smllFont, size, r.cx);
-				if (alertTextTexture)
-					gs_texture_destroy(alertTextTexture);
-				alertTextTexture = smllRenderer->RenderTextToTexture(lines, r.cx, r.cy, smllFont);
-				// Swap texture
-				std::shared_ptr<Mask::Resource::Image> img = std::dynamic_pointer_cast<Mask::Resource::Image>
-					(alertMaskDatas[currentAlertLocation]->GetResource("diffuse-1"));
-				if (img)
-					img->SwapTexture(alertTextTexture);
-
-				// done
-				if (alertTextTexture != NULL) {
-					renderedAlertText = theText;
-				}	
-			}
-
-			// draw stuff to texture
-			gs_texrender_reset(alertTexRender);
-			if (gs_texrender_begin(alertTexRender, alertViewport.cx, alertViewport.cy)) {
-
-				// clear
-				vec4 black;
-				vec4_zero(&black);
-				gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
-
-				// Draw the alert mask
-				gs_matrix_push();
-				gs_matrix_identity();
-				gs_matrix_translate3f(0.0f, 0.0f, alertTranslation);
-				drawMaskData(alertMaskDatas[currentAlertLocation].get(), false, false, true);
-				gs_matrix_pop();
-
-				gs_texrender_end(alertTexRender);
-			}
-		}
-		alert_tex = gs_texrender_get_texture(alertTexRender);
-	}
-
 	// SPRITE DRAWING - draw rendered stuff as sprites
 
 	// set up for sprite rendering
@@ -1231,22 +1051,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		}
 	}
 	
-	// Draw the rendered alert
-	if (alert_tex) {
-
-		blog(LOG_DEBUG, "DRAWING ALERT");
-
-		// draw the rendering on top of the video
-		gs_matrix_push();
-		gs_matrix_identity();
-		gs_matrix_translate3f((float)alertViewport.x, (float)alertViewport.y, 0);
-		while (gs_effect_loop(defaultEffect, "Draw")) {
-			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
-				"image"), alert_tex);
-			gs_draw_sprite(alert_tex, 0, alertViewport.cx, alertViewport.cy);
-		}
-		gs_matrix_pop();
-	}
 
 	// draw face detection data
 	if (drawFaces)
@@ -1501,159 +1305,6 @@ gs_texture* Plugin::FaceMaskFilter::Instance::RenderSourceTexture(gs_effect_t* e
 	return gs_texrender_get_texture(sourceRenderTarget);
 }
 
-void Plugin::FaceMaskFilter::Instance::getCanvasInfo() {
-	if (videoTicked) {
-		// get canvas width & height
-		gs_rect vpr;
-		gs_get_viewport(&vpr);
-		canvasWidth = vpr.cx;
-		canvasHeight = vpr.cy;
-
-		// get our dimensions (viewport) in the canvas
-		matrix4 m;
-		gs_matrix_get(&m);
-		gs_rect svp;
-		svp.x = (int)m.t.x;
-		svp.y = (int)m.t.y;
-		svp.cx = (int)((float)baseWidth * m.x.x);
-		svp.cy = (int)((float)baseHeight * m.y.y);
-		if (!gs_rect_equal(svp, sourceViewport)) {
-			sourceViewport = svp;
-			// reset our "smooth center"
-			vec2_set(&smoothCenter,
-				(float)sourceViewport.x + (sourceViewport.cx / 2),
-				(float)sourceViewport.y + (sourceViewport.cy / 2));
-		}
-
-		// the "smooth center" follows tracked faces...smoothly
-		if (faces.length) {
-			// find center of all tracked faces
-			vec2 c;
-			vec2_zero(&c);
-			for (int i = 0; i < faces.length; i++) {
-				int x = (faces[i].bounds.left() + faces[i].bounds.right()) / 2;
-				int y = (faces[i].bounds.top() + faces[i].bounds.bottom()) / 2;
-				c.x += (float)x;
-				c.y += (float)y;
-			}
-			c.x /= (float)faces.length;
-			c.y /= (float)faces.length;
-
-			// put in screen space
-			c.x = (c.x / (float)baseWidth) * sourceViewport.cx + sourceViewport.x;
-			c.y = (c.y / (float)baseHeight) * sourceViewport.cy + sourceViewport.y;
-
-			// blend with the current smooth center
-			float alpha = 0.01f;
-			smoothCenter.x = (1.0f - alpha) * smoothCenter.x + alpha * c.x;
-			smoothCenter.y = (1.0f - alpha) * smoothCenter.y + alpha * c.y;
-		}
-
-		// source/canvas centers
-		vec2 sourcePos;
-		vec2_set(&sourcePos,
-			(float)sourceViewport.x + (sourceViewport.cx / 2),
-			(float)sourceViewport.y + (sourceViewport.cy / 2));
-		vec2 canvasCenter;
-		vec2_set(&canvasCenter,
-			(float)canvasWidth / 2, (float)canvasHeight / 2);
-
-		// source viewport size as ratio of canvas
-		float ratio = (float)sourceViewport.cx / (float)canvasWidth;
-		vec2 track_pos = sourcePos;
-		float size_threshold = 0.7f;
-		if (ratio > size_threshold)
-			track_pos = smoothCenter;
-
-		// calculate alert location
-		AlertLocation loc;
-		bool is_left = false;
-		bool is_top = false;
-		if (track_pos.x < canvasCenter.x) {
-			if (track_pos.y < canvasCenter.y) {
-				loc = AlertLocation::RIGHT_BOTTOM;
-			}
-			else {
-				is_top = true;
-				loc = AlertLocation::RIGHT_TOP;
-			}
-		}
-		else {
-			is_left = true;
-			if (track_pos.y < canvasCenter.y) {
-				loc = AlertLocation::LEFT_BOTTOM;
-			}
-			else {
-				is_top = true;
-				loc = AlertLocation::LEFT_TOP;
-			}
-		}
-
-		// set new location
-		if (loc != currentAlertLocation) {
-			currentAlertLocation = loc;
-			// trigger redraw
-			renderedAlertText = "";
-		}
-
-		// calculate alert box size
-		float min = alertMinSize * canvasWidth;
-		float max = alertMaxSize * canvasWidth;
-		float alpha = (float)alertText.size() / 140.0f;
-		alpha = (alpha > 1.0f) ? 1.0f : alpha;
-		int alertW = (int)((1.0f - alpha) * min + alpha * max);
-		int alertH = (int)((float)alertViewport.cx / alertAspectRatio);
-
-		// set alert dimensions
-		if (alertViewport.cx != alertW ||
-			alertViewport.cy != alertH) {
-			alertViewport.cx = alertW;
-			alertViewport.cy = alertH;
-			// trigger redraw
-			renderedAlertText = "";
-		}
-
-		// calculate alert box position
-		if (ratio > size_threshold) {
-			// offset alert box
-			int offset = (int)((float)sourceViewport.cx * alertOffsetBig);
-
-			if (is_left)
-				alertViewport.x = (int)smoothCenter.x - alertViewport.cx - offset;
-			else
-				alertViewport.x = (int)smoothCenter.x + offset;
-			if (is_top)
-				alertViewport.y = (int)smoothCenter.y - alertViewport.cy;
-			else
-				alertViewport.y = (int)smoothCenter.y;
-		}
-		else {
-			// offset alert box
-			int offset = (int)((float)sourceViewport.cx * alertOffsetSmall);
-
-			if (is_left)
-				alertViewport.x = sourceViewport.x - alertViewport.cx - offset;
-			else
-				alertViewport.x = sourceViewport.x + sourceViewport.cx + offset;
-			if (is_top)
-				alertViewport.y = (int)sourcePos.y - alertViewport.cy;
-			else
-				alertViewport.y = (int)sourcePos.y;
-		}
-
-		// keep it on the screen
-		if (alertViewport.x < 0)
-			alertViewport.x = 0;
-		if ((alertViewport.x + alertViewport.cx) > canvasWidth)
-			alertViewport.x = canvasWidth - alertViewport.cx;
-		if (alertViewport.y < 0)
-			alertViewport.y = 0;
-		if ((alertViewport.y + alertViewport.cy) > canvasHeight)
-			alertViewport.y = canvasHeight - alertViewport.cy;
-	}
-}
-
-
 void Plugin::FaceMaskFilter::Instance::setupRenderingState() {
 
 	// Set up sampler state
@@ -1845,28 +1496,6 @@ int32_t Plugin::FaceMaskFilter::Instance::StaticMaskDataThreadMain(Instance *ptr
 int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_LOWEST);
-
-	// Load the alerts
-	char* f = obs_module_file(kDefaultAlertLT);
-	alertMaskDatas[AlertLocation::LEFT_TOP] = std::unique_ptr<Mask::MaskData>(LoadMask(f));
-	bfree(f);
-	f = obs_module_file(kDefaultAlertLB);
-	alertMaskDatas[AlertLocation::LEFT_BOTTOM] = std::unique_ptr<Mask::MaskData>(LoadMask(f));
-	bfree(f);
-	f = obs_module_file(kDefaultAlertRT);
-	alertMaskDatas[AlertLocation::RIGHT_TOP] = std::unique_ptr<Mask::MaskData>(LoadMask(f));
-	bfree(f);
-	f = obs_module_file(kDefaultAlertRB);
-	alertMaskDatas[AlertLocation::RIGHT_BOTTOM] = std::unique_ptr<Mask::MaskData>(LoadMask(f));
-	bfree(f);
-	
-	// make the alerts animations stop, get duraiton
-	alertAnimationDuration = 0.0f;
-	for (int i = 0; i < AlertLocation::NUM_ALERT_LOCATIONS; i++) {
-		alertMaskDatas[i]->SetStopOnLastFrame();
-		alertMaskDatas[i]->Stop();
-		alertAnimationDuration = alertMaskDatas[i]->GetDuration();
-	}
 
 	alertsLoaded = true;
 
