@@ -18,29 +18,32 @@
 * along with this program; if not, write to the Free Software
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#include "SingleValueKalman.hpp"
-#include <CppUTest/TestHarness.h>
+#pragma once
 
-TEST_GROUP(kalmanTest) {};
+#include "Kalman.hpp"
 
-TEST(kalmanTest, singleValueKalmanTest) {
-	const int testNum = 5;
-	const double error = 0.5;
-	double testSamples[testNum][2] = {
-		//update Value, expected result
-		{ 2.2, 2.19 },
-		{ 3.3, 3.295 },
-		{ 4.4, 4.397 },
-		{ -5.5, -0.8 },
-		{ 2.2, 0.36 }, //same update
+namespace smll {
+
+	class SingleValueKalman
+	{
+	public:
+		
+		SingleValueKalman();
+		~SingleValueKalman();
+
+		void Init(double val);
+		double Update(double val);
+
+		// This is like a smoothing factor
+		// 1.0 is good for normal use, bump up to 4.0 for really smooth
+		// 1.0 is default
+		void SetMeasurementNoiseCovariance(double mnc) {
+			m_kf->set_R(mnc);
+		}
+
+	private:
+		KalmanFilter<double, 1, 3>*	m_kf;
+
 	};
-	smll::SingleValueKalman kalman;
-	kalman.Init(1.1);
 
-	// veirfy update results
-	for (size_t i = 0; i < testNum; i++) {
-		double actualValue = kalman.Update(testSamples[i][0]);
-		CHECK(std::abs(testSamples[i][1] - actualValue) < error);
-	}
-	
 }
