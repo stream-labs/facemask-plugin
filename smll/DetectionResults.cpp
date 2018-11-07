@@ -159,9 +159,6 @@ namespace smll {
 		translation[2] = 0.0;
 	}
 
-
-
-
 	DetectionResults::DetectionResults() 
 		: sarray<DetectionResult, MAX_FACES>() {
 
@@ -253,8 +250,11 @@ namespace smll {
 
 
 	DetectionResult::DetectionResult() 
-		: matched(false), numFramesLost(0), kalmanFiltersInitialized(false), initedStartPose(false) {
-
+		: matched(false), numFramesLost(0), kalmanFilterInitialized(false), initedStartPose(false) {
+		nStates = 18;
+		nMeasurements = 6;
+		nInputs = 0;
+		dt = 0.125; // 1/FPS - TODO: Get it from current FPS
 	}
 
 	DetectionResult::~DetectionResult() {
@@ -269,7 +269,7 @@ namespace smll {
 		}
 		CheckForPoseFlip(pose.rotation, pose.translation);
 
-		kalmanFiltersInitialized = false;
+		kalmanFilterInitialized = false;
 		initedStartPose = false;
 		return *this;
 	}
@@ -281,12 +281,12 @@ namespace smll {
 
 	void DetectionResult::SetPose(const ThreeDPose& p) {
 		pose.CopyPoseFrom(p);
-		kalmanFiltersInitialized = false;
+		kalmanFilterInitialized = false;
 	}
 
 	void DetectionResult::SetPose(cv::Mat cvRot, cv::Mat cvTrs) {
 		pose.SetPose(cvRot, cvTrs);
-		kalmanFiltersInitialized = false;
+		kalmanFilterInitialized = false;
 	}
 
 	cv::Mat DetectionResult::GetCVRotation() const {
@@ -328,9 +328,9 @@ namespace smll {
 
 	void DetectionResult::UpdateResultsFrom(const DetectionResult& r) {
 
-		if (!kalmanFiltersInitialized) {
+		if (!kalmanFilterInitialized) {
 			*this = r;
-			InitKalmanFilters();
+			InitKalmanFilter();
 		}
 
 		double ntx[3] = { r.pose.translation[0], r.pose.translation[1], r.pose.translation[2] };
@@ -341,21 +341,36 @@ namespace smll {
 
 		// kalman filtering enabled?
 		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE)) {
-			
-			// update smoothing factor
-			double smoothing = Config::singleton().get_double(CONFIG_FLOAT_SMOOTHING_FACTOR);
-			for (int i = 0; i < KF_NUM_FILTERS; i++) {
-				kalmanFilters[i].SetMeasurementNoiseCovariance(smoothing);
-			}
+			// Get the measured translation
+			cv::Mat translation_measured = r.pose.GetCVTranslation();
 
-			// update the kalman filters
-			ntx[0] = kalmanFilters[KF_TRANS_X].Update(ntx[0]);
-			ntx[1] = kalmanFilters[KF_TRANS_Y].Update(ntx[1]);
-			ntx[2] = kalmanFilters[KF_TRANS_Z].Update(ntx[2]);
-			nrot[0] = kalmanFilters[KF_ROT_X].Update(nrot[0]);
-			nrot[1] = kalmanFilters[KF_ROT_Y].Update(nrot[1]);
-			nrot[2] = kalmanFilters[KF_ROT_Z].Update(nrot[2]);
-			nrot[3] = kalmanFilters[KF_ROT_A].Update(nrot[3]);
+			// Get the measured rotation
+			cv::Mat eulers_measured = r.pose.GetCVRotation();
+
+			cv::Mat measurements(6, 1, CV_64F);
+
+			// fill the measurements vector 
+			measurements.at<double>(0) = translation_measured.at<double>(0, 0); // x 
+			measurements.at<double>(1) = translation_measured.at<double>(1, 0); // y 
+			measurements.at<double>(2) = translation_measured.at<double>(2, 0); // z 
+			measurements.at<double>(3) = eulers_measured.at<double>(0, 0);      // roll 
+			measurements.at<double>(4) = eulers_measured.at<double>(1, 0);      // pitch 
+			measurements.at<double>(5) = eulers_measured.at<double>(2, 0);      // yaw 
+
+			// Update the Kalman Filter with good measurements
+			cv::Mat translation_estimated(3, 1, CV_64F), eulers_estimated(3, 1, CV_64F);
+			UpdateKalmanFilter(kalmanFilter, measurements, translation_estimated, eulers_estimated);
+			// Update Pose
+			pose.SetPose(eulers_estimated, translation_estimated);
+		}
+		else {
+			pose.translation[0] = ntx[0];
+			pose.translation[1] = ntx[1];
+			pose.translation[2] = ntx[2];
+			pose.rotation[0] = nrot[0];
+			pose.rotation[1] = nrot[1];
+			pose.rotation[2] = nrot[2];
+			pose.rotation[3] = nrot[3];
 		}
 
 		// copy values
@@ -364,27 +379,95 @@ namespace smll {
 		for (int i = 0; i < smll::NUM_FACIAL_LANDMARKS; i++) {
 			landmarks68[i] = r.landmarks68[i];
 		}
-		pose.translation[0] = ntx[0];
-		pose.translation[1] = ntx[1];
-		pose.translation[2] = ntx[2];
-		pose.rotation[0] = nrot[0];
-		pose.rotation[1] = nrot[1];
-		pose.rotation[2] = nrot[2];
-		pose.rotation[3] = nrot[3];
 	}
 
 
-	void DetectionResult::InitKalmanFilters() {
+	void DetectionResult::InitKalmanFilter() {
 		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE)) {
-			kalmanFilters[KF_TRANS_X].Init(pose.translation[0]);
-			kalmanFilters[KF_TRANS_Y].Init(pose.translation[1]);
-			kalmanFilters[KF_TRANS_Z].Init(pose.translation[2]);
-			kalmanFilters[KF_ROT_X].Init(pose.rotation[0]);
-			kalmanFilters[KF_ROT_Y].Init(pose.rotation[1]);
-			kalmanFilters[KF_ROT_Z].Init(pose.rotation[2]);
-			kalmanFilters[KF_ROT_A].Init(pose.rotation[3]);
-			kalmanFiltersInitialized = true;
+			kalmanFilter.init(nStates, nMeasurements, nInputs, CV_64F);					// init Kalman Filter 
+
+			cv::setIdentity(kalmanFilter.processNoiseCov, cv::Scalar::all(1e-5));		// set process noise 
+			cv::setIdentity(kalmanFilter.measurementNoiseCov, cv::Scalar::all(1e-4));   // set measurement noise 
+			cv::setIdentity(kalmanFilter.errorCovPost, cv::Scalar::all(1));             // error covariance 
+
+			/* DYNAMIC MODEL */
+			//  [1 0 0 dt  0  0 dt2   0   0 0 0 0  0  0  0   0   0   0] 
+			//  [0 1 0  0 dt  0   0 dt2   0 0 0 0  0  0  0   0   0   0] 
+			//  [0 0 1  0  0 dt   0   0 dt2 0 0 0  0  0  0   0   0   0] 
+			//  [0 0 0  1  0  0  dt   0   0 0 0 0  0  0  0   0   0   0] 
+			//  [0 0 0  0  1  0   0  dt   0 0 0 0  0  0  0   0   0   0] 
+			//  [0 0 0  0  0  1   0   0  dt 0 0 0  0  0  0   0   0   0] 
+			//  [0 0 0  0  0  0   1   0   0 0 0 0  0  0  0   0   0   0] 
+			//  [0 0 0  0  0  0   0   1   0 0 0 0  0  0  0   0   0   0] 
+			//  [0 0 0  0  0  0   0   0   1 0 0 0  0  0  0   0   0   0] 
+			//  [0 0 0  0  0  0   0   0   0 1 0 0 dt  0  0 dt2   0   0] 
+			//  [0 0 0  0  0  0   0   0   0 0 1 0  0 dt  0   0 dt2   0] 
+			//  [0 0 0  0  0  0   0   0   0 0 0 1  0  0 dt   0   0 dt2] 
+			//  [0 0 0  0  0  0   0   0   0 0 0 0  1  0  0  dt   0   0] 
+			//  [0 0 0  0  0  0   0   0   0 0 0 0  0  1  0   0  dt   0] 
+			//  [0 0 0  0  0  0   0   0   0 0 0 0  0  0  1   0   0  dt] 
+			//  [0 0 0  0  0  0   0   0   0 0 0 0  0  0  0   1   0   0] 
+			//  [0 0 0  0  0  0   0   0   0 0 0 0  0  0  0   0   1   0] 
+			//  [0 0 0  0  0  0   0   0   0 0 0 0  0  0  0   0   0   1] 
+
+			// position 
+			kalmanFilter.transitionMatrix.at<double>(0, 3) = dt;
+			kalmanFilter.transitionMatrix.at<double>(1, 4) = dt;
+			kalmanFilter.transitionMatrix.at<double>(2, 5) = dt;
+			kalmanFilter.transitionMatrix.at<double>(3, 6) = dt;
+			kalmanFilter.transitionMatrix.at<double>(4, 7) = dt;
+			kalmanFilter.transitionMatrix.at<double>(5, 8) = dt;
+			kalmanFilter.transitionMatrix.at<double>(0, 6) = 0.5*pow(dt, 2);
+			kalmanFilter.transitionMatrix.at<double>(1, 7) = 0.5*pow(dt, 2);
+			kalmanFilter.transitionMatrix.at<double>(2, 8) = 0.5*pow(dt, 2);
+
+			// orientation 
+			kalmanFilter.transitionMatrix.at<double>(9, 12) = dt;
+			kalmanFilter.transitionMatrix.at<double>(10, 13) = dt;
+			kalmanFilter.transitionMatrix.at<double>(11, 14) = dt;
+			kalmanFilter.transitionMatrix.at<double>(12, 15) = dt;
+			kalmanFilter.transitionMatrix.at<double>(13, 16) = dt;
+			kalmanFilter.transitionMatrix.at<double>(14, 17) = dt;
+			kalmanFilter.transitionMatrix.at<double>(9, 15) = 0.5*pow(dt, 2);
+			kalmanFilter.transitionMatrix.at<double>(10, 16) = 0.5*pow(dt, 2);
+			kalmanFilter.transitionMatrix.at<double>(11, 17) = 0.5*pow(dt, 2);
+
+			/* MEASUREMENT MODEL */
+			//  [1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0] 
+			//  [0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0] 
+			//  [0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0] 
+			//  [0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0] 
+			//  [0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0] 
+			//  [0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0] 
+			kalmanFilter.measurementMatrix.at<double>(0, 0) = 1;  // x 
+			kalmanFilter.measurementMatrix.at<double>(1, 1) = 1;  // y 
+			kalmanFilter.measurementMatrix.at<double>(2, 2) = 1;  // z 
+			kalmanFilter.measurementMatrix.at<double>(3, 9) = 1;  // roll 
+			kalmanFilter.measurementMatrix.at<double>(4, 10) = 1; // pitch 
+			kalmanFilter.measurementMatrix.at<double>(5, 11) = 1; // yaw 
+
+			kalmanFilterInitialized = true;
 		}
+	}
+
+	void DetectionResult::UpdateKalmanFilter(cv::KalmanFilter &KF, cv::Mat &measurement,
+		cv::Mat &translation_estimated, cv::Mat &eulers_estimated)
+	{
+		// First predict, to update the internal statePre variable 
+		cv::Mat prediction = KF.predict();
+
+		// The "correct" phase that is going to use the predicted value and our measurement 
+		cv::Mat estimated = KF.correct(measurement);
+
+		// Estimated translation 
+		translation_estimated.at<double>(0) = estimated.at<double>(0);
+		translation_estimated.at<double>(1) = estimated.at<double>(1);
+		translation_estimated.at<double>(2) = estimated.at<double>(2);
+
+		// Estimated euler angles 
+		eulers_estimated.at<double>(0) = estimated.at<double>(9);
+		eulers_estimated.at<double>(1) = estimated.at<double>(10);
+		eulers_estimated.at<double>(2) = estimated.at<double>(11);
 	}
 
 }
