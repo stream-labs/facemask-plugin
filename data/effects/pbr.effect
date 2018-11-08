@@ -1,0 +1,604 @@
+// 
+// Phong Shader (with skinning)
+//
+// Largely taken from https://www.3dgep.com/texturing-lighting-directx-11/, converted to OBS
+//
+
+// TRANSFORMS
+// NOTE: There is no gs_effect_set_matrix3. 
+uniform float4x4 ViewProj;
+uniform float4x4 World;
+uniform float4x4 TexMat = { 
+1.0, 0.0, 0.0, 0.0,
+0.0, 1.0, 0.0, 0.0,
+0.0, 0.0, 1.0, 0.0,
+0.0, 0.0, 0.0, 1.0 };
+
+// BONES
+// if numBones == 0 then render non-skinned
+uniform int      numBones = 0;
+uniform float4x4 bone0 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uniform float4x4 bone1 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uniform float4x4 bone2 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uniform float4x4 bone3 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uniform float4x4 bone4 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uniform float4x4 bone5 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uniform float4x4 bone6 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uniform float4x4 bone7 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+// TEXTURES
+uniform int ambientMap = 0;
+uniform texture2d ambientTex;
+uniform int diffuseMap = 0;
+uniform texture2d diffuseTex;
+uniform int specularMap = 0;
+uniform texture2d specularTex;
+uniform int emissiveMap = 0;
+uniform texture2d emissiveTex;
+uniform int normalMap = 0;
+uniform texture2d normalTex;
+uniform int reflectMap = 0;
+uniform texture2d reflectTex;
+uniform int roughnessMap = 0;
+uniform texture2d roughnessTex;
+uniform int metalnessMap = 0;
+uniform texture2d metalnessTex;
+
+// MATERIAL COLORS
+uniform float4 ambientColor = {0.2, 0.2, 0.2, 1.0};
+uniform float4 diffuseColor = {1.0, 1.0, 1.0, 1.0};
+uniform float4 specularColor = {1.0, 1.0, 1.0, 1.0};
+uniform float4 emissiveColor = {0.0, 0.0, 0.0, 0.0};
+
+#define PI 3.14159265358979323846264338327950288419
+
+// LIGHTS
+uniform int    numLights = 1;
+
+// LIGHT 0
+uniform int    light0Type = 1; // 0 = amb, 1 = dir, 2 = point, 3 = spot
+uniform float3 light0Position = {20.0, -20.0, -30.0};
+uniform float3 light0Direction = {-0.5, 0.5, 1.0};
+uniform float3 light0Attenuation = {1.0, 0.5, 0.0}; // constant, linear, quadratic
+uniform float3 light0Ambient = {0.2, 0.2, 0.2};
+uniform float3 light0Diffuse = {0.8, 0.8, 0.8};
+uniform float3 light0Specular = {1.0, 1.0, 1.0};
+uniform float  light0Angle = 45.0;
+
+// LIGHT 1
+uniform int    light1Type = 1; // 0 = amb, 1 = dir, 2 = point, 3 = spot
+uniform float3 light1Position = {-200.0, 200.0, -300.0};
+uniform float3 light1Direction = {1.0, -1.0, 1.0};
+uniform float3 light1Attenuation = {1.0, 0.5, 0.0}; // constant, linear, quadratic
+uniform float3 light1Ambient = {0.2, 0.2, 0.2};
+uniform float3 light1Diffuse = {0.8, 0.8, 0.8};
+uniform float3 light1Specular = {1.0, 1.0, 1.0};
+uniform float  light1Angle = 45.0;
+
+// LIGHT 2
+uniform int    light2Type = 1; // 0 = amb, 1 = dir, 2 = point, 3 = spot
+uniform float3 light2Position = {-200.0, 200.0, -300.0};
+uniform float3 light2Direction = {1.0, -1.0, 1.0};
+uniform float3 light2Attenuation = {1.0, 0.5, 0.0}; // constant, linear, quadratic
+uniform float3 light2Ambient = {0.2, 0.2, 0.2};
+uniform float3 light2Diffuse = {0.8, 0.8, 0.8};
+uniform float3 light2Specular = {1.0, 1.0, 1.0};
+uniform float  light2Angle = 45.0;
+
+// LIGHT 3
+uniform int    light3Type = 1; // 0 = amb, 1 = dir, 2 = point, 3 = spot
+uniform float3 light3Position = {-200.0, 200.0, -300.0};
+uniform float3 light3Direction = {1.0, -1.0, 1.0};
+uniform float3 light3Attenuation = {1.0, 0.5, 0.0}; // constant, linear, quadratic
+uniform float3 light3Ambient = {0.2, 0.2, 0.2};
+uniform float3 light3Diffuse = {0.8, 0.8, 0.8};
+uniform float3 light3Specular = {1.0, 1.0, 1.0};
+uniform float  light3Angle = 45.0;
+
+// OTHER VARS
+uniform float shininess = 8.0;
+uniform int transformNormals = 1;
+uniform float alpha = 1.0;
+
+
+// TEXTURE SAMPLERS
+sampler_state normalSampler {
+	Filter    = Linear;
+	AddressU  = Clamp;
+	AddressV  = Clamp;
+};
+sampler_state ambientSampler {
+	Filter    = Linear;
+	AddressU  = Clamp;
+	AddressV  = Clamp;
+};
+sampler_state diffuseSampler {
+	Filter    = Linear;
+	AddressU  = Clamp;
+	AddressV  = Clamp;
+};
+sampler_state specularSampler {
+	Filter    = Linear;
+	AddressU  = Clamp;
+	AddressV  = Clamp;
+};
+sampler_state emissiveSampler {
+	Filter    = Linear;
+	AddressU  = Clamp;
+	AddressV  = Clamp;
+};
+sampler_state reflectSampler {
+	Filter    = Linear;
+	AddressU  = Clamp;
+	AddressV  = Clamp;
+};
+sampler_state roughnessSampler {
+	Filter    = Linear;
+	AddressU  = Clamp;
+	AddressV  = Clamp;
+};
+sampler_state metalnessSampler {
+	Filter    = Linear;
+	AddressU  = Clamp;
+	AddressV  = Clamp;
+};
+
+// VERTEX IN (to vertex shader)
+//
+// Note: we use extra tex coords for bone indices and weights
+// ie) bones1.x == number of bones
+//     bones1.y == 0
+//     bones1.z == bone weight 0
+//     bones1.w == bone weight 0
+//     bones2.x == bone index 1
+//     bones2.y == bone weight 1
+//     bones2.z == bone weight 2
+//     bones2.w == bone weight 2
+// ... and so on ...
+//
+struct VertDataIn {
+	float4 pos : POSITION;
+	float4 norm : NORMAL;
+	float4 tangent : TANGENT;
+	float2 uv  : TEXCOORD0;
+	float4 boneinfo1  : TEXCOORD1;
+	float4 boneinfo2  : TEXCOORD2;
+	float4 boneinfo3  : TEXCOORD3;
+	float4 boneinfo4  : TEXCOORD4;
+	float4 boneinfo5  : TEXCOORD5;
+	float4 boneinfo6  : TEXCOORD6;
+	float4 boneinfo7  : TEXCOORD7;
+};
+
+// VERTEX OUT (from vertex shader)
+struct VertDataOut {
+	float4 pos : POSITION;
+	float3 norm : NORMAL;
+	float3 tangent : TANGENT;
+	float2 uv  : TEXCOORD0;
+	float4 vpos : TEXCOORD1;
+	float3 bitangent: TEXCOORD2;
+};
+
+
+// smoothstep : used for light attenuation
+//
+float smoothstep(float edge0, float edge1, float x) {
+    float t = clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
+    return t; //* t * (3.0 - 2.0 * t);
+}
+
+float GGX(float3 normal, float3 view_dir, float3 light_dir, float roughness, float F0)
+{
+	float alpha = roughness * roughness;
+	float3 halfway_dir = normalize(view_dir + light_dir);
+	
+	float NdL = saturate(dot(normal,light_dir));
+	float NdV = saturate(dot(normal,view_dir));
+	float NdH = saturate(dot(normal,halfway_dir));
+	float LdH = saturate(dot(light_dir,H));
+
+	// distribution (how microfacet normals are distributed)
+	float alpha_2 = alpha * alpha;
+	float denom = NdH * NdH *(alpha_2-1.0) + 1.0;
+	float distribution = alpha_2 / (pi * denom * denom);
+
+	// fresnel (grazing angle reflectivity)
+	float LdH_5 = NdH * NdH * (alpha_2 - 1.0) + 1.0;
+	float fresnel = F0 + (1-F0)*LdH_5;
+
+	// geometry term (visiblity)
+	float k = alpha / 2.0;
+	float G1V = NdV*(1.0-k)+k;
+	float G1L = NdL*(1.0-k)+k
+	float geometry = 0.25 * rcp(G1V*G1L);
+
+	return distribution * fresnel * geometry;
+}
+
+// DoLighting:  Calculates lighting for a single light and vert
+//
+float3 DoLighting(
+float3 vpos,
+float3 normal,
+float4 ambColor,
+float4 albedo,
+float4 spcColor,
+float4 emmColor,
+float  metalness,
+float  roughness,
+float  F0, // Fresnel Reflectance at 0 Degrees
+int    lightType,
+float3 lightPosition,
+float3 lightDirection,
+float3 lightAttenuation,
+float3 lightAmbient,
+float3 lightDiffuse,
+float3 lightSpecular,
+float  lightAngle) {
+
+	// ambient
+	float3 result = ambColor.xyz * lightAmbient;
+	
+	// non-ambient lights
+	if (lightType != 0) {
+
+		// get light direction
+		float3 light_dir,lightV;
+		if (lightType == 2) {
+			// point lights
+			light_dir = normalize(lightPosition - vpos);
+			lightV = -light_dir;
+		} else {
+			// dir/spot lights (1/3)
+			light_dir = normalize(lightDirection);
+			if (lightType == 3) {
+				lightV = normalize(vpos - lightPosition);
+			}
+			else
+				lightV = -light_dir;
+		}
+
+		float attenuation = 1.0;
+		// point and spot lights have attenuation
+		if (lightType == 2 || lightType == 3) {
+			float d = length(lightV) / 100.0;
+			float attenuation = 1.0 / 
+				(lightAttenuation.x + 
+				 (lightAttenuation.y * d) +
+				 (lightAttenuation.z * d * d));
+			
+			// spot lights have angle 
+			if (lightType == 3) {
+				float minCos = cos( lightAngle );
+				float maxCos = ( minCos + 1.0f ) / 2.0f;
+				float cosAngle = dot( light_dir, -lightV );
+				attenuation *= smoothstep( minCos, maxCos, cosAngle ); 
+			}
+		}
+
+		float3 view_dir = normalize(-vpos);
+		float light_intensity = saturate(dot(light_dir, normal));
+		
+		float NdL = saturate(dot(normal,light_dir));
+		
+		float3 specular = float3(0.0);
+		if(light_intensity > 0.0)
+			specular = GGX(normal, view_dir, light_dir, roughness, F0);
+
+		float3 diffuse = albedo * (1.0 - metalness);
+
+		float3 color = NdL * lightDiffuse * attenuation * (diffuse + specular);
+		result += color;
+	}
+	return result;
+}
+
+
+
+
+// VSPhong : Vertex Shader
+//
+VertDataOut VSPhong(VertDataIn v_in)
+{
+	VertDataOut vert_out;
+	
+	int i, bi, nvb;
+	float w;
+	float3 respos = float3(0.0, 0.0, 0.0);
+	float3 resnorm = float3(0.0, 0.0, 0.0);
+	float3 restangent = float3(0.0, 0.0, 0.0);
+	float4 vinpos = float4(v_in.pos.xyz, 1.0);
+	float4 vinnorm = float4(v_in.norm.xyz, 0.0);
+	float4 vintangent = float4(v_in.tangent.xyz, 0.0);
+	
+	if (numBones > 0) {
+		nvb = int(v_in.boneinfo1.x);
+		for(i = 0; i < nvb; i++) {
+			switch(i) {
+				case 0:
+					bi = int(v_in.boneinfo1.z);
+					w = v_in.boneinfo1.w;
+					break;
+				case 1:
+					bi = int(v_in.boneinfo2.x);
+					w = v_in.boneinfo2.y;
+					break;
+				case 2:
+					bi = int(v_in.boneinfo2.z);
+					w = v_in.boneinfo2.w;
+					break;
+				case 3:
+					bi = int(v_in.boneinfo3.x);
+					w = v_in.boneinfo3.y;
+					break;
+				case 4:
+					bi = int(v_in.boneinfo3.z);
+					w = v_in.boneinfo3.w;
+					break;
+				case 5:
+					bi = int(v_in.boneinfo4.x);
+					w = v_in.boneinfo4.y;
+					break;
+				case 6:
+					bi = int(v_in.boneinfo4.z);
+					w = v_in.boneinfo4.w;
+					break;
+				case 7:
+					bi = int(v_in.boneinfo5.x);
+					w = v_in.boneinfo5.y;
+					break;
+				case 8:
+					bi = int(v_in.boneinfo5.z);
+					w = v_in.boneinfo5.w;
+					break;
+				case 9:
+					bi = int(v_in.boneinfo6.x);
+					w = v_in.boneinfo6.y;
+					break;
+				case 10:
+					bi = int(v_in.boneinfo6.z);
+					w = v_in.boneinfo6.w;
+					break;
+				case 11:
+					bi = int(v_in.boneinfo7.x);
+					w = v_in.boneinfo7.y;
+					break;
+				case 12:
+					bi = int(v_in.boneinfo7.z);
+					w = v_in.boneinfo7.w;
+					break;
+			}
+			switch(bi) {
+				case 0:
+					respos += mul(vinpos, bone0).xyz * w;
+					resnorm += mul(vinnorm, bone0).xyz * w;
+					restangent += mul(vintangent, bone0).xyz * w;
+					break;
+				case 1:
+					respos += mul(vinpos, bone1).xyz * w;
+					resnorm += mul(vinnorm, bone1).xyz * w;
+					restangent += mul(vintangent, bone1).xyz * w;
+					break;
+				case 2:
+					respos += mul(vinpos, bone2).xyz * w;
+					resnorm += mul(vinnorm, bone2).xyz * w;
+					restangent += mul(vintangent, bone2).xyz * w;
+					break;
+				case 3:
+					respos += mul(vinpos, bone3).xyz * w;
+					resnorm += mul(vinnorm, bone3).xyz * w;
+					restangent += mul(vintangent, bone3).xyz * w;
+					break;
+				case 4:
+					respos += mul(vinpos, bone4).xyz * w;
+					resnorm += mul(vinnorm, bone4).xyz * w;
+					restangent += mul(vintangent, bone4).xyz * w;
+					break;
+				case 5:
+					respos += mul(vinpos, bone5).xyz * w;
+					resnorm += mul(vinnorm, bone5).xyz * w;
+					restangent += mul(vintangent, bone5).xyz * w;
+					break;
+				case 6:
+					respos += mul(vinpos, bone6).xyz * w;
+					resnorm += mul(vinnorm, bone6).xyz * w;
+					restangent += mul(vintangent, bone6).xyz * w;
+					break;
+				case 7:
+					respos += mul(vinpos, bone7).xyz * w;
+					resnorm += mul(vinnorm, bone7).xyz * w;
+					restangent += mul(vintangent, bone7).xyz * w;
+					break;
+			}
+		}
+		vinpos = float4(respos, 1.0);
+		vinnorm = float4(normalize(resnorm), 0.0);
+		vintangent = float4(normalize(restangent), 0.0);
+	}
+	
+	vert_out.pos = mul(vinpos, ViewProj);
+	vert_out.vpos = mul(vinpos, World);	
+	
+	if (transformNormals == 1) {
+		vert_out.norm = mul(vinnorm, World).xyz;
+		vert_out.tangent = mul(vintangent, World).xyz;
+	}
+	else {
+		vert_out.norm = vinnorm.xyz;
+		vert_out.tangent = vintangent.xyz;
+	}
+	vert_out.bitangent = cross(vert_out.tangent, vert_out.norm);
+	vert_out.uv = mul(float4(v_in.uv, 0.0, 1.0), TexMat).xy;
+	
+	return vert_out;
+}
+
+
+// PSPhong : Pixel Shader
+//
+float4 PSPhong(VertDataOut v_in) : TARGET
+{
+	// world space vertex position
+	float3 vpos = v_in.vpos.xyz;
+	
+	// normal
+	float3 normal = normalize(v_in.norm);
+	if (normalMap != 0) {
+		float3 tangent = normalize(v_in.tangent);
+		float3 bitangent = normalize(v_in.bitangent);
+		float3x3 TBN = float3x3( tangent, bitangent, normal );
+
+		normal = normalTex.Sample(normalSampler, v_in.uv).xyz * 2.0 - 1.0;
+		normal = normalize(mul(normal, TBN));
+	}
+
+	// material colors
+	float4 ambColor = ambientColor;
+	float4 dffColor = diffuseColor;
+	float4 spcColor = specularColor;
+	float4 emmColor = emissiveColor;
+
+	float metalness = 0.0;
+	float roughness = 0.5;
+	
+	// texture maps
+	if (ambientMap != 0)
+		ambColor = ambientTex.Sample(ambientSampler, v_in.uv);
+	if (diffuseMap != 0)
+		dffColor = diffuseTex.Sample(diffuseSampler, v_in.uv);
+	if (specularMap != 0)
+		spcColor = specularTex.Sample(specularSampler, v_in.uv);
+	if (emissiveMap != 0)
+		emmColor = emissiveTex.Sample(emissiveSampler, v_in.uv);
+	// TODO: pack roughness/metalness/AO in one texture
+	if (roughnessMap != 0)
+		roughness = max(0.001, roughnessTex.Sample(roughnessSampler, v_in.uv).r);
+	if (metalnessMap != 0)
+		metalness = metalnessTex.Sample(metalnessSampler, v_in.uv).r;
+
+	float4 reflect_color(0.0);
+	
+	if (reflectMap != 0) {
+		float3 r = reflect(normalize(-vpos), normal);
+		float m = 2.0 * sqrt( pow( r.x, 2.0 ) + pow( r.y, 2.0 ) + pow( r.z + 1.0, 2.0 ) );
+		float2 vN = r.xy / m + 0.5;
+		vN.y = 1.0 - vN.y; // need to flip Y
+		
+		reflect_color = reflectTex.Sample(reflectSampler, vN);
+	}
+	
+	// emmissive
+	float3 base_color = emmColor.xyz;
+	float F0 = 0.04;
+
+	// NO LIGHTS
+	if (numLights == 0) {
+		base_color += dffColor.xyz;
+	}
+	
+	// LIGHT 0
+	if (numLights > 0) {
+		base_color += DoLighting(
+			vpos,
+			normal,
+			ambColor,
+			dffColor,
+			spcColor,
+			emmColor,
+			metalness,
+			roughness,
+			F0,
+			light0Type, 
+			light0Position, 
+			light0Direction, 
+			light0Attenuation,
+			light0Ambient,
+			light0Diffuse,
+			light0Specular,
+			light0Angle);
+	}
+	
+	// LIGHT 1
+	if (numLights > 1) {
+		base_color += DoLighting(
+			vpos,
+			normal,
+			ambColor,
+			dffColor,
+			spcColor,
+			emmColor,
+			metalness,
+			roughness,
+			F0,
+			light1Type, 
+			light1Position, 
+			light1Direction, 
+			light1Attenuation,
+			light1Ambient,
+			light1Diffuse,
+			light1Specular,
+			light1Angle);
+	}
+	
+	// LIGHT 2
+	if (numLights > 2) {
+		base_color += DoLighting(
+			vpos,
+			normal,
+			ambColor,
+			dffColor,
+			spcColor,
+			emmColor,
+			metalness,
+			roughness,
+			F0,
+			light2Type, 
+			light2Position, 
+			light2Direction, 
+			light2Attenuation,
+			light2Ambient,
+			light2Diffuse,
+			light2Specular,
+			light2Angle);
+	}
+	
+	// LIGHT 3
+	if (numLights > 3) {
+		base_color += DoLighting(
+			vpos,
+			normal,
+			ambColor,
+			dffColor,
+			spcColor,
+			emmColor,
+			metalness,
+			roughness,
+			F0,
+			light3Type, 
+			light3Position, 
+			light3Direction, 
+			light3Attenuation,
+			light3Ambient,
+			light3Diffuse,
+			light3Specular,
+			light3Angle);
+	}
+
+	float3 final_color = saturate(base_color + reflect_color);
+	
+	return float4(final_color.rgb, dffColor.a * alpha);
+}
+
+
+// Draw : Main technique
+//
+technique Draw
+{
+	pass
+	{
+		vertex_shader = VSPhong(v_in);
+		pixel_shader  = PSPhong(v_in);
+	}
+}
+

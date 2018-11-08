@@ -141,6 +141,7 @@ std::shared_ptr<Mask::Resource::IBase> Mask::Resource::IBase::LoadDefault(Mask::
 	static const std::map<std::string, std::string> g_defaultEffects = {
 		{ "effectDefault", "effects/default.effect" },
 		{ "effectPhong", "effects/phong.effect" },
+		{ "PBR", "effects/pbr.effect" },
 	};
 
 	// yield

@@ -335,6 +335,8 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 		for (auto kv : m_parameters) {
 			try {
 				auto el = m_effect->GetEffect()->GetParameterByName(kv.first);
+
+				blog(LOG_DEBUG, "[FaceMask] setting PARAM: %s", kv.first.c_str());
 				switch (kv.second.type) {
 				case GS::EffectParameter::Type::Float:
 					el.SetFloat(kv.second.floatValue);
@@ -412,6 +414,7 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 					img->Render(part);
 					el.SetTexture(img->GetTexture());
 					el.SetSampler(m_samplerState);
+					blog(LOG_DEBUG, "[FaceMask] setting texture: %s", kv.first.c_str());
 				}
 				else if (kv.second->GetType() == Type::Sequence) {
 					std::shared_ptr<Sequence> seq = std::dynamic_pointer_cast<Sequence>(kv.second);
