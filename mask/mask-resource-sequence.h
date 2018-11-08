@@ -30,16 +30,12 @@ namespace Mask {
 			int		delta;
 			float	elapsed;
 			float   delay;
-			bool	playback_started;
-			bool	playback_ended;
 			SequenceInstanceData() : current(-1), delta(1), 
-				elapsed(0.0f), delay(0.0f), playback_started(false), playback_ended(false) {}
+				elapsed(0.0f), delay(0.0f) {}
 
 			void Reset() override {
 				current = 0;
 				elapsed = 0.0f;
-				playback_started = false;
-				playback_ended = false;
 			}
 			void Reset(int first, int last) {
 				float a = (float)rand() / (float)RAND_MAX;
@@ -47,8 +43,6 @@ namespace Mask {
 				float min = (float)first;
 				current = (int)(a * (max - min) + min);
 				elapsed = 0.0f;
-				playback_started = false;
-				playback_ended = false;
 			}
 		};
 
@@ -63,7 +57,6 @@ namespace Mask {
 
 			std::shared_ptr<Image> GetImage() { return m_image; }
 			void SetTextureMatrix(Mask::Part* part, matrix4* texmat);
-			bool IsInstancePlaying();
 
 			enum Mode : uint32_t {
 				ONCE,
@@ -101,8 +94,7 @@ namespace Mask {
 			}
 			bool IsDelayMode() {
 				return (m_mode == Mask::Resource::Sequence::REPEAT_DELAY ||
-					m_mode == Mask::Resource::Sequence::BOUNCE_DELAY ||
-					m_mode == Mask::Resource::Sequence::ONCE);
+					m_mode == Mask::Resource::Sequence::BOUNCE_DELAY);
 			}
 			bool IsBounceMode() {
 				return (m_mode == Mask::Resource::Sequence::BOUNCE ||

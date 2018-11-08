@@ -110,7 +110,7 @@ namespace Mask {
 
 		inline void Push(std::size_t the_id) {
 			hash_combine(the_id);
-			m_stack.push_back(m_currentId);
+			m_stack.push_back(the_id);
 		}
 
 		inline void PushDirect(std::size_t the_id) {
