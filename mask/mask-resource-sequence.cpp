@@ -213,8 +213,16 @@ void Mask::Resource::Sequence::Render(Mask::Part* part) {
 	m_image->Render(part);
 }
 
-
+// This method dictates the visibility of an instance
+// If it returns false, the mask will not appear on screen
 bool Mask::Resource::Sequence::IsInstancePlaying() {
+
+	// Looping sequences should keep their last frame until a new replay begins
+	// However, it is debatable if playing once should do the same or not
+	// For example, keeping the last frame of an explosion sequence doesn't look right
+	if (m_mode != Mask::Resource::Sequence::ONCE)
+		return true;
+
 	// get our instance data
 	m_parent->instanceDatas.Push(m_id);
 
