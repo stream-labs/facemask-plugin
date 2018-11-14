@@ -1735,8 +1735,6 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 		// skip first frame for more seamless loop
 		size_t last = previewFrames.size() - 2;
 		if (i > 0 && i <= last) {
-			cv::Mat vidf(baseWidth, baseHeight, CV_8UC4);
-
 			if (!testingStage) {
 				testingStage = gs_stagesurface_create(baseWidth, baseHeight, GS_RGBA);
 			}
@@ -1744,16 +1742,13 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 			// get vid tex
 			gs_stage_texture(testingStage, frame.vidtex);
 			uint8_t *data; uint32_t linesize;
+			cv::Mat cvm;
 			if (gs_stagesurface_map(testingStage, &data, &linesize)) {
-
-				cv::Mat cvm = cv::Mat(baseHeight, baseWidth, CV_8UC4, data, linesize);
-				cvm.copyTo(vidf);
-
+				cvm = cv::Mat(baseHeight, baseWidth, CV_8UC4, data, linesize);
 				gs_stagesurface_unmap(testingStage);
 			}
-
 			// convert rgba -> bgra
-			uint8_t* vpixel = vidf.data;
+			uint8_t* vpixel = cvm.data;
 			for (int w = 0; w < baseWidth; w++)
 				for (int h = 0; h < baseHeight; h++) {
 					uint8_t red = vpixel[0];
@@ -1764,8 +1759,8 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 				}
 
 			// crop
-			int offset = (baseWidth - baseHeight) * 2;
-			cv::Mat cropf(baseHeight, baseHeight, CV_8UC4, vidf.data + offset, linesize);
+			int offset = (baseWidth - baseHeight) / 2;
+			cv::Mat cropf = cvm(cv::Rect(offset, 0, baseHeight, baseHeight));
 
 			char temp[256];
 			snprintf(temp, sizeof(temp), "frame%04d.png", i);
