@@ -470,16 +470,30 @@ void  Mask::MaskData::ClearSortedDrawObjects() {
 }
 
 void  Mask::MaskData::AddSortedDrawObject(SortedDrawObject* obj) {
-	float z = obj->SortDepth();
+	float obj_z = obj->SortDepth();
+	float z = obj_z;
 	if (z > BUCKETS_MAX_Z)
 		z = BUCKETS_MAX_Z;
 	if (z < BUCKETS_MIN_Z)
 		z = BUCKETS_MIN_Z;
 	z = (z - BUCKETS_MIN_Z) / (BUCKETS_MAX_Z - BUCKETS_MIN_Z);
 	int idx = (int)(z * (float)(NUM_DRAW_BUCKETS - 1));
-	obj->nextDrawObject = m_drawBuckets[idx];
+
+	SortedDrawObject *next_sdo = m_drawBuckets[idx], *prev_sdo = nullptr;
+	while (next_sdo) {
+		float current_z = next_sdo->SortDepth();
+		if (obj_z >= current_z) break;
+		prev_sdo = next_sdo;
+		next_sdo = next_sdo->nextDrawObject;
+	}
+
+	if (prev_sdo != nullptr)
+		prev_sdo->nextDrawObject = obj;
+	else
+		m_drawBuckets[idx] = obj;
+
+	obj->nextDrawObject = next_sdo;
 	obj->instanceId = instanceDatas.CurrentId();
-	m_drawBuckets[idx] = obj;
 }
 
 void  Mask::MaskData::PartCalcMatrix(std::shared_ptr<Mask::Part> _part) {
