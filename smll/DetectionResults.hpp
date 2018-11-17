@@ -129,9 +129,6 @@ namespace smll {
 		DetectionResults();
 		void CorrelateAndUpdateFrom(DetectionResults& other);
 		int findClosest(const smll::DetectionResult& result);
-
-	private:
-
 	};
 
 }
