@@ -324,6 +324,11 @@ static void add_bool_property(obs_properties_t *props, const char* name) {
 	obs_property_set_long_description(p, P_TRANSLATE(n.c_str()));
 }
 
+static void add_dummy_property(obs_properties_t *props) {
+	obs_property_t* p = obs_properties_add_bool(props, "  ", "  ");
+	obs_property_set_visible(p, false);
+}
+
 static obs_property_t *add_int_list_property(obs_properties_t *props, const char* name) {
 	obs_property_t* p = obs_properties_add_list(props, name, P_TRANSLATE(name), OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
 	std::string n = name; n += ".Description";
@@ -415,7 +420,9 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 
 	// add advanced configuration params
 	smll::Config::singleton().get_properties(props);
-
+#else
+	//for fixing empty properties bug for endless loading
+	add_dummy_property(props);
 #endif
 }
 
