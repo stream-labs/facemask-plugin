@@ -45,6 +45,7 @@ using namespace std;
 
 namespace smll {
 
+
 	FaceDetector::FaceDetector()
 		: m_captureStage(nullptr)
 		, m_stageSize(0)
@@ -56,6 +57,7 @@ namespace smll {
 		, m_camera_h(0) {
 		// Load face detection and pose estimation models.
 		m_detector = get_frontal_face_detector();
+		//LoadFaceDetector(L"C:\\Users\\brank\\test-own-face-detector\\face-detector-model-17", m_detector);
 
 
 		char *filename = obs_module_file(kFileShapePredictor68);
@@ -85,6 +87,48 @@ namespace smll {
 		if (m_captureStage)
 			gs_stagesurface_destroy(m_captureStage);
 		obs_leave_graphics();
+	}
+
+	void FaceDetector::read_directory(const std::wstring& name, std::vector<std::wstring> &v)
+	{
+		std::wstring pattern(name);
+		pattern.append(L"\\*");
+		WIN32_FIND_DATA data;
+		HANDLE hFind;
+		if ((hFind = FindFirstFile(pattern.c_str(), &data)) != INVALID_HANDLE_VALUE) {
+			do {
+				v.push_back(data.cFileName);
+			} while (FindNextFile(hFind, &data) != 0);
+			FindClose(hFind);
+		}
+	}
+
+	void FaceDetector::LoadFaceDetector(std::wstring folder, dlib::object_detector<dlib::scan_fhog_pyramid<dlib::pyramid_down<6>>> &combined_detector) {
+		
+		dlib::object_detector<dlib::scan_fhog_pyramid<dlib::pyramid_down<6>>> detector;
+		std::vector<dlib::object_detector<dlib::scan_fhog_pyramid<dlib::pyramid_down<6>>>> detectors;
+
+		folder = folder + L"\\";
+
+		std::vector<std::wstring> files;
+		read_directory(folder, files);
+
+		for (int i = 0; i < files.size(); i++)
+		{
+			if (files[i].compare(L".") == 0 || files[i].compare(L"..") == 0) {
+				continue;
+			}
+			std::wcout << files[i] << std::endl;
+			ifstream fin(folder + files[i], ios::binary);
+			deserialize(detector, fin);
+
+			detectors.push_back(detector);
+		}
+
+		std::cout << "Read this many detector files " << detectors.size() << std::endl;
+
+		dlib::object_detector<dlib::scan_fhog_pyramid<dlib::pyramid_down<6> >> resulting_detector(detectors);
+		combined_detector = resulting_detector;
 	}
 
 
