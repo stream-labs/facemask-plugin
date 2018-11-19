@@ -14,11 +14,10 @@ del tmpFile
 set /P DIM= <tmpFile
 del tmpFile
 	
-ffmpeg -y -f lavfi -i color=red:s=%DIM% -f lavfi -i anullsrc -ar 48000 -ac 2 -t 1 red.mp4
+ffmpeg -y -f lavfi -i color=red:s=%DIM% -f lavfi -i anullsrc -ar 48000 -ac 2 -t 2 red.mp4
 
-
-echo file %INPUT% >> list
 echo file red.mp4 >> list
+echo file %INPUT% >> list
 
 :: Concatenate Files
 ffmpeg -y -f concat -safe 0 -i list -c copy formatted.mp4

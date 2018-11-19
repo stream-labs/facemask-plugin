@@ -203,7 +203,7 @@ For Unit Testing CppUtest framework is used.
   The path should look like: *%PATH_TO_YOUR_DIR%\ffmpeg-%VERSION%\bin*
   
 ### Format Video:
-Formatting video makes start/end of the video detectable by adding a red frame at the end
+Formatting video makes start/end of the looped video detectable by adding a red frame at the start
 - In the *facemask-plugin/data* there is a script: **format.bat**
 - Put your sample video as input.mp4 and click on the format.bat
 - Or call the script from the shell 
