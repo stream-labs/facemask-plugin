@@ -42,15 +42,19 @@
 #pragma warning( disable: 4267 )
 #pragma warning( disable: 4100 )
 #include <dlib/image_processing/frontal_face_detector.h>
+#include <dlib/image_processing/object_detector.h>
 #include <dlib/image_processing.h>
 #include <libobs/graphics/graphics.h>
 #include "OBSRenderer.hpp"
 #include <libobs/obs-module.h>
 #include <dlib/opencv.h>
+#include <dlib/string.h>
 #include <vector>
 #include <codecvt>
 #include <opencv2/opencv.hpp>
 #pragma warning( pop )
+
+
 
 namespace smll {
 
@@ -69,6 +73,12 @@ public:
 
 	void MakeTriangulation(MorphData& morphData, DetectionResults& results, 
 		TriangulationResult& result);
+
+	void read_directory(const std::wstring& name, std::vector<std::wstring> &v);
+
+	//typedef scan_fhog_pyramid<pyramid_down<6>> image_scanner_type;
+
+	void LoadFaceDetector(std::wstring folder, dlib::object_detector<dlib::scan_fhog_pyramid<dlib::pyramid_down<6>>> &combined_detector);
 
 	int CaptureWidth() const {
 		return m_capture.width;
