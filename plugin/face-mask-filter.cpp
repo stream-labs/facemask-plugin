@@ -132,12 +132,13 @@ void Plugin::FaceMaskFilter::destroy(void *ptr) {
 
 Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *source)
 	: source(source), canvasWidth(0), canvasHeight(0), baseWidth(640), baseHeight(480),
+	demoModeRecord(false), recordTriggered(false),
 	isActive(true), isVisible(true), videoTicked(true),
 	taskHandle(NULL), detectStage(nullptr),	maskDataShutdown(false), 
 	introFilename(nullptr),	outroFilename(nullptr),	alertActivate(true), alertDoIntro(false),
 	alertDoOutro(false), alertDuration(10.0f),
 	alertElapsedTime(BIG_FLOAT), alertTriggered(false), alertShown(false), alertsLoaded(false),
-	demoModeOn(false), demoCurrentMask(0),
+	demoCurrentMask(0),
 	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), 
 	drawMask(true),	drawAlert(false), drawFaces(false), drawMorphTris(false), drawFDRect(false), 
 	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr), testMode(false), custom_effect(nullptr){
@@ -291,13 +292,13 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	obs_data_set_default_bool(data, P_TEST_MODE, false);
 
 	obs_data_set_default_bool(data, P_GENTHUMBS, false);
+	obs_data_set_default_bool(data, P_RECORD, false);
 	obs_data_set_default_bool(data, P_DRAWMASK, false);
 	obs_data_set_default_bool(data, P_DRAWALERT, false);
 	obs_data_set_default_bool(data, P_DRAWFACEDATA, false);
 	obs_data_set_default_bool(data, P_DRAWMORPHTRIS, false);
 	obs_data_set_default_bool(data, P_DRAWCROPRECT, false);
 
-	obs_data_set_default_bool(data, P_DEMOMODEON, false);
 	obs_data_set_default_string(data, P_BEFORE_TEXT, kDefaultBeforeText);
 	obs_data_set_default_string(data, P_AFTER_TEXT, kDefaultAfterText);
 #if !defined(PUBLIC_RELEASE)
@@ -410,9 +411,8 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 	add_bool_property(props, P_DEACTIVATE);
 
 	// Demo mode
-	add_bool_property(props, P_DEMOMODEON);
-	add_text_property(props, P_DEMOFOLDER);
-
+	add_folder_property(props, P_DEMOFOLDER, "");
+	add_bool_property(props, P_RECORD);
 	add_bool_property(props, P_GENTHUMBS);
 
 	// Before After
@@ -537,9 +537,13 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	alertShowDelay = 0; //Default value
 
 	// demo mode
-	demoModeOn = obs_data_get_bool(data, P_DEMOMODEON);
 	demoModeFolder = obs_data_get_string(data, P_DEMOFOLDER);
 	demoModeGenPreviews = obs_data_get_bool(data, P_GENTHUMBS);
+	bool lastDemoModeRecord = demoModeRecord;
+	demoModeRecord = obs_data_get_bool(data, P_RECORD);
+	if (demoModeRecord) {
+		recordTriggered = (!lastDemoModeRecord && demoModeRecord);
+	}
 
 	if (!demoModeFolder.empty()) {
 		char lastChar = demoModeFolder.back();
@@ -666,7 +670,7 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 
 	// get the right mask data
 	Mask::MaskData* mdat = maskData.get();
-	if (demoModeOn) {
+	if (demoModeGenPreviews) {
 		if (demoCurrentMask >= 0 && demoCurrentMask < demoMaskDatas.size()) {
 			mdat = demoMaskDatas[demoCurrentMask].get();
 		}
@@ -793,7 +797,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// get mask data to draw
 	Mask::MaskData* mask_data = maskData.get();
-	if (demoModeOn && demoMaskDatas.size() > 0) {
+	if (demoModeGenPreviews && demoMaskDatas.size() > 0) {
 		if (demoCurrentMask >= 0 &&
 			demoCurrentMask < demoMaskDatas.size()) {
 			mask_data = demoMaskDatas[demoCurrentMask].get();
@@ -854,7 +858,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	}
 
 	// flags
-	bool genThumbs = mask_data && demoModeOn && demoModeGenPreviews && demoModeSavingFrames;
+	bool genThumbs = mask_data && demoModeGenPreviews && demoModeSavingFrames;
 
 	// Draw the source video
 	gs_enable_depth_test(false);
@@ -933,7 +937,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					}
 
 					// draw video to the mask texture?
-					if (genThumbs || mask_data->DrawVideoWithMask()) {
+					if (recordTriggered || genThumbs || mask_data->DrawVideoWithMask()) {
 						// setup transform state
 						gs_viewport_push();
 						gs_projection_push();
@@ -943,7 +947,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 						gs_matrix_identity();
 
 						// Draw the source video
-						if (mask_data && (autoBGRemoval || cartoonMode || demoModeOn)) {
+						if (mask_data && (autoBGRemoval || cartoonMode || demoModeGenPreviews || recordTriggered)) {
 							triangulation.autoBGRemoval = autoBGRemoval;
 							triangulation.cartoonMode = cartoonMode;
 							mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
@@ -1140,7 +1144,7 @@ void Plugin::FaceMaskFilter::Instance::demoModeRender(gs_texture* vidTex, gs_tex
 	Mask::MaskData* mask_data) {
 
 	// generate previews?
-	if (demoModeOn && videoTicked && demoModeGenPreviews && demoMaskDatas.size() > 0) {
+	if (videoTicked && (recordTriggered || (demoModeGenPreviews && demoMaskDatas.size() > 0))) {
 
 		// get frame color
 		if (!testingStage) {
@@ -1169,7 +1173,10 @@ void Plugin::FaceMaskFilter::Instance::demoModeRender(gs_texture* vidTex, gs_tex
 				WritePreviewFrames();
 				demoModeSavingFrames = false;
 				//increase mask number, change mask
-				demoCurrentMask = (demoCurrentMask + 1) % demoMaskDatas.size();
+				if (!recordTriggered && demoModeGenPreviews && demoMaskDatas.size() > 0) {
+					demoCurrentMask = (demoCurrentMask + 1) % demoMaskDatas.size();
+				}
+				recordTriggered = false;
 				demoModeInDelay = false;
 			}
 			else {
@@ -1284,7 +1291,7 @@ bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sou
 
 			// get the right mask data
 			Mask::MaskData* mdat = maskData.get();
-			if (demoModeOn && !demoModeInDelay) {
+			if (demoModeGenPreviews && !demoModeInDelay) {
 				if (demoCurrentMask >= 0 && demoCurrentMask < demoMaskDatas.size())
 					mdat = demoMaskDatas[demoCurrentMask].get();
 			}
@@ -1297,7 +1304,7 @@ bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sou
 
 			// (possibly) update morph buffer
 			if (morph) {
-				if (morph->GetMorphData().IsNewerThan(detection.frame.morphData) || demoModeOn) {
+				if (morph->GetMorphData().IsNewerThan(detection.frame.morphData) || demoModeGenPreviews) {
 					detection.frame.morphData = morph->GetMorphData();
 				}
 			}
@@ -1597,18 +1604,18 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 
 
 				// demo mode
-				if (demoModeOn && !lastDemoMode) {
+				if (demoModeGenPreviews && !lastDemoMode) {
 					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);
 					LoadDemo();
 					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_END);
 				}
-				else if (!demoModeOn && lastDemoMode) {
+				else if (!demoModeGenPreviews && lastDemoMode) {
 					obs_enter_graphics();
 					demoMaskDatas.clear();
 					demoMaskFilenames.clear();
 					obs_leave_graphics();
 				}
-				lastDemoMode = demoModeOn;
+				lastDemoMode = demoModeGenPreviews;
 			}
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(33));
@@ -1767,25 +1774,30 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 
 void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 
-	if (demoMaskFilenames.size() == 0)
+	if (!recordTriggered && demoMaskFilenames.size() == 0)
 		return;
 
 	obs_enter_graphics();
-
+	std::string outFolder;
 	// if the gif already exists, clean up and bail
-	std::string gifname = demoMaskFilenames[demoCurrentMask].substr(0, demoMaskFilenames[demoCurrentMask].length() - 4) + "gif";
-	if (::PathFileExists(Utils::ConvertStringToWstring(gifname).c_str()) == TRUE) {
-		for (int i = 0; i < previewFrames.size(); i++) {
-			const PreviewFrame& frame = previewFrames[i];
-			gs_texture_destroy(frame.vidtex);
-		}
-		previewFrames.clear();
-		obs_leave_graphics();
-		return;
+	if (recordTriggered) {
+		outFolder = demoModeFolder;
 	}
+	else {
+		std::string gifname = demoMaskFilenames[demoCurrentMask].substr(0, demoMaskFilenames[demoCurrentMask].length() - 4) + "gif";
+		if (::PathFileExists(Utils::ConvertStringToWstring(gifname).c_str()) == TRUE) {
+			for (int i = 0; i < previewFrames.size(); i++) {
+				const PreviewFrame& frame = previewFrames[i];
+				gs_texture_destroy(frame.vidtex);
+			}
+			previewFrames.clear();
+			obs_leave_graphics();
+			return;
+		}
 
-	// create output folder
-	std::string outFolder = demoMaskFilenames[demoCurrentMask] + ".render";
+		// create output folder
+		outFolder = demoMaskFilenames[demoCurrentMask] + ".render";
+	}
 	::CreateDirectory(Utils::ConvertStringToWstring(outFolder).c_str(), NULL);
 
 	// write out frames
@@ -1825,7 +1837,13 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 
 			// crop
 			int offset = (baseWidth - baseHeight) * 2;
-			cv::Mat cropf(baseHeight, baseHeight, CV_8UC4, vidf.data + offset, linesize);
+			cv::Mat cropf;
+			if (recordTriggered) {
+				cropf = vidf.clone();
+			} else {
+				cropf = cv::Mat(baseHeight, baseHeight, CV_8UC4, vidf.data + offset, linesize);
+			}
+			
 
 			char temp[256];
 			snprintf(temp, sizeof(temp), "frame%04d.png", i);
@@ -1846,16 +1864,22 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 	previewFrames.clear();
 
 	obs_leave_graphics();
-
-	char* gifmaker = obs_module_file("gifmaker.bat");
-	std::string cmd = gifmaker;
+	const char* batName;
+	if (recordTriggered) {
+		batName = "videomaker.bat";
+	} else {
+		batName = "gifmaker.bat";
+	}
+	char* bat = obs_module_file(batName);
+	std::string cmd = bat;
 	Utils::find_and_replace(cmd, "/", "\\");
 	Utils::find_and_replace(cmd, "Program Files", "\"Program Files\"");
 	Utils::find_and_replace(cmd, "Streamlabs OBS", "\"Streamlabs OBS\"");
-	cmd += " ";
+	cmd += " \"";
 	cmd += outFolder;
+	cmd += "\"";
 	::system(cmd.c_str());
-	bfree(gifmaker);
+	bfree(bat);
 }
 
 void Plugin::FaceMaskFilter::Instance::WriteTextureToFile(gs_texture* tex, std::string filename) {

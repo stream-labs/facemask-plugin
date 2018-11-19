@@ -191,11 +191,12 @@ namespace Plugin {
 			//test mode
 			bool				testMode;
 			// demo mode
-			bool				demoModeOn;
 			std::string			demoModeFolder;
 			int					demoCurrentMask;
 			bool				demoModeInDelay;
 			bool				demoModeGenPreviews;
+			bool				demoModeRecord;
+			bool				recordTriggered;
 			bool				demoModeSavingFrames;
 			std::string			beforeText;
 			std::string			beforeFile;

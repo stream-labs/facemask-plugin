@@ -47,6 +47,7 @@
 #define P_TEST_MODE				"Enable Testing Mode"
 #define P_BGREMOVAL				"greenscreen"
 #define P_GENTHUMBS				"genpreviews"
+#define P_RECORD				"Demo record"
 #define P_REWIND				"rewindanims"
 #define P_CARTOON				"cartoonMode"
 #define P_ALERT_DURATION		"alertDuration"
