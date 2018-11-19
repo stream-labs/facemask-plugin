@@ -144,7 +144,7 @@ else()
 endif()
 
 # Distribute format
-OPTION(BUILD_FOR_PUBLIC "Build for public release" ON)
+OPTION(BUILD_FOR_PUBLIC "Build for public release" OFF)
 if(BUILD_FOR_PUBLIC)
 	add_definitions(-DPUBLIC_RELEASE)
 endif()
