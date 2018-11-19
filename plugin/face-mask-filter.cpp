@@ -825,7 +825,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		antialiasing_method == FXAA_ANTI_ALIASING)
 		m_scale_rate = 1;
 	else
-		m_scale_rate = 2;
+		m_scale_rate = SSAA_UPSAMPLE_FACTOR;
 
 
 	// render mask to texture
@@ -1047,7 +1047,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		while (gs_effect_loop(custom_effect, "Draw")) {
 			gs_effect_set_texture(gs_effect_get_param_by_name(custom_effect,
 				"image"), mask_tex);
-			gs_draw_sprite(mask_tex, 0, baseWidth*m_scale_rate, baseHeight*m_scale_rate);
+			gs_draw_sprite(mask_tex, 0, baseWidth, baseHeight);
 		}
 	}
 	
@@ -1351,8 +1351,8 @@ void Plugin::FaceMaskFilter::Instance::drawMaskData(Mask::MaskData*	_maskData,
 	gs_viewport_push();
 	gs_projection_push();
 
-	uint32_t w = baseWidth;
-	uint32_t h = baseHeight;
+	uint32_t w = baseWidth*m_scale_rate;
+	uint32_t h = baseHeight*m_scale_rate;
 
 	gs_set_viewport(0, 0, w, h);
 	gs_enable_depth_test(true);

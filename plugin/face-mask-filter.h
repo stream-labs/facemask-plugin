@@ -42,6 +42,8 @@ extern "C" {
 #pragma warning( pop )
 }
 
+#define SSAA_UPSAMPLE_FACTOR 2
+
 using namespace std;
 
 namespace Plugin {
