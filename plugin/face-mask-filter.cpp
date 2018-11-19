@@ -131,8 +131,7 @@ void Plugin::FaceMaskFilter::destroy(void *ptr) {
 // ------------------------------------------------------------------------- //
 
 Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *source)
-	: request_rewind(false), 
-	source(source), canvasWidth(0), canvasHeight(0), baseWidth(640), baseHeight(480),
+	: source(source), canvasWidth(0), canvasHeight(0), baseWidth(640), baseHeight(480),
 	isActive(true), isVisible(true), videoTicked(true),
 	taskHandle(NULL), detectStage(nullptr),	maskDataShutdown(false), 
 	introFilename(nullptr),	outroFilename(nullptr),	alertActivate(true), alertDoIntro(false),
@@ -299,7 +298,8 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	obs_data_set_default_bool(data, P_DRAWCROPRECT, false);
 
 	obs_data_set_default_bool(data, P_DEMOMODEON, false);
-
+	obs_data_set_default_string(data, P_BEFORE_TEXT, kDefaultBeforeText);
+	obs_data_set_default_string(data, P_AFTER_TEXT, kDefaultAfterText);
 #if !defined(PUBLIC_RELEASE)
 	// default advanced params
 	smll::Config::singleton().set_defaults(data);
@@ -344,6 +344,17 @@ static void add_json_file_property(obs_properties_t *props, const char* name,
 	obs_property_t* p = obs_properties_add_path(props, name, P_TRANSLATE(name),
 		obs_path_type::OBS_PATH_FILE,
 		"Face Mask JSON (*.json)", defFolder);
+	std::string n = name; n += ".Description";
+	obs_property_set_long_description(p, P_TRANSLATE(n.c_str()));
+	bfree(defFolder);
+}
+
+static void add_video_file_property(obs_properties_t *props, const char* name,
+	const char* folder) {
+	char* defFolder = obs_module_file(folder);
+	obs_property_t* p = obs_properties_add_path(props, name, P_TRANSLATE(name),
+		obs_path_type::OBS_PATH_FILE,
+		"Face Mask Video (*.mp4)", defFolder);
 	std::string n = name; n += ".Description";
 	obs_property_set_long_description(p, P_TRANSLATE(n.c_str()));
 	bfree(defFolder);
@@ -398,15 +409,20 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 	// disable the plugin
 	add_bool_property(props, P_DEACTIVATE);
 
-	// rewind button
-	obs_properties_add_button(props, P_REWIND, P_TRANSLATE(P_REWIND), 
-		rewind_clicked);
-
 	// Demo mode
 	add_bool_property(props, P_DEMOMODEON);
 	add_text_property(props, P_DEMOFOLDER);
 
 	add_bool_property(props, P_GENTHUMBS);
+
+	// Before After
+	add_text_property(props, P_BEFORE_TEXT);
+	add_video_file_property(props, P_BEFORE, NULL);
+	add_text_property(props, P_AFTER_TEXT);
+	add_video_file_property(props, P_AFTER, NULL);
+	// rewind button
+	obs_properties_add_button(props, P_VIDEO_GENERATE, P_TRANSLATE(P_VIDEO_GENERATE),
+		generate_videos);
 
 	// debug drawing flags
 	add_bool_property(props, P_DRAWFACEDATA);
@@ -419,16 +435,38 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 #endif
 }
 
-bool Plugin::FaceMaskFilter::Instance::rewind_clicked(obs_properties_t *pr, obs_property_t *p, void *ptr) {
-	if (ptr == nullptr)
-		return false;
-	return reinterpret_cast<Instance*>(ptr)->rewind_clicked(pr, p);
+bool Plugin::FaceMaskFilter::Instance::generate_videos(obs_properties_t *pr, obs_property_t *p, void *ptr) {
+	return reinterpret_cast<Instance*>(ptr)->generate_videos(pr, p);
 }
 
-bool Plugin::FaceMaskFilter::Instance::rewind_clicked(obs_properties_t *pr, obs_property_t *p) {
+bool Plugin::FaceMaskFilter::Instance::generate_videos(obs_properties_t *pr, obs_property_t *p) {
 	UNUSED_PARAMETER(pr);
 	UNUSED_PARAMETER(p);
-	this->request_rewind = true;
+
+	char* bat = obs_module_file("sidebyside.bat");
+	std::string cmd = bat;
+	Utils::find_and_replace(cmd, "/", "\\");
+	Utils::find_and_replace(cmd, "Program Files", "\"Program Files\"");
+	Utils::find_and_replace(cmd, "Streamlabs OBS", "\"Streamlabs OBS\"");
+	Utils::find_and_replace(beforeFile, "\\", "/");
+	Utils::find_and_replace(afterFile, "\\", "/");
+	cmd += " \"";
+	cmd += beforeFile;
+	cmd += "\" \"";
+	cmd += afterFile;
+	cmd += "\" \"";
+	cmd += beforeText;
+	cmd += "\" \"";
+	cmd += afterText;
+	cmd += "\" \"";
+	if (!demoModeFolder.empty()) {
+		cmd += demoModeFolder + "/";
+	}
+	cmd += "output.mp4";
+	cmd += "\" ";
+	blog(LOG_DEBUG, cmd.c_str());
+	::system(cmd.c_str());
+	bfree(bat);
 	return true;
 }
 
@@ -503,6 +541,14 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	demoModeFolder = obs_data_get_string(data, P_DEMOFOLDER);
 	demoModeGenPreviews = obs_data_get_bool(data, P_GENTHUMBS);
 
+	if (!demoModeFolder.empty()) {
+		char lastChar = demoModeFolder.back();
+		//If slash at the end, remove it
+		if (lastChar == '\\') {
+			demoModeFolder.pop_back();
+		}
+	}
+
 	// update our param values
 	drawMask = obs_data_get_bool(data, P_DRAWMASK);
 	if (alertsLoaded) {
@@ -511,6 +557,10 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	drawFaces = obs_data_get_bool(data, P_DRAWFACEDATA);
 	drawMorphTris = obs_data_get_bool(data, P_DRAWMORPHTRIS);
 	drawFDRect = obs_data_get_bool(data, P_DRAWCROPRECT);
+	beforeText = (char*)obs_data_get_string(data, P_BEFORE_TEXT);
+	beforeFile = (char*)obs_data_get_string(data, P_BEFORE);
+	afterText = (char*)obs_data_get_string(data, P_AFTER_TEXT);
+	afterFile = (char*)obs_data_get_string(data, P_AFTER);
 }
 
 void Plugin::FaceMaskFilter::Instance::activate(void *ptr) {
@@ -639,11 +689,6 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 	// mask active?
 	if (maskActive) {
 		if (mdat) {
-			// rewind
-			if (request_rewind) {
-				mdat->Rewind();
-				request_rewind = false;
-			}
 			// tick main mask
 			mdat->Tick(timeDelta);
 		}

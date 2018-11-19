@@ -90,9 +90,8 @@ namespace Plugin {
 			void video_render(gs_effect_t *);
 
 			// callbacks
-			static bool rewind_clicked(obs_properties_t *pr, obs_property_t *p, void *data);
-			bool rewind_clicked(obs_properties_t *pr, obs_property_t *p);
-			bool request_rewind;
+			static bool generate_videos(obs_properties_t *pr, obs_property_t *p, void *data);
+			bool generate_videos(obs_properties_t *pr, obs_property_t *p);
 
 
 		protected:
@@ -198,6 +197,11 @@ namespace Plugin {
 			bool				demoModeInDelay;
 			bool				demoModeGenPreviews;
 			bool				demoModeSavingFrames;
+			std::string			beforeText;
+			std::string			beforeFile;
+			std::string			afterText;
+			std::string			afterFile;
+
 			std::vector<std::unique_ptr<Mask::MaskData>>	demoMaskDatas;
 			std::vector<std::string> demoMaskFilenames;
 
