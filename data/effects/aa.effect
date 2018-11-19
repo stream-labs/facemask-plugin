@@ -266,8 +266,8 @@ float4 fxaa(float2 uv) {
 	}
 
 	// Read the color at the new UV coordinates, and use it.
-	// return image.SampleLevel(def_sampler,final_uv,0);
-	return average(final_uv);
+	return image.SampleLevel(def_sampler,final_uv,0);
+	// return average(final_uv);
 
 }
 
