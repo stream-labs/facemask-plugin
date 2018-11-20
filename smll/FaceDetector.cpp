@@ -56,8 +56,8 @@ namespace smll {
 		, m_camera_w(0)
 		, m_camera_h(0) {
 		// Load face detection and pose estimation models.
-		m_detector = get_frontal_face_detector();
-		//LoadFaceDetector(L"C:\\Users\\brank\\test-own-face-detector\\face-detector-model-17", m_detector);
+		//m_detector = get_frontal_face_detector();
+		LoadFaceDetector(L"C:\\Users\\brank\\test-own-face-detector\\face-detector-model-17", m_detector);
 
 
 		char *filename = obs_module_file(kFileShapePredictor68);
