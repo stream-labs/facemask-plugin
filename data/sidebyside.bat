@@ -14,7 +14,7 @@ set FONT='/Windows/Fonts/Arial.ttf'
 
 if NOT ["%~1"]==[""] set INPUT1="%~1"
 if NOT ["%~2"]==[""] set INPUT2="%~2"
-if NOT ["%~3"]==[""] set TEXT2='%~3'
+if NOT ["%~3"]==[""] set TEXT1='%~3'
 if NOT ["%~4"]==[""] set TEXT2='%~4'
 if NOT ["%~5"]==[""] set OUT="%~5"
 
