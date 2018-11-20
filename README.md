@@ -198,11 +198,11 @@ For Unit Testing CppUtest framework is used.
 
 ### Setting up:
 * Install FFmpeg:
-  [ffmpeg](https://www.ffmpeg.org/)
+  [ffmpeg](https://ffmpeg.zeranoe.com/builds/)
   **Add a Path** of FFmpeg executable in the Environment Variables:
   The path should look like: *%PATH_TO_YOUR_DIR%\ffmpeg-%VERSION%\bin*
   
-### Format Video:
+### Adding red frame at the start of the video:
 Formatting video makes start/end of the looped video detectable by adding a red frame at the start
 - In the *facemask-plugin/data* there is a script: **format.bat**
 - Put your sample video as input.mp4 and click on the format.bat
@@ -223,15 +223,17 @@ It will generate output with red frame appended
     * Ensure that **Loop** option is *ON* and **Hide source when playback ends** is *OFF*
     * Choose video by changing *properties->local file*
 ##### There are 2 ways to record video:
-- ##### Manually
-  - Start Steramlabs-OBS recorder *(don't forget to change output format (in settings/output) to mp4)*
-  - Start and End recording as you see **red frame** appears
-- ##### Automotive
+- ##### Automatically detecting start and end using red frame
   * Add a filter: Face Mask Plugin
   * Go to Setting of facemask-plugin:
     * Set the **Demo Mode Folder** Path (where the output video should be generated)
-	* Turn On **Record Video**
-	* Recording and Rendering will take some time
+  * Tick On **Demo Record**
+    * If it is not working, untick and tick **Demo Record** again. It will only record the video the first time it is ticked.
+  * Recording and Rendering will take some time. The video needs to loop through until red frames are detected twice.
+- ##### Manually starting and finishing the recording
+  - Start Steramlabs-OBS recorder *(don't forget to change output format (in settings/output) to mp4)*
+  - Start and End recording as you see **red frame** appears
+
 	
 ### Generate Side By Side Video:
 
