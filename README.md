@@ -224,6 +224,7 @@ It will generate output with red frame appended
     * Choose video by changing *properties->local file*
 ##### There are 2 ways to record video:
 - ##### Automatically detecting start and end using red frame
+  This is the best way to use this feature. It will align the two videos perfectly.
   * Add a filter: Face Mask Plugin
   * Go to Setting of facemask-plugin:
     * Set the **Demo Mode Folder** Path (where the output video should be generated)
