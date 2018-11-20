@@ -208,9 +208,13 @@ Formatting video makes start/end of the looped video detectable by adding a red 
 - Put your sample video as input.mp4 and click on the format.bat
 - Or call the script from the shell 
 ```console 
-./format.bat /path/to/the/video
+./format.bat /path/to/the/input/video /path/to/the/output/video 
 ```
-It will generate output *formatted.mp4* with red frame appended
+Example:
+```console 
+./format.bat inputfolder/myinput.mp4 outputfolder/myoutput.mp4 
+```
+It will generate output with red frame appended
 
 
 ### Record Video:
