@@ -21,6 +21,7 @@
 #include "command_addres.h"
 #include "command_addpart.h"
 #include "command_import.h"
+#include "command_inspect.h"
 #include "command_morph_import.h"
 #include "command_merge.h"
 #include "command_tweak.h"
@@ -49,6 +50,8 @@ int main(int argc, char** argv) {
 		command_merge(args);
 	else if (args.command == "import")
 		command_import(args);
+	else if (args.command == "inspect")
+		inspect::command_inspect(args);
 	else if (args.command == "morphimport" || args.command == "mi")
 		command_morph_import(args);
 	else if (args.command == "tweak")

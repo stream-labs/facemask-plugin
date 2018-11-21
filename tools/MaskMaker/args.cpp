@@ -47,7 +47,10 @@ Args::Args(int argc, char** argv)
 	initJsonNamesAndValues();
 
 	command = argv[1];
-	filename = argv[argc - 1];
+
+	if (command != "inspect")
+		filename = argv[argc - 1];
+
 	if (command == "merge") {
 		for (int i = 2; i < (argc - 1); i++) {
 			string s = argv[i];
@@ -64,7 +67,8 @@ Args::Args(int argc, char** argv)
 		}
 	}
 	else {
-		for (int i = 2; i < (argc - 1); i++) {
+		int arg_count = (command == "inspect") ? argc : argc - 1;
+		for (int i = 2; i < arg_count; i++) {
 			vector<string> pair = Utils::split(argv[i], '=');
 			if (pair.size() > 1)
 				kvpairs[pair[0]] = pair[1];
@@ -430,6 +434,10 @@ json Args::createNewJson() {
 	return j;
 }
 
+void Args::outputJson(const json& j) {
+	std::cout << j.dump(4) << endl;
+}
+
 void Args::writeJson(const json& j) {
 	writeJson(j, filename);
 }
@@ -529,12 +537,12 @@ json Args::createImageResourceFromFile(string resFile, bool wantMips) {
 
 	int width, height, bpp;
 
-	cout << "Loading image " << resFile << endl;
+	cerr << "Loading image " << resFile << endl;
 	string fullPath = getFullResourcePath(resFile);
 	unsigned char* rgba = stbi_load(fullPath.c_str(), &width, &height, &bpp, 4);
 	if (rgba == nullptr) {
-		cout << "FAILED TO LOAD IMAGE!" << endl;
-		cout << " LOOKING FOR: " << fullPath << endl;
+		cerr << "FAILED TO LOAD IMAGE!" << endl;
+		cerr << " LOOKING FOR: " << fullPath << endl;
 		assert(rgba);
 	}
 
@@ -547,36 +555,43 @@ json Args::createImageResourceFromFile(string resFile, bool wantMips) {
 		}
 	}
 	if (lastImageHadAlpha)
-		cout << "IMAGE HAS ALPHA!!!!" << endl;
+		cerr << "IMAGE HAS ALPHA!!!!" << endl;
 
-	int tex_size_limit = intValue("texture_max");
 
-	// limit texture sizes
-	int nWidth = width;
-	int nHeight = height;
-	if (width > height) {
-		if (width > tex_size_limit) {
-			nHeight = (int)((float)tex_size_limit * (float)height / (float)width);
-			nWidth = tex_size_limit;
-		}
-	}
-	else {
-		if (height > tex_size_limit) {
-			nWidth = (int)((float)tex_size_limit * (float)width / (float)height);
-			nHeight = tex_size_limit;
-		}
-	}
 	bool imageScaled = false;
-	if (nWidth != width || nHeight != height) {
-		imageScaled = true;
-		unsigned char* mip = new unsigned char[nWidth * nHeight * 4];
-		ImageResizer.resizeImage(rgba, width, height, 0,
-			mip, nWidth, nHeight, 4, 0, &vars);
-		stbi_image_free(rgba);
-		rgba = mip;
-		width = nWidth;
-		height = nHeight;
+
+	// during "inspect" we only want to see original tex size
+	if (command != "inspect")
+	{
+		int tex_size_limit = intValue("texture_max");
+
+		// limit texture sizes
+		int nWidth = width;
+		int nHeight = height;
+		if (width > height) {
+			if (width > tex_size_limit) {
+				nHeight = (int)((float)tex_size_limit * (float)height / (float)width);
+				nWidth = tex_size_limit;
+			}
+		}
+		else {
+			if (height > tex_size_limit) {
+				nWidth = (int)((float)tex_size_limit * (float)width / (float)height);
+				nHeight = tex_size_limit;
+			}
+		}
+		if (nWidth != width || nHeight != height) {
+			imageScaled = true;
+			unsigned char* mip = new unsigned char[nWidth * nHeight * 4];
+			ImageResizer.resizeImage(rgba, width, height, 0,
+				mip, nWidth, nHeight, 4, 0, &vars);
+			stbi_image_free(rgba);
+			rgba = mip;
+			width = nWidth;
+			height = nHeight;
+		}
 	}
+
 
 	// convert data to base64
 	string imageDataBase64 = base64_encodeZ(rgba, width * height * 4);

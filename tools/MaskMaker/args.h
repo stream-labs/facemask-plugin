@@ -59,6 +59,7 @@ public:
 	json loadJsonFile(string fname);
 	void initJsonNamesAndValues();
 	json createNewJson();
+	void outputJson(const json& j);
 	void writeJson(const json& j);
 	void writeJson(const json& j, string toFile);
 	string uniqueResourceName(string name, string resType);
