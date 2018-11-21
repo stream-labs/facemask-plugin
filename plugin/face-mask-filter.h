@@ -26,12 +26,10 @@
 #include <vector>
 
 #include "smll/FaceDetector.hpp"
-#include "smll/OBSFont.hpp"
 #include "smll/OBSRenderer.hpp"
 #include "smll/DetectionResults.hpp"
 #include "smll/TriangulationResult.hpp"
 #include "smll/MorphData.hpp"
-#include "smll/TextShaper.hpp"
 
 
 #include "mask/mask.h"
@@ -114,7 +112,6 @@ namespace Plugin {
 			void setFaceTransform(const smll::ThreeDPose& pose,
 				bool billboard = false);
 			void setupRenderingState();
-			void getCanvasInfo();
 			void drawMaskData(Mask::MaskData*	maskData, bool depthOnly, 
 				bool staticOnly, bool rotationDisable);
 			gs_texture* RenderSourceTexture(gs_effect_t* effect);
@@ -139,10 +136,6 @@ namespace Plugin {
 			gs_effect_t*		custom_effect = nullptr;
 			int					m_scale_rate = 1;
 			int					antialiasing_method = SSAA_ANTI_ALIASING;
-
-			// Fonts
-			smll::TextShaper*		smllTextShaper;
-			smll::OBSFont*			smllFont;
 
 			// Texture rendering & staging
 			gs_texrender_t*		sourceRenderTarget;
@@ -169,14 +162,7 @@ namespace Plugin {
 			bool				alertActivate;
 			bool				alertDoIntro;
 			bool				alertDoOutro;
-			std::string			alertText;
-			std::string			donorName;
 			float				alertDuration;
-			float				donorNameDuration;
-			float				alertOffsetBig;
-			float				alertOffsetSmall;
-			float				alertMinSize;
-			float				alertMaxSize;
 			float				alertShowDelay;
 
 			// mask data loading thread
@@ -198,19 +184,10 @@ namespace Plugin {
 			};
 
 			// alert data
-			std::string			renderedAlertText;
-			AlertLocation		currentAlertLocation;
-			std::unique_ptr<Mask::MaskData>	alertMaskDatas[AlertLocation::NUM_ALERT_LOCATIONS];
-			gs_texture*			alertTextTexture;
-			float				alertTranslation;
-			float				alertAspectRatio;
 			float				alertElapsedTime;
-			float				alertAnimationDuration;
 			bool				alertTriggered;
 			bool				alertShown;
 			bool				alertsLoaded;
-			gs_rect				alertViewport;
-			vec2				smoothCenter;
 
 			//test mode
 			bool				testMode;
@@ -258,10 +235,6 @@ namespace Plugin {
 			// for testing/thumbs/writing textures to files
 			gs_stagesurf_t*		testingStage;
 
-			// find a cached video frame
-			int					FindCachedFrameIndex(const TimeStamp& ts);
-			gs_texture_t*		FindCachedFrame(const TimeStamp& ts);
-
 			// Detection
 			struct ThreadData {
 
@@ -272,7 +245,7 @@ namespace Plugin {
 				bool shutdown;
 
 				// frames circular buffer (video_render()'s thread -> detection thread)
-				struct CachedFrame {
+				struct Frame {
 					smll::OBSTexture	capture;
 					smll::ImageWrapper	detect;
 					smll::MorphData     morphData;
@@ -280,8 +253,7 @@ namespace Plugin {
 					TimeStamp			timestamp;
 					bool				active;
 				};
-				int frameIndex;
-				std::array<struct CachedFrame, BUFFER_SIZE> frames;
+				Frame frame;
 
 				// faces circular buffer (detection thread -> video_tick()'s thread)
 				struct CachedResult {
