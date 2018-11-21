@@ -230,7 +230,8 @@ It will generate output with red frame appended
     * Set the **Demo Mode Folder** Path (where the output video should be generated)
   * Tick On **Demo Record**
     * If it is not working, untick and tick **Demo Record** again. It will only record the video the first time it is ticked.
-  * Recording and Rendering will take some time. The video needs to loop through until red frames are detected twice.
+  * Recording and Rendering will take some time. The video needs to loop through until red frames are detected twice. Note
+  that **the video in the slobs will freeze** while the video is being extracted. You just have to wait until it is done.
 - ##### Manually starting and finishing the recording
   - Start Steramlabs-OBS recorder *(don't forget to change output format (in settings/output) to mp4)*
   - Start and End recording as you see **red frame** appears
