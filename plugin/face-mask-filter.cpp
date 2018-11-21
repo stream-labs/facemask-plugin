@@ -1772,6 +1772,18 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 	}
 }
 
+static std::string getTextTimestamp() {
+	time_t rawtime;
+	struct tm * timeinfo;
+	char buffer[80];
+
+	time(&rawtime);
+	timeinfo = localtime(&rawtime);
+
+	strftime(buffer, sizeof(buffer), "%d-%m-%Y %H-%M-%S", timeinfo);
+	return std::string(buffer);
+}
+
 void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 
 	if (!recordTriggered && demoMaskFilenames.size() == 0)
@@ -1799,7 +1811,9 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 		outFolder = demoMaskFilenames[demoCurrentMask] + ".render";
 	}
 	::CreateDirectory(Utils::ConvertStringToWstring(outFolder).c_str(), NULL);
-
+	if (recordTriggered) {
+		::CreateDirectory(Utils::ConvertStringToWstring(outFolder + "/temp/").c_str(), NULL);
+	}
 	// write out frames
 	for (int i = 0; i < previewFrames.size(); i++) {
 		const PreviewFrame& frame = previewFrames[i];
@@ -1847,11 +1861,17 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 
 			char temp[256];
 			snprintf(temp, sizeof(temp), "frame%04d.png", i);
-			std::string outFile = outFolder + "/" + temp;
+			std::string outFile;
+			if (recordTriggered) {
+				outFile= outFolder + "/temp/" + temp;
+			}
+			else {
+				outFile = outFolder + "/" + temp; 
+			}
 			cv::imwrite(outFile.c_str(), cropf);
 
 			// write out last frame again for thumbnail
-			if (i == last) {
+			if (!recordTriggered && i == last) {
 				outFile = outFolder + "/last_frame.png";
 				cv::imwrite(outFile.c_str(), cropf);
 			}
@@ -1878,6 +1898,11 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 	cmd += " \"";
 	cmd += outFolder;
 	cmd += "\"";
+	if (recordTriggered) {
+		cmd += " \"";
+		cmd += getTextTimestamp()+".mp4";
+		cmd += "\"";
+	}
 	::system(cmd.c_str());
 	bfree(bat);
 }

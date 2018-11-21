@@ -88,7 +88,6 @@ namespace Plugin {
 			void video_tick(float);
 			static void video_render(void *, gs_effect_t *);
 			void video_render(gs_effect_t *);
-
 			// callbacks
 			static bool generate_videos(obs_properties_t *pr, obs_property_t *p, void *data);
 			bool generate_videos(obs_properties_t *pr, obs_property_t *p);
