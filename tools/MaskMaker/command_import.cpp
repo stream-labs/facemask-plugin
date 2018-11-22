@@ -1112,26 +1112,23 @@ void command_import(Args& args) {
 			o["up"] = p;
 		}
 
-		// NOTE: for some reason light colors out of assimp are
-		//       in percentages [0,100]
-
 		// color : ambient
 		json c;
-		c["x"] = light->mColorAmbient.r / 100.0f;
-		c["y"] = light->mColorAmbient.g / 100.0f;
-		c["z"] = light->mColorAmbient.b / 100.0f;
+		c["x"] = light->mColorAmbient.r;
+		c["y"] = light->mColorAmbient.g;
+		c["z"] = light->mColorAmbient.b;
 		o["ambient"] = c;
 
 		// color : diffuse
-		c["x"] = light->mColorDiffuse.r / 100.0f;
-		c["y"] = light->mColorDiffuse.g / 100.0f;
-		c["z"] = light->mColorDiffuse.b / 100.0f;
+		c["x"] = light->mColorDiffuse.r;
+		c["y"] = light->mColorDiffuse.g;
+		c["z"] = light->mColorDiffuse.b;
 		o["diffuse"] = c;
 
 		// color : specular
-		c["x"] = light->mColorSpecular.r / 100.0f;
-		c["y"] = light->mColorSpecular.g / 100.0f;
-		c["z"] = light->mColorSpecular.b / 100.0f;
+		c["x"] = light->mColorSpecular.r;
+		c["y"] = light->mColorSpecular.g;
+		c["z"] = light->mColorSpecular.b;
 		o["specular"] = c;
 
 		// spot angles (only valid for spot lights)
