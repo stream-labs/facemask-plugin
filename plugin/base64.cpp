@@ -124,6 +124,12 @@ std::string base64_encodeZ(uint8_t const* buf, size_t bufLen) {
 	std::vector<uint8_t> dest(destLen + sizeof(size_t));
 	zlib::compress((zlib::Bytef*)dest.data(), &destLen,
 		(zlib::Bytef*)buf, (zlib::uLongf)bufLen);
+	// TODO change to better compression later
+	//      This change will require facemask plugin to be updated
+	//      So it can recognize zlib best compression
+	//      Currently, the decoder only checks for default compression
+	//zlib::compress2((zlib::Bytef*)dest.data(), &destLen,
+	//	(zlib::Bytef*)buf, (zlib::uLongf)bufLen, Z_BEST_COMPRESSION);
 
 	// add decompressed size to end of data
 	memcpy(dest.data() + destLen, &bufLen, sizeof(size_t));

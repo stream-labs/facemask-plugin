@@ -36,6 +36,7 @@ struct vec3 {
 		float ptr[4];
 		__m128 m;
 	};
+	vec3() :m() {}
 };
 struct gs_tvertarray {
 	size_t width;
@@ -60,12 +61,12 @@ public:
 		points = new vec3[num];
 		normals = new vec3[num];
 		tangents = new vec3[num];
-		colors = new uint32_t[num];
+		colors = new uint32_t[num]();
 		num_tex = 8;
 		tvarray = new gs_tvertarray[num_tex];
 		for (int i = 0; i < 8; i++) {
 			tvarray[i].width = 4;
-			tvarray[i].array = new float[num * 4];
+			tvarray[i].array = new float[num * 4]();
 		}
 	}
 	~GSVertexBuffer() {
@@ -744,7 +745,7 @@ void command_import(Args& args) {
 
 				// encode 
 				size_t vbuffSize = vertices.size();
-				uint8_t* vbuff = new uint8_t[vbuffSize + 16];
+				uint8_t* vbuff = new uint8_t[vbuffSize + 16]();
 				uint8_t* aligned = (uint8_t*)ALIGNED(vbuff);
 				vertices.get_data(aligned);
 				string vertexDataBase64 =
@@ -823,15 +824,16 @@ void command_import(Args& args) {
 			}
 			// encode vertices
 			size_t vbuffSize = vertices.size();
-			uint8_t* vbuff = new uint8_t[vbuffSize + 16];
+			uint8_t* vbuff = new uint8_t[vbuffSize + 16]();
 			uint8_t* aligned = (uint8_t*)ALIGNED(vbuff);
 			vertices.get_data(aligned);
 			string vertexDataBase64 =
 				base64_encodeZ(aligned, vbuffSize);
+
 			delete[] vbuff;
 
 			// Build index list
-			unsigned int* indices = new unsigned int[mesh->mNumFaces * 3];
+			unsigned int* indices = new unsigned int[mesh->mNumFaces * 3]();
 			int indIdx = 0;
 			for (unsigned int j = 0; j < mesh->mNumFaces; j++) {
 				aiFace& face = mesh->mFaces[j];

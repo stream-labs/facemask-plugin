@@ -23,7 +23,7 @@
 #include <vector>
 
 // Shamelessly taken from: https://stackoverflow.com/questions/180947/base64-decode-snippet-in-c
-std::string base64_encode(unsigned char const* raw_bytes, unsigned int in_len);
+std::string base64_encode(uint8_t const* raw_bytes, size_t in_len);
 void base64_decode(std::string const& inbuf, std::vector<uint8_t>& outbuf);
 
 // Added zlib compression
