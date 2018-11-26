@@ -45,6 +45,7 @@ namespace smll {
 		, m_timeout(0)
         , m_trackingTimeout(0)
         , m_detectionTimeout(0)
+		, m_forceDetection(0)
 		, m_trackingFaceIndex(0)
 		, m_camera_w(0)
 		, m_camera_h(0) {
@@ -211,11 +212,14 @@ namespace smll {
 
 		bool trackingFailed = false;
 		// if number of frames before the last detection is bigger than the threshold or if there are no faces to track
-		if (m_detectionTimeout == 0 || m_faces.length == 0) {
+		if (m_detectionTimeout == 0 || m_faces.length == 0 || m_forceDetection > 0) {
 			DoFaceDetection();
 			m_detectionTimeout =
 				Config::singleton().get_int(CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY);
 			StartObjectTracking();
+			if (m_forceDetection > 0) {
+				m_forceDetection--;
+			}
 		}
 		else if (m_trackingTimeout == 0) {
 			m_detectionTimeout--;
@@ -228,14 +232,14 @@ namespace smll {
 				m_trackingFaceIndex = (m_trackingFaceIndex + 1) % m_faces.length;
 
 				// tracking frequency
-				m_trackingTimeout =
-					Config::singleton().get_int(CONFIG_INT_TRACKING_FREQUNCY);
+				m_trackingTimeout =	Config::singleton().get_int(CONFIG_INT_TRACKING_FREQUNCY);
 			}
 			else {
 				m_trackingFaceIndex = 0;
 				// force detection on the next frame, do not wait for 5 frames
-				m_timeout == 0;
+				m_timeout = 0;
 				trackingFailed = true;
+				m_forceDetection = Config::singleton().get_int(CONFIG_INT_FORCE_DETECTION);
 			}
 
 			// copy faces to results
@@ -1235,6 +1239,7 @@ namespace smll {
 	void FaceDetector::ResetFaces() {
 		m_faces.length = 0;
 		m_detectionTimeout = 0;
+		m_forceDetection = 0;
 	}
 	
 } // smll namespace

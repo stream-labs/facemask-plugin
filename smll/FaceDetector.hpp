@@ -98,6 +98,7 @@ private:
 	int				m_timeout;
     int             m_trackingTimeout;
     int             m_detectionTimeout;
+	int             m_forceDetection;
 
 	// Tracking time-slicer
 	int				m_trackingFaceIndex;
