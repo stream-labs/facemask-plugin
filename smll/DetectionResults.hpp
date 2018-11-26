@@ -94,6 +94,9 @@ namespace smll {
 		void InitStartPose();
 		bool PoseValid();
 		void UpdateResultsFrom(const DetectionResult& r);
+		void UpdateResults();
+		double ntx[3] = { 0 };
+		double nrot[4] = { 0 };
 
 		double DistanceTo(const DetectionResult& r) const;
 

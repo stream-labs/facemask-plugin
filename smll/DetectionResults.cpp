@@ -227,6 +227,9 @@ namespace smll {
 						}
 						faces.length--;
 					}
+					else {
+						faces[i].UpdateResults();
+					}
 				}
 			}
 		}
@@ -328,16 +331,31 @@ namespace smll {
 
 	void DetectionResult::UpdateResultsFrom(const DetectionResult& r) {
 
+		int i;
+		for (i = 0; i < 3; i++)	{
+			ntx[i] = r.pose.translation[i];
+			nrot[i] = r.pose.rotation[i];
+		}
+		//additional  for nrot 
+		nrot[i] = r.pose.rotation[i];
+
+		dlib::rectangle bnd = r.bounds;
+		CheckForPoseFlip(nrot, ntx);
+
+		// copy values
+		bounds = bnd;
+
+		UpdateResults();
+
+		for (int j = 0; j < smll::NUM_FACIAL_LANDMARKS; j++) {
+			landmarks68[j] = r.landmarks68[j];
+		}
+	}
+
+	void DetectionResult::UpdateResults() {
 		if (!kalmanFiltersInitialized) {
-			*this = r;
 			InitKalmanFilters();
 		}
-
-		double ntx[3] = { r.pose.translation[0], r.pose.translation[1], r.pose.translation[2] };
-		double nrot[4] = { r.pose.rotation[0], r.pose.rotation[1], r.pose.rotation[2], r.pose.rotation[3] };
-		dlib::rectangle bnd = r.bounds;
-
-		CheckForPoseFlip(nrot, ntx);
 
 		// kalman filtering enabled?
 		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE)) {
@@ -358,12 +376,6 @@ namespace smll {
 			nrot[3] = kalmanFilters[KF_ROT_A].Update(nrot[3]);
 		}
 
-		// copy values
-		bounds = bnd;
-		
-		for (int i = 0; i < smll::NUM_FACIAL_LANDMARKS; i++) {
-			landmarks68[i] = r.landmarks68[i];
-		}
 		pose.translation[0] = ntx[0];
 		pose.translation[1] = ntx[1];
 		pose.translation[2] = ntx[2];
