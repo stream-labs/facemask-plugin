@@ -100,6 +100,10 @@ namespace smll {
 	static const char* const CONFIG_DOUBLE_TRACKING_THRESHOLD =
 		"trackingThreshold";
 
+	//Force detection Frequency when tracking fails
+	static const char* const CONFIG_INT_FORCE_DETECTION =
+		"Force Detection Frequency";
+
 	// Speed Limit
 	static const char* const CONFIG_INT_SPEED_LIMIT = 
 		"detectSpeedLimit";
