@@ -216,9 +216,11 @@ namespace smll {
 			DoFaceDetection();
 			m_detectionTimeout =
 				Config::singleton().get_int(CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY);
-			StartObjectTracking();
 			if (m_forceDetection > 0) {
 				m_forceDetection--;
+			}
+			else {
+				StartObjectTracking();
 			}
 		}
 		else if (m_trackingTimeout == 0) {
@@ -261,7 +263,7 @@ namespace smll {
 		results.length = m_faces.length;
 
 		// If faces are not found
-		if (m_faces.length == 0 && !trackingFailed) {
+		if (m_faces.length == 0 && !trackingFailed && m_forceDetection == 0) {
             // Wait for 5 frames and do face detection
             m_timeout = Config::singleton().get_int(CONFIG_INT_FACE_DETECT_FREQUENCY);
 		}
