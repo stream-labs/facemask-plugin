@@ -280,6 +280,8 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	obs_data_set_default_string(data, P_ALERT_OUTRO, kDefaultOutro);
 
 	bfree(defMaskFolder);
+	
+	obs_data_set_default_int(data, P_ANTI_ALIASING, NO_ANTI_ALIASING);
 
 	// ALERTS
 	obs_data_set_default_bool(data, P_ALERT_ACTIVATE, false);
