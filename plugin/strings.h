@@ -30,6 +30,11 @@
 // Properties
 #define P_MASK					"Mask"
 #define P_MASK_BROWSE			"Browse to mask"
+#define P_BEFORE				"Before Video"
+#define P_AFTER					"After Video"
+#define P_BEFORE_TEXT			"Before Video Text"
+#define P_AFTER_TEXT			"After Video Text"
+#define P_VIDEO_GENERATE		"Generate"
 #define P_MASKFOLDER			"maskFolder"
 #define P_DEACTIVATE			"deactivated"
 #define P_DRAWMASK				"drawmask"
@@ -43,20 +48,15 @@
 #define P_TEST_MODE				"Enable Testing Mode"
 #define P_BGREMOVAL				"greenscreen"
 #define P_GENTHUMBS				"genpreviews"
+#define P_RECORD				"Demo record"
 #define P_REWIND				"rewindanims"
 #define P_CARTOON				"cartoonMode"
-#define P_ALERT_TEXT			"alertText"
-#define P_ALERT_DONOR_NAME	    "donorName"
 #define P_ALERT_DURATION		"alertDuration"
 #define P_ALERT_INTRO			"alertIntro"
 #define P_ALERT_OUTRO			"alertOutro"
 #define P_ALERT_DOINTRO			"alertDoIntro"
 #define P_ALERT_DOOUTRO			"alertDoOutro"
 #define P_ALERT_ACTIVATE		"alertActivate"
-#define P_ALERT_OFFSET_BIG		"alertOffsetWhenBig"
-#define P_ALERT_OFFSET_SMALL	"alertOffsetWhenSmall"
-#define P_ALERT_MIN_SIZE		"alertMinSize"
-#define P_ALERT_MAX_SIZE		"alertMaxSize"
 #define P_ALERT_SHOW_DELAY		"alertShowDelay"
 #define P_ANTI_ALIASING			"antialiasing"
 #define P_NO_ANTI_ALIASING		"noAntialiasing"
@@ -68,11 +68,6 @@ static const char* const kDefaultMask = "b41214ab-8ef1-4842-924d-be113e2b5566.js
 static const char* const kDefaultIntro = "f99e23b1-0393-4a01-b4ec-369823528635.json";
 static const char* const kDefaultOutro = "f99e23b1-0393-4a01-b4ec-369823528635.json";
 static const char* const kDefaultMaskFolder = "masks";
-static const char* const kDefaultAlertLT = "alerts/alert_LT.json";
-static const char* const kDefaultAlertLB = "alerts/alert_LB.json";
-static const char* const kDefaultAlertRT = "alerts/alert_RT.json";
-static const char* const kDefaultAlertRB = "alerts/alert_RB.json";
-static const char* const kFontAlertTTF     = "fonts/ComicRelief.ttf";
-static const char* const kBaseFontAlertTTF = "fonts/CODE2000.ttf";
-
+static const char* const kDefaultBeforeText = "Before";
+static const char* const kDefaultAfterText	= "After";
 

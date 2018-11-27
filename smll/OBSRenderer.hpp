@@ -34,7 +34,6 @@
 
 
 #include "OBSTexture.hpp"
-#include "OBSFont.hpp"
 #include "ImageWrapper.hpp"
 #include "FaceDetector.hpp"
 #include "DetectionResults.hpp"
@@ -83,10 +82,6 @@ namespace smll {
 			gs_texrender_t* texrender, int width, int height);
 
 		void						SetTransform(const DetectionResult& face);
-
-		// Text rendering
-		gs_texture*		RenderTextToTexture(const std::vector<std::wstring>& lines,
-			int tex_width, int tex_height, OBSFont* font);
 
 	private:
 

@@ -18,31 +18,29 @@
 * along with this program; if not, write to the Free Software
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
+#include "SingleValueKalman.hpp"
+#include <CppUTest/TestHarness.h>
 
-// TODO: Update the code here
-// #include "SingleValueKalman.hpp"
-// #include <CppUTest/TestHarness.h>
+TEST_GROUP(kalmanTest) {};
 
-// TEST_GROUP(kalmanTest) {};
+TEST(kalmanTest, singleValueKalmanTest) {
+	const int testNum = 5;
+	const double error = 0.5;
+	double testSamples[testNum][2] = {
+		//update Value, expected result
+		{ 2.2, 2.19 },
+		{ 3.3, 3.295 },
+		{ 4.4, 4.397 },
+		{ -5.5, -0.8 },
+		{ 2.2, 0.36 }, //same update
+	};
+	smll::SingleValueKalman kalman;
+	kalman.Init(1.1);
 
-// TEST(kalmanTest, singleValueKalmanTest) {
-// 	const int testNum = 5;
-// 	const double error = 0.5;
-// 	double testSamples[testNum][2] = {
-// 		//update Value, expected result
-// 		{ 2.2, 2.19 },
-// 		{ 3.3, 3.295 },
-// 		{ 4.4, 4.397 },
-// 		{ -5.5, -0.8 },
-// 		{ 2.2, 0.36 }, //same update
-// 	};
-// 	smll::SingleValueKalman kalman;
-// 	kalman.Init(1.1);
-
-// 	// veirfy update results
-// 	for (size_t i = 0; i < testNum; i++) {
-// 		double actualValue = kalman.Update(testSamples[i][0]);
-// 		CHECK(std::abs(testSamples[i][1] - actualValue) < error);
-// 	}
+	// veirfy update results
+	for (size_t i = 0; i < testNum; i++) {
+		double actualValue = kalman.Update(testSamples[i][0]);
+		CHECK(std::abs(testSamples[i][1] - actualValue) < error);
+	}
 	
-// }
+}

@@ -736,59 +736,6 @@ namespace smll {
 		gs_projection_pop();
 	}
 
-	gs_texture*	OBSRenderer::RenderTextToTexture(const std::vector<std::wstring>& lines,
-		int tex_width, int tex_height, OBSFont* font) {
-
-		gs_matrix_push();
-		gs_projection_push();
-		gs_viewport_push();
-
-		gs_matrix_identity();
-		gs_set_viewport(0, 0, tex_width, tex_height);
-		gs_ortho(0.0f, (float)tex_width, 0.0f, (float)tex_height, 0.0f, 100.0f);
-
-		gs_set_cull_mode(GS_NEITHER);
-		gs_enable_blending(true);
-		gs_enable_depth_test(false);
-		gs_enable_color(true, true, true, true);
-		gs_blend_function(gs_blend_type::GS_BLEND_SRCALPHA,
-			gs_blend_type::GS_BLEND_INVSRCALPHA);
-
-		float y = (float)font->GetHeight();
-		float height = (float)font->GetHeight() * lines.size();
-		if (height < tex_height)
-			y += (tex_height - height) / 2.0f;
-
-		int fontSize = font->GetSize();
-
-		gs_texrender_reset(drawTexRender);
-		if (gs_texrender_begin(drawTexRender, tex_width, tex_height)) {
-
-			// clear
-			vec4 black;
-			vec4_zero(&black);
-			gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
-
-			for (int i = 0; i < lines.size(); i++) {
-				float x = (tex_width - font->GetTextWidth(fontSize, lines[i])) / 2;
-				font->RenderText(lines[i], x, y);
-				y += font->GetHeight();
-			}
-
-			gs_texrender_end(drawTexRender);
-		}
-		gs_matrix_pop();
-		gs_viewport_pop();
-		gs_projection_pop();
-
-		// Make a copy of the texture
-		gs_texture* t = gs_texture_create(tex_width, tex_height, GS_RGBA, 1, 0, 0);
-		gs_copy_texture(t, gs_texrender_get_texture(drawTexRender));
-		font->Reset();
-		return t; 
-	}
-
-
 
 } // smll namespace
 

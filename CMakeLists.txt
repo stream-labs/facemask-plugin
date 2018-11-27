@@ -182,16 +182,16 @@ SET(smll_HEADERS
 	"${SMLLDir}/DetectionResults.hpp"
 	"${SMLLDir}/Face.hpp"
 	"${SMLLDir}/FaceDetector.hpp"
+	"${SMLLDir}/Kalman.hpp"
 	"${SMLLDir}/ImageWrapper.hpp"
 	"${SMLLDir}/landmarks.hpp"
 	"${SMLLDir}/MorphData.hpp"
-	"${SMLLDir}/OBSFont.hpp"
 	"${SMLLDir}/OBSRenderer.hpp"
 	"${SMLLDir}/OBSTexture.hpp"
 	"${SMLLDir}/sarray.hpp"
-	"${SMLLDir}/TextShaper.hpp"
 	"${SMLLDir}/TriangulationResult.hpp"
 	"${SMLLDir}/TestingPipe.hpp"
+	"${SMLLDir}/SingleValueKalman.hpp"
 )
 SET(gs_HEADERS
 	"${PROJECT_SOURCE_DIR}/gs/gs-effect.h"
@@ -236,14 +236,13 @@ SET(smll_SOURCES
 	"${SMLLDir}/DetectionResults.cpp"
 	"${SMLLDir}/Face.cpp"
 	"${SMLLDir}/FaceDetector.cpp"
-	"${SMLLDir}/OBSFont.cpp"
 	"${SMLLDir}/OBSRenderer.cpp"
 	"${SMLLDir}/ImageWrapper.cpp"
 	"${SMLLDir}/landmarks.cpp"
 	"${SMLLDir}/MorphData.cpp"
-	"${SMLLDir}/TextShaper.cpp"
 	"${SMLLDir}/TriangulationResult.cpp"
 	"${SMLLDir}/TestingPipe.cpp"
+	"${SMLLDir}/SingleValueKalman.cpp"
 )
 SET(gs_SOURCES
 	"${PROJECT_SOURCE_DIR}/gs/gs-effect.cpp"
@@ -285,11 +284,13 @@ if(BUILD_UNIT_TESTS)
 		"${PROJECT_SOURCE_DIR}/test/test.cpp"
 		"${PROJECT_SOURCE_DIR}/test/test-utils.cpp"
 		"${PROJECT_SOURCE_DIR}/test/test-image.cpp"
+		"${PROJECT_SOURCE_DIR}/test/test-kalman.cpp"
 		"${PROJECT_SOURCE_DIR}/test/test-base64.cpp"
 		"${PROJECT_SOURCE_DIR}/plugin/base64.cpp"
 		"${PROJECT_SOURCE_DIR}/plugin/exceptions.cpp"
 		"${PROJECT_SOURCE_DIR}/plugin/utils.cpp"
 		"${SMLLDir}/ImageWrapper.cpp"
+		"${SMLLDir}/SingleValueKalman.cpp"
 	)
 endif()
 SET(facemask-plugin_DATA
