@@ -128,14 +128,14 @@ void Plugin::FaceMaskFilter::destroy(void *ptr) {
 // ------------------------------------------------------------------------- //
 
 Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *source)
-	: request_rewind(false), 
-	source(source), canvasWidth(0), canvasHeight(0), baseWidth(640), baseHeight(480),
+	: source(source), canvasWidth(0), canvasHeight(0), baseWidth(640), baseHeight(480),
+	demoModeRecord(false), recordTriggered(false),
 	isActive(true), isVisible(true), videoTicked(true),
 	taskHandle(NULL), detectStage(nullptr),	maskDataShutdown(false), 
 	introFilename(nullptr),	outroFilename(nullptr),	alertActivate(true), alertDoIntro(false),
 	alertDoOutro(false), alertDuration(10.0f),
 	alertElapsedTime(BIG_FLOAT), alertTriggered(false), alertShown(false), alertsLoaded(false),
-	demoModeOn(false), demoCurrentMask(0),
+	demoCurrentMask(0),
 	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), 
 	drawMask(true),	drawAlert(false), drawFaces(false), drawMorphTris(false), drawFDRect(false), 
 	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr), testMode(false), custom_effect(nullptr){
@@ -277,6 +277,8 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	obs_data_set_default_string(data, P_ALERT_OUTRO, kDefaultOutro);
 
 	bfree(defMaskFolder);
+	
+	obs_data_set_default_int(data, P_ANTI_ALIASING, NO_ANTI_ALIASING);
 
 	// ALERTS
 	obs_data_set_default_bool(data, P_ALERT_ACTIVATE, false);
@@ -289,14 +291,15 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	obs_data_set_default_bool(data, P_TEST_MODE, false);
 
 	obs_data_set_default_bool(data, P_GENTHUMBS, false);
+	obs_data_set_default_bool(data, P_RECORD, false);
 	obs_data_set_default_bool(data, P_DRAWMASK, false);
 	obs_data_set_default_bool(data, P_DRAWALERT, false);
 	obs_data_set_default_bool(data, P_DRAWFACEDATA, false);
 	obs_data_set_default_bool(data, P_DRAWMORPHTRIS, false);
 	obs_data_set_default_bool(data, P_DRAWCROPRECT, false);
 
-	obs_data_set_default_bool(data, P_DEMOMODEON, false);
-
+	obs_data_set_default_string(data, P_BEFORE_TEXT, kDefaultBeforeText);
+	obs_data_set_default_string(data, P_AFTER_TEXT, kDefaultAfterText);
 #if !defined(PUBLIC_RELEASE)
 	// default advanced params
 	smll::Config::singleton().set_defaults(data);
@@ -321,6 +324,11 @@ static void add_bool_property(obs_properties_t *props, const char* name) {
 	obs_property_set_long_description(p, P_TRANSLATE(n.c_str()));
 }
 
+static void add_dummy_property(obs_properties_t *props) {
+	obs_property_t* p = obs_properties_add_bool(props, "  ", "  ");
+	obs_property_set_visible(p, false);
+}
+
 static obs_property_t *add_int_list_property(obs_properties_t *props, const char* name) {
 	obs_property_t* p = obs_properties_add_list(props, name, P_TRANSLATE(name), OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
 	std::string n = name; n += ".Description";
@@ -341,6 +349,17 @@ static void add_json_file_property(obs_properties_t *props, const char* name,
 	obs_property_t* p = obs_properties_add_path(props, name, P_TRANSLATE(name),
 		obs_path_type::OBS_PATH_FILE,
 		"Face Mask JSON (*.json)", defFolder);
+	std::string n = name; n += ".Description";
+	obs_property_set_long_description(p, P_TRANSLATE(n.c_str()));
+	bfree(defFolder);
+}
+
+static void add_video_file_property(obs_properties_t *props, const char* name,
+	const char* folder) {
+	char* defFolder = obs_module_file(folder);
+	obs_property_t* p = obs_properties_add_path(props, name, P_TRANSLATE(name),
+		obs_path_type::OBS_PATH_FILE,
+		"Face Mask Video (*.mp4)", defFolder);
 	std::string n = name; n += ".Description";
 	obs_property_set_long_description(p, P_TRANSLATE(n.c_str()));
 	bfree(defFolder);
@@ -395,15 +414,19 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 	// disable the plugin
 	add_bool_property(props, P_DEACTIVATE);
 
-	// rewind button
-	obs_properties_add_button(props, P_REWIND, P_TRANSLATE(P_REWIND), 
-		rewind_clicked);
-
 	// Demo mode
-	add_bool_property(props, P_DEMOMODEON);
-	add_text_property(props, P_DEMOFOLDER);
-
+	add_folder_property(props, P_DEMOFOLDER, "");
+	add_bool_property(props, P_RECORD);
 	add_bool_property(props, P_GENTHUMBS);
+
+	// Before After
+	add_text_property(props, P_BEFORE_TEXT);
+	add_video_file_property(props, P_BEFORE, NULL);
+	add_text_property(props, P_AFTER_TEXT);
+	add_video_file_property(props, P_AFTER, NULL);
+	// rewind button
+	obs_properties_add_button(props, P_VIDEO_GENERATE, P_TRANSLATE(P_VIDEO_GENERATE),
+		generate_videos);
 
 	// debug drawing flags
 	add_bool_property(props, P_DRAWFACEDATA);
@@ -412,20 +435,44 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 
 	// add advanced configuration params
 	smll::Config::singleton().get_properties(props);
-
+#else
+	//for fixing empty properties bug for endless loading
+	add_dummy_property(props);
 #endif
 }
 
-bool Plugin::FaceMaskFilter::Instance::rewind_clicked(obs_properties_t *pr, obs_property_t *p, void *ptr) {
-	if (ptr == nullptr)
-		return false;
-	return reinterpret_cast<Instance*>(ptr)->rewind_clicked(pr, p);
+bool Plugin::FaceMaskFilter::Instance::generate_videos(obs_properties_t *pr, obs_property_t *p, void *ptr) {
+	return reinterpret_cast<Instance*>(ptr)->generate_videos(pr, p);
 }
 
-bool Plugin::FaceMaskFilter::Instance::rewind_clicked(obs_properties_t *pr, obs_property_t *p) {
+bool Plugin::FaceMaskFilter::Instance::generate_videos(obs_properties_t *pr, obs_property_t *p) {
 	UNUSED_PARAMETER(pr);
 	UNUSED_PARAMETER(p);
-	this->request_rewind = true;
+
+	char* bat = obs_module_file("sidebyside.bat");
+	std::string cmd = bat;
+	Utils::find_and_replace(cmd, "/", "\\");
+	Utils::find_and_replace(cmd, "Program Files", "\"Program Files\"");
+	Utils::find_and_replace(cmd, "Streamlabs OBS", "\"Streamlabs OBS\"");
+	Utils::find_and_replace(beforeFile, "\\", "/");
+	Utils::find_and_replace(afterFile, "\\", "/");
+	cmd += " \"";
+	cmd += beforeFile;
+	cmd += "\" \"";
+	cmd += afterFile;
+	cmd += "\" \"";
+	cmd += beforeText;
+	cmd += "\" \"";
+	cmd += afterText;
+	cmd += "\" \"";
+	if (!demoModeFolder.empty()) {
+		cmd += demoModeFolder + "/";
+	}
+	cmd += "output.mp4";
+	cmd += "\" ";
+	blog(LOG_DEBUG, cmd.c_str());
+	::system(cmd.c_str());
+	bfree(bat);
 	return true;
 }
 
@@ -496,9 +543,21 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	alertShowDelay = 0; //Default value
 
 	// demo mode
-	demoModeOn = obs_data_get_bool(data, P_DEMOMODEON);
 	demoModeFolder = obs_data_get_string(data, P_DEMOFOLDER);
 	demoModeGenPreviews = obs_data_get_bool(data, P_GENTHUMBS);
+	bool lastDemoModeRecord = demoModeRecord;
+	demoModeRecord = obs_data_get_bool(data, P_RECORD);
+	if (demoModeRecord) {
+		recordTriggered = (!lastDemoModeRecord && demoModeRecord);
+	}
+
+	if (!demoModeFolder.empty()) {
+		char lastChar = demoModeFolder.back();
+		//If slash at the end, remove it
+		if (lastChar == '\\') {
+			demoModeFolder.pop_back();
+		}
+	}
 
 	// update our param values
 	drawMask = obs_data_get_bool(data, P_DRAWMASK);
@@ -508,6 +567,10 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	drawFaces = obs_data_get_bool(data, P_DRAWFACEDATA);
 	drawMorphTris = obs_data_get_bool(data, P_DRAWMORPHTRIS);
 	drawFDRect = obs_data_get_bool(data, P_DRAWCROPRECT);
+	beforeText = (char*)obs_data_get_string(data, P_BEFORE_TEXT);
+	beforeFile = (char*)obs_data_get_string(data, P_BEFORE);
+	afterText = (char*)obs_data_get_string(data, P_AFTER_TEXT);
+	afterFile = (char*)obs_data_get_string(data, P_AFTER);
 }
 
 void Plugin::FaceMaskFilter::Instance::activate(void *ptr) {
@@ -613,7 +676,7 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 
 	// get the right mask data
 	Mask::MaskData* mdat = maskData.get();
-	if (demoModeOn) {
+	if (demoModeGenPreviews) {
 		if (demoCurrentMask >= 0 && demoCurrentMask < demoMaskDatas.size()) {
 			mdat = demoMaskDatas[demoCurrentMask].get();
 		}
@@ -636,11 +699,6 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 	// mask active?
 	if (maskActive) {
 		if (mdat) {
-			// rewind
-			if (request_rewind) {
-				mdat->Rewind();
-				request_rewind = false;
-			}
 			// tick main mask
 			mdat->Tick(timeDelta);
 		}
@@ -745,7 +803,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// get mask data to draw
 	Mask::MaskData* mask_data = maskData.get();
-	if (demoModeOn && demoMaskDatas.size() > 0) {
+	if (demoModeGenPreviews && demoMaskDatas.size() > 0) {
 		if (demoCurrentMask >= 0 &&
 			demoCurrentMask < demoMaskDatas.size()) {
 			mask_data = demoMaskDatas[demoCurrentMask].get();
@@ -806,7 +864,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	}
 
 	// flags
-	bool genThumbs = mask_data && demoModeOn && demoModeGenPreviews && demoModeSavingFrames;
+	bool genThumbs = mask_data && demoModeGenPreviews && demoModeSavingFrames;
 
 	// Draw the source video
 	gs_enable_depth_test(false);
@@ -822,7 +880,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		antialiasing_method == FXAA_ANTI_ALIASING)
 		m_scale_rate = 1;
 	else
-		m_scale_rate = 2;
+		m_scale_rate = SSAA_UPSAMPLE_FACTOR;
 
 
 	// render mask to texture
@@ -877,7 +935,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					}
 
 					// draw video to the mask texture?
-					if (genThumbs || mask_data->DrawVideoWithMask()) {
+					if (recordTriggered || genThumbs || mask_data->DrawVideoWithMask()) {
 						// setup transform state
 						gs_viewport_push();
 						gs_projection_push();
@@ -887,7 +945,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 						gs_matrix_identity();
 
 						// Draw the source video
-						if (mask_data && (autoBGRemoval || cartoonMode || demoModeOn)) {
+						if (mask_data && (autoBGRemoval || cartoonMode || demoModeGenPreviews || recordTriggered)) {
 							triangulation.autoBGRemoval = autoBGRemoval;
 							triangulation.cartoonMode = cartoonMode;
 							mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
@@ -1036,7 +1094,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		while (gs_effect_loop(custom_effect, "Draw")) {
 			gs_effect_set_texture(gs_effect_get_param_by_name(custom_effect,
 				"image"), mask_tex);
-			gs_draw_sprite(mask_tex, 0, baseWidth*m_scale_rate, baseHeight*m_scale_rate);
+			gs_draw_sprite(mask_tex, 0, baseWidth, baseHeight);
 		}
 	}
 	
@@ -1084,7 +1142,7 @@ void Plugin::FaceMaskFilter::Instance::demoModeRender(gs_texture* vidTex, gs_tex
 	Mask::MaskData* mask_data) {
 
 	// generate previews?
-	if (demoModeOn && videoTicked && demoModeGenPreviews && demoMaskDatas.size() > 0) {
+	if (videoTicked && (recordTriggered || (demoModeGenPreviews && demoMaskDatas.size() > 0))) {
 
 		// get frame color
 		if (!testingStage) {
@@ -1113,7 +1171,10 @@ void Plugin::FaceMaskFilter::Instance::demoModeRender(gs_texture* vidTex, gs_tex
 				WritePreviewFrames();
 				demoModeSavingFrames = false;
 				//increase mask number, change mask
-				demoCurrentMask = (demoCurrentMask + 1) % demoMaskDatas.size();
+				if (!recordTriggered && demoModeGenPreviews && demoMaskDatas.size() > 0) {
+					demoCurrentMask = (demoCurrentMask + 1) % demoMaskDatas.size();
+				}
+				recordTriggered = false;
 				demoModeInDelay = false;
 			}
 			else {
@@ -1228,7 +1289,7 @@ bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sou
 
 			// get the right mask data
 			Mask::MaskData* mdat = maskData.get();
-			if (demoModeOn && !demoModeInDelay) {
+			if (demoModeGenPreviews && !demoModeInDelay) {
 				if (demoCurrentMask >= 0 && demoCurrentMask < demoMaskDatas.size())
 					mdat = demoMaskDatas[demoCurrentMask].get();
 			}
@@ -1241,7 +1302,7 @@ bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sou
 
 			// (possibly) update morph buffer
 			if (morph) {
-				if (morph->GetMorphData().IsNewerThan(detection.frame.morphData) || demoModeOn) {
+				if (morph->GetMorphData().IsNewerThan(detection.frame.morphData) || demoModeGenPreviews) {
 					detection.frame.morphData = morph->GetMorphData();
 				}
 			}
@@ -1340,8 +1401,8 @@ void Plugin::FaceMaskFilter::Instance::drawMaskData(Mask::MaskData*	_maskData,
 	gs_viewport_push();
 	gs_projection_push();
 
-	uint32_t w = baseWidth;
-	uint32_t h = baseHeight;
+	uint32_t w = baseWidth*m_scale_rate;
+	uint32_t h = baseHeight*m_scale_rate;
 
 	gs_set_viewport(0, 0, w, h);
 	gs_enable_depth_test(true);
@@ -1537,18 +1598,18 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 
 
 				// demo mode
-				if (demoModeOn && !lastDemoMode) {
+				if (demoModeGenPreviews && !lastDemoMode) {
 					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);
 					LoadDemo();
 					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_END);
 				}
-				else if (!demoModeOn && lastDemoMode) {
+				else if (!demoModeGenPreviews && lastDemoMode) {
 					obs_enter_graphics();
 					demoMaskDatas.clear();
 					demoMaskFilenames.clear();
 					obs_leave_graphics();
 				}
-				lastDemoMode = demoModeOn;
+				lastDemoMode = demoModeGenPreviews;
 			}
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(33));
@@ -1705,29 +1766,48 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 	}
 }
 
+static std::string getTextTimestamp() {
+	time_t rawtime;
+	struct tm * timeinfo;
+	char buffer[80];
+
+	time(&rawtime);
+	timeinfo = localtime(&rawtime);
+
+	strftime(buffer, sizeof(buffer), "%d-%m-%Y %H-%M-%S", timeinfo);
+	return std::string(buffer);
+}
+
 void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 
-	if (demoMaskFilenames.size() == 0)
+	if (!recordTriggered && demoMaskFilenames.size() == 0)
 		return;
 
 	obs_enter_graphics();
-
+	std::string outFolder;
 	// if the gif already exists, clean up and bail
-	std::string gifname = demoMaskFilenames[demoCurrentMask].substr(0, demoMaskFilenames[demoCurrentMask].length() - 4) + "gif";
-	if (::PathFileExists(Utils::ConvertStringToWstring(gifname).c_str()) == TRUE) {
-		for (int i = 0; i < previewFrames.size(); i++) {
-			const PreviewFrame& frame = previewFrames[i];
-			gs_texture_destroy(frame.vidtex);
-		}
-		previewFrames.clear();
-		obs_leave_graphics();
-		return;
+	if (recordTriggered) {
+		outFolder = demoModeFolder;
 	}
+	else {
+		std::string gifname = demoMaskFilenames[demoCurrentMask].substr(0, demoMaskFilenames[demoCurrentMask].length() - 4) + "gif";
+		if (::PathFileExists(Utils::ConvertStringToWstring(gifname).c_str()) == TRUE) {
+			for (int i = 0; i < previewFrames.size(); i++) {
+				const PreviewFrame& frame = previewFrames[i];
+				gs_texture_destroy(frame.vidtex);
+			}
+			previewFrames.clear();
+			obs_leave_graphics();
+			return;
+		}
 
-	// create output folder
-	std::string outFolder = demoMaskFilenames[demoCurrentMask] + ".render";
+		// create output folder
+		outFolder = demoMaskFilenames[demoCurrentMask] + ".render";
+	}
 	::CreateDirectory(Utils::ConvertStringToWstring(outFolder).c_str(), NULL);
-
+	if (recordTriggered) {
+		::CreateDirectory(Utils::ConvertStringToWstring(outFolder + "/temp/").c_str(), NULL);
+	}
 	// write out frames
 	for (int i = 0; i < previewFrames.size(); i++) {
 		const PreviewFrame& frame = previewFrames[i];
@@ -1759,16 +1839,28 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 				}
 
 			// crop
-			int offset = (baseWidth - baseHeight) / 2;
-			cv::Mat cropf = cvm(cv::Rect(offset, 0, baseHeight, baseHeight));
+
+			int offset = (baseWidth - baseHeight) * 2;
+			cv::Mat cropf;
+			if (recordTriggered) {
+				cropf = cvm.clone();
+			} else {
+				cropf = cvm(cv::Rect(offset, 0, baseHeight, baseHeight));
+			}
 
 			char temp[256];
 			snprintf(temp, sizeof(temp), "frame%04d.png", i);
-			std::string outFile = outFolder + "/" + temp;
+			std::string outFile;
+			if (recordTriggered) {
+				outFile= outFolder + "/temp/" + temp;
+			}
+			else {
+				outFile = outFolder + "/" + temp; 
+			}
 			cv::imwrite(outFile.c_str(), cropf);
 
 			// write out last frame again for thumbnail
-			if (i == last) {
+			if (!recordTriggered && i == last) {
 				outFile = outFolder + "/last_frame.png";
 				cv::imwrite(outFile.c_str(), cropf);
 			}
@@ -1781,16 +1873,27 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 	previewFrames.clear();
 
 	obs_leave_graphics();
-
-	char* gifmaker = obs_module_file("gifmaker.bat");
-	std::string cmd = gifmaker;
+	const char* batName;
+	if (recordTriggered) {
+		batName = "videomaker.bat";
+	} else {
+		batName = "gifmaker.bat";
+	}
+	char* bat = obs_module_file(batName);
+	std::string cmd = bat;
 	Utils::find_and_replace(cmd, "/", "\\");
 	Utils::find_and_replace(cmd, "Program Files", "\"Program Files\"");
 	Utils::find_and_replace(cmd, "Streamlabs OBS", "\"Streamlabs OBS\"");
-	cmd += " ";
+	cmd += " \"";
 	cmd += outFolder;
+	cmd += "\"";
+	if (recordTriggered) {
+		cmd += " \"";
+		cmd += getTextTimestamp()+".mp4";
+		cmd += "\"";
+	}
 	::system(cmd.c_str());
-	bfree(gifmaker);
+	bfree(bat);
 }
 
 void Plugin::FaceMaskFilter::Instance::WriteTextureToFile(gs_texture* tex, std::string filename) {

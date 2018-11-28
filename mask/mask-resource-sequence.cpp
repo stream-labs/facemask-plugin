@@ -169,6 +169,10 @@ void Mask::Resource::Sequence::Update(Mask::Part* part, float time) {
 				else if (IsRepeatMode()) {
 					instData->current = m_first;
 				}
+				else if (m_mode == Mask::Resource::Sequence::ONCE) {
+					instData->current = m_last;
+					instData->playback_ended = true;
+				}
 				else {
 					instData->current = m_last;
 				}
@@ -188,9 +192,10 @@ void Mask::Resource::Sequence::Update(Mask::Part* part, float time) {
 		}
 
 		// delay mode, and on first frame?
-		if (IsDelayMode() && pastFirst) {
+		if (IsDelayMode() && (pastFirst || !instData->playback_started)) {
 			// set delay
 			instData->delay = m_delay;
+			instData->playback_started = true;
 			instData->current = m_first;
 		}
 	}
@@ -208,6 +213,31 @@ void Mask::Resource::Sequence::Render(Mask::Part* part) {
 	m_image->Render(part);
 }
 
+// This method dictates the visibility of an instance
+// If it returns false, the mask will not appear on screen
+bool Mask::Resource::Sequence::IsInstancePlaying() {
+
+	// Looping sequences should keep their last frame until a new replay begins
+	// However, it is debatable if playing once should do the same or not
+	// For example, keeping the last frame of an explosion sequence doesn't look right
+	if (m_mode != Mask::Resource::Sequence::ONCE)
+		return true;
+
+	// get our instance data
+	m_parent->instanceDatas.Push(m_id);
+
+	// get our instance data
+	std::shared_ptr<SequenceInstanceData> instData =
+		m_parent->instanceDatas.GetData<SequenceInstanceData>();
+
+	bool is_playing = instData->delay == 0 || instData->current > 0;
+	bool not_ended = instData->playback_ended;
+
+	m_parent->instanceDatas.Pop();
+
+	return is_playing && !not_ended;
+
+}
 
 void Mask::Resource::Sequence::SetTextureMatrix(Mask::Part* part, matrix4* texmat) {
 	UNUSED_PARAMETER(part);
