@@ -145,6 +145,8 @@ namespace smll {
 		char* cropData = detect.data +
 			(detect.getStride() * cropInfo.offsetY) +
 			(detect.getNumElems() * cropInfo.offsetX);
+
+
 		switch (detect.type) {
 		case IMAGETYPE_GRAY:
 		{
@@ -155,29 +157,53 @@ namespace smll {
 		case IMAGETYPE_RGB:
 		{
 			cv::Mat rgbImage(cropInfo.height, cropInfo.width, CV_8UC3, cropData, detect.getStride());
-			cv::Mat gray; cv::cvtColor(rgbImage, gray, cv::COLOR_RGB2GRAY);
-			currentImage = gray.clone();
+			if (currentImage.empty()) {
+				cv::Mat gray; cv::cvtColor(rgbImage, gray, cv::COLOR_RGB2GRAY);
+				currentImage = gray.clone();
+			}
+			else
+			{
+				cv::cvtColor(rgbImage, currentImage, cv::COLOR_RGB2GRAY);
+			}
 			break;
 		}
 		case IMAGETYPE_BGR:
 		{
-			cv::Mat bgrImage(cropInfo.height, cropInfo.width, CV_8UC3, cropData, detect.getStride());
-			cv::Mat gray; cv::cvtColor(bgrImage, gray, cv::COLOR_BGR2GRAY);
-			currentImage = gray.clone();
+			cv::Mat bgrImage(cropInfo.height, cropInfo.width, CV_8UC3, cropData, detect.getStride());			
+			if (currentImage.empty()) {
+				cv::Mat gray; cv::cvtColor(bgrImage, gray, cv::COLOR_BGR2GRAY);
+				currentImage = gray.clone();
+			}
+			else
+			{
+				cv::cvtColor(bgrImage, currentImage, cv::COLOR_BGR2GRAY);
+			}
 			break;
 		}
 		case IMAGETYPE_RGBA:
 		{
 			cv::Mat rgbaImage(cropInfo.height, cropInfo.width, CV_8UC4, cropData, detect.getStride());
-			cv::Mat gray; cv::cvtColor(rgbaImage, gray, cv::COLOR_RGBA2GRAY);
-			currentImage = gray.clone();
+			if (currentImage.empty()) {
+				cv::Mat gray; cv::cvtColor(rgbaImage, gray, cv::COLOR_RGBA2GRAY);
+				currentImage = gray.clone();
+			}
+			else
+			{
+				cv::cvtColor(rgbaImage, currentImage, cv::COLOR_RGBA2GRAY);
+			}
 			break;
 		}
 		case IMAGETYPE_BGRA:
 		{
 			cv::Mat bgraImage(cropInfo.height, cropInfo.width, CV_8UC4, cropData, detect.getStride());
-			cv::Mat gray; cv::cvtColor(bgraImage, gray, cv::COLOR_BGRA2GRAY);
-			currentImage = gray.clone();
+			if (currentImage.empty()) {
+				cv::Mat gray; cv::cvtColor(bgraImage, gray, cv::COLOR_BGRA2GRAY);
+				currentImage = gray.clone();
+			}
+			else
+			{
+				cv::cvtColor(bgraImage, currentImage, cv::COLOR_BGRA2GRAY);
+			}
 			break;
 		}
 		default:
@@ -185,6 +211,7 @@ namespace smll {
 				"INVALID IMAGE TYPE - Check if the frame is valid");
 			break;
 		}
+		
 	}
 
 	void FaceDetector::DetectFaces(const ImageWrapper& detect, const OBSTexture& capture, DetectionResults& results) {
