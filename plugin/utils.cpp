@@ -51,8 +51,12 @@ namespace Utils {
 		::GetTempPath(256, dbuff);
 		::GetTempFileName(dbuff, nullptr, 0, tbuff);
 #ifdef UNICODE
+		std::wstring stbuff(tbuff);
+		// This is to keep the changes minimal
+		// TODO change return type to std::string
 		static char buff[256];
-		wcstombs(buff, (wchar_t*)tbuff, wcslen((wchar_t*)tbuff) + 1);
+		std::string str = ConvertWstringToString(stbuff);
+		strcpy(buff, str.c_str());
 #else
 		char* buff = tbuff;
 #endif
