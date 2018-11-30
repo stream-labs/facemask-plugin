@@ -52,9 +52,6 @@
 #define USE_FAST_MEMCPY					(false)
 #define USE_IPP_MEMCPY					(false)
 
-// whether to run landmark detection/solvepnp/morph on main thread
-#define STUFF_ON_MAIN_THREAD			(false)
-
 // Windows MMCSS thread task name
 //
 // see registry: Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\...
@@ -280,6 +277,8 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	obs_data_set_default_string(data, P_ALERT_OUTRO, kDefaultOutro);
 
 	bfree(defMaskFolder);
+	
+	obs_data_set_default_int(data, P_ANTI_ALIASING, NO_ANTI_ALIASING);
 
 	// ALERTS
 	obs_data_set_default_bool(data, P_ALERT_ACTIVATE, false);
@@ -454,9 +453,8 @@ bool Plugin::FaceMaskFilter::Instance::generate_videos(obs_properties_t *pr, obs
 
 	char* bat = obs_module_file("sidebyside.bat");
 	std::string cmd = bat;
+	cmd = "\"\"" + cmd + "\"";
 	Utils::find_and_replace(cmd, "/", "\\");
-	Utils::find_and_replace(cmd, "Program Files", "\"Program Files\"");
-	Utils::find_and_replace(cmd, "Streamlabs OBS", "\"Streamlabs OBS\"");
 	Utils::find_and_replace(beforeFile, "\\", "/");
 	Utils::find_and_replace(afterFile, "\\", "/");
 	cmd += " \"";
@@ -472,7 +470,7 @@ bool Plugin::FaceMaskFilter::Instance::generate_videos(obs_properties_t *pr, obs
 		cmd += demoModeFolder + "/";
 	}
 	cmd += "output.mp4";
-	cmd += "\" ";
+	cmd += "\"\"";
 	blog(LOG_DEBUG, cmd.c_str());
 	::system(cmd.c_str());
 	bfree(bat);
@@ -532,7 +530,7 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	testMode = obs_data_get_bool(data, P_TEST_MODE);
 
 	// Anti-aliasing
-	antialiasing_method = obs_data_get_int(data, P_ANTI_ALIASING);
+	antialiasing_method = (int)obs_data_get_int(data, P_ANTI_ALIASING);
 
 	// Alerts
 	bool lastAlertActivate = alertActivate;
@@ -884,7 +882,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		antialiasing_method == FXAA_ANTI_ALIASING)
 		m_scale_rate = 1;
 	else
-		m_scale_rate = 2;
+		m_scale_rate = SSAA_UPSAMPLE_FACTOR;
 
 
 	// render mask to texture
@@ -910,14 +908,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
 
 				if (mask_data) {
-
-					// Swap texture with video texture :P
-					// TODO: we'd prefer to have the mask drawn on top
-					// TODO: this should be a feature!!
-					//std::shared_ptr<Mask::Resource::Image> img = std::dynamic_pointer_cast<Mask::Resource::Image>
-					//	(mask_data->GetResource("diffuse-1"));
-					//if (img)
-					//	img->SwapTexture(vidTex);
 
 					// Check here for no morph
 					if (!mask_data->GetMorph()) {
@@ -1106,7 +1096,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		while (gs_effect_loop(custom_effect, "Draw")) {
 			gs_effect_set_texture(gs_effect_get_param_by_name(custom_effect,
 				"image"), mask_tex);
-			gs_draw_sprite(mask_tex, 0, baseWidth*m_scale_rate, baseHeight*m_scale_rate);
+			gs_draw_sprite(mask_tex, 0, baseWidth, baseHeight);
 		}
 	}
 
@@ -1415,8 +1405,8 @@ void Plugin::FaceMaskFilter::Instance::drawMaskData(Mask::MaskData*	_maskData,
 	gs_viewport_push();
 	gs_projection_push();
 
-	uint32_t w = baseWidth;
-	uint32_t h = baseHeight;
+	uint32_t w = baseWidth*m_scale_rate;
+	uint32_t h = baseHeight*m_scale_rate;
 
 	gs_set_viewport(0, 0, w, h);
 	gs_enable_depth_test(true);
@@ -1477,11 +1467,9 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			else {
 				// new frame - do the face detection
 				smllFaceDetector->DetectFaces(detection.frame.detect, detection.frame.capture, detect_results);
-				if (!STUFF_ON_MAIN_THREAD) {
-					// Now do the landmark detection & pose estimation
-					smllFaceDetector->DetectLandmarks(detection.frame.capture, detect_results);
-					smllFaceDetector->DoPoseEstimation(detect_results);
-				}
+				// Now do the landmark detection & pose estimation
+				smllFaceDetector->DetectLandmarks(detection.frame.capture, detect_results);
+				smllFaceDetector->DoPoseEstimation(detect_results);
 
 				lastTimestamp = detection.frame.timestamp;
 			}
@@ -1507,17 +1495,15 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 
 			// pass on timestamp to results
 			detection.faces[face_idx].timestamp = lastTimestamp;
+			std::unique_lock<std::mutex> framelock(detection.frame.mutex);
 
-			if (!STUFF_ON_MAIN_THREAD) {
-				std::unique_lock<std::mutex> framelock(detection.frame.mutex);
+			// Make the triangulation
+			detection.faces[face_idx].triangulationResults.buildLines = drawMorphTris;
+			smllFaceDetector->MakeTriangulation(detection.frame.morphData,
+				detect_results, detection.faces[face_idx].triangulationResults);
 
-				// Make the triangulation
-				detection.faces[face_idx].triangulationResults.buildLines = drawMorphTris;
-				smllFaceDetector->MakeTriangulation(detection.frame.morphData,
-					detect_results, detection.faces[face_idx].triangulationResults);
-
-				detection.frame.active = false;
-			}
+			detection.frame.active = false;
+	
 
 			// Copy our detection results
 			for (int i = 0; i < detect_results.length; i++) {
@@ -1854,8 +1840,6 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 		// skip first frame for more seamless loop
 		size_t last = previewFrames.size() - 2;
 		if (i > 0 && i <= last) {
-			cv::Mat vidf(baseWidth, baseHeight, CV_8UC4);
-
 			if (!testingStage) {
 				testingStage = gs_stagesurface_create(baseWidth, baseHeight, GS_RGBA);
 			}
@@ -1863,16 +1847,13 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 			// get vid tex
 			gs_stage_texture(testingStage, frame.vidtex);
 			uint8_t *data; uint32_t linesize;
+			cv::Mat cvm;
 			if (gs_stagesurface_map(testingStage, &data, &linesize)) {
-
-				cv::Mat cvm = cv::Mat(baseHeight, baseWidth, CV_8UC4, data, linesize);
-				cvm.copyTo(vidf);
-
+				cvm = cv::Mat(baseHeight, baseWidth, CV_8UC4, data, linesize);
 				gs_stagesurface_unmap(testingStage);
 			}
-
 			// convert rgba -> bgra
-			uint8_t* vpixel = vidf.data;
+			uint8_t* vpixel = cvm.data;
 			for (int w = 0; w < baseWidth; w++)
 				for (int h = 0; h < baseHeight; h++) {
 					uint8_t red = vpixel[0];
@@ -1883,14 +1864,14 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 				}
 
 			// crop
+
 			int offset = (baseWidth - baseHeight) * 2;
 			cv::Mat cropf;
 			if (recordTriggered) {
-				cropf = vidf.clone();
+				cropf = cvm.clone();
 			} else {
-				cropf = cv::Mat(baseHeight, baseHeight, CV_8UC4, vidf.data + offset, linesize);
+				cropf = cvm(cv::Rect(offset, 0, baseHeight, baseHeight));
 			}
-			
 
 			char temp[256];
 			snprintf(temp, sizeof(temp), "frame%04d.png", i);
@@ -1925,9 +1906,8 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 	}
 	char* bat = obs_module_file(batName);
 	std::string cmd = bat;
+	cmd = "\"\"" + cmd + "\"";
 	Utils::find_and_replace(cmd, "/", "\\");
-	Utils::find_and_replace(cmd, "Program Files", "\"Program Files\"");
-	Utils::find_and_replace(cmd, "Streamlabs OBS", "\"Streamlabs OBS\"");
 	cmd += " \"";
 	cmd += outFolder;
 	cmd += "\"";
@@ -1936,6 +1916,7 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 		cmd += getTextTimestamp()+".mp4";
 		cmd += "\"";
 	}
+	cmd += "\"";
 	::system(cmd.c_str());
 	bfree(bat);
 }

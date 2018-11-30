@@ -42,6 +42,8 @@ extern "C" {
 #pragma warning( pop )
 }
 
+#define SSAA_UPSAMPLE_FACTOR 2
+
 using namespace std;
 
 namespace Plugin {
@@ -134,7 +136,7 @@ namespace Plugin {
 
 			gs_effect_t*		custom_effect = nullptr;
 			int					m_scale_rate = 1;
-			int					antialiasing_method = SSAA_ANTI_ALIASING;
+			int					antialiasing_method = NO_ANTI_ALIASING;
 
 			// Texture rendering & staging
 			gs_texrender_t*		sourceRenderTarget;

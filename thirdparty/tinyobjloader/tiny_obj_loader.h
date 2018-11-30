@@ -47,6 +47,8 @@ THE SOFTWARE.
 #include <string>
 #include <vector>
 
+#include "plugin/utils.h"
+
 namespace tinyobj {
 
 // https://en.wikipedia.org/wiki/Wavefront_.obj_file says ...
@@ -1349,20 +1351,20 @@ bool MaterialFileReader::operator()(const std::string &matId,
                                     std::vector<material_t> *materials,
                                     std::map<std::string, int> *matMap,
                                     std::string *err) {
-  std::string filepath;
+  std::wstring filepath;
 
   if (!m_mtlBaseDir.empty()) {
-    filepath = std::string(m_mtlBaseDir) + matId;
+    filepath = Utils::ConvertStringToWstring(m_mtlBaseDir) + Utils::ConvertStringToWstring(matId);
   } else {
-    filepath = matId;
+    filepath = Utils::ConvertStringToWstring(matId);
   }
 
   std::ifstream matIStream(filepath.c_str());
   if (!matIStream) {
-    std::stringstream ss;
+    std::wstringstream ss;
     ss << "WARN: Material file [ " << filepath << " ] not found." << std::endl;
     if (err) {
-      (*err) += ss.str();
+      (*err) += Utils::ConvertWstringToString(ss.str());
     }
     return false;
   }
@@ -1415,7 +1417,7 @@ bool LoadObj(attrib_t *attrib, std::vector<shape_t> *shapes,
 
   std::stringstream errss;
 
-  std::ifstream ifs(filename);
+  std::ifstream ifs(Utils::ConvertStringToWstring(filename));
   if (!ifs) {
     errss << "Cannot open file [" << filename << "]" << std::endl;
     if (err) {
