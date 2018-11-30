@@ -67,7 +67,7 @@ namespace Utils {
 		std::vector<uint8_t> decoded;
 		base64_decodeZ(base64String, decoded);
 		const char* fn = GetTempFileName();
-		std::fstream f(fn, std::ios::out | std::ios::binary);
+		std::fstream f(Utils::ConvertStringToWstring(std::string(fn)), std::ios::out | std::ios::binary);
 		f.write((char*)decoded.data(), decoded.size());
 		f.close();
 		return fn;
