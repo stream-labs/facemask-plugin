@@ -1078,9 +1078,9 @@ namespace smll {
 
 		// detect landmarks
 		obs_enter_graphics();
-		for (int f = 0; f < m_faces.length; f++) {
-			StageCaptureTexture();
 
+		StageCaptureTexture();
+		for (int f = 0; f < m_faces.length; f++) {
 			// Detect features on full-size frame
 			full_object_detection d68;
 			switch (m_stageWork.type) {
@@ -1121,8 +1121,6 @@ namespace smll {
 				break;
 			}
 
-			UnstageCaptureTexture();
-
 			// Sanity check
 			if (d68.num_parts() != NUM_FACIAL_LANDMARKS)
 				throw std::invalid_argument(
@@ -1132,6 +1130,8 @@ namespace smll {
 				results[f].landmarks68[j] = point(d68.part(j).x(), d68.part(j).y());
 			}
 		}
+		UnstageCaptureTexture();
+		
 		obs_leave_graphics();
 		results.length = m_faces.length;
 	}
