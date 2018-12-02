@@ -451,9 +451,8 @@ bool Plugin::FaceMaskFilter::Instance::generate_videos(obs_properties_t *pr, obs
 
 	char* bat = obs_module_file("sidebyside.bat");
 	std::string cmd = bat;
+	cmd = "\"\"" + cmd + "\"";
 	Utils::find_and_replace(cmd, "/", "\\");
-	Utils::find_and_replace(cmd, "Program Files", "\"Program Files\"");
-	Utils::find_and_replace(cmd, "Streamlabs OBS", "\"Streamlabs OBS\"");
 	Utils::find_and_replace(beforeFile, "\\", "/");
 	Utils::find_and_replace(afterFile, "\\", "/");
 	cmd += " \"";
@@ -469,7 +468,7 @@ bool Plugin::FaceMaskFilter::Instance::generate_videos(obs_properties_t *pr, obs
 		cmd += demoModeFolder + "/";
 	}
 	cmd += "output.mp4";
-	cmd += "\" ";
+	cmd += "\"\"";
 	blog(LOG_DEBUG, cmd.c_str());
 	::system(cmd.c_str());
 	bfree(bat);
@@ -1881,9 +1880,8 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 	}
 	char* bat = obs_module_file(batName);
 	std::string cmd = bat;
+	cmd = "\"\"" + cmd + "\"";
 	Utils::find_and_replace(cmd, "/", "\\");
-	Utils::find_and_replace(cmd, "Program Files", "\"Program Files\"");
-	Utils::find_and_replace(cmd, "Streamlabs OBS", "\"Streamlabs OBS\"");
 	cmd += " \"";
 	cmd += outFolder;
 	cmd += "\"";
@@ -1892,6 +1890,7 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 		cmd += getTextTimestamp()+".mp4";
 		cmd += "\"";
 	}
+	cmd += "\"";
 	::system(cmd.c_str());
 	bfree(bat);
 }
