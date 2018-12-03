@@ -406,6 +406,7 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 		
 		// set up image params (image/sequence)
 		bool texmatset = false;
+		bool is_instance_visible = true;
 		for (auto kv : m_imageParameters) {
 			try {
 				auto el = m_effect->GetEffect()->GetParameterByName(kv.first);
@@ -432,6 +433,9 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 					texmatset = true;
 					if (effparm)
 						gs_effect_set_matrix4(effparm, &texmat);
+
+					// should we delay rendering?
+					is_instance_visible = seq->IsInstancePlaying();
 				}
 			}
 			catch (...) {
@@ -450,7 +454,7 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 			std::shared_ptr<AlphaInstanceData> aid =
 				m_parent->instanceDatas.GetData<AlphaInstanceData>
 				(AlphaInstanceDataId);
-			gs_effect_set_float(effparm, aid->alpha);
+			gs_effect_set_float(effparm, is_instance_visible ? aid->alpha : 0.0);
 		}
 
 		// get the technique
