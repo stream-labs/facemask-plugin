@@ -58,6 +58,8 @@ int main(int argc, char** argv) {
 		command_tweak(args);
 	else if (args.command == "depends")
 		command_depends(args);
+	else if (args.command == "buildtexture")
+		args.writeJson(args.createImageResourceFromFile(args.value("file"), true));
 
 	
 	//getchar();
