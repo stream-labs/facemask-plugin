@@ -1434,6 +1434,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 	// run until we're shut down
 	TimeStamp lastTimestamp;
 	while (true) {
+		bool update = false;
 
 		auto frameStart = std::chrono::system_clock::now();
 
@@ -1462,12 +1463,14 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			}
 			else {
 				// new frame - do the face detection
-				smllFaceDetector->DetectFaces(detection.frame.detect, detection.frame.capture, detect_results);
+				smllFaceDetector->DetectFaces(detection.frame.detect, detection.frame.capture, detect_results, facesChanged);
 				// Now do the landmark detection & pose estimation
 				smllFaceDetector->DetectLandmarks(detection.frame.capture, detect_results);
 				smllFaceDetector->DoPoseEstimation(detect_results);
 
 				lastTimestamp = detection.frame.timestamp;
+
+				update = facesChanged;
 			}
 		}
 
@@ -1485,34 +1488,36 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 		}
 		if (face_idx < 0)
 			face_idx = 0;
+		if (update) {
 
-		{
-			std::unique_lock<std::mutex> facelock(detection.faces[face_idx].mutex);
+			{
+				std::unique_lock<std::mutex> facelock(detection.faces[face_idx].mutex);
 
-			// pass on timestamp to results
-			detection.faces[face_idx].timestamp = lastTimestamp;
-			std::unique_lock<std::mutex> framelock(detection.frame.mutex);
+				// pass on timestamp to results
+				detection.faces[face_idx].timestamp = lastTimestamp;
+				std::unique_lock<std::mutex> framelock(detection.frame.mutex);
 
-			// Make the triangulation
-			detection.faces[face_idx].triangulationResults.buildLines = drawMorphTris;
-			smllFaceDetector->MakeTriangulation(detection.frame.morphData,
-				detect_results, detection.faces[face_idx].triangulationResults);
+				// Make the triangulation
+				detection.faces[face_idx].triangulationResults.buildLines = drawMorphTris;
+				smllFaceDetector->MakeTriangulation(detection.frame.morphData,
+					detect_results, detection.faces[face_idx].triangulationResults);
 
-			detection.frame.active = false;
-	
+				detection.frame.active = false;
 
-			// Copy our detection results
-			for (int i = 0; i < detect_results.length; i++) {
-				detection.faces[face_idx].detectionResults[i] = detect_results[i];
+
+				// Copy our detection results
+				for (int i = 0; i < detect_results.length; i++) {
+					detection.faces[face_idx].detectionResults[i] = detect_results[i];
+				}
+				detection.faces[face_idx].detectionResults.length = detect_results.length;
 			}
-			detection.faces[face_idx].detectionResults.length = detect_results.length;
-		}
 
-		{
-			std::unique_lock<std::mutex> lock(detection.mutex);
+			{
+				std::unique_lock<std::mutex> lock(detection.mutex);
 
-			// increment face buffer index
-			detection.facesIndex = (face_idx + 1) % ThreadData::BUFFER_SIZE;
+				// increment face buffer index
+				detection.facesIndex = (face_idx + 1) % ThreadData::BUFFER_SIZE;
+			}
 		}
 
 		// don't go too fast and eat up all the cpu
@@ -1896,7 +1901,7 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 	bfree(bat);
 }
 
-void Plugin::FaceMaskFilter::Instance::WriteTextureToFile(gs_texture* tex, std::string filename) {
+/*void Plugin::FaceMaskFilter::Instance::WriteTextureToFile(gs_texture* tex, std::string filename) {
 	cv::Mat vidf(baseWidth, baseHeight, CV_8UC4);
 
 	if (!testingStage) {
@@ -1927,7 +1932,7 @@ void Plugin::FaceMaskFilter::Instance::WriteTextureToFile(gs_texture* tex, std::
 
 	// wrap & write
 	cv::imwrite(filename.c_str(), vidf);
-}
+}*/
 
 Plugin::FaceMaskFilter::Instance::PreviewFrame::PreviewFrame(gs_texture_t* v, 
 	int w, int h) {
