@@ -151,10 +151,11 @@ namespace smll {
 		case IMAGETYPE_GRAY:
 		{
 			cv::Mat gray(cropInfo.height, cropInfo.width, CV_8UC1, cropData, m_detect.getStride());
-			currentImage = gray.clone();
+			currentImage = gray; // .clone();
 			break;
 		}
-		case IMAGETYPE_RGB:
+		}
+		/*case IMAGETYPE_RGB:
 		{
 			cv::Mat rgbImage(cropInfo.height, cropInfo.width, CV_8UC3, cropData, detect.getStride());
 			if (currentImage.empty()) {
@@ -169,7 +170,7 @@ namespace smll {
 		}
 		case IMAGETYPE_BGR:
 		{
-			cv::Mat bgrImage(cropInfo.height, cropInfo.width, CV_8UC3, cropData, detect.getStride());			
+			cv::Mat bgrImage(cropInfo.height, cropInfo.width, CV_8UC3, cropData, detect.getStride());
 			if (currentImage.empty()) {
 				cv::Mat gray; cv::cvtColor(bgrImage, gray, cv::COLOR_BGR2GRAY);
 				currentImage = gray.clone();
@@ -210,11 +211,11 @@ namespace smll {
 			throw std::invalid_argument(
 				"INVALID IMAGE TYPE - Check if the frame is valid");
 			break;
-		}
-		
+		}*/
+
 	}
 
-	void FaceDetector::DetectFaces(const ImageWrapper& detect, const OBSTexture& capture, DetectionResults& results) {
+	void FaceDetector::DetectFaces(const ImageWrapper& detect, const OBSTexture& capture, DetectionResults& results, bool& ranDetectionOrTracking) {
 
 		// Wait for CONFIG_INT_FACE_DETECT_FREQUENCY after all faces are lost before trying to detect them again
 		if (m_timeout > 0) {
@@ -243,11 +244,14 @@ namespace smll {
 			m_detectionTimeout =
 				Config::singleton().get_int(CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY);
 			StartObjectTracking();
+			ranDetectionOrTracking = true;
 		}
 		else if (m_trackingTimeout == 0) {
 			m_detectionTimeout--;
 
 			UpdateObjectTracking();
+
+			ranDetectionOrTracking = true;
 
 			// Is Tracking is still good?
 			if (m_faces.length > 0) {
