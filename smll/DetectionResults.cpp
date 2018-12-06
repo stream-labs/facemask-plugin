@@ -345,6 +345,11 @@ namespace smll {
 		// copy values
 		bounds = bnd;
 
+		if (!kalmanFiltersInitialized) {
+			*this = r;
+			InitKalmanFilters();
+		}
+
 		UpdateResults();
 
 		for (int j = 0; j < smll::NUM_FACIAL_LANDMARKS; j++) {
@@ -354,7 +359,7 @@ namespace smll {
 
 	void DetectionResult::UpdateResults() {
 		if (!kalmanFiltersInitialized) {
-			InitKalmanFilters();
+			return;
 		}
 
 		// kalman filtering enabled?
@@ -367,22 +372,24 @@ namespace smll {
 			}
 
 			// update the kalman filters
-			ntx[0] = kalmanFilters[KF_TRANS_X].Update(ntx[0]);
-			ntx[1] = kalmanFilters[KF_TRANS_Y].Update(ntx[1]);
-			ntx[2] = kalmanFilters[KF_TRANS_Z].Update(ntx[2]);
-			nrot[0] = kalmanFilters[KF_ROT_X].Update(nrot[0]);
-			nrot[1] = kalmanFilters[KF_ROT_Y].Update(nrot[1]);
-			nrot[2] = kalmanFilters[KF_ROT_Z].Update(nrot[2]);
-			nrot[3] = kalmanFilters[KF_ROT_A].Update(nrot[3]);
+			pose.translation[0] = kalmanFilters[KF_TRANS_X].Update(ntx[0]);
+			pose.translation[1] = kalmanFilters[KF_TRANS_Y].Update(ntx[1]);
+			pose.translation[2] = kalmanFilters[KF_TRANS_Z].Update(ntx[2]);
+			pose.rotation[0] = kalmanFilters[KF_ROT_X].Update(nrot[0]);
+			pose.rotation[1] = kalmanFilters[KF_ROT_Y].Update(nrot[1]);
+			pose.rotation[2] = kalmanFilters[KF_ROT_Z].Update(nrot[2]);
+			pose.rotation[3] = kalmanFilters[KF_ROT_A].Update(nrot[3]);
+		}
+		else {
+			pose.translation[0] = ntx[0];
+			pose.translation[1] = ntx[1];
+			pose.translation[2] = ntx[2];
+			pose.rotation[0]	= nrot[0];
+			pose.rotation[1]	= nrot[1];
+			pose.rotation[2]	= nrot[2];
+			pose.rotation[3]	= nrot[3];
 		}
 
-		pose.translation[0] = ntx[0];
-		pose.translation[1] = ntx[1];
-		pose.translation[2] = ntx[2];
-		pose.rotation[0] = nrot[0];
-		pose.rotation[1] = nrot[1];
-		pose.rotation[2] = nrot[2];
-		pose.rotation[3] = nrot[3];
 	}
 
 
