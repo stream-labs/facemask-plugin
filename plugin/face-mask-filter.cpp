@@ -44,14 +44,6 @@
 #include "mask/mask-resource-morph.h"
 #include "mask/mask-resource-effect.h"
 
-//
-// SYSTEM MEMCPY STILL SEEMS FASTEST
-//
-// - the following memcpy options are typically set to false
-//
-#define USE_FAST_MEMCPY					(false)
-#define USE_IPP_MEMCPY					(false)
-
 // Windows MMCSS thread task name
 //
 // see registry: Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\...
@@ -1274,14 +1266,7 @@ bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sou
 						detect.AlignedAlloc();
 					}
 
-					if (USE_FAST_MEMCPY)
-						Utils::fastMemcpy(detect.data, data, detect.getSize());
-					else if (USE_IPP_MEMCPY) {
-						smll::ImageWrapper src(detect.w, detect.h, detect.stride, detect.type, (char*)data);
-						src.CopyTo(detect);
-					}
-					else
-						memcpy(detect.data, data, detect.getSize());
+					memcpy(detect.data, data, detect.getSize());
 					gs_stagesurface_unmap(detectStage);
 				}
 			}
