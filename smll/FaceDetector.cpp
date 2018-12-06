@@ -146,8 +146,50 @@ namespace smll {
 			(detect.getStride() * cropInfo.offsetY) +
 			(detect.getNumElems() * cropInfo.offsetX);
 
-		cv::Mat gray(cropInfo.height, cropInfo.width, CV_8UC1, cropData, m_detect.getStride());
-		currentImage = gray;
+		switch (detect.type) {
+		case IMAGETYPE_GRAY:
+		{
+			cv::Mat gray(cropInfo.height, cropInfo.width, CV_8UC1, cropData, m_detect.getStride());
+			currentImage = gray;
+			break;
+		}
+		case IMAGETYPE_RGB:
+		{
+			cv::Mat rgbImage(cropInfo.height, cropInfo.width, CV_8UC3, cropData, detect.getStride());
+			cv::Mat gray;
+			cv::cvtColor(rgbImage, gray, cv::COLOR_RGB2GRAY);
+			currentImage = gray;
+			break;
+		}
+		case IMAGETYPE_BGR:
+		{
+			cv::Mat bgrImage(cropInfo.height, cropInfo.width, CV_8UC3, cropData, detect.getStride());
+			cv::Mat gray;
+			cv::cvtColor(bgrImage, gray, cv::COLOR_BGR2GRAY);
+			currentImage = gray;
+			break;
+		}
+		case IMAGETYPE_RGBA:
+		{
+			cv::Mat rgbaImage(cropInfo.height, cropInfo.width, CV_8UC4, cropData, detect.getStride());
+			cv::Mat gray;
+			cv::cvtColor(rgbaImage, gray, cv::COLOR_RGBA2GRAY);
+			currentImage = gray;
+			break;
+		}
+		case IMAGETYPE_BGRA:
+		{
+			cv::Mat bgraImage(cropInfo.height, cropInfo.width, CV_8UC4, cropData, detect.getStride());
+			cv::Mat gray;
+			cv::cvtColor(bgraImage, gray, cv::COLOR_BGRA2GRAY);
+			currentImage = gray;
+			break;
+		}
+		default:
+			throw std::invalid_argument(
+				"INVALID IMAGE TYPE - Check if the frame is valid");
+			break;
+		}
 			
 	}
 
