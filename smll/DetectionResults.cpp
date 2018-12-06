@@ -371,9 +371,16 @@ namespace smll {
 			cv::Mat translationDiff; cv::absdiff(translationEstimated, smoothTranslation, translationDiff);
 			double translationUpdateValue = cv::sum(translationDiff)[0] / 3.0;
 
-			smoothEulers += 0.8 * dt * (eulersEstimated - smoothEulers);
-			smoothTranslation += 5 * 0.8 * dt * (translationEstimated - smoothTranslation);
-			
+			double eulerUpdateThreshold = 0.05; // < 3 degrees is considered as noise
+			double translationUpdateThreshold = 0.09; // Reduces noise to an extent (not fully)
+
+			if (eulerUpdateValue > eulerUpdateThreshold) {
+				smoothEulers += 0.8 * dt * (eulersEstimated - smoothEulers);
+			}
+
+			if (translationUpdateValue > translationUpdateThreshold) {
+				smoothTranslation += 5 * 0.8 * dt * (translationEstimated - smoothTranslation);
+			}
 
 			// Update Pose 
 			pose.SetPose(smoothEulers, smoothTranslation);
