@@ -147,7 +147,7 @@ namespace smll {
 			(detect.getNumElems() * cropInfo.offsetX);
 
 		cv::Mat gray(cropInfo.height, cropInfo.width, CV_8UC1, cropData, m_detect.getStride());
-		currentImage = gray.clone();
+		currentImage = gray;
 			
 	}
 
