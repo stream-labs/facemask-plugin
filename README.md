@@ -176,7 +176,6 @@ Turn ON the **'Command Line Clients Tool'** option during the installation
 * Add a filter: Face Mask Plugin
 * Go to Setting of facemask-plugin:
     * Set the **Demo Mode Folder** Path (where the masks JSON files are located)
-    * Turn On **Demo Mode**
     * Turn On **Generate Thumbs**
     * Push **Done** and wait, thumbnails will be generated in the Demo Folder
 
@@ -192,3 +191,62 @@ For Unit Testing CppUtest framework is used.
   * Set **BUILD_UNIT_TESTS** option *ON*
   * Set **PATH_CPP_UTEST** Path to the cpputest folder
   * Build and Run the *facemask-plugin-test* project, it will show the report of tests
+  
+  
+  
+## Video Comparison side by side
+
+### Setting up:
+* Install FFmpeg:
+  [ffmpeg](https://ffmpeg.zeranoe.com/builds/)
+  **Add a Path** of FFmpeg executable in the Environment Variables:
+  The path should look like: *%PATH_TO_YOUR_DIR%\ffmpeg-%VERSION%\bin*
+  
+### Adding red frame at the start of the video:
+Formatting video makes start/end of the looped video detectable by adding a red frame at the start
+- In the *facemask-plugin/data* there is a script: **format.bat**
+- Put your sample video as input.mp4 and click on the format.bat
+- Or call the script from the shell 
+```console 
+./format.bat /path/to/the/input/video /path/to/the/output/video 
+```
+Example:
+```console 
+./format.bat inputfolder/myinput.mp4 outputfolder/myoutput.mp4 
+```
+It will generate output with red frame appended
+
+
+### Record Video:
+* Start/Restart Streamlabs-OBS
+* Add a Media Resource
+    * Ensure that **Loop** option is *ON* and **Hide source when playback ends** is *OFF*
+    * Choose video by changing *properties->local file*
+##### There are 2 ways to record video:
+- ##### Automatically detecting start and end using red frame
+  This is the best way to use this feature. It will align the two videos perfectly.
+  * Add a filter: Face Mask Plugin
+  * Go to Setting of facemask-plugin:
+    * Set the **Demo Mode Folder** Path (where the output video should be generated)
+  * Tick On **Demo Record**
+    * If it is not working, untick and tick **Demo Record** again. It will only record the video the first time it is ticked.
+  * Recording and Rendering will take some time. The video needs to loop through until red frames are detected twice. Note
+  that **the video in the slobs will freeze** while the video is being extracted. You just have to wait until it is done.
+- ##### Manually starting and finishing the recording
+  - Start Steramlabs-OBS recorder *(don't forget to change output format (in settings/output) to mp4)*
+  - Start and End recording as you see **red frame** appears
+
+	
+### Generate Side By Side Video:
+
+* Go to Setting of facemask-plugin:
+    * Choose the before video
+	* Configure the before text for the video
+	* Choose the after video
+	* Configure the after text for the video
+    * Push the Generate button
+- Or call the script from the shell 
+```console 
+./sidebyside.bat /path/to/the/beforeVideo /path/to/the/afterVideo before-text after-text /path/to/output/file
+```
+	
