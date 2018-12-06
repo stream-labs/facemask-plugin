@@ -1895,39 +1895,6 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 	bfree(bat);
 }
 
-void Plugin::FaceMaskFilter::Instance::WriteTextureToFile(gs_texture* tex, std::string filename) {
-	cv::Mat vidf(baseWidth, baseHeight, CV_8UC4);
-
-	if (!testingStage) {
-		testingStage = gs_stagesurface_create(baseWidth, baseHeight, GS_RGBA);
-	}
-
-	// get vid tex
-	gs_stage_texture(testingStage, tex);
-	uint8_t *data; uint32_t linesize;
-	if (gs_stagesurface_map(testingStage, &data, &linesize)) {
-
-		cv::Mat cvm = cv::Mat(baseHeight, baseWidth, CV_8UC4, data, linesize);
-		cvm.copyTo(vidf);
-
-		gs_stagesurface_unmap(testingStage);
-	}
-
-	// convert rgba -> bgra
-	uint8_t* vpixel = vidf.data;
-	for (int w = 0; w < baseWidth; w++)
-		for (int h = 0; h < baseHeight; h++) {
-			uint8_t red = vpixel[0];
-			uint8_t blue = vpixel[2];
-			vpixel[0] = blue;
-			vpixel[2] = red;
-			vpixel += 4;
-		}
-
-	// wrap & write
-	cv::imwrite(filename.c_str(), vidf);
-}
-
 Plugin::FaceMaskFilter::Instance::PreviewFrame::PreviewFrame(gs_texture_t* v, 
 	int w, int h) {
 	obs_enter_graphics();
