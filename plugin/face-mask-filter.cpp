@@ -1177,7 +1177,12 @@ void Plugin::FaceMaskFilter::Instance::demoModeRender(gs_texture* vidTex, gs_tex
 				demoModeInDelay = false;
 			}
 			else {
-				PreviewFrame pf(maskTex, baseWidth, baseHeight);
+				gs_texture* preview_tex = maskTex;
+				if (faces.length == 0) {
+					preview_tex = vidTex;
+				} 
+				PreviewFrame pf(preview_tex, baseWidth, baseHeight);
+
 				previewFrames.emplace_back(pf);
 			}
 		}
