@@ -44,14 +44,6 @@
 #include "mask/mask-resource-morph.h"
 #include "mask/mask-resource-effect.h"
 
-//
-// SYSTEM MEMCPY STILL SEEMS FASTEST
-//
-// - the following memcpy options are typically set to false
-//
-#define USE_FAST_MEMCPY					(false)
-#define USE_IPP_MEMCPY					(false)
-
 // Windows MMCSS thread task name
 //
 // see registry: Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\...
@@ -1274,14 +1266,7 @@ bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sou
 						detect.AlignedAlloc();
 					}
 
-					if (USE_FAST_MEMCPY)
-						Utils::fastMemcpy(detect.data, data, detect.getSize());
-					else if (USE_IPP_MEMCPY) {
-						smll::ImageWrapper src(detect.w, detect.h, detect.stride, detect.type, (char*)data);
-						src.CopyTo(detect);
-					}
-					else
-						memcpy(detect.data, data, detect.getSize());
+					memcpy(detect.data, data, detect.getSize());
 					gs_stagesurface_unmap(detectStage);
 				}
 			}
@@ -1893,39 +1878,6 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 	cmd += "\"";
 	::system(cmd.c_str());
 	bfree(bat);
-}
-
-void Plugin::FaceMaskFilter::Instance::WriteTextureToFile(gs_texture* tex, std::string filename) {
-	cv::Mat vidf(baseWidth, baseHeight, CV_8UC4);
-
-	if (!testingStage) {
-		testingStage = gs_stagesurface_create(baseWidth, baseHeight, GS_RGBA);
-	}
-
-	// get vid tex
-	gs_stage_texture(testingStage, tex);
-	uint8_t *data; uint32_t linesize;
-	if (gs_stagesurface_map(testingStage, &data, &linesize)) {
-
-		cv::Mat cvm = cv::Mat(baseHeight, baseWidth, CV_8UC4, data, linesize);
-		cvm.copyTo(vidf);
-
-		gs_stagesurface_unmap(testingStage);
-	}
-
-	// convert rgba -> bgra
-	uint8_t* vpixel = vidf.data;
-	for (int w = 0; w < baseWidth; w++)
-		for (int h = 0; h < baseHeight; h++) {
-			uint8_t red = vpixel[0];
-			uint8_t blue = vpixel[2];
-			vpixel[0] = blue;
-			vpixel[2] = red;
-			vpixel += 4;
-		}
-
-	// wrap & write
-	cv::imwrite(filename.c_str(), vidf);
 }
 
 Plugin::FaceMaskFilter::Instance::PreviewFrame::PreviewFrame(gs_texture_t* v, 
