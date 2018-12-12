@@ -23,6 +23,9 @@
 
 #define MAX_BONES_PER_SKIN		(8)
 
+#define INHERIT_TYPE_RrSs 0
+#define INHERIT_TYPE_RSrs 1
+#define INHERIT_TYPE_Rrs 2
 
 #define ALIGNED(XXX) (((size_t)(XXX) & 0xF) ? (((size_t)(XXX) + 0x10) & 0xFFFFFFFFFFFFFFF0ULL) : (size_t)(XXX))
 
@@ -266,11 +269,12 @@ void RemovePostRotationNodes(aiNode* node) {
 	}
 }
 
-void AddNodes(const aiScene* scene, aiNode* node, json* parts) {
+string AddNodes(const aiScene* scene, aiNode* node, json* parts) {
 	if (!node)
-		return;
+		return string();
 
 	string nodeName = node->mName.C_Str();
+	bool needs_local_nodes = false;
 	if (nodeName != "root") {
 		json part;
 		if (node->mParent) {
@@ -310,6 +314,22 @@ void AddNodes(const aiScene* scene, aiNode* node, json* parts) {
 		s["z"] = scl.z;
 		part["scale"] = s;
 
+		// insert inherit type if other than the default
+		// INHERIT_TYPE_RrSs: Apply parent scaling after child scaling.
+		// INHERIT_TYPE_RSrs: What logically should happen: First parent rotation and scaling, and then child's. 
+		// INHERIT_TYPE_Rrs:  Parent scaling is ignored.
+		if (node->mMetaData) {
+			int type;
+			if (node->mMetaData->Get("InheritType", type))
+			{
+				if (type != INHERIT_TYPE_RSrs)
+				{
+					part["inherit-type"] = type;
+					needs_local_nodes = true;
+				}
+			}
+		}
+
 		// add mesh resources
 		json rez;
 		for (unsigned int i = 0; i < node->mNumMeshes; i++) {
@@ -333,13 +353,26 @@ void AddNodes(const aiScene* scene, aiNode* node, json* parts) {
 		if (node->mNumMeshes > 0 || lightNum >= 0)
 			part["resources"] = rez;
 
-		// add the part
+		if (!needs_local_nodes && node->mNumChildren == 1) {
+			string local_to = AddNodes(scene, node->mChildren[0], parts);
+			if (local_to.length() > 0) {
+				part["local-to"] = local_to;
+			}
+			(*parts)[node->mName.C_Str()] = part;
+			return local_to;
+		}
+
 		(*parts)[node->mName.C_Str()] = part;
 	}
 
 	for (unsigned int i = 0; i < node->mNumChildren; i++) {
 		AddNodes(scene, node->mChildren[i], parts);
 	}
+
+	if (needs_local_nodes)
+		return node->mName.C_Str();
+	else
+		return string();
 }
 
 aiNode* FindNode(aiNode* node, const string& name) {
@@ -654,6 +687,7 @@ void command_import(Args& args) {
 				// Reset Skin vars
 				numIndices = 0;
 				numVertices = 0;
+				vertices.num = mesh->mNumVertices;
 				std::vector<int> bones;
 
 				// Walk triangles
