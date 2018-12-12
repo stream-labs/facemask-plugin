@@ -87,7 +87,7 @@ Plugin::FaceMaskFilter::FaceMaskFilter() {
 	std::memset(&filter, 0, sizeof(obs_source_info));
 	filter.id = "face_mask_filter";
 	filter.type = OBS_SOURCE_TYPE_FILTER;
-	filter.output_flags = OBS_SOURCE_VIDEO;
+	filter.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_ASYNC;
 
 	filter.get_name = get_name;
 	filter.create = create;
@@ -103,6 +103,7 @@ Plugin::FaceMaskFilter::FaceMaskFilter() {
 	filter.hide = Instance::hide;
 	filter.video_tick = Instance::video_tick;
 	filter.video_render = Instance::video_render;
+	filter.filter_video = Instance::filter_video;
 
 	obs_register_source(&filter);
 }
@@ -621,6 +622,98 @@ void Plugin::FaceMaskFilter::Instance::hide() {
 	}
 }
 
+struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(void *ptr, struct obs_source_frame *frame) {
+	if (ptr == nullptr)
+		return NULL;
+	reinterpret_cast<Instance*>(ptr)->filter_video(frame);
+	return frame;
+}
+
+struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct obs_source_frame * frame1) {
+
+	// only if first render after video tick
+	if (!videoTicked)
+		return false;
+
+	// timestamp for this frame
+	TimeStamp sourceTimestamp = NEW_TIMESTAMP;
+	bool frameSent = false;
+
+	// if there's already an active frame, bail
+	if (detection.frame.active)
+		return false;
+
+	// lock current frame
+	{
+		std::unique_lock<std::mutex> lock(detection.frame.mutex,
+			std::try_to_lock);
+		if (lock.owns_lock()) {
+			frameSent = true;
+			cv::Mat bgra_img(frame1->height, frame1->width, CV_8UC4, frame1->data[0], int(frame1->linesize[0]));
+			// detect texture dimensions
+			smll::OBSTexture detectTex;
+			obs_source_t *target = obs_filter_get_target(source);
+			detection.frame.active = true;
+			detection.frame.timestamp = sourceTimestamp;
+
+			if ((target == NULL)) {
+				return NULL;
+			}
+
+			// Target base width and height.
+			baseWidth = obs_source_get_base_width(target);
+			baseHeight = obs_source_get_base_height(target);
+			detectTex.width = smll::Config::singleton().get_int(
+				smll::CONFIG_INT_FACE_DETECT_WIDTH);
+			detectTex.height = (int)((float)detectTex.width *
+				(float)baseHeight / (float)baseWidth);
+
+			cv::flip(bgra_img, bgra_img, -1);
+
+			cv::Mat full_gray;
+			cv::cvtColor(bgra_img, full_gray, cv::COLOR_RGBA2GRAY);
+
+			cv::Mat resized_gray_img;
+			cv::resize(full_gray, resized_gray_img, cv::Size(detectTex.width, detectTex.height), 0, 0, cv::INTER_LINEAR);
+
+			detection.frame.full_size_img_gray = full_gray;
+			detection.frame.resized_img_gray = resized_gray_img;
+			//cv::imshow("image", full_gray);
+			//cv::imshow("image2", resized_gray_img);
+
+			//cv::waitKey(0);
+			
+			//cv::imwrite("C:\\Users\\brank\\test_img1.png", full_gray);
+		}
+	}
+
+	// get the right mask data
+	Mask::MaskData* mdat = maskData.get();
+	if (demoModeGenPreviews && !demoModeInDelay) {
+		if (demoCurrentMask >= 0 && demoCurrentMask < demoMaskDatas.size())
+			mdat = demoMaskDatas[demoCurrentMask].get();
+	}
+
+	// ask mask for a morph resource
+	Mask::Resource::Morph* morph = nullptr;
+	if (mdat) {
+		morph = mdat->GetMorph();
+	}
+
+	// (possibly) update morph buffer
+	if (morph) {
+		if (morph->GetMorphData().IsNewerThan(detection.frame.morphData) || demoModeGenPreviews) {
+			detection.frame.morphData = morph->GetMorphData();
+		}
+	}
+	else {
+		// Make sure current is invalid
+		detection.frame.morphData.Invalidate();
+	}
+
+	return frame1;
+}
+
 void Plugin::FaceMaskFilter::Instance::video_tick(void *ptr, float timeDelta) {
 	if (ptr == nullptr)
 		return;
@@ -753,7 +846,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// Grab parent and target source.
 	obs_source_t *parent = obs_filter_get_parent(source);
+	
 	obs_source_t *target = obs_filter_get_target(source);
+
+
 	if ((parent == NULL) || (target == NULL)) {
 		// *** SKIP ***
 		obs_source_skip_video_filter(source);
@@ -784,7 +880,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	smllRenderer->SetViewport(baseWidth, baseHeight);
 
 	// ----- SEND FRAME TO FACE DETECTION THREAD -----
-	SendSourceTextureToThread(sourceTexture);
+	//SendSourceTextureToThread(sourceTexture);
 
 	// Get mask data mutex
 	std::unique_lock<std::mutex> masklock(maskDataMutex, std::try_to_lock);
@@ -1461,9 +1557,19 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			}
 			else {
 				// new frame - do the face detection
-				smllFaceDetector->DetectFaces(detection.frame.detect, detection.frame.capture, detect_results);
+				//smllFaceDetector->DetectFaces(detection.frame.detect, detection.frame.capture, detect_results);
+				smllFaceDetector->DetectFaces(detection.frame.resized_img_gray, detection.frame.full_size_img_gray, detect_results);
 				// Now do the landmark detection & pose estimation
-				smllFaceDetector->DetectLandmarks(detection.frame.capture, detect_results);
+				//smllFaceDetector->DetectLandmarks(detection.frame.capture, detect_results);
+
+				cv::Mat img_w_bbox = detection.frame.resized_img_gray.clone();
+				cv::flip(img_w_bbox, img_w_bbox, +1);
+				cv::rectangle(img_w_bbox, cv::Point(detect_results[0].bounds.left(), detect_results[0].bounds.top()),   \
+					cv::Point(detect_results[0].bounds.right(), detect_results[0].bounds.bottom()), cv::Scalar(0, 255, 0));
+				cv::imshow("detected face", img_w_bbox);
+				cv::waitKey(0);
+
+				smllFaceDetector->DetectLandmarks(detection.frame.full_size_img_gray, detect_results);
 				smllFaceDetector->DoPoseEstimation(detect_results);
 
 				lastTimestamp = detection.frame.timestamp;

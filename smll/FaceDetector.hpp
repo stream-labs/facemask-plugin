@@ -62,8 +62,10 @@ public:
 	FaceDetector();
 	~FaceDetector();
 
-	void DetectFaces(const ImageWrapper& detect, const OBSTexture& capture, DetectionResults& results);
-	void DetectLandmarks(const OBSTexture& capture, DetectionResults& results);
+	//void DetectFaces(const ImageWrapper& detect, const OBSTexture& capture, DetectionResults& results);
+	void DetectFaces(cv::Mat gray_whole_img, cv::Mat resized_img_grey, DetectionResults& results);
+	//void DetectLandmarks(const OBSTexture& capture, DetectionResults& results);
+	void DetectLandmarks(cv::Mat gray_whole_img, DetectionResults& results);
 	void DoPoseEstimation(DetectionResults& results);
 	void ResetFaces();
 
@@ -140,6 +142,7 @@ private:
 	CropInfo	GetCropInfo();
 	// Current Image
 	cv::Mat currentImage;
+	cv::Mat grayImage;
 	void computeCurrentImage(const ImageWrapper& detect);
 
 	// Staging the capture texture

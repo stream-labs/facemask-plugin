@@ -88,6 +88,8 @@ namespace Plugin {
 			void hide();
 			static void video_tick(void *, float);
 			void video_tick(float);
+			static struct obs_source_frame * filter_video(void *, struct obs_source_frame *);
+			struct obs_source_frame * filter_video(struct obs_source_frame *);
 			static void video_render(void *, gs_effect_t *);
 			void video_render(gs_effect_t *);
 			// callbacks
@@ -258,6 +260,9 @@ namespace Plugin {
 					std::mutex			mutex;
 					TimeStamp			timestamp;
 					bool				active;
+
+					cv::Mat full_size_img_gray;
+					cv::Mat resized_img_gray;
 				};
 				Frame frame;
 
