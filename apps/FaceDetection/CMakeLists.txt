@@ -86,8 +86,8 @@ SET(FaceDetection_LIBRARIES
 
 source_group("FaceDetection\\Headers" FILES ${FaceDetection_HEADERS})
 source_group("FaceDetection\\Sources" FILES ${FaceDetection_SOURCES})
-source_group("FaceLib\\Headers" FILES ${smll_HEADERS})
-source_group("FaceLib\\Sources" FILES ${smll_SOURCES})
+source_group("FaceLib\\Headers" FILES ${FaceLib_HEADERS})
+source_group("FaceLib\\Sources" FILES ${FaceLib_SOURCES})
 
 
 # Compiler Configuration
@@ -108,60 +108,4 @@ endif()
 ################################################################################
 # Building
 ################################################################################
-ADD_LIBRARY(facemask-plugin MODULE
-	${facemask-plugin_HEADERS}
-	${facemask-plugin_SOURCES}
-	${facemask-plugin_DATA}
-)
-
-
-if(FACEMASK_EXTERNAL)
-	TARGET_LINK_LIBRARIES(facemask-plugin
-		${LIBOBS_LIBRARIES}
-		${facemask-plugin_LIBRARIES}
-	)
-	
-	if(BUILD_UNIT_TESTS)
-		add_executable(facemask-plugin-test
-			${facemask-plugin_TEST_SOURCES}
-		)
-		TARGET_LINK_LIBRARIES(facemask-plugin-test
-			${facemask-plugin_LIBRARIES} CppUTest
-		)
-	endif()	
-else()
-	TARGET_LINK_LIBRARIES(facemask-plugin
-		libobs
-		${facemask-plugin_LIBRARIES}
-	)
-endif()
-
-if(MSVC)
-	target_compile_definitions(facemask-plugin
-		PRIVATE _ENABLE_EXTENDED_ALIGNED_STORAGE
-	)
-endif()
-
-################################################################################
-# Installation / Distribution
-################################################################################
-if(FACEMASK_EXTERNAL)
-	add_custom_command(TARGET facemask-plugin POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_directory
-		"${PROJECT_SOURCE_DIR}/data"
-		"${DISTRIBUTE_PATH}/$<CONFIG>/data/obs-plugins/facemask-plugin"
-	)
-	add_custom_command(TARGET facemask-plugin POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy
-		"$<TARGET_FILE:facemask-plugin>"
-		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/$<TARGET_FILE_NAME:facemask-plugin>"
-	)
-	add_custom_command(TARGET facemask-plugin POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy
-		"$<TARGET_FILE_DIR:facemask-plugin>/facemask-plugin.pdb"
-		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/facemask-plugin.pdb"
-	)
-else()
-	install_obs_plugin_with_data(facemask-plugin data)
-endif()
 
