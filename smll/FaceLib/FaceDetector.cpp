@@ -24,9 +24,26 @@
 namespace FaceLib {
 	FaceDetector::FaceDetector()
 	{
+		Init();
 	}
 
 	FaceDetector::~FaceDetector()
 	{
+	}
+
+	void FaceDetector::Init() {
+		// Initialize the DLIB's Frontal Face Detector
+		_detector = dlib::get_frontal_face_detector();
+	}
+
+	void FaceDetector::DetectFaces(cv::Mat& image, std::vector<dlib::rectangle>& faces) {
+		// Convert cv::Mat to dlib::cv_image
+		dlib::cv_image<unsigned char> imageDLIB(image);
+
+		// Detect faces
+		std::vector<dlib::rectangle> facesDLIB = _detector(imageDLIB);
+
+		// Swap with the faces
+		faces.swap(facesDLIB);
 	}
 }

@@ -49,9 +49,6 @@ namespace smll {
 		, m_camera_w(0)
 		, m_camera_h(0) {
 		// Load face detection and pose estimation models.
-		m_detector = get_frontal_face_detector();
-
-
 		char *filename = obs_module_file(kFileShapePredictor68);
 #ifdef _WIN32
 		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
@@ -929,10 +926,9 @@ namespace smll {
 		// need to scale back
 		float scale = (float)m_capture.width / m_detect.w;
 
-        // detect faces
+        // Detect faces using FaceLib::FaceDetector::DetectFaces
 		std::vector<rectangle> faces;
-		dlib::cv_image<unsigned char> img(currentImage);
-		faces = m_detector(img);
+		_faceDetector.DetectFaces(currentImage, faces);
 
 		// only consider the face detection results if:
         //

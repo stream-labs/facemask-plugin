@@ -19,15 +19,49 @@
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #pragma once
+#include <vector>
+#include <opencv2/opencv.hpp>
+#include <dlib/image_processing/frontal_face_detector.h>
+#include <dlib/image_processing.h>
+#include <dlib/opencv.h>
 
 namespace FaceLib {
+	/*
+	A FaceLib class wrapped around DLIB+OpenCV to detect face(s)
+	*/
+
 	class FaceDetector
 	{
 	public:
+		/**
+		Constructor to initialize the FaceDetector object.
+		Intializes the DLIB Frontal Face Detector.
+
+		@usage FaceLib::FaceDetector detector()
+		*/
 		FaceDetector();
+
+		/**
+		Destructor for the FaceDetector object.
+		*/
 		~FaceDetector();
 
+		/**
+		Returns all the faces in the image in std::vector<dlib::rectangle> format.
+
+		@param image The image to detect faces.
+		@param faces The return vector filled with current face detections.
+		@return None.
+		*/
+		void DetectFaces(cv::Mat& image, std::vector<dlib::rectangle>& faces);
+
 	private:
+		dlib::frontal_face_detector _detector;
+
+		/**
+		Function to initialize the DLIB's frontal face detector.
+		*/
+		void Init();
 
 	};
 }

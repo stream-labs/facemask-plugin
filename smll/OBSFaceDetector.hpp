@@ -50,6 +50,7 @@
 #include <vector>
 #include <codecvt>
 #include <opencv2/opencv.hpp>
+#include "FaceLib/FaceDetector.hpp"
 #pragma warning( pop )
 
 namespace smll {
@@ -78,6 +79,8 @@ public:
 	}
 
 private:
+	// Face Detector variables
+	FaceLib::FaceDetector _faceDetector;
 
 	// Saved Faces
 	Faces			m_faces;
