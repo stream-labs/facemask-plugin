@@ -142,7 +142,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	obs_leave_graphics();
 
 	// Make the smll stuff
-	smllFaceDetector = new smll::FaceDetector();
+	smllFaceDetector = new smll::OBSFaceDetector();
 	smllRenderer = new smll::OBSRenderer(); 
 
 	// set our mm thread task

@@ -130,7 +130,7 @@ namespace Plugin {
 			HANDLE			taskHandle;
 
 			// Face detector
-			smll::FaceDetector*		smllFaceDetector;
+			smll::OBSFaceDetector*		smllFaceDetector;
 			smll::OBSRenderer*		smllRenderer;
 
 			gs_effect_t*		custom_effect = nullptr;

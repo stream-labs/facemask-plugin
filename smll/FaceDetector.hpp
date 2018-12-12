@@ -18,8 +18,8 @@
 * along with this program; if not, write to the Free Software
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
-#ifndef __SMLL_FACE_DETECTOR_HPP__
-#define __SMLL_FACE_DETECTOR_HPP__
+#ifndef __SMLL_OBS_FACE_DETECTOR_HPP__
+#define __SMLL_OBS_FACE_DETECTOR_HPP__
 
 #include "Face.hpp"
 #include "Config.hpp"
@@ -55,12 +55,12 @@
 namespace smll {
 
 
-class FaceDetector
+class OBSFaceDetector
 {
 public:
 
-	FaceDetector();
-	~FaceDetector();
+	OBSFaceDetector();
+	~OBSFaceDetector();
 
 	void DetectFaces(const ImageWrapper& detect, const OBSTexture& capture, DetectionResults& results);
 	void DetectLandmarks(const OBSTexture& capture, DetectionResults& results);

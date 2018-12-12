@@ -41,7 +41,7 @@
 
 namespace smll {
 
-	class FaceDetector;
+	class OBSFaceDetector;
 
 	class Face
 	{

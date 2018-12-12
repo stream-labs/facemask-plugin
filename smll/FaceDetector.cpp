@@ -39,7 +39,7 @@ using namespace std;
 
 namespace smll {
 
-	FaceDetector::FaceDetector()
+	OBSFaceDetector::OBSFaceDetector()
 		: m_captureStage(nullptr)
 		, m_stageSize(0)
 		, m_timeout(0)
@@ -74,7 +74,7 @@ namespace smll {
 		bfree(filename);
 	}
 
-	FaceDetector::~FaceDetector() {
+	OBSFaceDetector::~OBSFaceDetector() {
 		obs_enter_graphics();
 		if (m_captureStage)
 			gs_stagesurface_destroy(m_captureStage);
@@ -82,7 +82,7 @@ namespace smll {
 	}
 
 
-	void FaceDetector::MakeVtxBitmaskLookup() {
+	void OBSFaceDetector::MakeVtxBitmaskLookup() {
 		if (m_vtxBitmaskLookup.size() == 0) {
 			for (int i = 0; i < NUM_MORPH_LANDMARKS; i++) {
 				LandmarkBitmask b;
@@ -107,17 +107,17 @@ namespace smll {
 		}
 	}
 
-	const cv::Mat& FaceDetector::GetCVCamMatrix() {
+	const cv::Mat& OBSFaceDetector::GetCVCamMatrix() {
 		SetCVCamera();
 		return m_camera_matrix;
 	}
 
-	const cv::Mat& FaceDetector::GetCVDistCoeffs() {
+	const cv::Mat& OBSFaceDetector::GetCVDistCoeffs() {
 		SetCVCamera();
 		return m_dist_coeffs;
 	}
 
-	void FaceDetector::SetCVCamera() {
+	void OBSFaceDetector::SetCVCamera() {
 		int w = CaptureWidth();
 		int h = CaptureHeight();
 
@@ -138,7 +138,7 @@ namespace smll {
 		}
 	}
 
-	void FaceDetector::computeCurrentImage(const ImageWrapper& detect) {
+	void OBSFaceDetector::computeCurrentImage(const ImageWrapper& detect) {
 		// Do image cropping and cv::Mat initialization in single shot
 		CropInfo cropInfo = GetCropInfo();
 
@@ -150,7 +150,7 @@ namespace smll {
 		currentImage = gray;
 	}
 
-	void FaceDetector::DetectFaces(const ImageWrapper& detect, const OBSTexture& capture, DetectionResults& results) {
+	void OBSFaceDetector::DetectFaces(const ImageWrapper& detect, const OBSTexture& capture, DetectionResults& results) {
 
 		// Wait for CONFIG_INT_FACE_DETECT_FREQUENCY after all faces are lost before trying to detect them again
 		if (m_timeout > 0) {
@@ -226,7 +226,7 @@ namespace smll {
 		}
 	}
 
-	void FaceDetector::MakeTriangulation(MorphData& morphData, 
+	void OBSFaceDetector::MakeTriangulation(MorphData& morphData, 
 		DetectionResults& results,
 		TriangulationResult& result) {
 
@@ -438,7 +438,7 @@ namespace smll {
 	}
 
 
-	void FaceDetector::AddSelectivePoints(cv::Subdiv2D& subdiv,
+	void OBSFaceDetector::AddSelectivePoints(cv::Subdiv2D& subdiv,
 		const std::vector<cv::Point2f>& points,
 		const std::vector<cv::Point2f>& warpedpoints, std::map<int, int>& vtxMap) {
 
@@ -476,7 +476,7 @@ namespace smll {
 		AddContourSelective(subdiv, GetFaceContour(FACE_CONTOUR_MOUTH_OUTER_BOTTOM), points, warpedpoints, vtxMap, turnedLeft);
 	}
 
-	void FaceDetector::AddContour(cv::Subdiv2D& subdiv, const FaceContour& fc, const std::vector<cv::Point2f>& points,
+	void OBSFaceDetector::AddContour(cv::Subdiv2D& subdiv, const FaceContour& fc, const std::vector<cv::Point2f>& points,
 		std::map<int, int>& vtxMap) {
 
 		cv::Rect rect(0, 0, CaptureWidth() + 1, CaptureHeight() + 1);
@@ -500,7 +500,7 @@ namespace smll {
 	}
 
 
-	void FaceDetector::AddContourSelective(cv::Subdiv2D& subdiv, const FaceContour& fc,
+	void OBSFaceDetector::AddContourSelective(cv::Subdiv2D& subdiv, const FaceContour& fc,
 		const std::vector<cv::Point2f>& points,
 		const std::vector<cv::Point2f>& warpedpoints, std::map<int, int>& vtxMap, 
 		bool checkLeft) {
@@ -576,7 +576,7 @@ namespace smll {
 	}
 
 
-	void FaceDetector::AddHeadPoints(std::vector<cv::Point2f>& points, const DetectionResult& face) {
+	void OBSFaceDetector::AddHeadPoints(std::vector<cv::Point2f>& points, const DetectionResult& face) {
 
 		points.reserve(points.size() + HP_NUM_HEAD_POINTS);
 
@@ -639,7 +639,7 @@ namespace smll {
 	// - these are extra points added to the morph to smooth out the appearance,
 	//   and keep the rest of the video frame from morphing with it
 	//
-	void FaceDetector::MakeHullPoints(const std::vector<cv::Point2f>& points,
+	void OBSFaceDetector::MakeHullPoints(const std::vector<cv::Point2f>& points,
 		const std::vector<cv::Point2f>& warpedpoints, std::vector<cv::Point2f>& hullpoints) {
 		// consider outside contours only
 		const int num_contours = 2;
@@ -705,7 +705,7 @@ namespace smll {
 
 	// MakeAreaIndices : make index buffers for different areas of the face
 	//
-	void FaceDetector::MakeAreaIndices(TriangulationResult& result,
+	void OBSFaceDetector::MakeAreaIndices(TriangulationResult& result,
 		const std::vector<cv::Vec3i>& triangleList) {
 
 		// Allocate temp storage for triangle indices
@@ -812,7 +812,7 @@ namespace smll {
 
 	// Subdivide : insert points half-way between all the points
 	//
-	void FaceDetector::Subdivide(std::vector<cv::Point2f>& points) {
+	void OBSFaceDetector::Subdivide(std::vector<cv::Point2f>& points) {
 		points.reserve(points.size() * 2);
 		for (unsigned int i = 0; i < points.size(); i++) {
 			int i2 = (i + 1) % points.size();
@@ -827,7 +827,7 @@ namespace smll {
 	// https://gist.github.com/pr0digy/1383576
 	// - converted to C++
 	// - modified for my uses
-	void FaceDetector::CatmullRomSmooth(std::vector<cv::Point2f>& points, 
+	void OBSFaceDetector::CatmullRomSmooth(std::vector<cv::Point2f>& points, 
 		const std::vector<int>& indices, int steps) {
 
 		if (indices.size() < 3)
@@ -895,7 +895,7 @@ namespace smll {
 		}
 	}
 
-	void FaceDetector::ScaleMorph(std::vector<cv::Point2f>& points,
+	void OBSFaceDetector::ScaleMorph(std::vector<cv::Point2f>& points,
 		std::vector<int> indices, cv::Point2f& center, cv::Point2f& scale) {
 		for (auto i : indices) {
 			points[i].x = (points[i].x - center.x) * scale.x + center.x;
@@ -903,7 +903,7 @@ namespace smll {
 		}
 	}
 
-	FaceDetector::CropInfo FaceDetector::GetCropInfo() {
+	OBSFaceDetector::CropInfo OBSFaceDetector::GetCropInfo() {
 		// get cropping info from config and detect image dimensions
 		int ww = (int)((float)m_detect.w *
 			Config::singleton().get_double(
@@ -922,7 +922,7 @@ namespace smll {
 		return cropInfo;
 	}
 
-    void FaceDetector::DoFaceDetection() {
+    void OBSFaceDetector::DoFaceDetection() {
 
 		// get cropping info from config and detect image dimensions
 		CropInfo cropInfo = GetCropInfo();
@@ -963,7 +963,7 @@ namespace smll {
     }
     
         
-    void FaceDetector::StartObjectTracking() {
+    void OBSFaceDetector::StartObjectTracking() {
 
 		// TODO: Complete full OpenCV 4.0.0 integration
 		//		Debug and Release and necessary dll's
@@ -983,7 +983,7 @@ namespace smll {
 	}
     
     
-    void FaceDetector::UpdateObjectTracking() {
+    void OBSFaceDetector::UpdateObjectTracking() {
 
 		// get crop info from config and track image dimensions
 		CropInfo cropInfo = GetCropInfo();
@@ -1007,7 +1007,7 @@ namespace smll {
 	}
     
     
-    void FaceDetector::DetectLandmarks(const OBSTexture& capture, DetectionResults& results)
+    void OBSFaceDetector::DetectLandmarks(const OBSTexture& capture, DetectionResults& results)
     {
 		// convenience
 		m_capture = capture;
@@ -1071,7 +1071,7 @@ namespace smll {
 		results.length = m_faces.length;
 	}
 
-	float FaceDetector::ReprojectionError(const std::vector<cv::Point3f>& model_points,
+	float OBSFaceDetector::ReprojectionError(const std::vector<cv::Point3f>& model_points,
 		const std::vector<cv::Point2f>& image_points,
 		const cv::Mat& rotation, const cv::Mat& translation) {
 
@@ -1087,7 +1087,7 @@ namespace smll {
 	}
 
 
-	void FaceDetector::DoPoseEstimation(DetectionResults& results)
+	void OBSFaceDetector::DoPoseEstimation(DetectionResults& results)
 	{
 		// Build a set of model points to use for solving 3D pose
 		// NOTE: The keypoints sould be selected w.r.t stability
@@ -1158,7 +1158,7 @@ namespace smll {
 		}
 	}
 
-	void FaceDetector::StageCaptureTexture() {
+	void OBSFaceDetector::StageCaptureTexture() {
 		// need to stage the surface so we can read from it
 		// (re)alloc the stage surface if necessary
 		if (m_captureStage == nullptr ||
@@ -1189,12 +1189,12 @@ namespace smll {
 		}
 	}
 
-	void FaceDetector::UnstageCaptureTexture() {
+	void OBSFaceDetector::UnstageCaptureTexture() {
 		// unstage the surface and leave graphics context
 		gs_stagesurface_unmap(m_captureStage);
 	}
 
-	void FaceDetector::ResetFaces() {
+	void OBSFaceDetector::ResetFaces() {
 		m_faces.length = 0;
 		m_detectionTimeout = 0;
 	}
