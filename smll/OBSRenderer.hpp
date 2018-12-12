@@ -35,7 +35,7 @@
 
 #include "OBSTexture.hpp"
 #include "ImageWrapper.hpp"
-#include "FaceDetector.hpp"
+#include "OBSFaceDetector.hpp"
 #include "DetectionResults.hpp"
 
 namespace smll {

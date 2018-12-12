@@ -19,7 +19,7 @@
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 
-#include "FaceDetector.hpp"
+#include "OBSFaceDetector.hpp"
 
 
 #define HULL_POINTS_SCALE		(1.25f)

@@ -25,7 +25,7 @@
 #include <thread>
 #include <vector>
 
-#include "smll/FaceDetector.hpp"
+#include "smll/OBSFaceDetector.hpp"
 #include "smll/OBSRenderer.hpp"
 #include "smll/DetectionResults.hpp"
 #include "smll/TriangulationResult.hpp"
