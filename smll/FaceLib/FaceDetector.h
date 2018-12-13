@@ -27,7 +27,7 @@
 
 namespace FaceLib {
 	/*
-	A FaceLib class wrapped around DLIB+OpenCV to detect face(s)
+	FaceDetector class wrapped around DLIB+OpenCV to detect face(s)
 	*/
 
 	class FaceDetector
