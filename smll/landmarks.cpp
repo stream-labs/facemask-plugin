@@ -38,7 +38,6 @@ namespace smll {
 	static std::vector<cv::Point3f>	g_head_points;
 	static std::vector<FaceContour>	g_face_contours;
 	static std::vector<FaceArea>	g_face_areas;
-	static std::vector<cv::Point3f>	g_5_landmark_points;
 	
 	void GetLandmarkPoints() {
 		if (g_landmark_points.size() == 0) {
