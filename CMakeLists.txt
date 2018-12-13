@@ -182,7 +182,7 @@ SET(smll_HEADERS
 	"${SMLLDir}/DetectionResults.hpp"
 	"${SMLLDir}/Face.hpp"
 	"${SMLLDir}/OBSFaceDetector.hpp"
-	"${SMLLDir}/FaceLib/FaceDetector.hpp"
+	"${SMLLDir}/FaceLib/FaceDetector.h"
 	"${SMLLDir}/Kalman.hpp"
 	"${SMLLDir}/ImageWrapper.hpp"
 	"${SMLLDir}/landmarks.hpp"

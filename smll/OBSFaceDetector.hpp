@@ -49,7 +49,7 @@
 #include <vector>
 #include <codecvt>
 #include <opencv2/opencv.hpp>
-#include "FaceLib/FaceDetector.hpp"
+#include "FaceLib/FaceDetector.h"
 #pragma warning( pop )
 
 namespace smll {
@@ -103,9 +103,6 @@ private:
 
 	// Tracking time-slicer
 	int				m_trackingFaceIndex;
-
-	// dlib HOG face detector
-	dlib::frontal_face_detector		m_detector;
 
 	// dlib landmark predictors (68 point)
 	dlib::shape_predictor			m_predictor68;
