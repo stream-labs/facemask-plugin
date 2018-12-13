@@ -64,22 +64,22 @@ CV_EXPORTS @interface CvAbstractCamera : NSObject
 
 @property (nonatomic, strong) UIView* parentView;
 
-- CV_UNUSED(start);
-- CV_UNUSED(stop);
-- CV_UNUSED(switchCameras);
+- (void)start;
+- (void)stop;
+- (void)switchCameras;
 
 - (id)initWithParentView:(UIView*)parent;
 
-- CV_UNUSED(createCaptureOutput);
-- CV_UNUSED(createVideoPreviewLayer);
-- CV_UNUSED(updateOrientation);
+- (void)createCaptureOutput;
+- (void)createVideoPreviewLayer;
+- (void)updateOrientation;
 
-- CV_UNUSED(lockFocus);
-- CV_UNUSED(unlockFocus);
-- CV_UNUSED(lockExposure);
-- CV_UNUSED(unlockExposure);
-- CV_UNUSED(lockBalance);
-- CV_UNUSED(unlockBalance);
+- (void)lockFocus;
+- (void)unlockFocus;
+- (void)lockExposure;
+- (void)unlockExposure;
+- (void)lockBalance;
+- (void)unlockBalance;
 
 @end
 
@@ -117,8 +117,8 @@ CV_EXPORTS @interface CvVideoCamera : CvAbstractCamera<AVCaptureVideoDataOutputS
 @property (nonatomic, strong) AVAssetWriter* recordAssetWriter;
 
 - (void)adjustLayoutToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation;
-- CV_UNUSED(layoutPreviewLayer);
-- CV_UNUSED(saveVideo);
+- (void)layoutPreviewLayer;
+- (void)saveVideo;
 - (NSURL *)videoFileURL;
 - (NSString *)videoFileString;
 
@@ -143,7 +143,7 @@ CV_EXPORTS @interface CvPhotoCamera : CvAbstractCamera
 
 @property (nonatomic, weak) id<CvPhotoCameraDelegate> delegate;
 
-- CV_UNUSED(takePicture);
+- (void)takePicture;
 
 @end
 

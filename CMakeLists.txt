@@ -57,30 +57,24 @@ endif()
 
 # OpenCV
 SET(OpenCV_DIR "${PROJECT_SOURCE_DIR}/thirdparty/opencv")
-SET(OpenCV_VERSION "400" CACHE STRING "Version of OpenCV to use.")
+SET(OpenCV_VERSION "331" CACHE STRING "Version of OpenCV to use.")
 SET(OpenCV_LIBS
-	debug "${OpenCV_DIR}/lib/Debug/opencv_world${OpenCV_VERSION}d.lib"
-	optimized "${OpenCV_DIR}/lib/Release/opencv_world${OpenCV_VERSION}.lib"
-	debug "${OpenCV_DIR}/3rdparty/lib/Debug/zlibd.lib"
-	optimized "${OpenCV_DIR}/3rdparty/lib/Release/zlib.lib"
-	debug "${OpenCV_DIR}/3rdparty/lib/Debug/libpngd.lib"
+	
+	optimized "${OpenCV_DIR}/lib/Release/opencv_features2d${OpenCV_VERSION}.lib"
+	optimized "${OpenCV_DIR}/lib/Release/opencv_calib3d${OpenCV_VERSION}.lib"
+	optimized "${OpenCV_DIR}/lib/Release/opencv_core${OpenCV_VERSION}.lib"
+	optimized "${OpenCV_DIR}/lib/Release/opencv_highgui${OpenCV_VERSION}.lib"
+	optimized "${OpenCV_DIR}/lib/Release/opencv_imgcodecs${OpenCV_VERSION}.lib"
+	optimized "${OpenCV_DIR}/lib/Release/opencv_imgproc${OpenCV_VERSION}.lib"
+	optimized "${OpenCV_DIR}/lib/Release/opencv_video${OpenCV_VERSION}.lib"
+	optimized "${OpenCV_DIR}/lib/Release/opencv_videoio${OpenCV_VERSION}.lib"
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libpng.lib"
-	debug "${OpenCV_DIR}/3rdparty/lib/Debug/ittnotifyd.lib"
+	optimized "${OpenCV_DIR}/3rdparty/lib/Release/zlib.lib"
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/ittnotify.lib"
-	debug "${OpenCV_DIR}/3rdparty/lib/Debug/ippiwd.lib"
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/ippiw.lib"
-	debug "${OpenCV_DIR}/3rdparty/lib/Debug/IlmImfd.lib"
-	optimized "${OpenCV_DIR}/3rdparty/lib/Release/IlmImf.lib"
-	debug "${OpenCV_DIR}/3rdparty/lib/Debug/libjpeg-turbod.lib"
-	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libjpeg-turbo.lib"
-	debug "${OpenCV_DIR}/3rdparty/lib/Debug/libtiffd.lib"
-	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libtiff.lib"
-	debug "${OpenCV_DIR}/3rdparty/lib/Debug/libjasperd.lib"
-	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libjasper.lib"
-	debug "${OpenCV_DIR}/3rdparty/lib/Debug/libwebpd.lib"
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libwebp.lib"
-	debug "${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_${OpenCV_VERSION}/lib/intel64/ippicvmt.lib"
-	optimized "${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_${OpenCV_VERSION}/lib/intel64/ippicvmt.lib"
+	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libtiff.lib"
+	optimized "${OpenCV_DIR}/3rdparty/ippicv/ippicv_win/lib/intel64/ippicvmt.lib"
 )
 include_directories("${OpenCV_DIR}/include")
 
@@ -88,8 +82,10 @@ include_directories("${OpenCV_DIR}/include")
 include_directories("${OpenCV_DIR}/3rdparty/include")
 
 # intel IPP
-include_directories("${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_${OpenCV_VERSION}/include")
-include_directories("${OpenCV_DIR}/3rdparty/ippicv/ippiw_win_${OpenCV_VERSION}/include")
+include_directories("${OpenCV_DIR}/3rdparty/ippicv/ippicv_win/include")
+include_directories("${OpenCV_DIR}/3rdparty/ippicv/ippiw_win/include")
+
+
 
 # smll
 include_directories("smll")
@@ -341,6 +337,14 @@ if (MSVC)
 elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long -pedantic")
 endif()
+
+
+add_executable(facemask-landmark
+			face_landmark_detection_dlib_of_kf_mixed.cpp
+		)
+TARGET_LINK_LIBRARIES(facemask-landmark
+	${facemask-plugin_LIBRARIES}
+)
 
 ################################################################################
 # Building

@@ -402,9 +402,9 @@ namespace cv { namespace cuda { namespace device
             static __device__ void reduce(KP skeys, KR key, VP svals, VR val, unsigned int tid, Cmp cmp)
             {
             #if 0 // __CUDA_ARCH__ >= 300
-                CV_UNUSED(skeys);
-                CV_UNUSED(svals);
-                CV_UNUSED(tid);
+                (void) skeys;
+                (void) svals;
+                (void) tid;
 
                 Unroll<N / 2, KP, KR, VP, VR, Cmp>::loopShfl(key, val, cmp, N);
             #else
