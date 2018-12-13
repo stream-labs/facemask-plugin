@@ -215,6 +215,7 @@ namespace smll {
 	void FaceDetector::convertToGrey(const ImageWrapper& detect) {
 		cv::Mat gray(detect.h, detect.w, CV_8UC1, detect.data, m_detect.getStride());
 		currentImage = gray;
+		currentOrigImage = currentImage.clone();
 	}
 
 	void FaceDetector::DetectFaces(const ImageWrapper& detect, const OBSTexture& capture, DetectionResults& results) {
