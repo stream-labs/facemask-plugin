@@ -48,11 +48,13 @@ SET(OpenCV_LIBS
 	debug "${OpenCV_DIR}/3rdparty/lib/Debug/libtiffd.lib"
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libtiff.lib"
 	debug "${OpenCV_DIR}/3rdparty/lib/Debug/libjasperd.lib"
-	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libjasper.lib"
+    optimized "${OpenCV_DIR}/3rdparty/lib/Release/libjasper.lib"
+    debug "${OpenCV_DIR}/3rdparty/lib/Debug/libprotobufd.lib"
+	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libprotobuf.lib"
 	debug "${OpenCV_DIR}/3rdparty/lib/Debug/libwebpd.lib"
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libwebp.lib"
 	debug "${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_${OpenCV_VERSION}/lib/intel64/ippicvmt.lib"
-	optimized "${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_${OpenCV_VERSION}/lib/intel64/ippicvmt.lib"
+    optimized "${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_${OpenCV_VERSION}/lib/intel64/ippicvmt.lib"
 )
 include_directories("${OpenCV_DIR}/include")
 
@@ -116,4 +118,4 @@ endif()
 # Building
 ################################################################################
 add_executable( FaceDetection ${FaceDetection_SOURCES} ${FaceLib_SOURCES} ${FaceLib_HEADERS})
-target_link_libraries( FaceDetection ${FaceDetection_LIBRARIES} )
+target_link_libraries( FaceDetection ${FaceDetection_LIBRARIES} Vfw32.lib)
