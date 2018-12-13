@@ -62,6 +62,11 @@ namespace Mask {
 		std::vector<std::shared_ptr<Resource::IBase>> resources;
 		std::shared_ptr<Part> parent;
 		std::size_t hash_id;
+		// Name of part, used for local transform chain detection
+		std::string name;
+		// Is this part a local transformation for another part?
+		// local_to will keep the name of that part
+		std::string local_to;
 		vec3 position, scale, rotation;
 		quat qrotation;
 
@@ -70,6 +75,12 @@ namespace Mask {
 		bool localdirty;
 		bool dirty;
 		bool isquat;
+		// FBX Inherit Type
+		// RrSs: Apply parent scaling after child scaling.
+		// RSrs: What logically should happen: First parent rotation and scaling, and then child's.
+		// Rrs:  Parent scaling is ignored.
+		enum InheritType { Inherit_RrSs = 0, Inherit_RSrs, Inherit_Rrs };
+		InheritType inherit_type = Inherit_RSrs;
 	};
 
 	class SortedDrawObject {
@@ -158,7 +169,7 @@ namespace Mask {
 
 	private:
 		std::shared_ptr<Part> LoadPart(std::string name, obs_data_t* data);
-		static void PartCalcMatrix(std::shared_ptr<Mask::Part> part);
+		static void PartCalcMatrix(Part *part);
 
 		struct {
 			std::string name;

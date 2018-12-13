@@ -376,6 +376,7 @@ void Mask::MaskData::AddPart(const std::string& name, std::shared_ptr<Mask::Part
 
 	std::hash<std::string> hasher;
 	part->hash_id = hasher(name);
+	part->name = name;
 	m_parts.emplace(name, part);
 }
 
@@ -482,43 +483,119 @@ void  Mask::MaskData::AddSortedDrawObject(SortedDrawObject* obj) {
 	m_drawBuckets[idx] = obj;
 }
 
-void  Mask::MaskData::PartCalcMatrix(std::shared_ptr<Mask::Part> _part) {
-	register Mask::Part* part = _part.get();
+void  Mask::MaskData::PartCalcMatrix(Part *part) {
 
 	// Only if we're dirty
 	if (part->dirty) {
-		if (part->localdirty) {
-		
-			// Calculate local matrix 
-			matrix4_identity(&part->local);
-			matrix4_scale3f(&part->local, &part->local,
-				part->scale.x, part->scale.y, part->scale.z);
-			if (part->isquat) {
-				matrix4 qm;
-				matrix4_from_quat(&qm, &part->qrotation);
-				matrix4_mul(&part->local, &part->local, &qm);
-			}
-			else {
-				matrix4_rotate_aa4f(&part->local, &part->local,
-					1.0f, 0.0f, 0.0f, part->rotation.x);
-				matrix4_rotate_aa4f(&part->local, &part->local,
-					0.0f, 1.0f, 0.0f, part->rotation.y);
-				matrix4_rotate_aa4f(&part->local, &part->local,
-					0.0f, 0.0f, 1.0f, part->rotation.z);
-			}
-			matrix4_translate3f(&part->local, &part->local,
-				part->position.x, part->position.y, part->position.z);
-			part->localdirty = false;
-		}
+		Mask::Part* current_part = part;
 
+		// pre-check dirty status for the local chain
+		// we check if *any* of local transform nodes are dirty
+		// if there's one, we will recalculate the local matrix
+		bool local_chain_dirty = true;
+		Mask::Part* temp_part = part;
+		do {
+			if (temp_part->localdirty) {
+				local_chain_dirty = true;
+				break;
+			}
+			temp_part = temp_part->parent.get();
+		}
+		while (temp_part && temp_part->local_to.length() > 0 && temp_part->local_to == part->name);
+
+
+		if (local_chain_dirty) {
+			do {
+				// Calculate local matrix
+				matrix4_identity(&current_part->local);
+
+				matrix4_scale3f(&current_part->local, &current_part->local,
+					current_part->scale.x, current_part->scale.y, current_part->scale.z);
+				if (current_part->isquat) {
+					matrix4 qm;
+					matrix4_from_quat(&qm, &current_part->qrotation);
+					matrix4_mul(&current_part->local, &current_part->local, &qm);
+				}
+				else {
+					matrix4_rotate_aa4f(&current_part->local, &current_part->local,
+						1.0f, 0.0f, 0.0f, current_part->rotation.x);
+					matrix4_rotate_aa4f(&current_part->local, &current_part->local,
+						0.0f, 1.0f, 0.0f, current_part->rotation.y);
+					matrix4_rotate_aa4f(&current_part->local, &current_part->local,
+						0.0f, 0.0f, 1.0f, current_part->rotation.z);
+				}
+				matrix4_translate3f(&current_part->local, &current_part->local,
+					current_part->position.x, current_part->position.y, current_part->position.z);
+
+				current_part->localdirty = false;
+
+				// a local child node?
+				if (current_part != part)
+					matrix4_mul(&part->local, &part->local, &current_part->local);
+
+				current_part = current_part->parent.get();
+
+			} while (current_part && current_part->local_to.length() > 0 && current_part->local_to == part->name);
+		}
+		
 		// Calculate global
 		matrix4_copy(&part->global, &part->local);
-		if (part->parent) {
-			PartCalcMatrix(part->parent);
-			matrix4_mul(&part->global, &part->global,
-				&part->parent->global);
-		} 
-		
+		if (current_part) {
+			PartCalcMatrix(current_part);
+			if (part->inherit_type == Part::Inherit_RSrs) {
+				matrix4_mul(&part->global, &part->global, &current_part->global);
+			}
+			else if (part->inherit_type == Part::Inherit_RrSs) {
+				blog(LOG_WARNING, "RrSs not supported, reverting to normal transformation inheritance.");
+				matrix4_mul(&part->global, &part->global, &current_part->global);
+			}
+			else if (part->inherit_type == Part::Inherit_Rrs) {
+				/*
+					In this inherit type we shouldn't inherit parent scaling.
+
+					This is what happens in a normal chain:
+
+					Parent_Matrix = T * R * S
+					Local_Matrix  =  t * r * s
+
+					Global_Matrix = Parent_Matrix * Local_Matrix
+					Global_Matrix = (T * R * S) * (t * r * s)
+
+					We want to cancel out the effect of S.
+					As the order of matrix multiplication is important,
+					we inject the inverse of S in between parent and local matrices
+					to cancel out scaling correctly.
+
+					Local_Matrix = inv_S * (t * r * s)
+
+					Global_Matrix = Parent_Matrix * Local_Matrix
+					Global_Matrix = (T * R * S) * (inv_S * t * r * s)
+					Global_Matrix = (T * R) * (S * inv_S) * (t * r * s)
+					Global_Matrix = (T * R) * (t * r * s)
+
+					The way FBX SDK is doing this is more complex and requires 
+					more matrix multiplications for separating translation.
+
+					See their sample code for more info:
+					http://help.autodesk.com/cloudhelp/2018/ENU/FBX-Developer-Help/cpp_ref/_transformations_2main_8cxx-example.html
+
+				*/
+				// extract scale information from parent global matrix
+				// Note: negative scaling is not considered here
+				//       if we end up needing that, we'll have to
+				//       do full matrix decomposition
+				float sx = vec4_len(&current_part->global.x);
+				float sy = vec4_len(&current_part->global.y);
+				float sz = vec4_len(&current_part->global.z);
+
+				matrix4_copy(&part->global, &part->local);
+				matrix4_scale3f(&part->global, &part->global,
+					1.0 / sx, 1.0 / sy, 1.0 / sz);
+				matrix4_mul(&part->global, &part->global, &current_part->global);
+
+			}
+		}
+
 		part->dirty = false;
 	}
 }
@@ -544,7 +621,10 @@ void Mask::MaskData::Tick(float time) {
 	}
 	// calculate transforms 
 	for (auto kv : m_parts) {
-		PartCalcMatrix(kv.second);
+		if (kv.second->local_to.length() == 0)
+		{
+			PartCalcMatrix(kv.second.get());
+		}
 	}
 	// update part resources
 	for (auto kv : m_parts) {
@@ -640,6 +720,8 @@ static const char* const S_POSITION = "position";
 static const char* const S_ROTATION = "rotation";
 static const char* const S_QROTATION = "qrotation";
 static const char* const S_SCALE = "scale";
+static const char* const S_LOCAL_TO = "local-to";
+static const char* const S_INHERIT_TYPE = "inherit-type";
 static const char* const S_RESOURCE = "resource";
 static const char* const S_RESOURCES = "resources";
 static const char* const S_PARENT = "parent";
@@ -657,9 +739,15 @@ std::shared_ptr<Mask::Part> Mask::MaskData::LoadPart(std::string name, obs_data_
 		current->isquat = true;
 		obs_data_get_quat(data, S_QROTATION, &current->qrotation);
 	}
-	
+
 	if (obs_data_has_user_value(data, S_SCALE))
 		obs_data_get_vec3(data, S_SCALE, &current->scale);
+
+	if (obs_data_has_user_value(data, S_LOCAL_TO))
+		current->local_to = obs_data_get_string(data, S_LOCAL_TO);
+
+	if (obs_data_has_user_value(data, S_INHERIT_TYPE))
+		current->inherit_type = static_cast<Part::InheritType>(obs_data_get_int(data, S_INHERIT_TYPE));
 	
 	// Resources
 	if (obs_data_has_user_value(data, S_RESOURCE)) {
