@@ -668,13 +668,14 @@ struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct 
 			detectTex.height = (int)((float)detectTex.width *
 				(float)baseHeight / (float)baseWidth);
 
-			cv::flip(bgra_img, bgra_img, -1);
+			cv::Mat bgra_img1;
+			cv::flip(bgra_img, bgra_img1, -1);
 
 			cv::Mat full_gray;
-			cv::cvtColor(bgra_img, full_gray, cv::COLOR_RGBA2GRAY);
+			cv::cvtColor(bgra_img1, full_gray, cv::COLOR_RGBA2GRAY);
 
 			cv::Mat resized_gray_img;
-			cv::resize(full_gray, resized_gray_img, cv::Size(detectTex.width, detectTex.height), 0, 0, cv::INTER_LINEAR);
+			cv::resize(full_gray, resized_gray_img, cv::Size(detectTex.width, detectTex.height), 0, 0, cv::INTER_CUBIC);
 
 			detection.frame.full_size_img_gray = full_gray;
 			detection.frame.resized_img_gray = resized_gray_img;
@@ -1566,8 +1567,8 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 				cv::flip(img_w_bbox, img_w_bbox, +1);
 				cv::rectangle(img_w_bbox, cv::Point(detect_results[0].bounds.left(), detect_results[0].bounds.top()),   \
 					cv::Point(detect_results[0].bounds.right(), detect_results[0].bounds.bottom()), cv::Scalar(0, 255, 0));
-				cv::imshow("detected face", img_w_bbox);
-				cv::waitKey(0);
+				//cv::imshow("detected face", img_w_bbox);
+				//cv::waitKey(0);
 
 				smllFaceDetector->DetectLandmarks(detection.frame.full_size_img_gray, detect_results);
 				smllFaceDetector->DoPoseEstimation(detect_results);
