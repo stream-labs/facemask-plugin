@@ -181,10 +181,10 @@ namespace smll {
 		return points;
 	}
 
-	cv::Point3f					GetLandmarkPoint(int which) {
+	/*cv::Point3f					GetLandmarkPoint(int which) {
 		GetLandmarkPoints();
 		return g_landmark_points[which];
-	}
+	}*/
 
 	std::vector<cv::Point3f>&	GetAllHeadPoints() {
 		if (g_head_points.size() == 0) {

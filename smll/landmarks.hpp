@@ -194,7 +194,7 @@ namespace smll {
 	// access to 3D landmark points
 	void	GetLandmarkPoints();
 	std::vector<cv::Point3f>	GetLandmarkPoints(const std::vector<int>& indices);
-	cv::Point3f					GetLandmarkPoint(int which);
+
 
 	enum {
 		// Extra 11 head points
