@@ -259,6 +259,8 @@ namespace Plugin {
 					smll::MorphData     morphData;
 					std::mutex			mutex;
 					TimeStamp			timestamp;
+					int					w;
+					int					h;
 					bool				active;
 
 					cv::Mat full_size_img_gray;

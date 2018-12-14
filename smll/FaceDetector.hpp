@@ -63,7 +63,8 @@ public:
 	~FaceDetector();
 
 	//void DetectFaces(const ImageWrapper& detect, const OBSTexture& capture, DetectionResults& results);
-	void DetectFaces(cv::Mat gray_whole_img, cv::Mat resized_img_grey, DetectionResults& results);
+	//void DetectFaces(cv::Mat gray_whole_img, cv::Mat resized_img_grey, DetectionResults& results);
+	void FaceDetector::DetectFaces(cv::Mat full_gray, int w, int h, DetectionResults& results);
 	//void DetectLandmarks(const OBSTexture& capture, DetectionResults& results);
 	void DetectLandmarks(cv::Mat gray_whole_img, DetectionResults& results);
 	void DoPoseEstimation(DetectionResults& results);

@@ -188,7 +188,8 @@ namespace smll {
 	}
 
 	//void FaceDetector::DetectFaces(const ImageWrapper& detect, const OBSTexture& capture, DetectionResults& results) {
-	void FaceDetector::DetectFaces(cv::Mat full_gray, cv::Mat resized_img_grey, DetectionResults& results) {
+	//void FaceDetector::DetectFaces(cv::Mat full_gray, cv::Mat resized_img_grey, DetectionResults& results) {
+	void FaceDetector::DetectFaces(cv::Mat full_gray, int w, int h, DetectionResults& results) {
 		// Wait for CONFIG_INT_FACE_DETECT_FREQUENCY after all faces are lost before trying to detect them again
 		if (m_timeout > 0) {
 			m_timeout--;
@@ -208,10 +209,10 @@ namespace smll {
 		// Compute GrayScale image.
 		// This will be used for the rest of the Computer Vision.
 		//computeCurrentImage(detect);
-
-		currentImage = resized_img_grey;
 		grayImage = full_gray;
 
+		cv::resize(grayImage, currentImage, cv::Size(w, h), 0, 0, cv::INTER_NEAREST);
+		
 		bool trackingFailed = false;
 		// if number of frames before the last detection is bigger than the threshold or if there are no faces to track
 		if (m_detectionTimeout == 0 || m_faces.length == 0) {

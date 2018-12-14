@@ -674,11 +674,13 @@ struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct 
 			cv::Mat full_gray;
 			cv::cvtColor(bgra_img1, full_gray, cv::COLOR_RGBA2GRAY);
 
-			cv::Mat resized_gray_img;
-			cv::resize(full_gray, resized_gray_img, cv::Size(detectTex.width, detectTex.height), 0, 0, cv::INTER_NEAREST);
+			//cv::Mat resized_gray_img;
+			//cv::resize(full_gray, resized_gray_img, cv::Size(detectTex.width, detectTex.height), 0, 0, cv::INTER_NEAREST);
 
 			detection.frame.full_size_img_gray = full_gray;
-			detection.frame.resized_img_gray = resized_gray_img;
+			detection.frame.w = detectTex.width;
+			detection.frame.h = detectTex.height;
+			//detection.frame.resized_img_gray = resized_gray_img;
 			//cv::imshow("image", full_gray);
 			//cv::imshow("image2", resized_gray_img);
 
@@ -1558,7 +1560,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			else {
 				// new frame - do the face detection
 				//smllFaceDetector->DetectFaces(detection.frame.detect, detection.frame.capture, detect_results);
-				smllFaceDetector->DetectFaces(detection.frame.resized_img_gray, detection.frame.full_size_img_gray, detect_results);
+				smllFaceDetector->DetectFaces(detection.frame.full_size_img_gray, detection.frame.w, detection.frame.h, detect_results);
 				// Now do the landmark detection & pose estimation
 				//smllFaceDetector->DetectLandmarks(detection.frame.capture, detect_results);
 
