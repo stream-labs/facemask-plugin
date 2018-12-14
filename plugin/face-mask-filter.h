@@ -223,7 +223,6 @@ namespace Plugin {
 			};
 			std::vector<PreviewFrame>	previewFrames;
 			void WritePreviewFrames();
-			void WriteTextureToFile(gs_texture* tex, std::string filename);
 
 			// our current face detection results
 			smll::DetectionResults		faces;
