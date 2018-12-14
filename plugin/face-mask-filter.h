@@ -117,7 +117,6 @@ namespace Plugin {
 			void drawMaskData(Mask::MaskData*	maskData, bool depthOnly, 
 				bool staticOnly, bool rotationDisable);
 			gs_texture* RenderSourceTexture(gs_effect_t* effect);
-			bool SendSourceTextureToThread(gs_texture* sourceTexture);
 			void clearFramesActiveStatus();
 
 		private:
@@ -253,8 +252,6 @@ namespace Plugin {
 
 				// frames circular buffer (video_render()'s thread -> detection thread)
 				struct Frame {
-					smll::OBSTexture	capture;
-					smll::ImageWrapper	detect;
 					smll::MorphData     morphData;
 					std::mutex			mutex;
 					TimeStamp			timestamp;
@@ -262,8 +259,7 @@ namespace Plugin {
 					int					h;
 					bool				active;
 
-					cv::Mat full_size_img_gray;
-					cv::Mat resized_img_gray;
+					cv::Mat fullSizeGrayFrame;
 				};
 				Frame frame;
 
