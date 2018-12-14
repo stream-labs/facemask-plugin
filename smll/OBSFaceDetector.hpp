@@ -50,6 +50,7 @@
 #include <codecvt>
 #include <opencv2/opencv.hpp>
 #include "FaceLib/FaceDetector.h"
+#include "FaceLib/FaceLandmarks.h"
 #pragma warning( pop )
 
 namespace smll {
@@ -80,6 +81,7 @@ public:
 private:
 	// Face Detector variables
 	FaceLib::FaceDetector _faceDetector;
+	FaceLib::FaceLandmarks _faceLandmarks;
 
 	// Saved Faces
 	Faces			m_faces;

@@ -50,24 +50,25 @@ namespace smll {
 		, m_camera_h(0) {
 		// Load face detection and pose estimation models.
 		char *filename = obs_module_file(kFileShapePredictor68);
-#ifdef _WIN32
-		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-		std::wstring wide_filename(converter.from_bytes(filename));
-
-		/* DLIB will not accept a wifstream or widestring to construct
-		 * an ifstream or wifstream itself. Here we use a non-standard
-		 * constructor provided by Microsoft and then the direct
-		 * serialization function with an ifstream. */
-		std::ifstream predictor68_file(wide_filename.c_str(), std::ios::binary);
-
-		if (!predictor68_file) {
-			throw std::runtime_error("Failed to open predictor68 file");
-		}
-
-		deserialize(m_predictor68, predictor68_file);
-#else
-		deserialize(filename) >> m_predictor68;
-#endif
+		_faceLandmarks.Init(filename);
+//#ifdef _WIN32
+//		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+//		std::wstring wide_filename(converter.from_bytes(filename));
+//
+//		/* DLIB will not accept a wifstream or widestring to construct
+//		 * an ifstream or wifstream itself. Here we use a non-standard
+//		 * constructor provided by Microsoft and then the direct
+//		 * serialization function with an ifstream. */
+//		std::ifstream predictor68_file(wide_filename.c_str(), std::ios::binary);
+//
+//		if (!predictor68_file) {
+//			throw std::runtime_error("Failed to open predictor68 file");
+//		}
+//
+//		deserialize(m_predictor68, predictor68_file);
+//#else
+//		deserialize(filename) >> m_predictor68;
+//#endif
 		bfree(filename);
 	}
 
@@ -1014,37 +1015,30 @@ namespace smll {
 		for (int f = 0; f < m_faces.length; f++) {
 
 			// Detect features on full-size frame
-			full_object_detection d68;
+			//full_object_detection d68;
+			cv::Mat gray;
 			switch (m_stageWork.type) {
 			case IMAGETYPE_BGR:
 			{
 				cv::Mat bgrImage(m_stageWork.h, m_stageWork.w, CV_8UC3, m_stageWork.data, m_stageWork.getStride());
-				cv::Mat gray; cv::cvtColor(bgrImage, gray, cv::COLOR_BGR2GRAY);
-				dlib::cv_image<unsigned char> img(gray);
-				d68 = m_predictor68(img, m_faces[f].m_bounds);
+				cv::cvtColor(bgrImage, gray, cv::COLOR_BGR2GRAY);
 				break;
 			}
 			case IMAGETYPE_RGB:
 			{
 				cv::Mat rgbImage(m_stageWork.h, m_stageWork.w, CV_8UC3, m_stageWork.data, m_stageWork.getStride());
-				cv::Mat gray; cv::cvtColor(rgbImage, gray, cv::COLOR_RGB2GRAY);
-				dlib::cv_image<unsigned char> img(gray);
-				d68 = m_predictor68(img, m_faces[f].m_bounds);
+				cv::cvtColor(rgbImage, gray, cv::COLOR_RGB2GRAY);
 				break;
 			}
 			case IMAGETYPE_RGBA:
 			{
 				cv::Mat rgbaImage(m_stageWork.h, m_stageWork.w, CV_8UC4, m_stageWork.data, m_stageWork.getStride());
-				cv::Mat gray; cv::cvtColor(rgbaImage, gray, cv::COLOR_RGBA2GRAY);
-				dlib::cv_image<unsigned char> img(gray);
-				d68 = m_predictor68(img, m_faces[f].m_bounds);
+				cv::cvtColor(rgbaImage, gray, cv::COLOR_RGBA2GRAY);
 				break;
 			}
 			case IMAGETYPE_GRAY:
 			{
-				cv::Mat gray(m_stageWork.h, m_stageWork.w, CV_8UC1, m_stageWork.data, m_stageWork.getStride());
-				dlib::cv_image<unsigned char> img(gray);
-				d68 = m_predictor68(img, m_faces[f].m_bounds);
+				gray = cv::Mat(m_stageWork.h, m_stageWork.w, CV_8UC1, m_stageWork.data, m_stageWork.getStride());
 				break;
 			}
 			default:
@@ -1053,13 +1047,14 @@ namespace smll {
 				break;
 			}
 
-			// Sanity check
-			if (d68.num_parts() != NUM_FACIAL_LANDMARKS)
-				throw std::invalid_argument(
-					"shape predictor got wrong number of landmarks");
-
+			//// Sanity check
+			//if (d68.num_parts() != NUM_FACIAL_LANDMARKS)
+			//	throw std::invalid_argument(
+			//		"shape predictor got wrong number of landmarks");
+			std::vector<dlib::point> landmarks;
+			_faceLandmarks.DetectLandmarks(gray, m_faces[f].m_bounds, landmarks);
 			for (int j = 0; j < NUM_FACIAL_LANDMARKS; j++) {
-				results[f].landmarks68[j] = point(d68.part(j).x(), d68.part(j).y());
+				results[f].landmarks68[j] = landmarks[j];
 			}
 		}
 		UnstageCaptureTexture();

@@ -21,7 +21,10 @@
 #pragma once
 
 #include <dlib/image_processing.h>
+#include <dlib/opencv.h>
 #include <opencv2/opencv.hpp>
+#include <locale>
+#include <codecvt>
 
 namespace FaceLib {
 	class FaceLandmarks {
@@ -30,7 +33,7 @@ namespace FaceLib {
 		~FaceLandmarks();
 		FaceLandmarks(char* filename);
 		void Init(char* filename);
-		void DetectLandmarks(cv::Mat& image, std::vector<cv::Point2d>& landmarks);
+		void DetectLandmarks(cv::Mat& image, dlib::rectangle& face, std::vector<dlib::point>& landmarks);
 
 	private:
 		dlib::shape_predictor _landmarksPredictor;
