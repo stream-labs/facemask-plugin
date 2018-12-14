@@ -23,6 +23,7 @@
 #include <dlib/image_processing.h>
 #include <dlib/opencv.h>
 #include <opencv2/opencv.hpp>
+#include <string>
 #include <locale>
 #include <codecvt>
 
@@ -32,6 +33,7 @@ namespace FaceLib {
 		FaceLandmarks();
 		~FaceLandmarks();
 		FaceLandmarks(char* filename);
+		FaceLandmarks(std::string filename);
 		void Init(char* filename);
 		void DetectLandmarks(cv::Mat& image, dlib::rectangle& face, std::vector<dlib::point>& landmarks);
 

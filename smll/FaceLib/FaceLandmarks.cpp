@@ -55,6 +55,10 @@ namespace FaceLib {
 #endif
 	}
 
+	FaceLandmarks::FaceLandmarks(std::string filename) {
+		dlib::deserialize(filename) >> _landmarksPredictor;
+	}
+
 	void FaceLandmarks::DetectLandmarks(cv::Mat& image, dlib::rectangle& face, std::vector<dlib::point>& landmarks) {
 		// Convert OpenCV image to DLIB style
 		dlib::cv_image<unsigned char> imageDLIB(image);
