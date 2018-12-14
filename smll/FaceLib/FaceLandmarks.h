@@ -28,13 +28,59 @@
 #include <codecvt>
 
 namespace FaceLib {
+	/*
+	FaceLandmarks class wrapped around DLIB+OpenCV to detect landmarks
+	*/
+
 	class FaceLandmarks {
 	public:
+		/**
+		Constructor to initialize the FaceLandmarks object.
+
+		@usage FaceLib::FaceLandmarks landmarksPredictor;
+		*/
 		FaceLandmarks();
+
+		/**
+		Destructor for the FaceLandmarks object.
+		*/
 		~FaceLandmarks();
+
+		/**
+		Constructor to initialize the FaceLandmarks object.
+		Intializes the DLIB Face Shape Predictor.
+
+		@param filename The full path to the shape predictor file.
+		@usage FaceLib::FaceDetector detector(filename);
+		*/
 		FaceLandmarks(char* filename);
+
+		/**
+		Constructor to initialize the FaceLandmarks object.
+		Intializes the DLIB Face Shape Predictor.
+
+		@param filename The full path to the shape predictor file.
+		@usage FaceLib::FaceDetector detector(filename);
+		*/
 		FaceLandmarks(std::string filename);
+
+		/**
+		Function to initialize the DLIB's shape predictor.
+
+		@param filename The full path to the shape predictor file.
+		@return None
+		*/
 		void Init(char* filename);
+
+		/**
+		Returns all the landmarks for the given face in the image in
+		std::vector<dlib::point> format.
+
+		@param image The image to detect landmarks.
+		@param face The bounding box of face in dlib::rectangle format.
+		@param landmarks Fills current landmarks in std::vector<dlib::point>
+		@return None.
+		*/
 		void DetectLandmarks(cv::Mat& image, dlib::rectangle& face, std::vector<dlib::point>& landmarks);
 
 	private:
