@@ -62,10 +62,7 @@ public:
 	FaceDetector();
 	~FaceDetector();
 
-	//void DetectFaces(const ImageWrapper& detect, const OBSTexture& capture, DetectionResults& results);
-	//void DetectFaces(cv::Mat gray_whole_img, cv::Mat resized_img_grey, DetectionResults& results);
 	void FaceDetector::DetectFaces(cv::Mat full_gray, int w, int h, DetectionResults& results);
-	//void DetectLandmarks(const OBSTexture& capture, DetectionResults& results);
 	void DetectLandmarks(cv::Mat gray_whole_img, DetectionResults& results);
 	void DoPoseEstimation(DetectionResults& results);
 	void ResetFaces();
@@ -146,11 +143,6 @@ private:
 	// Current Image
 	cv::Mat currentImage;
 	cv::Mat grayImage;
-	void computeCurrentImage(const ImageWrapper& detect);
-
-	// Staging the capture texture
-	void 	StageCaptureTexture();
-	void 	UnstageCaptureTexture();
 
 	// For 3d pose
 	float	ReprojectionError(const std::vector<cv::Point3f>& model_points,
