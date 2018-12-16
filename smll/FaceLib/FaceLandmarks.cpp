@@ -53,10 +53,12 @@ namespace FaceLib {
 #else
 		dlib::deserialize(filename) >> _landmarksPredictor;
 #endif
+		InitLandmarks3D();
 	}
 
 	FaceLandmarks::FaceLandmarks(std::string filename) {
 		dlib::deserialize(filename) >> _landmarksPredictor;
+		InitLandmarks3D();
 	}
 
 	void FaceLandmarks::DetectLandmarks(cv::Mat& image, dlib::rectangle& face, std::vector<dlib::point>& landmarks) {
@@ -73,6 +75,27 @@ namespace FaceLib {
 		}
 
 		landmarks.swap(results);
+	}
+
+	void FaceLandmarks::DetectPose(std::vector<cv::Point2d>& landmarks2D, std::vector<cv::Point3d>& landmarks3D, cv::Mat& K, cv::Mat& D, cv::Mat& R, cv::Mat& t) {
+		cv::solvePnP(landmarks3D, landmarks2D, K, D, R, t);
+	}
+
+	void FaceLandmarks::DetectPose(std::vector<cv::Point2d>& landmarks2D, cv::Mat& K, cv::Mat& D, cv::Mat& R, cv::Mat& t) {
+		cv::solvePnP(_landmarks3D, landmarks2D, K, D, R, t);
+	}
+
+	void FaceLandmarks::InitLandmarks3D() {
+		// Our custom Maya landmarks
+		_landmarks3D.clear();
+		_landmarks3D.reserve(7);
+		_landmarks3D.emplace_back(-2.379, -1.8, 2.442238431);
+		_landmarks3D.emplace_back(2.379, -1.8, 2.442238431);
+		_landmarks3D.emplace_back(0.0, -1.83012447, 1.2548274);
+		_landmarks3D.emplace_back(0.0, -1.146743411, 0.7348212125);
+		_landmarks3D.emplace_back(0.0f, -0.5915072192f, 0.3310879765f);
+		_landmarks3D.emplace_back(0.0, -0.0, -0.0);
+		_landmarks3D.emplace_back(0.0, 0.7203533372, 0.8644320921);
 	}
 
 	//void FaceLandmarks::DetectLandmarks(cv::Mat& image, dlib::rectangle& face, std::vector<cv::Point2d>& landmarks) {

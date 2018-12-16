@@ -83,7 +83,13 @@ namespace FaceLib {
 		*/
 		void DetectLandmarks(cv::Mat& image, dlib::rectangle& face, std::vector<dlib::point>& landmarks);
 
+		void DetectPose(std::vector<cv::Point2d>& landmarks2D, std::vector<cv::Point3d>& landmarks3D, cv::Mat& K, cv::Mat& D, cv::Mat& R, cv::Mat& t);
+		void DetectPose(std::vector<cv::Point2d>& landmarks2D, cv::Mat& K, cv::Mat& D, cv::Mat& R, cv::Mat& t);
+
 	private:
 		dlib::shape_predictor _landmarksPredictor;
+		std::vector<cv::Point3f> _landmarks3D;
+
+		void InitLandmarks3D();
 	};
 }
