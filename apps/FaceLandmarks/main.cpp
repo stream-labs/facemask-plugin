@@ -7,6 +7,8 @@
 void DrawPoseAxis(cv::Mat& frame, cv::Mat& R, cv::Point2d origin, float scale) {
 	cv::Mat RotMat; cv::Rodrigues(R, RotMat);
 
+	std::cout << R << std::endl;
+
 	cv::Mat axis3D = (cv::Mat_<double>(3, 3) << 1, 0, 0, 0, -1, 0, 0, 0, -1);
 	
 	axis3D = axis3D * RotMat.t();
@@ -19,6 +21,19 @@ void DrawPoseAxis(cv::Mat& frame, cv::Mat& R, cv::Point2d origin, float scale) {
 	cv::line(frame, origin, x * scale + origin, cv::Scalar(255, 0, 0), 3);
 	cv::line(frame, origin, y * scale + origin, cv::Scalar(0, 255, 0), 3);
 	cv::line(frame, origin, z * scale + origin, cv::Scalar(0, 0, 255), 3);
+
+	//// Convert radians to Angles
+	//double angleX = R.at<double>(0, 0) * 180 / 3.14;
+	//double angleY = R.at<double>(1, 0) * 180 / 3.14;
+	//double angleZ = R.at<double>(2, 0) * 180 / 3.14;
+
+	std::ostringstream out;
+	out.str("");
+	out << "X = " << std::fixed << std::setprecision(2) << R.at<double>(0, 0)
+		<< ", Y = " << std::fixed << std::setprecision(2) << R.at<double>(1, 0)
+		<< ", Z = " << std::fixed << std::setprecision(2) << R.at<double>(2, 0);
+	cv::putText(frame, out.str(), cv::Point2f(0, 45), cv::FONT_HERSHEY_TRIPLEX, 0.5,
+		cv::Scalar(255, 0, 0));
 }
 
 int main()
@@ -77,6 +92,7 @@ int main()
 			//std::cout << landmarks2D << K << D << std::endl;
 			landmarksDetector.DetectPose(landmarks2D, K, D, R, t);
 			DrawPoseAxis(frame, R, cv::Point2d(100, 100), 30);
+			
 		}
 
 		cv::imshow("Image", frame);
@@ -88,6 +104,7 @@ int main()
 			std::wcout << "True" << std::endl;
 			cv::imwrite("../output/Image_" + std::to_string(imageWriterCounter++) + ".png", frame);
 		}
+
 	}
 	std::cout << "DONE!" << std::endl;
 	return 0;
