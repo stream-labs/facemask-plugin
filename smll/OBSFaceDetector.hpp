@@ -106,9 +106,6 @@ private:
 	// Tracking time-slicer
 	int				m_trackingFaceIndex;
 
-	// dlib landmark predictors (68 point)
-	dlib::shape_predictor			m_predictor68;
-
 	// openCV camera (saved for convenience)
 	int				m_camera_w, m_camera_h;
 	cv::Mat			m_camera_matrix;

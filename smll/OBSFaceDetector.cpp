@@ -48,27 +48,10 @@ namespace smll {
 		, m_trackingFaceIndex(0)
 		, m_camera_w(0)
 		, m_camera_h(0) {
-		// Load face detection and pose estimation models.
+
+		// Init DLIB's shape predictor.
 		char *filename = obs_module_file(kFileShapePredictor68);
 		_faceLandmarks.Init(filename);
-//#ifdef _WIN32
-//		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-//		std::wstring wide_filename(converter.from_bytes(filename));
-//
-//		/* DLIB will not accept a wifstream or widestring to construct
-//		 * an ifstream or wifstream itself. Here we use a non-standard
-//		 * constructor provided by Microsoft and then the direct
-//		 * serialization function with an ifstream. */
-//		std::ifstream predictor68_file(wide_filename.c_str(), std::ios::binary);
-//
-//		if (!predictor68_file) {
-//			throw std::runtime_error("Failed to open predictor68 file");
-//		}
-//
-//		deserialize(m_predictor68, predictor68_file);
-//#else
-//		deserialize(filename) >> m_predictor68;
-//#endif
 		bfree(filename);
 	}
 
@@ -1047,10 +1030,7 @@ namespace smll {
 				break;
 			}
 
-			//// Sanity check
-			//if (d68.num_parts() != NUM_FACIAL_LANDMARKS)
-			//	throw std::invalid_argument(
-			//		"shape predictor got wrong number of landmarks");
+			// Predict Landmarks
 			std::vector<dlib::point> landmarks;
 			_faceLandmarks.DetectLandmarks(gray, m_faces[f].m_bounds, landmarks);
 			for (int j = 0; j < NUM_FACIAL_LANDMARKS; j++) {
