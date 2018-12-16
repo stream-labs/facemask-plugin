@@ -269,6 +269,7 @@ SET(facemask-plugin_SOURCES
 	"${PROJECT_SOURCE_DIR}/plugin/face-mask-filter.cpp"
 	"${PROJECT_SOURCE_DIR}/plugin/plugin.cpp"
 	"${PROJECT_SOURCE_DIR}/plugin/utils.cpp"
+	"${PROJECT_SOURCE_DIR}/plugin/face_landmark.cpp"
 	"${TINYOBJDir}/tiny_obj_loader.cc"
 	"${gs_SOURCES}"
 	"${mask_SOURCES}"

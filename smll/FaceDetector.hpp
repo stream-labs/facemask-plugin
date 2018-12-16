@@ -76,7 +76,12 @@ public:
 	int CaptureHeight() const {
 		return m_capture.height;
 	}
-
+	// Current Image
+	cv::Mat currentImage;
+	ImageWrapper	m_stageWork;
+	// Staging the capture texture
+	void 	StageCaptureTexture();
+	void 	UnstageCaptureTexture();
 private:
 
 	// Saved Faces
@@ -92,7 +97,6 @@ private:
 	// For staging the capture texture
 	gs_stagesurf_t* m_captureStage;
 	int				m_stageSize;
-	ImageWrapper	m_stageWork;
 
 	// Face detection timeouts
 	int				m_timeout;
@@ -138,13 +142,10 @@ private:
 		}
 	};
 	CropInfo	GetCropInfo();
-	// Current Image
-	cv::Mat currentImage;
+
 	void computeCurrentImage(const ImageWrapper& detect);
 
-	// Staging the capture texture
-	void 	StageCaptureTexture();
-	void 	UnstageCaptureTexture();
+
 
 	// For 3d pose
 	float	ReprojectionError(const std::vector<cv::Point3f>& model_points,

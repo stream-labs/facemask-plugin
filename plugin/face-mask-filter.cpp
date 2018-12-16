@@ -1462,8 +1462,16 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			else {
 				// new frame - do the face detection
 				smllFaceDetector->DetectFaces(detection.frame.detect, detection.frame.capture, detect_results);
-				// Now do the landmark detection & pose estimation
-				smllFaceDetector->DetectLandmarks(detection.frame.capture, detect_results);
+				// detect landmarks
+				obs_enter_graphics();
+				smllFaceDetector->StageCaptureTexture();
+				cv::Mat rgbaImage(smllFaceDetector->m_stageWork.h, smllFaceDetector->m_stageWork.w, CV_8UC4, smllFaceDetector->m_stageWork.data, smllFaceDetector->m_stageWork.getStride());
+				cv::Mat gray; cv::cvtColor(rgbaImage, gray, cv::COLOR_RGBA2GRAY);
+
+				landmark_tracking(gray, detect_results);
+				smllFaceDetector->UnstageCaptureTexture();
+				obs_leave_graphics();
+
 				smllFaceDetector->DoPoseEstimation(detect_results);
 
 				lastTimestamp = detection.frame.timestamp;
