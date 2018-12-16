@@ -145,6 +145,13 @@ namespace smll {
 			return;
 		}
 
+		// better check if the camera res has changed on us
+		if ((w != currentImage.cols) ||
+			(h != currentImage.rows)) {
+			// forget whatever we thought were faces
+			m_faces.length = 0;
+		}
+
 		grayImage = full_gray;
 
 		cv::resize(grayImage, currentImage, cv::Size(w, h), 0, 0, cv::INTER_NEAREST);
