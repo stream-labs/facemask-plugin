@@ -7,8 +7,6 @@
 void DrawPoseAxis(cv::Mat& frame, cv::Mat& R, cv::Point2d origin, float scale) {
 	cv::Mat RotMat; cv::Rodrigues(R, RotMat);
 
-	std::cout << R << std::endl;
-
 	cv::Mat axis3D = (cv::Mat_<double>(3, 3) << 1, 0, 0, 0, -1, 0, 0, 0, -1);
 	
 	axis3D = axis3D * RotMat.t();
@@ -89,7 +87,7 @@ int main()
 			for (auto idx : idxs2D) {
 				landmarks2D.emplace_back(landmarks[idx].x(), landmarks[idx].y());
 			}
-			//std::cout << landmarks2D << K << D << std::endl;
+			
 			landmarksDetector.DetectPose(landmarks2D, K, D, R, t);
 			DrawPoseAxis(frame, R, cv::Point2d(100, 100), 30);
 			
@@ -101,7 +99,6 @@ int main()
 			break;
 		}
 		if (k == 'c') {
-			std::wcout << "True" << std::endl;
 			cv::imwrite("../output/Image_" + std::to_string(imageWriterCounter++) + ".png", frame);
 		}
 

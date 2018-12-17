@@ -77,8 +77,8 @@ namespace FaceLib {
 		landmarks.swap(results);
 	}
 
-	void FaceLandmarks::DetectPose(std::vector<cv::Point2d>& landmarks2D, std::vector<cv::Point3d>& landmarks3D, cv::Mat& K, cv::Mat& D, cv::Mat& R, cv::Mat& t) {
-		cv::solvePnP(landmarks3D, landmarks2D, K, D, R, t);
+	void FaceLandmarks::DetectPose(std::vector<cv::Point2f>& landmarks2D, std::vector<cv::Point3f>& landmarks3D, cv::Mat& K, cv::Mat& D, cv::Mat& R, cv::Mat& t) {
+		cv::solvePnP(landmarks3D, landmarks2D, K, D, R, t, false, cv::SOLVEPNP_EPNP);
 
 		if (t.at<double>(2, 0) < 0) {
 			CorrectPoseFlip(R, t);
@@ -86,8 +86,8 @@ namespace FaceLib {
 	}
 
 	void FaceLandmarks::DetectPose(std::vector<cv::Point2d>& landmarks2D, cv::Mat& K, cv::Mat& D, cv::Mat& R, cv::Mat& t) {
-		cv::solvePnP(_landmarks3D, landmarks2D, K, D, R, t);
-
+		cv::solvePnP(_landmarks3D, landmarks2D, K, D, R, t, false, cv::SOLVEPNP_EPNP);
+		
 		if (t.at<double>(2, 0) < 0) {
 			CorrectPoseFlip(R, t);
 		}
@@ -107,6 +107,7 @@ namespace FaceLib {
 	}
 
 	void FaceLandmarks::CorrectPoseFlip(cv::Mat& R, cv::Mat& t) {
+		// TODO: Buggy!!!!
 		// Convert Eulers to Quaternion
 		double angle = sqrt(R.dot(R));
 		double quatRot[4];
