@@ -78,7 +78,7 @@ namespace FaceLib {
 
 		@param image The image to detect landmarks.
 		@param face The bounding box of face in dlib::rectangle format.
-		@param landmarks Fills current landmarks in std::vector<dlib::point>
+		@param landmarks Return current landmarks in std::vector<dlib::point>
 		@return None.
 		*/
 		void DetectLandmarks(cv::Mat& image, dlib::rectangle& face, std::vector<dlib::point>& landmarks);
