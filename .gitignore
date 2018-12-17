@@ -6,3 +6,6 @@ ipch
 x64
 .vs
 .mayaSwatches
+
+# Apps specific ignore
+output/
