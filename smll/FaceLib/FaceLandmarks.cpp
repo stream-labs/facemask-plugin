@@ -77,8 +77,8 @@ namespace FaceLib {
 		landmarks.swap(results);
 	}
 
-	void FaceLandmarks::DetectPose(std::vector<cv::Point2f>& landmarks2D, std::vector<cv::Point3f>& landmarks3D, cv::Mat& K, cv::Mat& D, cv::Mat& R, cv::Mat& t) {
-		cv::solvePnP(landmarks3D, landmarks2D, K, D, R, t, false, cv::SOLVEPNP_EPNP);
+	void FaceLandmarks::DetectPose(std::vector<cv::Point2f>& landmarks2D, std::vector<cv::Point3f>& landmarks3D, const cv::Mat& K, const cv::Mat& D, cv::Mat& R, cv::Mat& t, bool useExtrinsicGuess) {
+		cv::solvePnP(landmarks3D, landmarks2D, K, D, R, t, useExtrinsicGuess, cv::SOLVEPNP_EPNP);
 
 		if (t.at<double>(2, 0) < 0) {
 			CorrectPoseFlip(R, t);

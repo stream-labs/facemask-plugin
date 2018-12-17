@@ -1097,10 +1097,8 @@ namespace smll {
 			// Solve for pose
 			cv::Mat translation = m_poses[i].GetCVTranslation();
 			cv::Mat rotation = m_poses[i].GetCVRotation();
-			cv::solvePnP(model_points, image_points,
-				GetCVCamMatrix(), GetCVDistCoeffs(),
-				rotation, translation,
-				m_poses[i].PoseValid());
+			_faceLandmarks.DetectPose(image_points, model_points, GetCVCamMatrix(), GetCVDistCoeffs(), rotation, translation, m_poses[i].PoseValid());
+			
 
 			// sometimes we get crap
 			if (translation.at<double>(2, 0) > 1000.0 ||
