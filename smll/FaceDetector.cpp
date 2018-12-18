@@ -153,8 +153,9 @@ namespace smll {
 		}
 
 		grayImage = full_gray;
-
-		cv::resize(grayImage, currentImage, cv::Size(w, h), 0, 0, cv::INTER_NEAREST);
+		cv::resize(grayImage, currentImage, cv::Size(w, h), 0, 0, cv::INTER_LINEAR);
+		CropInfo cropInfo = GetCropInfo();
+		currentImage = currentImage(cv::Rect(cropInfo.offsetX, cropInfo.offsetY, cropInfo.offsetX+cropInfo.width, cropInfo.offsetY+cropInfo.height));
 		
 		bool trackingFailed = false;
 		// if number of frames before the last detection is bigger than the threshold or if there are no faces to track
@@ -978,15 +979,19 @@ namespace smll {
 		}
 	}
     
-	void FaceDetector::DetectLandmarks(cv::Mat gray_whole_img, DetectionResults& results)
+	void FaceDetector::DetectLandmarks(DetectionResults& results)
     {
 		// detect landmarks
-		obs_enter_graphics();
 		for (int f = 0; f < m_faces.length; f++) {
 			// Detect features on full-size frame
 			full_object_detection d68;
 
-			dlib::cv_image<unsigned char> img(gray_whole_img);
+			
+			//cv::rectangle(grayImage, cv::Point(m_faces[f].m_bounds.left(), m_faces[f].m_bounds.top()), cv::Point(m_faces[f].m_bounds.right(), m_faces[f].m_bounds.bottom()), cv::Scalar(0,0,255), 3 );
+			//cv::imshow("image", grayImage);
+			//cv::waitKey(0);
+
+			dlib::cv_image<unsigned char> img(grayImage);
 			d68 = m_predictor68(img, m_faces[f].m_bounds);
 
 			// Sanity check
@@ -998,7 +1003,7 @@ namespace smll {
 				results[f].landmarks68[j] = point(d68.part(j).x(), d68.part(j).y());
 			}
 		}
-		obs_leave_graphics();
+
 		results.length = m_faces.length;
 	}
 

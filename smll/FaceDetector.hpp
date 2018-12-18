@@ -63,7 +63,7 @@ public:
 	~FaceDetector();
 
 	void FaceDetector::DetectFaces(cv::Mat full_gray, int w, int h, DetectionResults& results);
-	void DetectLandmarks(cv::Mat gray_whole_img, DetectionResults& results);
+	void DetectLandmarks(DetectionResults& results);
 	void DoPoseEstimation(DetectionResults& results);
 	void ResetFaces();
 
