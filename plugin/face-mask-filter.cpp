@@ -882,7 +882,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// ----- DRAW -----
 
 	if (latestFrame == NULL) {
-		obs_source_skip_video_filter(source);  
+		obs_source_skip_video_filter(source);
 		return;
 	}
 
@@ -891,7 +891,12 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		texture = gs_texture_create(latestFrame->width, latestFrame->height*1.5, GS_R8, 1, NULL, GS_DYNAMIC);
 	}
 
-	gs_texture_set_image(texture, latestFrame->data[0], latestFrame->linesize[0], false);
+
+	update_async_texrender(latestFrame, texture, sourceRenderTarget, effect);
+
+	//gs_texture_set_image(texture, latestFrame->data[0], latestFrame->linesize[0], false);
+
+
 	//const struct obs_source_frame *frame = latestFrame;
 	//obs_source_output_video(source, frame);
 
@@ -1911,15 +1916,7 @@ Plugin::FaceMaskFilter::Instance::PreviewFrame::operator=(const PreviewFrame& ot
 Plugin::FaceMaskFilter::Instance::PreviewFrame::~PreviewFrame() {
 }
 
-enum convert_type {
-	CONVERT_NONE,
-	CONVERT_NV12,
-	CONVERT_420,
-	CONVERT_422_U,
-	CONVERT_422_Y,
-};
-
-static inline enum convert_type get_convert_type(enum video_format format)
+inline enum convert_type Plugin::FaceMaskFilter::Instance::get_convert_type(enum video_format format)
 {
 	switch (format) {
 	case VIDEO_FORMAT_I420:
@@ -1945,7 +1942,7 @@ static inline enum convert_type get_convert_type(enum video_format format)
 	return CONVERT_NONE;
 }
 
-static inline bool init_gpu_conversion(int &async_convert_height, int &async_convert_width, int &async_texture_format, int * async_plane_offset,
+inline bool Plugin::FaceMaskFilter::Instance::init_gpu_conversion(int &async_convert_height, int &async_convert_width, int &async_texture_format, int * async_plane_offset,
 	const struct obs_source_frame *frame)
 {
 	switch (get_convert_type(frame->format)) {
@@ -1968,7 +1965,7 @@ static inline bool init_gpu_conversion(int &async_convert_height, int &async_con
 	return false;
 }
 
-static inline bool set_packed422_sizes(int &async_convert_height, int &async_convert_width, int &async_texture_format,
+inline bool Plugin::FaceMaskFilter::Instance::set_packed422_sizes(int &async_convert_height, int &async_convert_width, int &async_texture_format,
 	const struct obs_source_frame *frame)
 {
 	async_convert_height = frame->height;
@@ -1977,7 +1974,7 @@ static inline bool set_packed422_sizes(int &async_convert_height, int &async_con
 	return true;
 }
 
-static inline bool set_planar420_sizes(int &async_convert_height, int &async_convert_width, int &async_texture_format, int *async_plane_offset,
+inline bool Plugin::FaceMaskFilter::Instance::set_planar420_sizes(int &async_convert_height, int &async_convert_width, int &async_texture_format, int *async_plane_offset,
 	const struct obs_source_frame *frame)
 {
 	uint32_t size = frame->width * frame->height;
@@ -1991,7 +1988,7 @@ static inline bool set_planar420_sizes(int &async_convert_height, int &async_con
 	return true;
 }
 
-static inline bool set_nv12_sizes(int async_convert_width, int async_convert_height, int async_texture_format, int* async_plane_offset,
+inline bool Plugin::FaceMaskFilter::Instance::set_nv12_sizes(int async_convert_width, int async_convert_height, int async_texture_format, int* async_plane_offset,
 	const struct obs_source_frame *frame)
 {
 	uint32_t size = frame->width * frame->height;
@@ -2004,7 +2001,7 @@ static inline bool set_nv12_sizes(int async_convert_width, int async_convert_hei
 	return true;
 }
 
-static void upload_raw_frame(gs_texture_t *tex,
+void Plugin::FaceMaskFilter::Instance::upload_raw_frame(gs_texture_t *tex,
 	const struct obs_source_frame *frame)
 {
 	switch (get_convert_type(frame->format)) {
@@ -2030,8 +2027,8 @@ static void upload_raw_frame(gs_texture_t *tex,
 	}
 }
 
-static bool update_async_texrender(const struct obs_source_frame *frame,
-		gs_texture_t *tex, gs_texrender_t *texrender)
+bool Plugin::FaceMaskFilter::Instance::update_async_texrender(const struct obs_source_frame *frame,
+		gs_texture_t *tex, gs_texrender_t *texrender, gs_effect_t *conv)
 {
 	gs_texrender_reset(texrender);
 
@@ -2050,7 +2047,6 @@ static bool update_async_texrender(const struct obs_source_frame *frame,
 
 	convert_width = (float)async_convert_width;
 
-	gs_effect_t *conv = obs->video.conversion_effect;
 	gs_technique_t *tech = gs_effect_get_technique(conv,
 			select_conversion_technique(frame->format));
 
@@ -2086,7 +2082,7 @@ static bool update_async_texrender(const struct obs_source_frame *frame,
 	return true;
 }
 
-static const char *select_conversion_technique(enum video_format format)
+const char * Plugin::FaceMaskFilter::Instance::select_conversion_technique(enum video_format format)
 {
 	switch (format) {
 	case VIDEO_FORMAT_UYVY:
@@ -2117,13 +2113,13 @@ static const char *select_conversion_technique(enum video_format format)
 	return NULL;
 }
 
-static inline void set_eparam(gs_effect_t *effect, const char *name, float val)
+inline void Plugin::FaceMaskFilter::Instance::set_eparam(gs_effect_t *effect, const char *name, float val)
 {
 	gs_eparam_t *param = gs_effect_get_param_by_name(effect, name);
 	gs_effect_set_float(param, val);
 }
 
-static inline void set_eparami(gs_effect_t *effect, const char *name, int val)
+inline void Plugin::FaceMaskFilter::Instance::set_eparami(gs_effect_t *effect, const char *name, int val)
 {
 	gs_eparam_t *param = gs_effect_get_param_by_name(effect, name);
 	gs_effect_set_int(param, val);
