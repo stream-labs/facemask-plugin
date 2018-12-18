@@ -145,6 +145,10 @@ namespace Plugin {
 			gs_texrender_t*		detectTexRender;
 			gs_stagesurf_t*		detectStage;
 
+			gs_texture_t* texture;
+
+			struct obs_source_frame * latestFrame;
+
 			// mask filenames
 			std::string			maskFolder;
 			std::string			currentMaskFolder;
@@ -258,6 +262,7 @@ namespace Plugin {
 					int					w;
 					int					h;
 					bool				active;
+					struct obs_source_frame * obs_frame;
 
 					cv::Mat fullSizeGrayFrame;
 				};

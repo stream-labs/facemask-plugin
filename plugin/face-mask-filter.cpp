@@ -136,6 +136,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
 
 	obs_enter_graphics();
+	texture = NULL;
 	sourceRenderTarget = gs_texrender_create(GS_RGBA, GS_ZS_NONE);
 	detectTexRender = gs_texrender_create(GS_R8, GS_ZS_NONE);
 	drawTexRender = gs_texrender_create(GS_RGBA, GS_Z32F); // has depth buffer
@@ -639,7 +640,11 @@ struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct 
 			std::try_to_lock);
 		if (lock.owns_lock()) {
 			frameSent = true;
-			cv::Mat bgra_img(frame1->height, frame1->width, CV_8UC4, frame1->data[0], int(frame1->linesize[0]));
+			cv::Mat bgra_img(frame1->height*1.5, frame1->width, CV_8UC1, frame1->data[0], int(frame1->linesize[0]));
+
+		//	cv::imshow("img", bgra_img);
+		//	cv::waitKey(0);
+
 			// detect texture dimensions
 			smll::OBSTexture detectTex;
 			obs_source_t *target = obs_filter_get_target(source);
@@ -658,15 +663,19 @@ struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct 
 			detectTex.height = (int)((float)detectTex.width *
 				(float)baseHeight / (float)baseWidth);
 
-			cv::Mat bgra_img1;
-			cv::flip(bgra_img, bgra_img1, 0);
+			cv::Mat bgra_img1 = bgra_img;
+			//cv::flip(bgra_img, bgra_img1, 0);
 
 			cv::Mat full_gray;
-			cv::cvtColor(bgra_img1, full_gray, cv::COLOR_RGBA2GRAY);
+			cv::cvtColor(bgra_img1, full_gray, cv::COLOR_YUV2GRAY_I420);
+
+			//cv::imshow("img", full_gray);
+			//cv::waitKey(0);
 
 			detection.frame.fullSizeGrayFrame = full_gray;
 			detection.frame.w = detectTex.width;
 			detection.frame.h = detectTex.height;
+			detection.frame.obs_frame = frame1;
 		}
 	}
 
@@ -807,7 +816,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(void *ptr,
 	reinterpret_cast<Instance*>(ptr)->video_render(effect);
 }
 
-void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
+void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) { 
 
 	// Skip rendering if inactive or invisible.
 	if (!isActive || !isVisible || 
@@ -852,12 +861,12 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	gs_effect_t* defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
 
 	// Render source frame to a texture
-	gs_texture* sourceTexture = RenderSourceTexture(effect ? effect : defaultEffect);
+	/*gs_texture* sourceTexture = RenderSourceTexture(effect ? effect : defaultEffect);
 	if (sourceTexture == NULL) {
 		// *** SKIP ***
 		obs_source_skip_video_filter(source);
 		return;
-	}
+	}*/
 
 	// smll needs a "viewport" to draw
 	smllRenderer->SetViewport(baseWidth, baseHeight);
@@ -872,6 +881,20 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// ----- DRAW -----
 
+	if (latestFrame == NULL) {
+		obs_source_skip_video_filter(source);  
+		return;
+	}
+
+	if (texture == NULL) {
+		//enum gs_color_format format = convert_video_format(latestFrame->format);
+		texture = gs_texture_create(latestFrame->width, latestFrame->height*1.5, GS_R8, 1, NULL, GS_DYNAMIC);
+	}
+
+	gs_texture_set_image(texture, latestFrame->data[0], latestFrame->linesize[0], false);
+	//const struct obs_source_frame *frame = latestFrame;
+	//obs_source_output_video(source, frame);
+
 	// OBS rendering state
 	gs_blend_state_push();
 	setupRenderingState();
@@ -884,7 +907,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			mask_data = demoMaskDatas[demoCurrentMask].get();
 		}
 	}
-
+	
 	// set up alphas
 	bool introActive = false;
 	bool outroActive = false;
@@ -931,7 +954,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	}
 
 	// Draw always current frame to be up to date, even it's processing is delayd
-	gs_texture_t* vidTex = sourceTexture;
+	gs_texture_t* vidTex = texture;
 
 	// some reasons triangulation should be destroyed
 	if (!mask_data || faces.length == 0) {
@@ -1023,7 +1046,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 						if (mask_data && (autoBGRemoval || cartoonMode || demoModeGenPreviews || recordTriggered)) {
 							triangulation.autoBGRemoval = autoBGRemoval;
 							triangulation.cartoonMode = cartoonMode;
-							mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
+							//mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
 						}
 
 						// restore transform state
@@ -1132,18 +1155,18 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		(!mask_data->DrawVideoWithMask() &&
 			!genThumbs)) {
 
-		// Draw the source video
+		// Draw the source video 
 		if (mask_data) {
 			triangulation.autoBGRemoval = autoBGRemoval;
 			triangulation.cartoonMode = cartoonMode;
-			mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
+			//mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
 		}
 		else {
 			// Draw the source video
-			while (gs_effect_loop(defaultEffect, "Draw")) {
-				gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
-					"image"), vidTex);
-				gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
+ 			while (gs_effect_loop(defaultEffect, "Draw")) {
+				//gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+				//	"image"), vidTex);
+				//gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
 			}
 		}
 	}
@@ -1182,7 +1205,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	drawCropRects(baseWidth, baseHeight);
 
 	// demo mode render stuff
-	demoModeRender(vidTex, mask_tex, mask_data);
+	//demoModeRender(vidTex, mask_tex, mask_data);
 
 	// restore rendering state
 	gs_blend_state_pop();
@@ -1192,6 +1215,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	checkForMaskUnloading();
 
 	videoTicked = false;
+
+	//std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 }
 
 void Plugin::FaceMaskFilter::Instance::checkForMaskUnloading() {
@@ -1418,8 +1443,23 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 				// new frame - do the face detection
 				smllFaceDetector->DetectFaces(detection.frame.fullSizeGrayFrame, detection.frame.w, detection.frame.h, detect_results);
 
-				smllFaceDetector->DetectLandmarks(detection.frame.fullSizeGrayFrame, detect_results);
+				smllFaceDetector->DetectLandmarks(detect_results);
+
+				cv::Mat img(detection.frame.fullSizeGrayFrame);
+				for (int i = 0; i < 68; i++) {
+					int x = detect_results[0].landmarks68[i].x();
+					int y = detect_results[0].landmarks68[i].y();
+					cv::circle(img, cv::Point(x, y), 3, cv::Scalar(0,0,255));
+				}
+
+				//cv::imshow("image", img);
+				//cv::waitKey(0);
+
 				smllFaceDetector->DoPoseEstimation(detect_results);
+
+				//cv::rectangle(Mat& img, Point pt1, Point pt2, const Scalar& color, int thickness = 1, int lineType = 8)
+
+				latestFrame = detection.frame.obs_frame;
 
 				lastTimestamp = detection.frame.timestamp;
 			}
@@ -1869,5 +1909,223 @@ Plugin::FaceMaskFilter::Instance::PreviewFrame::operator=(const PreviewFrame& ot
 }
 
 Plugin::FaceMaskFilter::Instance::PreviewFrame::~PreviewFrame() {
+}
+
+enum convert_type {
+	CONVERT_NONE,
+	CONVERT_NV12,
+	CONVERT_420,
+	CONVERT_422_U,
+	CONVERT_422_Y,
+};
+
+static inline enum convert_type get_convert_type(enum video_format format)
+{
+	switch (format) {
+	case VIDEO_FORMAT_I420:
+		return CONVERT_420;
+	case VIDEO_FORMAT_NV12:
+		return CONVERT_NV12;
+
+	case VIDEO_FORMAT_YVYU:
+	case VIDEO_FORMAT_YUY2:
+		return CONVERT_422_Y;
+	case VIDEO_FORMAT_UYVY:
+		return CONVERT_422_U;
+
+	case VIDEO_FORMAT_Y800:
+	case VIDEO_FORMAT_I444:
+	case VIDEO_FORMAT_NONE:
+	case VIDEO_FORMAT_RGBA:
+	case VIDEO_FORMAT_BGRA:
+	case VIDEO_FORMAT_BGRX:
+		return CONVERT_NONE;
+	}
+
+	return CONVERT_NONE;
+}
+
+static inline bool init_gpu_conversion(int &async_convert_height, int &async_convert_width, int &async_texture_format, int * async_plane_offset,
+	const struct obs_source_frame *frame)
+{
+	switch (get_convert_type(frame->format)) {
+	case CONVERT_422_Y:
+	case CONVERT_422_U:
+		return set_packed422_sizes(async_convert_height, async_convert_width, async_texture_format, frame);
+
+	case CONVERT_420:
+		return set_planar420_sizes(async_convert_height, async_convert_width, async_texture_format, async_plane_offset, frame);
+
+	case CONVERT_NV12:
+		return set_nv12_sizes(async_convert_height, async_convert_width, async_texture_format, async_plane_offset, frame);
+		break;
+
+	case CONVERT_NONE:
+		assert(false && "No conversion requested");
+		break;
+
+	}
+	return false;
+}
+
+static inline bool set_packed422_sizes(int &async_convert_height, int &async_convert_width, int &async_texture_format,
+	const struct obs_source_frame *frame)
+{
+	async_convert_height = frame->height;
+	async_convert_width = frame->width / 2;
+	async_texture_format = GS_BGRA;
+	return true;
+}
+
+static inline bool set_planar420_sizes(int &async_convert_height, int &async_convert_width, int &async_texture_format, int *async_plane_offset,
+	const struct obs_source_frame *frame)
+{
+	uint32_t size = frame->width * frame->height;
+	size += size / 2;
+
+	async_convert_width = frame->width;
+	async_convert_height = size / frame->width;
+	async_texture_format = GS_R8;
+	async_plane_offset[0] = (int)(frame->data[1] - frame->data[0]);
+	async_plane_offset[1] = (int)(frame->data[2] - frame->data[0]);
+	return true;
+}
+
+static inline bool set_nv12_sizes(int async_convert_width, int async_convert_height, int async_texture_format, int* async_plane_offset,
+	const struct obs_source_frame *frame)
+{
+	uint32_t size = frame->width * frame->height;
+	size += size / 2;
+
+	async_convert_width = frame->width;
+	async_convert_height = size / frame->width;
+	async_texture_format = GS_R8;
+	async_plane_offset[0] = (int)(frame->data[1] - frame->data[0]);
+	return true;
+}
+
+static void upload_raw_frame(gs_texture_t *tex,
+	const struct obs_source_frame *frame)
+{
+	switch (get_convert_type(frame->format)) {
+	case CONVERT_422_U:
+	case CONVERT_422_Y:
+		gs_texture_set_image(tex, frame->data[0],
+			frame->linesize[0], false);
+		break;
+
+	case CONVERT_420:
+		gs_texture_set_image(tex, frame->data[0],
+			frame->width, false);
+		break;
+
+	case CONVERT_NV12:
+		gs_texture_set_image(tex, frame->data[0],
+			frame->width, false);
+		break;
+
+	case CONVERT_NONE:
+		assert(false && "No conversion requested");
+		break;
+	}
+}
+
+static bool update_async_texrender(const struct obs_source_frame *frame,
+		gs_texture_t *tex, gs_texrender_t *texrender)
+{
+	gs_texrender_reset(texrender);
+
+	upload_raw_frame(tex, frame);
+
+	uint32_t cx = frame->width;
+	uint32_t cy = frame->height;
+
+	float convert_width;
+
+	int async_convert_height, async_convert_width;
+	int async_texture_format;
+	int async_plane_offset[2];
+
+	init_gpu_conversion(async_convert_height, async_convert_width, async_texture_format, async_plane_offset, frame);
+
+	convert_width = (float)async_convert_width;
+
+	gs_effect_t *conv = obs->video.conversion_effect;
+	gs_technique_t *tech = gs_effect_get_technique(conv,
+			select_conversion_technique(frame->format));
+
+	if (!gs_texrender_begin(texrender, cx, cy))
+		return false;
+
+	gs_technique_begin(tech);
+	gs_technique_begin_pass(tech, 0);
+
+	gs_effect_set_texture(gs_effect_get_param_by_name(conv, "image"), tex);
+	set_eparam(conv, "width",  (float)cx);
+	set_eparam(conv, "height", (float)cy);
+	set_eparam(conv, "width_d2",  cx * 0.5f);
+	set_eparam(conv, "width_d2_i",  1.0f / (cx * 0.5f));
+	set_eparam(conv, "input_width_i_d2",  (1.0f / convert_width)  * 0.5f);
+
+	set_eparami(conv, "int_width", (int)cx);
+	set_eparami(conv, "int_input_width", async_convert_width);
+	set_eparami(conv, "int_u_plane_offset",
+			(int)async_plane_offset[0]);
+	set_eparami(conv, "int_v_plane_offset",
+			(int)async_plane_offset[1]);
+
+	gs_ortho(0.f, (float)cx, 0.f, (float)cy, -100.f, 100.f);
+
+	gs_draw_sprite(tex, 0, cx, cy);
+
+	gs_technique_end_pass(tech);
+	gs_technique_end(tech);
+
+	gs_texrender_end(texrender);
+
+	return true;
+}
+
+static const char *select_conversion_technique(enum video_format format)
+{
+	switch (format) {
+	case VIDEO_FORMAT_UYVY:
+		return "UYVY_Reverse";
+
+	case VIDEO_FORMAT_YUY2:
+		return "YUY2_Reverse";
+
+	case VIDEO_FORMAT_YVYU:
+		return "YVYU_Reverse";
+
+	case VIDEO_FORMAT_I420:
+		return "I420_Reverse";
+
+	case VIDEO_FORMAT_NV12:
+		return "NV12_Reverse";
+		break;
+
+	case VIDEO_FORMAT_Y800:
+	case VIDEO_FORMAT_BGRA:
+	case VIDEO_FORMAT_BGRX:
+	case VIDEO_FORMAT_RGBA:
+	case VIDEO_FORMAT_NONE:
+	case VIDEO_FORMAT_I444:
+		assert(false && "No conversion requested");
+		break;
+	}
+	return NULL;
+}
+
+static inline void set_eparam(gs_effect_t *effect, const char *name, float val)
+{
+	gs_eparam_t *param = gs_effect_get_param_by_name(effect, name);
+	gs_effect_set_float(param, val);
+}
+
+static inline void set_eparami(gs_effect_t *effect, const char *name, int val)
+{
+	gs_eparam_t *param = gs_effect_get_param_by_name(effect, name);
+	gs_effect_set_int(param, val);
 }
 
