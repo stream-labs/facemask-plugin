@@ -87,6 +87,10 @@ namespace smll {
 	static const char* const CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY = 
 		"faceDetectRecheckFrequency";
 
+	static const char* const CONFIG_INT_LANDMARK_ERROR_CONFIDENCE =
+		"Landmark error threshold";
+	
+
 	// Tracking Vars ----------
 
 	// NOTE: tracking now uses same image dimensions as face
