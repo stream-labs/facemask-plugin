@@ -616,8 +616,8 @@ void Plugin::FaceMaskFilter::Instance::hide() {
 struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(void *ptr, struct obs_source_frame *frame) {
 	if (ptr == nullptr)
 		return NULL;
-	reinterpret_cast<Instance*>(ptr)->filter_video(frame);
-	return frame;
+	obs_source_frame * frame_to_render = reinterpret_cast<Instance*>(ptr)->filter_video(frame);
+	return frame_to_render;
 }
 
 struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct obs_source_frame * frame1) {
@@ -836,10 +836,14 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		return;
 	}
 
+	
+
 	// Grab parent and target source.
 	obs_source_t *parent = obs_filter_get_parent(source);
 	
 	obs_source_t *target = obs_filter_get_target(source);
+
+	obs_source_video_render(parent);
 
 
 	if ((parent == NULL) || (target == NULL)) {
@@ -881,12 +885,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// ----- DRAW -----
 
-	if (latestFrame == NULL) {
-		obs_source_skip_video_filter(source);
-		return;
-	}
-
-	update_async_texrender(latestFrame, &texture, sourceRenderTarget);
+	//update_async_texrender(latestFrame, &texture, sourceRenderTarget);
 
 	
 
@@ -955,7 +954,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	}
 
 	// Draw always current frame to be up to date, even it's processing is delayd
-	gs_texture_t* vidTex = texture;
+	//gs_texture_t* vidTex = texture;
 
 	// some reasons triangulation should be destroyed
 	if (!mask_data || faces.length == 0) {
@@ -968,10 +967,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// Draw the source video
 	gs_enable_depth_test(false);
 	gs_set_cull_mode(GS_NEITHER);
-	while (gs_effect_loop(defaultEffect, "Draw")) {
+	/*while (gs_effect_loop(defaultEffect, "DrawMatrix")) {
 		gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect, "image"), vidTex);
 		gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
-	}
+	}*/
 
 	// Get current method to use for anti-aliasing
 	if (antialiasing_method == NO_ANTI_ALIASING ||
@@ -2050,8 +2049,7 @@ bool Plugin::FaceMaskFilter::Instance::update_async_texrender(const struct obs_s
 
 	char * filename;
 	filename = obs_find_data_file("format_conversion.effect");
-	gs_effect_t *conv = gs_effect_create_from_file(filename,
-		NULL);
+	gs_effect_t *conv = gs_effect_create_from_file(filename, NULL);
 	bfree(filename);
 
 	gs_technique_t *tech = gs_effect_get_technique(conv,
