@@ -20,6 +20,7 @@
 */
 
 #include "FaceDetector.hpp"
+#include <dlib/opencv.h>
 
 
 #define HULL_POINTS_SCALE		(1.25f)
@@ -1005,7 +1006,14 @@ namespace smll {
 			}
 		}
 	}
-    
+	// calculate the variance between the current points and last points
+	double cal_dist_diff(std::vector<float> err) {
+		double sum = 0.0;
+		for (int i = 0; i < err.size(); i++) {
+			sum += std::abs(err[i]);
+		}
+		return sum/err.size();
+	}
     
     void FaceDetector::DetectLandmarks(const OBSTexture& capture, DetectionResults& results)
     {
@@ -1016,14 +1024,14 @@ namespace smll {
 		obs_enter_graphics();
 		StageCaptureTexture();
 		for (int f = 0; f < m_faces.length; f++) {
-
+			cv::Mat gray;
 			// Detect features on full-size frame
 			full_object_detection d68;
 			switch (m_stageWork.type) {
 			case IMAGETYPE_BGR:
 			{
 				cv::Mat bgrImage(m_stageWork.h, m_stageWork.w, CV_8UC3, m_stageWork.data, m_stageWork.getStride());
-				cv::Mat gray; cv::cvtColor(bgrImage, gray, cv::COLOR_BGR2GRAY);
+				cv::cvtColor(bgrImage, gray, cv::COLOR_BGR2GRAY);
 				dlib::cv_image<unsigned char> img(gray);
 				d68 = m_predictor68(img, m_faces[f].m_bounds);
 				break;
@@ -1031,7 +1039,7 @@ namespace smll {
 			case IMAGETYPE_RGB:
 			{
 				cv::Mat rgbImage(m_stageWork.h, m_stageWork.w, CV_8UC3, m_stageWork.data, m_stageWork.getStride());
-				cv::Mat gray; cv::cvtColor(rgbImage, gray, cv::COLOR_RGB2GRAY);
+				cv::cvtColor(rgbImage, gray, cv::COLOR_RGB2GRAY);
 				dlib::cv_image<unsigned char> img(gray);
 				d68 = m_predictor68(img, m_faces[f].m_bounds);
 				break;
@@ -1039,14 +1047,14 @@ namespace smll {
 			case IMAGETYPE_RGBA:
 			{
 				cv::Mat rgbaImage(m_stageWork.h, m_stageWork.w, CV_8UC4, m_stageWork.data, m_stageWork.getStride());
-				cv::Mat gray; cv::cvtColor(rgbaImage, gray, cv::COLOR_RGBA2GRAY);
+				cv::cvtColor(rgbaImage, gray, cv::COLOR_RGBA2GRAY);
 				dlib::cv_image<unsigned char> img(gray);
 				d68 = m_predictor68(img, m_faces[f].m_bounds);
 				break;
 			}
 			case IMAGETYPE_GRAY:
 			{
-				cv::Mat gray(m_stageWork.h, m_stageWork.w, CV_8UC1, m_stageWork.data, m_stageWork.getStride());
+				gray = cv::Mat(m_stageWork.h, m_stageWork.w, CV_8UC1, m_stageWork.data, m_stageWork.getStride());
 				dlib::cv_image<unsigned char> img(gray);
 				d68 = m_predictor68(img, m_faces[f].m_bounds);
 				break;
@@ -1065,11 +1073,65 @@ namespace smll {
 			for (int j = 0; j < NUM_FACIAL_LANDMARKS; j++) {
 				results[f].landmarks68[j] = point(d68.part(j).x(), d68.part(j).y());
 			}
+			std::vector<uchar> status;
+			std::vector<float> err;
+
+			
+			if (!inited_prevgray) {
+				inited_prevgray = true;
+				prevgray = gray;
+				//prevTrackPts.push_back(cv::Point2f(d68.part(LEFT_OUTER_EYE_CORNER).x(), d68.part(LEFT_OUTER_EYE_CORNER).y()));
+				//prevTrackPts.push_back(cv::Point2f(d68.part(RIGHT_OUTER_EYE_CORNER).x(), d68.part(RIGHT_OUTER_EYE_CORNER).y()));
+				//prevTrackPts.push_back(cv::Point2f(d68.part(NOSE_1).x(), d68.part(NOSE_1).y()));
+				//prevTrackPts.push_back(cv::Point2f(d68.part(NOSE_2).x(), d68.part(NOSE_2).y()));
+				//prevTrackPts.push_back(cv::Point2f(d68.part(NOSE_3).x(), d68.part(NOSE_3).y()));
+				//prevTrackPts.push_back(cv::Point2f(d68.part(NOSE_4).x(), d68.part(NOSE_4).y()));
+				//prevTrackPts.push_back(cv::Point2f(d68.part(NOSE_7).x(), d68.part(NOSE_7).y()));
+				for (int i = 0; i < 68; i++) {
+					prevTrackPts.push_back(cv::Point2f(d68.part(i).x(), d68.part(i).y()));
+				}
+			}
+
+			calcOpticalFlowPyrLK(prevgray, gray, prevTrackPts, nextTrackPts, status, err);
+			double diff = cal_dist_diff(err);
+			if (diff > Config::singleton().get_int(CONFIG_INT_LANDMARK_ERROR_CONFIDENCE)) {
+				//nextTrackPts[0] = (cv::Point2f(d68.part(LEFT_OUTER_EYE_CORNER).x(), d68.part(LEFT_OUTER_EYE_CORNER).y()));
+				//nextTrackPts[1] = (cv::Point2f(d68.part(RIGHT_OUTER_EYE_CORNER).x(), d68.part(RIGHT_OUTER_EYE_CORNER).y()));
+				//nextTrackPts[2] = (cv::Point2f(d68.part(NOSE_1).x(), d68.part(NOSE_1).y()));
+				//nextTrackPts[3] = (cv::Point2f(d68.part(NOSE_2).x(), d68.part(NOSE_2).y()));
+				//nextTrackPts[4] = (cv::Point2f(d68.part(NOSE_3).x(), d68.part(NOSE_3).y()));
+				//nextTrackPts[5] = (cv::Point2f(d68.part(NOSE_4).x(), d68.part(NOSE_4).y()));
+				//nextTrackPts[6] = (cv::Point2f(d68.part(NOSE_7).x(), d68.part(NOSE_7).y()));
+				for (int i = 0; i < 68; i++) {
+					nextTrackPts[i] = (cv::Point2f(d68.part(i).x(), d68.part(i).y()));
+				}
+
+			} 
+			for (int i = 0; i < 68; i++) {
+				results[f].landmarks68[i] = point(nextTrackPts[i].x, nextTrackPts[i].y);
+			}
+			
+
+			//results[f].landmarks68[LEFT_OUTER_EYE_CORNER] = point(nextTrackPts[0].x, nextTrackPts[0].y);
+			//results[f].landmarks68[RIGHT_OUTER_EYE_CORNER] = point(nextTrackPts[1].x, nextTrackPts[1].y);
+			//results[f].landmarks68[NOSE_1] = point(nextTrackPts[2].x, nextTrackPts[2].y);
+			//results[f].landmarks68[NOSE_2] = point(nextTrackPts[3].x, nextTrackPts[3].y);
+			//results[f].landmarks68[NOSE_3] = point(nextTrackPts[4].x, nextTrackPts[4].y);
+			//results[f].landmarks68[NOSE_4] = point(nextTrackPts[5].x, nextTrackPts[5].y);
+			//results[f].landmarks68[NOSE_7] = point(nextTrackPts[6].x, nextTrackPts[6].y);
+
+
+			std::swap(prevTrackPts, nextTrackPts);
+
+			prevgray = gray.clone();
 		}
+
 		UnstageCaptureTexture();
 		obs_leave_graphics();
 		results.length = m_faces.length;
 	}
+
+
 
 	float FaceDetector::ReprojectionError(const std::vector<cv::Point3f>& model_points,
 		const std::vector<cv::Point2f>& image_points,

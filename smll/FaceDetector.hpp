@@ -50,6 +50,7 @@
 #include <vector>
 #include <codecvt>
 #include <opencv2/opencv.hpp>
+#include <stdio.h>
 #pragma warning( pop )
 
 namespace smll {
@@ -107,7 +108,8 @@ private:
 
 	// dlib landmark predictors (68 point)
 	dlib::shape_predictor			m_predictor68;
-
+	std::vector<cv::Point2f> prevTrackPts;
+	std::vector<cv::Point2f> nextTrackPts;
 	// openCV camera (saved for convenience)
 	int				m_camera_w, m_camera_h;
 	cv::Mat			m_camera_matrix;
@@ -115,7 +117,8 @@ private:
 	void			SetCVCamera();
 	const cv::Mat&	GetCVCamMatrix();
 	const cv::Mat&	GetCVDistCoeffs();
-
+	cv::Mat prevgray;
+	bool inited_prevgray = false;
 	// lookup table for morph triangulation
 	std::vector<LandmarkBitmask>	m_vtxBitmaskLookup;
 	void							MakeVtxBitmaskLookup();
