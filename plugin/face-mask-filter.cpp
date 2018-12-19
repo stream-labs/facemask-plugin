@@ -886,13 +886,9 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		return;
 	}
 
-	if (texture == NULL) {
-		//enum gs_color_format format = convert_video_format(latestFrame->format);
-		texture = gs_texture_create(latestFrame->width, latestFrame->height*1.5, GS_R8, 1, NULL, GS_DYNAMIC);
-	}
+	update_async_texrender(latestFrame, &texture, sourceRenderTarget);
 
-
-	update_async_texrender(latestFrame, texture, sourceRenderTarget, effect);
+	
 
 	//gs_texture_set_image(texture, latestFrame->data[0], latestFrame->linesize[0], false);
 
@@ -973,8 +969,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	gs_enable_depth_test(false);
 	gs_set_cull_mode(GS_NEITHER);
 	while (gs_effect_loop(defaultEffect, "Draw")) {
-		gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
-			"image"), vidTex);
+		gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect, "image"), vidTex);
 		gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
 	}
 
@@ -1942,10 +1937,11 @@ inline enum convert_type Plugin::FaceMaskFilter::Instance::get_convert_type(enum
 	return CONVERT_NONE;
 }
 
-inline bool Plugin::FaceMaskFilter::Instance::init_gpu_conversion(int &async_convert_height, int &async_convert_width, int &async_texture_format, int * async_plane_offset,
+inline bool Plugin::FaceMaskFilter::Instance::init_gpu_conversion(int &async_convert_height, int &async_convert_width, gs_color_format &async_texture_format, int * async_plane_offset,
 	const struct obs_source_frame *frame)
 {
-	switch (get_convert_type(frame->format)) {
+	return set_planar420_sizes(async_convert_height, async_convert_width, async_texture_format, async_plane_offset, frame);
+	/*switch (get_convert_type(frame->format)) {
 	case CONVERT_422_Y:
 	case CONVERT_422_U:
 		return set_packed422_sizes(async_convert_height, async_convert_width, async_texture_format, frame);
@@ -1961,11 +1957,11 @@ inline bool Plugin::FaceMaskFilter::Instance::init_gpu_conversion(int &async_con
 		assert(false && "No conversion requested");
 		break;
 
-	}
+	}*/
 	return false;
 }
 
-inline bool Plugin::FaceMaskFilter::Instance::set_packed422_sizes(int &async_convert_height, int &async_convert_width, int &async_texture_format,
+inline bool Plugin::FaceMaskFilter::Instance::set_packed422_sizes(int &async_convert_height, int &async_convert_width, gs_color_format &async_texture_format,
 	const struct obs_source_frame *frame)
 {
 	async_convert_height = frame->height;
@@ -1974,7 +1970,7 @@ inline bool Plugin::FaceMaskFilter::Instance::set_packed422_sizes(int &async_con
 	return true;
 }
 
-inline bool Plugin::FaceMaskFilter::Instance::set_planar420_sizes(int &async_convert_height, int &async_convert_width, int &async_texture_format, int *async_plane_offset,
+inline bool Plugin::FaceMaskFilter::Instance::set_planar420_sizes(int &async_convert_height, int &async_convert_width, gs_color_format &async_texture_format, int *async_plane_offset,
 	const struct obs_source_frame *frame)
 {
 	uint32_t size = frame->width * frame->height;
@@ -1988,7 +1984,7 @@ inline bool Plugin::FaceMaskFilter::Instance::set_planar420_sizes(int &async_con
 	return true;
 }
 
-inline bool Plugin::FaceMaskFilter::Instance::set_nv12_sizes(int async_convert_width, int async_convert_height, int async_texture_format, int* async_plane_offset,
+inline bool Plugin::FaceMaskFilter::Instance::set_nv12_sizes(int &async_convert_width, int &async_convert_height, gs_color_format &async_texture_format, int* async_plane_offset,
 	const struct obs_source_frame *frame)
 {
 	uint32_t size = frame->width * frame->height;
@@ -2001,23 +1997,23 @@ inline bool Plugin::FaceMaskFilter::Instance::set_nv12_sizes(int async_convert_w
 	return true;
 }
 
-void Plugin::FaceMaskFilter::Instance::upload_raw_frame(gs_texture_t *tex,
+void Plugin::FaceMaskFilter::Instance::upload_raw_frame(gs_texture_t **tex,
 	const struct obs_source_frame *frame)
 {
 	switch (get_convert_type(frame->format)) {
 	case CONVERT_422_U:
 	case CONVERT_422_Y:
-		gs_texture_set_image(tex, frame->data[0],
+		gs_texture_set_image(*tex, frame->data[0],
 			frame->linesize[0], false);
 		break;
 
 	case CONVERT_420:
-		gs_texture_set_image(tex, frame->data[0],
+		gs_texture_set_image(*tex, frame->data[0],
 			frame->width, false);
 		break;
 
 	case CONVERT_NV12:
-		gs_texture_set_image(tex, frame->data[0],
+		gs_texture_set_image(*tex, frame->data[0],
 			frame->width, false);
 		break;
 
@@ -2025,27 +2021,38 @@ void Plugin::FaceMaskFilter::Instance::upload_raw_frame(gs_texture_t *tex,
 		assert(false && "No conversion requested");
 		break;
 	}
-}
+ }
 
 bool Plugin::FaceMaskFilter::Instance::update_async_texrender(const struct obs_source_frame *frame,
-		gs_texture_t *tex, gs_texrender_t *texrender, gs_effect_t *conv)
+		gs_texture_t **tex, gs_texrender_t *texrender)
 {
 	gs_texrender_reset(texrender);
+
+	float convert_width;
+
+	int async_convert_height, async_convert_width;
+	gs_color_format async_texture_format;
+	int async_plane_offset[2];
+
+	init_gpu_conversion(async_convert_height, async_convert_width, async_texture_format, async_plane_offset, frame);
+
+	convert_width = (float)async_convert_width;
+	convert_width = (float)async_convert_width;
+
+	if (*tex == NULL) {
+		*tex = gs_texture_create(frame->width, frame->height*1.5, async_texture_format, 1, NULL, GS_DYNAMIC);
+	}
 
 	upload_raw_frame(tex, frame);
 
 	uint32_t cx = frame->width;
 	uint32_t cy = frame->height;
 
-	float convert_width;
-
-	int async_convert_height, async_convert_width;
-	int async_texture_format;
-	int async_plane_offset[2];
-
-	init_gpu_conversion(async_convert_height, async_convert_width, async_texture_format, async_plane_offset, frame);
-
-	convert_width = (float)async_convert_width;
+	char * filename;
+	filename = obs_find_data_file("format_conversion.effect");
+	gs_effect_t *conv = gs_effect_create_from_file(filename,
+		NULL);
+	bfree(filename);
 
 	gs_technique_t *tech = gs_effect_get_technique(conv,
 			select_conversion_technique(frame->format));
@@ -2053,10 +2060,11 @@ bool Plugin::FaceMaskFilter::Instance::update_async_texrender(const struct obs_s
 	if (!gs_texrender_begin(texrender, cx, cy))
 		return false;
 
+
 	gs_technique_begin(tech);
 	gs_technique_begin_pass(tech, 0);
 
-	gs_effect_set_texture(gs_effect_get_param_by_name(conv, "image"), tex);
+	gs_effect_set_texture(gs_effect_get_param_by_name(conv, "image"), *tex);
 	set_eparam(conv, "width",  (float)cx);
 	set_eparam(conv, "height", (float)cy);
 	set_eparam(conv, "width_d2",  cx * 0.5f);
@@ -2072,7 +2080,7 @@ bool Plugin::FaceMaskFilter::Instance::update_async_texrender(const struct obs_s
 
 	gs_ortho(0.f, (float)cx, 0.f, (float)cy, -100.f, 100.f);
 
-	gs_draw_sprite(tex, 0, cx, cy);
+	gs_draw_sprite(*tex, 0, cx, cy);
 
 	gs_technique_end_pass(tech);
 	gs_technique_end(tech);

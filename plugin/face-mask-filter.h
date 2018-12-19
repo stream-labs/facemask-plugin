@@ -104,21 +104,21 @@ namespace Plugin {
 			static bool generate_videos(obs_properties_t *pr, obs_property_t *p, void *data);
 			bool generate_videos(obs_properties_t *pr, obs_property_t *p);
 
-			static inline bool init_gpu_conversion(int &async_convert_height, int &async_convert_width, int &async_texture_format, int * async_plane_offset,
+			static inline bool init_gpu_conversion(int &async_convert_height, int &async_convert_width, gs_color_format &async_texture_format, int * async_plane_offset,
 				const struct obs_source_frame *frame);
-			static bool set_packed422_sizes(int &async_convert_height, int &async_convert_width, int &async_texture_format,
+			static bool set_packed422_sizes(int &async_convert_height, int &async_convert_width, gs_color_format &async_texture_format,
 				const struct obs_source_frame *frame);
-			static inline bool set_planar420_sizes(int &async_convert_height, int &async_convert_width, int &async_texture_format, int *async_plane_offset,
+			static inline bool set_planar420_sizes(int &async_convert_height, int &async_convert_width, gs_color_format &async_texture_format, int *async_plane_offset,
 				const struct obs_source_frame *frame);
-			static inline bool set_nv12_sizes(int async_convert_width, int async_convert_height, int async_texture_format, int* async_plane_offset,
+			static inline bool set_nv12_sizes(int &async_convert_width, int &async_convert_height, gs_color_format &async_texture_format, int* async_plane_offset,
 				const struct obs_source_frame *frame);
 			static bool update_async_texrender(const struct obs_source_frame *frame,
-				gs_texture_t *tex, gs_texrender_t *texrender, gs_effect_t *conv);
+				gs_texture_t **tex, gs_texrender_t *texrender);
 			static inline enum convert_type get_convert_type(enum video_format format);
 			static inline void set_eparam(gs_effect_t *effect, const char *name, float val);
 			static inline void set_eparami(gs_effect_t *effect, const char *name, int val);
 			static const char *select_conversion_technique(enum video_format format);
-			static void upload_raw_frame(gs_texture_t *tex, const struct obs_source_frame *frame);
+			static void upload_raw_frame(gs_texture_t **tex, const struct obs_source_frame *frame);
 
 		protected:
 			// face detection thread
