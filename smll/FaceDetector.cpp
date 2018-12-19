@@ -1182,9 +1182,10 @@ namespace smll {
 			cv::solvePnP(model_points, image_points,
 				GetCVCamMatrix(), GetCVDistCoeffs(),
 				rotation, translation,
-				m_poses[i].PoseValid());
+				m_poses[i].PoseValid(),
+				cv::SOLVEPNP_EPNP);
 
-			// sometimes we get crap
+			// TODO: Check if we still get wrong results.
 			if (translation.at<double>(2, 0) > 1000.0 ||
 				translation.at<double>(2, 0) < -1000.0) {
 				resultsBad = true;
@@ -1192,7 +1193,8 @@ namespace smll {
 				break;
 			}
 
-			// check error again, still bad, use previous pose
+			// TODO: If possible, remove these sanity checks
+			// NOTE: If no pose is generated, use previous pose.
 			if (m_poses[i].PoseValid() &&
 				ReprojectionError(model_points, image_points, rotation, translation) > threshold) {
 				// reset pose
