@@ -146,46 +146,9 @@ namespace smll {
 		char* cropData = detect.data +
 			(detect.getStride() * cropInfo.offsetY) +
 			(detect.getNumElems() * cropInfo.offsetX);
-		switch (detect.type) {
-		case IMAGETYPE_GRAY:
-		{
-			cv::Mat gray(cropInfo.height, cropInfo.width, CV_8UC1, cropData, m_detect.getStride());
-			currentImage = gray.clone();
-			break;
-		}
-		case IMAGETYPE_RGB:
-		{
-			cv::Mat rgbImage(cropInfo.height, cropInfo.width, CV_8UC3, cropData, detect.getStride());
-			cv::Mat gray; cv::cvtColor(rgbImage, gray, cv::COLOR_RGB2GRAY);
-			currentImage = gray.clone();
-			break;
-		}
-		case IMAGETYPE_BGR:
-		{
-			cv::Mat bgrImage(cropInfo.height, cropInfo.width, CV_8UC3, cropData, detect.getStride());
-			cv::Mat gray; cv::cvtColor(bgrImage, gray, cv::COLOR_BGR2GRAY);
-			currentImage = gray.clone();
-			break;
-		}
-		case IMAGETYPE_RGBA:
-		{
-			cv::Mat rgbaImage(cropInfo.height, cropInfo.width, CV_8UC4, cropData, detect.getStride());
-			cv::Mat gray; cv::cvtColor(rgbaImage, gray, cv::COLOR_RGBA2GRAY);
-			currentImage = gray.clone();
-			break;
-		}
-		case IMAGETYPE_BGRA:
-		{
-			cv::Mat bgraImage(cropInfo.height, cropInfo.width, CV_8UC4, cropData, detect.getStride());
-			cv::Mat gray; cv::cvtColor(bgraImage, gray, cv::COLOR_BGRA2GRAY);
-			currentImage = gray.clone();
-			break;
-		}
-		default:
-			throw std::invalid_argument(
-				"INVALID IMAGE TYPE - Check if the frame is valid");
-			break;
-		}
+
+		cv::Mat gray(cropInfo.height, cropInfo.width, CV_8UC1, cropData, m_detect.getStride());
+		currentImage = gray;
 	}
 
 	void FaceDetector::DetectFaces(const ImageWrapper& detect, const OBSTexture& capture, DetectionResults& results) {
@@ -1057,8 +1020,8 @@ namespace smll {
 
 		// detect landmarks
 		obs_enter_graphics();
+		StageCaptureTexture();
 		for (int f = 0; f < m_faces.length; f++) {
-			StageCaptureTexture();
 
 			// Detect features on full-size frame
 			full_object_detection d68;
@@ -1100,8 +1063,6 @@ namespace smll {
 				break;
 			}
 
-			UnstageCaptureTexture();
-
 			// Sanity check
 			if (d68.num_parts() != NUM_FACIAL_LANDMARKS)
 				throw std::invalid_argument(
@@ -1111,6 +1072,7 @@ namespace smll {
 				results[f].landmarks68[j] = point(d68.part(j).x(), d68.part(j).y());
 			}
 		}
+		UnstageCaptureTexture();
 		obs_leave_graphics();
 		results.length = m_faces.length;
 	}
@@ -1173,9 +1135,10 @@ namespace smll {
 			cv::solvePnP(model_points, image_points,
 				GetCVCamMatrix(), GetCVDistCoeffs(),
 				rotation, translation,
-				m_poses[i].PoseValid());
+				m_poses[i].PoseValid(),
+				cv::SOLVEPNP_EPNP);
 
-			// sometimes we get crap
+			// TODO: Check if we still get wrong results.
 			if (translation.at<double>(2, 0) > 1000.0 ||
 				translation.at<double>(2, 0) < -1000.0) {
 				resultsBad = true;
@@ -1183,7 +1146,8 @@ namespace smll {
 				break;
 			}
 
-			// check error again, still bad, use previous pose
+			// TODO: If possible, remove these sanity checks
+			// NOTE: If no pose is generated, use previous pose.
 			if (m_poses[i].PoseValid() &&
 				ReprojectionError(model_points, image_points, rotation, translation) > threshold) {
 				// reset pose
