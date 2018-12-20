@@ -799,6 +799,16 @@ void Plugin::FaceMaskFilter::Instance::video_render(void *ptr,
 
 void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
+	// ----- GET FACES FROM OTHER THREAD -----
+	updateFaces();
+
+	// Grab parent and target source.
+	obs_source_t *parent = obs_filter_get_parent(source);
+
+	obs_source_t *target = obs_filter_get_target(source);
+
+	obs_source_video_render(parent);
+
 	// Skip rendering if inactive or invisible.
 	if (!isActive || !isVisible || 
 		// or if the alert is done
@@ -812,27 +822,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		faces.length = 0;
 		// make sure file loads still happen
 		checkForMaskUnloading();
-		// *** SKIP ***
-		obs_source_skip_video_filter(source);
 		return;
 	}
 
-	
-
-	// Grab parent and target source.
-	obs_source_t *parent = obs_filter_get_parent(source);
-	
-	obs_source_t *target = obs_filter_get_target(source);
-
-	obs_source_video_render(parent);
-
-	// ----- GET FACES FROM OTHER THREAD -----
-	updateFaces();
-
-
 	if ((parent == NULL) || (target == NULL)) {
-		// *** SKIP ***
-		obs_source_skip_video_filter(source);
 		return;
 	}
 
@@ -840,21 +833,11 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	baseWidth = obs_source_get_base_width(target);
 	baseHeight = obs_source_get_base_height(target);
 	if ((baseWidth <= 0) || (baseHeight <= 0)) {
-		// *** SKIP ***
-		obs_source_skip_video_filter(source);
 		return;
 	}
 
 	// Effects
 	gs_effect_t* defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
-
-	// Render source frame to a texture
-	/*gs_texture* sourceTexture = RenderSourceTexture(effect ? effect : defaultEffect);
-	if (sourceTexture == NULL) {
-		// *** SKIP ***
-		obs_source_skip_video_filter(source);
-		return;
-	}*/
 
 	// smll needs a "viewport" to draw
 	smllRenderer->SetViewport(baseWidth, baseHeight);
@@ -862,22 +845,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// Get mask data mutex
 	std::unique_lock<std::mutex> masklock(maskDataMutex, std::try_to_lock);
 	if (!masklock.owns_lock()) {
-		// *** SKIP RENDERING ***
-		obs_source_skip_video_filter(source);
 		return;
 	}
-
-	// ----- DRAW -----
-
-	//update_async_texrender(latestFrame, &texture, sourceRenderTarget);
-
-	
-
-	//gs_texture_set_image(texture, latestFrame->data[0], latestFrame->linesize[0], false);
-
-
-	//const struct obs_source_frame *frame = latestFrame;
-	//obs_source_output_video(source, frame);
 
 	// OBS rendering state
 	gs_blend_state_push();
@@ -937,9 +906,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		mask_data->SetGlobalAlpha(maskAlpha);
 	}
 
-	// Draw always current frame to be up to date, even it's processing is delayd
-	//gs_texture_t* vidTex = texture;
-
 	// some reasons triangulation should be destroyed
 	if (!mask_data || faces.length == 0) {
 		triangulation.DestroyBuffers();
@@ -947,14 +913,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// flags
 	bool genThumbs = mask_data && demoModeGenPreviews && demoModeSavingFrames;
-
-	// Draw the source video
-	gs_enable_depth_test(false);
-	gs_set_cull_mode(GS_NEITHER);
-	/*while (gs_effect_loop(defaultEffect, "DrawMatrix")) {
-		gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect, "image"), vidTex);
-		gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
-	}*/
 
 	// Get current method to use for anti-aliasing
 	if (antialiasing_method == NO_ANTI_ALIASING ||
@@ -1131,11 +1089,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	gs_blend_function(gs_blend_type::GS_BLEND_SRCALPHA,
 		gs_blend_type::GS_BLEND_INVSRCALPHA);
 
-	// Draw the source video:
-	// - if we are not drawing the video with the mask, then we need
-	//   to draw video now.
-	if (!mask_data ||
-		(!mask_data->DrawVideoWithMask() &&
+
+	if ((!mask_data->DrawVideoWithMask() &&
 			!genThumbs)) {
 
 		// Draw the source video 
@@ -1143,14 +1098,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			triangulation.autoBGRemoval = autoBGRemoval;
 			triangulation.cartoonMode = cartoonMode;
 			//mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
-		}
-		else {
-			// Draw the source video
- 			while (gs_effect_loop(defaultEffect, "Draw")) {
-				//gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
-				//	"image"), vidTex);
-				//gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
-			}
 		}
 	}
 
@@ -1199,7 +1146,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	videoTicked = false;
 
-	//std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 }
 
 void Plugin::FaceMaskFilter::Instance::checkForMaskUnloading() {
@@ -1898,4 +1844,3 @@ Plugin::FaceMaskFilter::Instance::PreviewFrame::operator=(const PreviewFrame& ot
 
 Plugin::FaceMaskFilter::Instance::PreviewFrame::~PreviewFrame() {
 }
-
