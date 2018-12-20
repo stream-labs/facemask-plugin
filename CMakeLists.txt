@@ -68,12 +68,16 @@ SET(OpenCV_LIBS
 	optimized "${OpenCV_DIR}/lib/Release/opencv_imgproc${OpenCV_VERSION}.lib"
 	optimized "${OpenCV_DIR}/lib/Release/opencv_video${OpenCV_VERSION}.lib"
 	optimized "${OpenCV_DIR}/lib/Release/opencv_videoio${OpenCV_VERSION}.lib"
+	optimized "${OpenCV_DIR}/lib/Release/opencv_objdetect${OpenCV_VERSION}.lib"
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libpng.lib"
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/zlib.lib"
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/ittnotify.lib"
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/ippiw.lib"
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libwebp.lib"
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libtiff.lib"
+	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libjpeg.lib"
+	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libjasper.lib"
+	optimized "${OpenCV_DIR}/3rdparty/lib/Release/IlmImf.lib"
 	optimized "${OpenCV_DIR}/3rdparty/ippicv/ippicv_win/lib/intel64/ippicvmt.lib"
 )
 include_directories("${OpenCV_DIR}/include")
@@ -341,7 +345,7 @@ endif()
 
 
 add_executable(facemask-landmark
-			face_landmark_detection_dlib_of_kf_mixed.cpp
+			plugin/cud.cpp
 		)
 TARGET_LINK_LIBRARIES(facemask-landmark
 	${facemask-plugin_LIBRARIES}

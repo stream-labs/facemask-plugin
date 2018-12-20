@@ -2,7 +2,7 @@
 #define OPENCV_CVCONFIG_H_INCLUDED
 
 /* OpenCV compiled as static or dynamic libs */
-/* #undef BUILD_SHARED_LIBS */
+#define BUILD_SHARED_LIBS
 
 /* OpenCV intrinsics optimized code */
 #define CV_ENABLE_INTRINSICS
@@ -110,10 +110,10 @@
 /* #undef HAVE_IPP_A */
 
 /* JPEG-2000 codec */
-/* #undef HAVE_JASPER */
+#define HAVE_JASPER
 
 /* IJG JPEG codec */
-/* #undef HAVE_JPEG */
+#define HAVE_JPEG
 
 /* libpng/png.h needs to be included */
 /* #undef HAVE_LIBPNG_PNG_H */
@@ -136,7 +136,7 @@
 /* OpenCL Support */
 #define HAVE_OPENCL
 /* #undef HAVE_OPENCL_STATIC */
-/* #undef HAVE_OPENCL_SVM */
+#define HAVE_OPENCL_SVM
 
 /* OpenEXR codec */
 #define HAVE_OPENEXR
@@ -246,3 +246,4 @@
 
 
 #endif // OPENCV_CVCONFIG_H_INCLUDED
+
