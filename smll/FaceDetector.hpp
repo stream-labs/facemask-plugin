@@ -62,7 +62,7 @@ public:
 	FaceDetector();
 	~FaceDetector();
 
-	void FaceDetector::DetectFaces(cv::Mat full_gray, int w, int h, DetectionResults& results);
+	void FaceDetector::DetectFaces(struct obs_source_frame * frame, int w, int h, DetectionResults& results);
 	void DetectLandmarks(DetectionResults& results);
 	void DoPoseEstimation(DetectionResults& results);
 	void ResetFaces();

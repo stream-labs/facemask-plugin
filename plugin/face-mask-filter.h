@@ -171,6 +171,8 @@ namespace Plugin {
 			gs_texture_t* texture;
 
 			struct obs_source_frame * latestFrame;
+			int latest_w;
+			int latest_h;
 
 			// mask filenames
 			std::string			maskFolder;
@@ -200,6 +202,8 @@ namespace Plugin {
 			std::unique_ptr<Mask::MaskData>	maskData;
 			std::unique_ptr<Mask::MaskData>	introData;
 			std::unique_ptr<Mask::MaskData>	outroData;
+
+			std::mutex          passFrameToDetection;
 
 			// alert location
 			enum AlertLocation {

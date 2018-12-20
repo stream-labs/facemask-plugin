@@ -138,7 +138,7 @@ namespace smll {
 		}
 	}
 
-	void FaceDetector::DetectFaces(cv::Mat full_gray, int w, int h, DetectionResults& results) {
+	void FaceDetector::DetectFaces(struct obs_source_frame * frame, int w, int h, DetectionResults& results) {
 		// Wait for CONFIG_INT_FACE_DETECT_FREQUENCY after all faces are lost before trying to detect them again
 		if (m_timeout > 0) {
 			m_timeout--;
@@ -152,7 +152,12 @@ namespace smll {
 			m_faces.length = 0;
 		}
 
-		grayImage = full_gray;
+		cv::Mat bgra_img(frame->height*1.5, frame->width, CV_8UC1, frame->data[0], int(frame->linesize[0]));
+
+		//cv::flip(bgra_img, bgra_img1, 0);
+
+		cv::cvtColor(bgra_img, grayImage, cv::COLOR_YUV2GRAY_I420);
+
 		cv::resize(grayImage, currentImage, cv::Size(w, h), 0, 0, cv::INTER_LINEAR);
 		CropInfo cropInfo = GetCropInfo();
 		currentImage = currentImage(cv::Rect(cropInfo.offsetX, cropInfo.offsetY, cropInfo.offsetX+cropInfo.width, cropInfo.offsetY+cropInfo.height));
