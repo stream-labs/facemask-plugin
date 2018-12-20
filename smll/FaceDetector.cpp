@@ -51,6 +51,8 @@ namespace smll {
 		// Load face detection and pose estimation models.
 		m_detector = get_frontal_face_detector();
 
+		count = 0;
+
 
 		char *filename = obs_module_file(kFileShapePredictor68);
 #ifdef _WIN32
@@ -138,7 +140,7 @@ namespace smll {
 		}
 	}
 
-	void FaceDetector::DetectFaces(struct obs_source_frame * frame, int w, int h, DetectionResults& results) {
+	void FaceDetector::DetectFaces(struct obs_source_frame * frame, int width, int height, DetectionResults& results) {
 		// Wait for CONFIG_INT_FACE_DETECT_FREQUENCY after all faces are lost before trying to detect them again
 		if (m_timeout > 0) {
 			m_timeout--;
@@ -152,15 +154,24 @@ namespace smll {
 			m_faces.length = 0;
 		}
 
-		cv::Mat bgra_img(frame->height*1.5, frame->width, CV_8UC1, frame->data[0], int(frame->linesize[0]));
+		w = width;
+		h = height;
 
-		//cv::flip(bgra_img, bgra_img1, 0);
+		cv::Mat bgra_img(frame->height*1.5, frame->width, CV_8UC1, frame->data[0], int(frame->linesize[0]));
 
 		cv::cvtColor(bgra_img, grayImage, cv::COLOR_YUV2GRAY_I420);
 
 		cv::resize(grayImage, currentImage, cv::Size(w, h), 0, 0, cv::INTER_LINEAR);
 		CropInfo cropInfo = GetCropInfo();
-		currentImage = currentImage(cv::Rect(cropInfo.offsetX, cropInfo.offsetY, cropInfo.offsetX+cropInfo.width, cropInfo.offsetY+cropInfo.height));
+		currentImage = currentImage(cv::Rect(cropInfo.offsetX, cropInfo.offsetY, cropInfo.width, cropInfo.height));
+
+		/*char str[100];
+		int file_number = 0;
+		sprintf(str, "C:\\Users\\brank\\currentImage - cpu -frame\\%d.jpg", count);
+		cv::imwrite(str, currentImage);
+		sprintf(str, "C:\\Users\\brank\\full-size-cpu-frame\\%d.jpg", count);
+		cv::imwrite(str, grayImage);
+		count++;*/
 		
 		bool trackingFailed = false;
 		// if number of frames before the last detection is bigger than the threshold or if there are no faces to track
@@ -893,12 +904,12 @@ namespace smll {
 	}
 
 	FaceDetector::CropInfo FaceDetector::GetCropInfo() {
-		int ww = (int)((float)currentImage.cols * Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_WIDTH));
-		int hh = (int)((float)currentImage.rows * Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_HEIGHT));
-		int xx = (int)((float)(currentImage.cols / 2) * Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_X)) +
-			(currentImage.cols / 2);
-		int yy = (int)((float)(currentImage.rows / 2) * Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_Y)) +
-			(currentImage.rows / 2);
+		int ww = (int)((float)w * Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_WIDTH));
+		int hh = (int)((float)h * Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_HEIGHT));
+		int xx = (int)((float)(w / 2) * Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_X)) +
+			(w / 2);
+		int yy = (int)((float)(h / 2) * Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_Y)) +
+			(h / 2);
 
 		CropInfo cropInfo(xx, yy, ww, hh);
 		return cropInfo;
@@ -909,7 +920,7 @@ namespace smll {
 		// get cropping info from config and detect image dimensions
 		CropInfo cropInfo = GetCropInfo();
 		// need to scale back
-		float scale = (float)grayImage.rows/currentImage.rows;
+		float scale = (float)grayImage.rows / h;
 
         // detect faces
 		std::vector<rectangle> faces;
@@ -955,7 +966,7 @@ namespace smll {
 		CropInfo cropInfo = GetCropInfo();
 
 		// need to scale back
-		float scale = (float)grayImage.rows / currentImage.rows;
+		float scale = (float)grayImage.rows / h;
 
         // start tracking
 		dlib::cv_image<unsigned char> img(currentImage);
@@ -991,7 +1002,6 @@ namespace smll {
 			// Detect features on full-size frame
 			full_object_detection d68;
 
-			
 			//cv::rectangle(grayImage, cv::Point(m_faces[f].m_bounds.left(), m_faces[f].m_bounds.top()), cv::Point(m_faces[f].m_bounds.right(), m_faces[f].m_bounds.bottom()), cv::Scalar(0,0,255), 3 );
 			//cv::imshow("image", grayImage);
 			//cv::waitKey(0);
