@@ -634,16 +634,12 @@ struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct 
 	if (detection.frame.active)
 		return frame1;
 
-	frameSent = true;
-
 //	cv::imshow("img", bgra_img);
 //	cv::waitKey(0);
 
 	// detect texture dimensions
 	smll::OBSTexture detectTex;
 	obs_source_t *target = obs_filter_get_target(source);
-	detection.frame.active = true;
-	detection.frame.timestamp = sourceTimestamp;
 
 	if ((target == NULL)) {
 		return frame1;
@@ -656,35 +652,45 @@ struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct 
 		smll::CONFIG_INT_FACE_DETECT_WIDTH);
 	detectTex.height = (int)((float)detectTex.width * (float)baseHeight / (float)baseWidth);
 
+
+	// lock current frame
 	{
-		std::unique_lock<std::mutex> lock(passFrameToDetection);
-		latestFrame = frame1;
-		latest_w = detectTex.width;
-		latest_h = detectTex.height;
-	}
+		std::unique_lock<std::mutex> lock(detection.frame.mutex,
+			std::try_to_lock);
+		if (lock.owns_lock()) {
+			frameSent = true;
 
-	// get the right mask data
-	Mask::MaskData* mdat = maskData.get();
-	if (demoModeGenPreviews && !demoModeInDelay) {
-		if (demoCurrentMask >= 0 && demoCurrentMask < demoMaskDatas.size())
-			mdat = demoMaskDatas[demoCurrentMask].get();
-	}
+			detection.frame.active = true;
+			detection.frame.timestamp = sourceTimestamp;
 
-	// ask mask for a morph resource
-	Mask::Resource::Morph* morph = nullptr;
-	if (mdat) {
-		morph = mdat->GetMorph();
-	}
+			detection.frame.obs_frame = frame1;
+			detection.frame.w = detectTex.width;
+			detection.frame.h = detectTex.height;
 
-	// (possibly) update morph buffer 
-	if (morph) {
-		if (morph->GetMorphData().IsNewerThan(detection.frame.morphData) || demoModeGenPreviews) {
-			detection.frame.morphData = morph->GetMorphData();
+			// get the right mask data
+			Mask::MaskData* mdat = maskData.get();
+			if (demoModeGenPreviews && !demoModeInDelay) {
+				if (demoCurrentMask >= 0 && demoCurrentMask < demoMaskDatas.size())
+					mdat = demoMaskDatas[demoCurrentMask].get();
+			}
+
+			// ask mask for a morph resource
+			Mask::Resource::Morph* morph = nullptr;
+			if (mdat) {
+				morph = mdat->GetMorph();
+			}
+
+			// (possibly) update morph buffer 
+			if (morph) {
+				if (morph->GetMorphData().IsNewerThan(detection.frame.morphData) || demoModeGenPreviews) {
+					detection.frame.morphData = morph->GetMorphData();
+				}
+			}
+			else {
+				// Make sure current is invalid
+				detection.frame.morphData.Invalidate();
+			}
 		}
-	}
-	else {
-		// Make sure current is invalid
-		detection.frame.morphData.Invalidate();
 	}
 
 	return frame1;
@@ -700,10 +706,14 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 
 	videoTicked = true;
 
+
 	if (!isVisible || !isActive) {
 		// *** SKIP TICK ***
 		return;
 	}
+
+	// ----- GET FACES FROM OTHER THREAD -----
+	updateFaces();
 
 	// Lock mask datas mutex
 	std::unique_lock<std::mutex> masklock(maskDataMutex, std::try_to_lock);
@@ -799,8 +809,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(void *ptr,
 
 void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
-	// ----- GET FACES FROM OTHER THREAD -----
-	updateFaces();
 
 	// Grab parent and target source.
 	obs_source_t *parent = obs_filter_get_parent(source);
@@ -1359,12 +1367,6 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 
 		smll::DetectionResults detect_results;
 
-		{
-			std::unique_lock<std::mutex> lock(passFrameToDetection);
-			detection.frame.obs_frame = latestFrame;
-			detection.frame.w = latest_w;
-			detection.frame.h = latest_h;
-		}
 
 		bool skipped = false;
 		{
