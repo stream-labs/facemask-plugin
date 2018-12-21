@@ -40,6 +40,9 @@ extern "C" {
 #include <libobs/obs-source.h>
 #include <libobs/graphics/matrix4.h>
 #pragma warning( pop )
+#define private private_var_name
+#include <libobs/obs-internal.h>
+#undef private
 }
 
 #define SSAA_UPSAMPLE_FACTOR 2

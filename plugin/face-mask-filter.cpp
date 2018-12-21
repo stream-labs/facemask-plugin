@@ -995,7 +995,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 						if (mask_data && (autoBGRemoval || cartoonMode || demoModeGenPreviews || recordTriggered)) {
 							triangulation.autoBGRemoval = autoBGRemoval;
 							triangulation.cartoonMode = cartoonMode;
-							//mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
+							mask_data->RenderMorphVideo(source->async_texture, baseWidth, baseHeight, triangulation);
 						}
 
 						// restore transform state
@@ -1105,7 +1105,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		if (mask_data) {
 			triangulation.autoBGRemoval = autoBGRemoval;
 			triangulation.cartoonMode = cartoonMode;
-			//mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
+			mask_data->RenderMorphVideo(source->async_texture, baseWidth, baseHeight, triangulation);
 		}
 	}
 
