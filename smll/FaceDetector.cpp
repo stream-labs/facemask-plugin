@@ -53,7 +53,6 @@ namespace smll {
 
 		count = 0;
 
-
 		char *filename = obs_module_file(kFileShapePredictor68);
 #ifdef _WIN32
 		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
@@ -82,7 +81,6 @@ namespace smll {
 			gs_stagesurface_destroy(m_captureStage);
 		obs_leave_graphics();
 	}
-
 
 	void FaceDetector::MakeVtxBitmaskLookup() {
 		if (m_vtxBitmaskLookup.size() == 0) {
@@ -164,14 +162,6 @@ namespace smll {
 		cv::resize(grayImage, currentImage, cv::Size(w, h), 0, 0, cv::INTER_LINEAR);
 		CropInfo cropInfo = GetCropInfo();
 		currentImage = currentImage(cv::Rect(cropInfo.offsetX, cropInfo.offsetY, cropInfo.width, cropInfo.height));
-
-		/*char str[100];
-		int file_number = 0;
-		sprintf(str, "C:\\Users\\brank\\currentImage - cpu -frame\\%d.jpg", count);
-		cv::imwrite(str, currentImage);
-		sprintf(str, "C:\\Users\\brank\\full-size-cpu-frame\\%d.jpg", count);
-		cv::imwrite(str, grayImage);
-		count++;*/
 		
 		bool trackingFailed = false;
 		// if number of frames before the last detection is bigger than the threshold or if there are no faces to track
@@ -1080,11 +1070,11 @@ namespace smll {
 			cv::solvePnP(model_points, image_points,
 				GetCVCamMatrix(), GetCVDistCoeffs(),
 				rotation, translation,
-				m_poses[i].PoseValid());
+				m_poses[i].PoseValid(),
+				cv::SOLVEPNP_EPNP);
 
-			std::cout << "checkpoint" << std::endl;
 
-			// sometimes we get crap
+			// TODO: Check if we still get wrong results.
 			if (translation.at<double>(2, 0) > 1000.0 ||
 				translation.at<double>(2, 0) < -1000.0) {
 				resultsBad = true;
@@ -1092,7 +1082,8 @@ namespace smll {
 				break;
 			}
 
-			// check error again, still bad, use previous pose
+			// TODO: If possible, remove these sanity checks
+			// NOTE: If no pose is generated, use previous pose.
 			if (m_poses[i].PoseValid() &&
 				ReprojectionError(model_points, image_points, rotation, translation) > threshold) {
 				// reset pose
