@@ -809,13 +809,26 @@ void Plugin::FaceMaskFilter::Instance::video_render(void *ptr,
 
 void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
-
 	// Grab parent and target source.
 	obs_source_t *parent = obs_filter_get_parent(source);
 
 	obs_source_t *target = obs_filter_get_target(source);
 
-	obs_source_video_render(parent);
+	gs_texrender_reset(sourceRenderTarget);
+	if (gs_texrender_begin(sourceRenderTarget, parent->async_width, parent->async_height)) {
+
+		gs_blend_state_push();
+		gs_projection_push();
+
+		gs_ortho(0, (float)baseWidth, 0, (float)baseHeight, -1, 1);
+		
+		obs_source_video_render(parent);
+		gs_texrender_end(sourceRenderTarget);
+
+		gs_projection_pop();
+		gs_blend_state_pop();
+
+	}
 
 	// Skip rendering if inactive or invisible.
 	if (!isActive || !isVisible || 
@@ -855,6 +868,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	if (!masklock.owns_lock()) {
 		return;
 	}
+
+	gs_texture_t *vidTex = gs_texrender_get_texture(sourceRenderTarget);
 
 	// OBS rendering state
 	gs_blend_state_push();
@@ -921,6 +936,13 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// flags
 	bool genThumbs = mask_data && demoModeGenPreviews && demoModeSavingFrames;
+
+	/*while (gs_effect_loop(defaultEffect, "DrawMatrix")) {
+		gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+			"image"), source->async_texture);
+		gs_draw_sprite(source->async_texture, 0, baseWidth, baseHeight);
+	}*/
+
 
 	// Get current method to use for anti-aliasing
 	if (antialiasing_method == NO_ANTI_ALIASING ||
@@ -995,7 +1017,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 						if (mask_data && (autoBGRemoval || cartoonMode || demoModeGenPreviews || recordTriggered)) {
 							triangulation.autoBGRemoval = autoBGRemoval;
 							triangulation.cartoonMode = cartoonMode;
-							mask_data->RenderMorphVideo(source->async_texture, baseWidth, baseHeight, triangulation);
+							mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
 						}
 
 						// restore transform state
@@ -1105,7 +1127,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		if (mask_data) {
 			triangulation.autoBGRemoval = autoBGRemoval;
 			triangulation.cartoonMode = cartoonMode;
-			mask_data->RenderMorphVideo(source->async_texture, baseWidth, baseHeight, triangulation);
+			mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
 		}
 	}
 
