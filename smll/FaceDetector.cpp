@@ -138,7 +138,7 @@ namespace smll {
 		}
 	}
 
-	void FaceDetector::DetectFaces(struct obs_source_frame * frame, int width, int height, DetectionResults& results) {
+	void FaceDetector::DetectFaces(struct obs_source_frame * frame, int width, int height, bool flipped, DetectionResults& results) {
 		// Wait for CONFIG_INT_FACE_DETECT_FREQUENCY after all faces are lost before trying to detect them again
 		if (m_timeout > 0) {
 			m_timeout--;
@@ -146,8 +146,8 @@ namespace smll {
 		}
 
 		// better check if the camera res has changed on us
-		if ((w != currentImage.cols) ||
-			(h != currentImage.rows)) {
+		if ((w != width) ||
+			(h != height)) {
 			// forget whatever we thought were faces
 			m_faces.length = 0;
 		}
@@ -155,9 +155,7 @@ namespace smll {
 		w = width;
 		h = height;
 
-		cv::Mat bgra_img(frame->height*1.5, frame->width, CV_8UC1, frame->data[0], int(frame->linesize[0]));
-
-		cv::cvtColor(bgra_img, grayImage, cv::COLOR_YUV2GRAY_I420);
+		ConvertFrameToGrayMat(frame);
 
 		cv::resize(grayImage, currentImage, cv::Size(w, h), 0, 0, cv::INTER_LINEAR);
 		CropInfo cropInfo = GetCropInfo();
@@ -426,6 +424,87 @@ namespace smll {
 
 		// Make Index Buffers
 		MakeAreaIndices(result, triangleList);
+	}
+
+	cv::Mat FaceDetector::ConvertFrameToGrayMat(obs_source_frame* frame) {
+		int img_width, img_height;
+
+		switch (frame->format) {
+		case VIDEO_FORMAT_I420:
+		case VIDEO_FORMAT_NV12:
+		{
+			img_width = frame->width;
+			img_height = frame->height*1.5;
+			cv::Mat img(img_height, img_width, CV_8UC1, frame->data[0], int(frame->linesize[0]));
+			cv::cvtColor(img, grayImage, cv::COLOR_YUV2GRAY_I420);
+			break;
+		}
+		case VIDEO_FORMAT_YVYU:
+		case VIDEO_FORMAT_YUY2:
+		{
+			img_width = frame->width / 2;
+			img_height = frame->height;
+			cv::Mat img(img_height, img_width, CV_8UC4, frame->data[0], int(frame->linesize[0]));
+			cv::cvtColor(img, grayImage, cv::COLOR_YUV2GRAY_YUY2);
+			break;
+		}
+		case VIDEO_FORMAT_UYVY:
+		{
+			img_width = frame->width / 2;
+			img_height = frame->height;
+			cv::Mat img(img_height, img_width, CV_8UC4, frame->data[0], int(frame->linesize[0]));
+			cv::cvtColor(img, grayImage, cv::COLOR_YUV2GRAY_UYVY);
+			break;
+		}
+		case VIDEO_FORMAT_Y800:
+		{
+			img_width = frame->width;
+			img_height = frame->height;
+			cv::Mat img(img_height, img_width, CV_8UC1, frame->data[0], int(frame->linesize[0]));
+			grayImage = img;
+			break;
+		}
+		case VIDEO_FORMAT_RGBA:
+		{
+			img_width = frame->width;
+			img_height = frame->height;
+			cv::Mat img(img_height, img_width, CV_8UC4, frame->data[0], int(frame->linesize[0]));
+			cv::cvtColor(img, grayImage, cv::COLOR_RGBA2GRAY);
+			break;
+		}
+		case VIDEO_FORMAT_BGRA:
+		{
+			img_width = frame->width;
+			img_height = frame->height;
+			cv::Mat img(img_height, img_width, CV_8UC4, frame->data[0], int(frame->linesize[0]));
+			cv::cvtColor(img, grayImage, cv::COLOR_BGRA2GRAY);
+			break;
+		}
+		case VIDEO_FORMAT_BGRX:
+		{
+			img_width = frame->width;
+			img_height = frame->height;
+			cv::Mat img(img_height, img_width, CV_8UC4, frame->data[0], int(frame->linesize[0]));
+			cv::cvtColor(img, grayImage, cv::COLOR_BGR2GRAY);
+			break;
+		}
+		case VIDEO_FORMAT_I444:
+		{
+			// TODO check if this works
+			img_width = frame->width;
+			img_height = frame->height;
+			cv::Mat img(img_height, img_width, CV_8UC4, frame->data[0], int(frame->linesize[0]));
+			cv::cvtColor(img, img, cv::COLOR_YCrCb2BGR);
+			cv::cvtColor(img, grayImage, cv::COLOR_RGB2GRAY);
+			break;
+		}
+		}
+
+		if (frame->flip) {
+			cv::flip(grayImage, grayImage, 0);
+		}
+
+		return grayImage;
 	}
 
 
