@@ -621,7 +621,6 @@ struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(void *p
 }
 
 struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct obs_source_frame * frame1) {
-
 	// only if first render after video tick
 	if (!videoTicked)
 		return frame1;
@@ -640,6 +639,8 @@ struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct 
 	// detect texture dimensions
 	smll::OBSTexture detectTex;
 	obs_source_t *target = obs_filter_get_target(source);
+
+	obs_source_t *parent = obs_filter_get_parent(source);
 
 	if ((target == NULL)) {
 		return frame1;
@@ -666,6 +667,7 @@ struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct 
 			detection.frame.obs_frame = frame1;
 			detection.frame.w = detectTex.width;
 			detection.frame.h = detectTex.height;
+			detection.frame.flipped = parent->async_flip;
 
 			// get the right mask data
 			Mask::MaskData* mdat = maskData.get();
