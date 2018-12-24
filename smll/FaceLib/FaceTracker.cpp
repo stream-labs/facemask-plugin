@@ -20,3 +20,17 @@
 */
 
 #include "FaceTracker.h"
+
+namespace FaceLib {
+	FaceTracker::FaceTracker() {
+
+	}
+
+	FaceTracker::~FaceTracker() {
+
+	}
+
+	void FaceTracker::TrackFaces(cv::Mat& image, std::vector<dlib::rectangle>& faces) {
+
+	}
+}

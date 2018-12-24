@@ -19,3 +19,28 @@
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #pragma once
+#include <vector>
+#include <opencv2/opencv.hpp>
+#include <dlib/image_processing.h>
+#include <dlib/opencv.h>
+
+namespace FaceLib {
+
+	/*
+	FaceTracker class to detect and track multiple faces
+	*/
+
+	class FaceTracker {
+	public:
+		FaceTracker();
+		~FaceTracker();
+		void TrackFaces(cv::Mat& image, std::vector<dlib::rectangle>& faces);
+
+	private:
+		int _maxFaces;
+		int _detectionFrequency;
+		std::vector<dlib::rectangle> _faces;
+		std::vector<dlib::correlation_tracker> _tracker;
+
+	};
+}
