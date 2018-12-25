@@ -620,10 +620,18 @@ struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(void *p
 	return frame_to_render;
 }
 
-struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct obs_source_frame * frame1) {
+struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct obs_source_frame * frame) {
+
+	// No need to do detection if mask will not be drawn
+	if (!isActive || !isVisible ||
+		// or if the alert is done
+		(!drawMask && alertElapsedTime > alertDuration)) {
+		return frame;
+	}
+
 	// only if first render after video tick
 	if (!videoTicked)
-		return frame1;
+		return frame;
 
 	// timestamp for this frame
 	TimeStamp sourceTimestamp = NEW_TIMESTAMP;
@@ -631,10 +639,7 @@ struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct 
 
 	// if there's already an active frame, bail
 	if (detection.frame.active)
-		return frame1;
-
-//	cv::imshow("img", bgra_img);
-//	cv::waitKey(0);
+		return frame;
 
 	// detect texture dimensions
 	smll::OBSTexture detectTex;
@@ -642,19 +647,23 @@ struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct 
 
 	obs_source_t *parent = obs_filter_get_parent(source);
 
-	if ((target == NULL)) {
-		return frame1;
+	if (parent == NULL || target == NULL) {
+		return frame;
 	}
 
 	// Target base width and height.
 	baseWidth = obs_source_get_base_width(target);
 	baseHeight = obs_source_get_base_height(target);
+	if (baseWidth < 0 || baseHeight < 0) {
+		return frame;
+	}
+
 	detectTex.width = smll::Config::singleton().get_int(
 		smll::CONFIG_INT_FACE_DETECT_WIDTH);
 	detectTex.height = (int)((float)detectTex.width * (float)baseHeight / (float)baseWidth);
 
-
-	// lock current frame
+	// Send frame information to detection thread.
+	// Lock current frame.
 	{
 		std::unique_lock<std::mutex> lock(detection.frame.mutex,
 			std::try_to_lock);
@@ -664,7 +673,7 @@ struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct 
 			detection.frame.active = true;
 			detection.frame.timestamp = sourceTimestamp;
 
-			detection.frame.obs_frame = frame1;
+			detection.frame.obs_frame = frame;
 			detection.frame.w = detectTex.width;
 			detection.frame.h = detectTex.height;
 			detection.frame.flipped = parent->async_flip;
@@ -695,7 +704,7 @@ struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct 
 		}
 	}
 
-	return frame1;
+	return frame;
 }
 
 void Plugin::FaceMaskFilter::Instance::video_tick(void *ptr, float timeDelta) {
@@ -811,29 +820,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(void *ptr,
 
 void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
-	// Grab parent and target source.
-	obs_source_t *parent = obs_filter_get_parent(source);
-
-	obs_source_t *target = obs_filter_get_target(source);
-
-	gs_texrender_reset(sourceRenderTarget);
-	if (gs_texrender_begin(sourceRenderTarget, parent->async_width, parent->async_height)) {
-
-		gs_blend_state_push();
-		gs_projection_push();
-
-		gs_ortho(0, (float)baseWidth, 0, (float)baseHeight, -1, 1);
-		
-		obs_source_video_render(parent);
-		gs_texrender_end(sourceRenderTarget);
-
-		gs_projection_pop();
-		gs_blend_state_pop();
-
-	}
-
 	// Skip rendering if inactive or invisible.
-	if (!isActive || !isVisible || 
+	if (!isActive || !isVisible ||
 		// or if the alert is done
 		(!drawMask && alertElapsedTime > alertDuration)) {
 		// reset the buffer
@@ -845,7 +833,53 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		faces.length = 0;
 		// make sure file loads still happen
 		checkForMaskUnloading();
+		obs_source_skip_video_filter(source);
 		return;
+	}
+
+	// Get mask data mutex
+	std::unique_lock<std::mutex> masklock(maskDataMutex, std::try_to_lock);
+	if (!masklock.owns_lock()) {
+		obs_source_skip_video_filter(source);
+		return;
+	}
+
+	if (maskData == nullptr) {
+		obs_source_skip_video_filter(source);
+		return;
+	}
+
+	// Grab parent and target source.
+	obs_source_t *parent = obs_filter_get_parent(source);
+	obs_source_t *target = obs_filter_get_target(source);
+
+	// OBS rendering state
+	gs_blend_state_push();
+	setupRenderingState();
+
+	Mask::MaskData* mask_data = maskData.get();
+
+	gs_texture_t *vidTex = nullptr;
+	if (mask_data->GetMorph() || recordTriggered || (demoModeGenPreviews && demoMaskDatas.size() > 0)) {
+		gs_texrender_reset(sourceRenderTarget);
+		if (gs_texrender_begin(sourceRenderTarget, parent->async_width, parent->async_height)) {
+
+			gs_blend_state_push();
+			gs_projection_push();
+
+			gs_ortho(0, (float)baseWidth, 0, (float)baseHeight, -1, 1);
+
+			obs_source_video_render(parent);
+			gs_texrender_end(sourceRenderTarget);
+
+			gs_projection_pop();
+			gs_blend_state_pop();
+
+		}
+		vidTex = gs_texrender_get_texture(sourceRenderTarget);
+	}
+	if (!mask_data->GetMorph()) {
+		obs_source_video_render(parent);
 	}
 
 	if ((parent == NULL) || (target == NULL)) {
@@ -853,32 +887,13 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	}
 
 	// Target base width and height.
-	baseWidth = obs_source_get_base_width(target);
-	baseHeight = obs_source_get_base_height(target);
 	if ((baseWidth <= 0) || (baseHeight <= 0)) {
 		return;
 	}
 
-	// Effects
-	gs_effect_t* defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
-
 	// smll needs a "viewport" to draw
 	smllRenderer->SetViewport(baseWidth, baseHeight);
 
-	// Get mask data mutex
-	std::unique_lock<std::mutex> masklock(maskDataMutex, std::try_to_lock);
-	if (!masklock.owns_lock()) {
-		return;
-	}
-
-	gs_texture_t *vidTex = gs_texrender_get_texture(sourceRenderTarget);
-
-	// OBS rendering state
-	gs_blend_state_push();
-	setupRenderingState();
-
-	// get mask data to draw
-	Mask::MaskData* mask_data = maskData.get();
 	if (demoModeGenPreviews && demoMaskDatas.size() > 0) {
 		if (demoCurrentMask >= 0 &&
 			demoCurrentMask < demoMaskDatas.size()) {
@@ -939,13 +954,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// flags
 	bool genThumbs = mask_data && demoModeGenPreviews && demoModeSavingFrames;
 
-	/*while (gs_effect_loop(defaultEffect, "DrawMatrix")) {
-		gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
-			"image"), source->async_texture);
-		gs_draw_sprite(source->async_texture, 0, baseWidth, baseHeight);
-	}*/
-
-
 	// Get current method to use for anti-aliasing
 	if (antialiasing_method == NO_ANTI_ALIASING ||
 		antialiasing_method == FXAA_ANTI_ALIASING)
@@ -953,13 +961,11 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	else
 		m_scale_rate = SSAA_UPSAMPLE_FACTOR;
 
-
 	// render mask to texture
 	gs_texture* mask_tex = nullptr;
 	if (faces.length > 0) {
 		// only render once per video tick
 		if (videoTicked) {
-
 			//init start pose for static masks
 			for (int i = 0; i < faces.length; i++) {
 				faces[i].InitStartPose();
@@ -1122,8 +1128,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		gs_blend_type::GS_BLEND_INVSRCALPHA);
 
 
-	if ((!mask_data->DrawVideoWithMask() &&
-			!genThumbs)) {
+    if ((!mask_data->DrawVideoWithMask() &&
+			!genThumbs) && mask_data->GetMorph()) {
 
 		// Draw the source video 
 		if (mask_data) {
@@ -1157,17 +1163,21 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			gs_draw_sprite(mask_tex, 0, baseWidth, baseHeight);
 		}
 	}
-	
 
 	// draw face detection data
 	if (drawFaces)
 		smllRenderer->DrawFaces(faces);
 
 	// draw crop rectangles
-	drawCropRects(baseWidth, baseHeight);
+	if (drawFDRect) {
+		drawCropRects(baseWidth, baseHeight);
+	}
 
 	// demo mode render stuff
-	//demoModeRender(vidTex, mask_tex, mask_data);
+		// generate previews?
+	if ( recordTriggered || (demoModeGenPreviews && demoMaskDatas.size() > 0) ) {
+		demoModeRender(vidTex, mask_tex, mask_data);
+	}
 
 	// restore rendering state
 	gs_blend_state_pop();
@@ -1202,64 +1212,65 @@ void Plugin::FaceMaskFilter::Instance::checkForMaskUnloading() {
 void Plugin::FaceMaskFilter::Instance::demoModeRender(gs_texture* vidTex, gs_texture* maskTex, 
 	Mask::MaskData* mask_data) {
 
-	// generate previews?
-	if (videoTicked && (recordTriggered || (demoModeGenPreviews && demoMaskDatas.size() > 0))) {
+	if (vidTex == nullptr) {
+		return;
+	}
 
-		// get frame color
-		if (!testingStage) {
-			testingStage = gs_stagesurface_create(baseWidth, baseHeight, GS_RGBA);
+	// get frame color
+	if (!testingStage) {
+		testingStage = gs_stagesurface_create(baseWidth, baseHeight, GS_RGBA);
+	}
+	gs_stage_texture(testingStage, vidTex);
+	uint8_t *data; uint32_t linesize;
+	bool isRed = false;
+	if (gs_stagesurface_map(testingStage, &data, &linesize)) {
+		uint8_t red = *data++;
+		uint8_t green = *data++;
+		uint8_t blue = *data++;
+		if (red > 252 && green < 3 && blue < 3) {
+			isRed = true;
 		}
-		gs_stage_texture(testingStage, vidTex);
-		uint8_t *data; uint32_t linesize;
-		bool isRed = false;
-		if (gs_stagesurface_map(testingStage, &data, &linesize)) {
-			uint8_t red = *data++;
-			uint8_t green = *data++;
-			uint8_t blue = *data++;
-			if (red > 252 && green < 3 && blue < 3) {
-				isRed = true;
-			}
-			gs_stagesurface_unmap(testingStage);
-		}
+		gs_stagesurface_unmap(testingStage);
+	}
 
-		if (demoModeSavingFrames) {
-			// sometimes the red frame is 2 frames
-			if (isRed && previewFrames.size() < 1) {
-				mask_data->Rewind();
-			}
-			else if (isRed) {
-				// done
-				WritePreviewFrames();
-				demoModeSavingFrames = false;
-				//increase mask number, change mask
-				if (!recordTriggered && demoModeGenPreviews && demoMaskDatas.size() > 0) {
-					demoCurrentMask = (demoCurrentMask + 1) % demoMaskDatas.size();
-				}
-				recordTriggered = false;
-				demoModeInDelay = false;
-			}
-			else {
-				gs_texture* preview_tex = maskTex;
-				if (faces.length == 0) {
-					preview_tex = vidTex;
-				}
-				PreviewFrame pf(preview_tex, baseWidth, baseHeight);
-				previewFrames.emplace_back(pf);
-			}
+	if (demoModeSavingFrames) {
+		// sometimes the red frame is 2 frames
+		if (isRed && previewFrames.size() < 1) {
+			mask_data->Rewind();
 		}
 		else if (isRed) {
-			if (demoModeInDelay) {
-				// ready to go
-				mask_data->Rewind();
-				demoModeSavingFrames = true;
-				demoModeInDelay = false;
+			// done
+ 			WritePreviewFrames();
+			demoModeSavingFrames = false;
+			//increase mask number, change mask
+			if (!recordTriggered && demoModeGenPreviews && demoMaskDatas.size() > 0) {
+				demoCurrentMask = (demoCurrentMask + 1) % demoMaskDatas.size();
 			}
+			recordTriggered = false;
+			demoModeInDelay = false;
 		}
 		else {
-			//wait one cycle
-			demoModeInDelay = true;
+			gs_texture* preview_tex = maskTex;
+			if (faces.length == 0) {
+				preview_tex = vidTex;
+			}
+			PreviewFrame pf(preview_tex, baseWidth, baseHeight);
+			previewFrames.emplace_back(pf);
 		}
 	}
+	else if (isRed) {
+		if (demoModeInDelay) {
+			// ready to go
+			mask_data->Rewind();
+			demoModeSavingFrames = true;
+			demoModeInDelay = false;
+		}
+	}
+	else {
+		//wait one cycle
+		demoModeInDelay = true;
+	}
+	
 }
 
 gs_texture* Plugin::FaceMaskFilter::Instance::RenderSourceTexture(gs_effect_t* effect) {
@@ -1407,21 +1418,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 
 				smllFaceDetector->DetectLandmarks(detect_results);
 
-				cv::Mat img(detection.frame.fullSizeGrayFrame);
-				for (int i = 0; i < 68; i++) {
-					int x = detect_results[0].landmarks68[i].x();
-					int y = detect_results[0].landmarks68[i].y();
-					cv::circle(img, cv::Point(x, y), 3, cv::Scalar(0,0,255));
-				}
-
-				//cv::imshow("image", img);
-				//cv::waitKey(0);
-
 				smllFaceDetector->DoPoseEstimation(detect_results);
-
-				//cv::rectangle(Mat& img, Point pt1, Point pt2, const Scalar& color, int thickness = 1, int lineType = 8)
-
-				//latestFrame = detection.frame.obs_frame;
 
 				lastTimestamp = detection.frame.timestamp;
 			}
@@ -1641,32 +1638,30 @@ Plugin::FaceMaskFilter::Instance::LoadMask(std::string filename) {
 }
 
 void Plugin::FaceMaskFilter::Instance::drawCropRects(int width, int height) {
-	if (drawFDRect) {
-		dlib::rectangle r;
-		int x = (int)((float)(width / 2) *
-			smll::Config::singleton().get_double(
-				smll::CONFIG_DOUBLE_FACE_DETECT_CROP_X)) + (width / 2);
-		int y = (int)((float)(height / 2) *
-			smll::Config::singleton().get_double(
-				smll::CONFIG_DOUBLE_FACE_DETECT_CROP_Y)) + (height / 2);
-		int w = (int)((float)width *
-			smll::Config::singleton().get_double(
-				smll::CONFIG_DOUBLE_FACE_DETECT_CROP_WIDTH));
-		int h = (int)((float)height *
-			smll::Config::singleton().get_double(
-				smll::CONFIG_DOUBLE_FACE_DETECT_CROP_HEIGHT));
+	dlib::rectangle r;
+	int x = (int)((float)(width / 2) *
+		smll::Config::singleton().get_double(
+			smll::CONFIG_DOUBLE_FACE_DETECT_CROP_X)) + (width / 2);
+	int y = (int)((float)(height / 2) *
+		smll::Config::singleton().get_double(
+			smll::CONFIG_DOUBLE_FACE_DETECT_CROP_Y)) + (height / 2);
+	int w = (int)((float)width *
+		smll::Config::singleton().get_double(
+			smll::CONFIG_DOUBLE_FACE_DETECT_CROP_WIDTH));
+	int h = (int)((float)height *
+		smll::Config::singleton().get_double(
+			smll::CONFIG_DOUBLE_FACE_DETECT_CROP_HEIGHT));
 
-		// need to transform back to capture size
-		x -= w / 2;
-		y -= h / 2;
+	// need to transform back to capture size
+	x -= w / 2;
+	y -= h / 2;
 
-		r.set_top(y);
-		r.set_bottom(y + h);
-		r.set_left(x);
-		r.set_right(x + w);
-		smllRenderer->SetDrawColor(255, 0, 255);
-		smllRenderer->DrawRect(r);
-	}
+	r.set_top(y);
+	r.set_bottom(y + h);
+	r.set_left(x);
+	r.set_right(x + w);
+	smllRenderer->SetDrawColor(255, 0, 255);
+	smllRenderer->DrawRect(r);
 }
 
 void Plugin::FaceMaskFilter::Instance::updateFaces() {
@@ -1733,8 +1728,8 @@ static std::string getTextTimestamp() {
 
 void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 
-	if (!recordTriggered && demoMaskFilenames.size() == 0)
-		return;
+	//if (!recordTriggered && demoMaskFilenames.size() == 0)
+	//	return;
 
 	obs_enter_graphics();
 	std::string outFolder;
