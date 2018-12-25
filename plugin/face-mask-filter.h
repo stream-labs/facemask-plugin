@@ -276,10 +276,7 @@ namespace Plugin {
 					int					w;
 					int					h;
 					bool				active;
-					bool				flipped;
 					struct obs_source_frame * obs_frame;
-
-					cv::Mat fullSizeGrayFrame;
 				};
 				Frame frame;
 

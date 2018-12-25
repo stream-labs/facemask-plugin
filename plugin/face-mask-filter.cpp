@@ -676,7 +676,6 @@ struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct 
 			detection.frame.obs_frame = frame;
 			detection.frame.w = detectTex.width;
 			detection.frame.h = detectTex.height;
-			detection.frame.flipped = parent->async_flip;
 
 			// get the right mask data
 			Mask::MaskData* mdat = maskData.get();
