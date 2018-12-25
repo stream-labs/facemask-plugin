@@ -23,7 +23,6 @@
 
 #include "Face.hpp"
 #include "Config.hpp"
-#include "OBSTexture.hpp"
 #include "ImageWrapper.hpp"
 #include "DetectionResults.hpp"
 #include "TriangulationResult.hpp"

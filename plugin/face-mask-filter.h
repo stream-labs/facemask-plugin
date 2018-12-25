@@ -142,7 +142,7 @@ namespace Plugin {
 
 			// Face detector
 			smll::FaceDetector*		smllFaceDetector;
-			smll::OBSRenderer*		smllRenderer;
+			smll::OBSRenderer*      smllRenderer;
 
 			gs_effect_t*		custom_effect = nullptr;
 			int					m_scale_rate = 1;
@@ -152,14 +152,6 @@ namespace Plugin {
 			gs_texrender_t*		sourceRenderTarget;
 			gs_texrender_t*		drawTexRender;
 			gs_texrender_t*		alertTexRender;
-			gs_texrender_t*		detectTexRender;
-			gs_stagesurf_t*		detectStage;
-
-			gs_texture_t* texture;
-
-			struct obs_source_frame * latestFrame;
-			int latest_w;
-			int latest_h;
 
 			// mask filenames
 			std::string			maskFolder;

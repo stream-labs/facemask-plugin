@@ -124,7 +124,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	: source(source), canvasWidth(0), canvasHeight(0), baseWidth(640), baseHeight(480),
 	demoModeRecord(false), recordTriggered(false),
 	isActive(true), isVisible(true), videoTicked(true),
-	taskHandle(NULL), detectStage(nullptr),	maskDataShutdown(false), 
+	taskHandle(NULL), maskDataShutdown(false), 
 	introFilename(nullptr),	outroFilename(nullptr),	alertActivate(true), alertDoIntro(false),
 	alertDoOutro(false), alertDuration(10.0f),
 	alertElapsedTime(BIG_FLOAT), alertTriggered(false), alertShown(false), alertsLoaded(false),
@@ -136,9 +136,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
 
 	obs_enter_graphics();
-	texture = NULL;
 	sourceRenderTarget = gs_texrender_create(GS_RGBA, GS_ZS_NONE);
-	detectTexRender = gs_texrender_create(GS_R8, GS_ZS_NONE);
 	drawTexRender = gs_texrender_create(GS_RGBA, GS_Z32F); // has depth buffer
 	alertTexRender = gs_texrender_create(GS_RGBA, GS_Z32F); // has depth buffer
 	obs_leave_graphics();
@@ -213,12 +211,10 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 	gs_texrender_destroy(sourceRenderTarget);
 	gs_texrender_destroy(drawTexRender);
 	gs_texrender_destroy(alertTexRender);
-	gs_texrender_destroy(detectTexRender);
 
 	if (testingStage)
 		gs_stagesurface_destroy(testingStage);
-	if (detectStage)
-		gs_stagesurface_destroy(detectStage);
+
 	maskData = nullptr;
 	obs_leave_graphics();
 
@@ -372,7 +368,6 @@ static void add_float_slider(obs_properties_t *props, const char* name, float mi
 	std::string n = name; n += ".Description";
 	obs_property_set_long_description(p, P_TRANSLATE(n.c_str()));
 }
-
 
 void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 #if !defined(PUBLIC_RELEASE)
@@ -708,8 +703,6 @@ void Plugin::FaceMaskFilter::Instance::video_tick(void *ptr, float timeDelta) {
 void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 
 	videoTicked = true;
-
-
 	if (!isVisible || !isActive) {
 		// *** SKIP TICK ***
 		return;
