@@ -641,10 +641,7 @@ struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct 
 	if (detection.frame.active)
 		return frame;
 
-	// detect texture dimensions
-	smll::OBSTexture detectTex;
 	obs_source_t *target = obs_filter_get_target(source);
-
 	obs_source_t *parent = obs_filter_get_parent(source);
 
 	if (parent == NULL || target == NULL) {
@@ -658,10 +655,6 @@ struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct 
 		return frame;
 	}
 
-	detectTex.width = smll::Config::singleton().get_int(
-		smll::CONFIG_INT_FACE_DETECT_WIDTH);
-	detectTex.height = (int)((float)detectTex.width * (float)baseHeight / (float)baseWidth);
-
 	// Send frame information to detection thread.
 	// Lock current frame.
 	{
@@ -669,13 +662,13 @@ struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct 
 			std::try_to_lock);
 		if (lock.owns_lock()) {
 			frameSent = true;
-
+			 
 			detection.frame.active = true;
 			detection.frame.timestamp = sourceTimestamp;
 
 			detection.frame.obs_frame = frame;
-			detection.frame.w = detectTex.width;
-			detection.frame.h = detectTex.height;
+			detection.frame.resizeWidth = smll::Config::singleton().get_int(smll::CONFIG_INT_FACE_DETECT_WIDTH);
+			detection.frame.resizeHeight = (int)((float)detection.frame.resizeWidth * (float)baseHeight / (float)baseWidth);
 
 			// get the right mask data
 			Mask::MaskData* mdat = maskData.get();
@@ -1413,9 +1406,9 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			}
 			else {
 				// new frame - do the face detection
-				smllFaceDetector->DetectFaces(detection.frame.obs_frame, detection.frame.w, detection.frame.h, detect_results);
+				smllFaceDetector->DetectFaces(detection.frame.obs_frame, detection.frame.resizeWidth, detection.frame.resizeHeight, detect_results);
 
-				smllFaceDetector->DetectLandmarks(detect_results);
+		 		smllFaceDetector->DetectLandmarks(detect_results);
 
 				smllFaceDetector->DoPoseEstimation(detect_results);
 

@@ -40,9 +40,7 @@ using namespace std;
 namespace smll {
 
 	FaceDetector::FaceDetector()
-		: m_captureStage(nullptr)
-		, m_stageSize(0)
-		, m_timeout(0)
+		: m_timeout(0)
         , m_trackingTimeout(0)
         , m_detectionTimeout(0)
 		, m_trackingFaceIndex(0)
@@ -73,13 +71,6 @@ namespace smll {
 		deserialize(filename) >> m_predictor68;
 #endif
 		bfree(filename);
-	}
-
-	FaceDetector::~FaceDetector() {
-		obs_enter_graphics();
-		if (m_captureStage)
-			gs_stagesurface_destroy(m_captureStage);
-		obs_leave_graphics();
 	}
 
 	void FaceDetector::MakeVtxBitmaskLookup() {
@@ -146,19 +137,19 @@ namespace smll {
 		}
 
 		// better check if the camera res has changed on us
-		if ((w != width) ||
-			(h != height)) {
+		if ((resizeWidth != width) ||
+			(resizeHeight != height)) {
 			// forget whatever we thought were faces
 			m_faces.length = 0;
 		}
 
-		w = width;
-		h = height;
+		resizeWidth = width;
+		resizeHeight = height;
 
 		ConvertFrameToGrayMat(frame);
 
 		// Resize and cut out region of interest
-		cv::resize(grayImage, currentImage, cv::Size(w, h), 0, 0, cv::INTER_LINEAR);
+		cv::resize(grayImage, currentImage, cv::Size(resizeWidth, resizeHeight), 0, 0, cv::INTER_LINEAR);
 		CropInfo cropInfo = GetCropInfo();
 		currentImage = currentImage(cv::Rect(cropInfo.offsetX, cropInfo.offsetY, cropInfo.width, cropInfo.height));
 		
@@ -974,12 +965,12 @@ namespace smll {
 	}
 
 	FaceDetector::CropInfo FaceDetector::GetCropInfo() {
-		int ww = (int)((float)w * Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_WIDTH));
-		int hh = (int)((float)h * Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_HEIGHT));
-		int xx = (int)((float)(w / 2) * Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_X)) +
-			(w / 2);
-		int yy = (int)((float)(h / 2) * Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_Y)) +
-			(h / 2);
+		int ww = (int)((float)resizeWidth * Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_WIDTH));
+		int hh = (int)((float)resizeHeight * Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_HEIGHT));
+		int xx = (int)((float)(resizeWidth / 2) * Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_X)) +
+			(resizeWidth / 2);
+		int yy = (int)((float)(resizeHeight / 2) * Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_Y)) +
+			(resizeHeight / 2);
 
 		CropInfo cropInfo(xx, yy, ww, hh);
 		return cropInfo;
@@ -990,7 +981,7 @@ namespace smll {
 		// get cropping info from config and detect image dimensions
 		CropInfo cropInfo = GetCropInfo();
 		// need to scale back
-		float scale = (float)grayImage.rows / h;
+		float scale = (float)grayImage.rows / resizeHeight;
 
         // detect faces
 		std::vector<rectangle> faces;
@@ -1036,7 +1027,7 @@ namespace smll {
 		CropInfo cropInfo = GetCropInfo();
 
 		// need to scale back
-		float scale = (float)grayImage.rows / h;
+		float scale = (float)grayImage.rows / resizeHeight;
 
         // start tracking
 		dlib::cv_image<unsigned char> img(currentImage);

@@ -60,7 +60,6 @@ class FaceDetector
 public:
 
 	FaceDetector();
-	~FaceDetector();
 
 	cv::Mat ConvertFrameToGrayMat(obs_source_frame* frame);
 	void DetectFaces(struct obs_source_frame * frame, int w, int h, DetectionResults& results);
@@ -88,21 +87,12 @@ private:
 	// Saved Poses
 	ThreeDPoses		m_poses;
 
-	// Image Buffers
-	OBSTexture		m_capture;
-	ImageWrapper	m_detect;
-
-	// For staging the capture texture
-	gs_stagesurf_t* m_captureStage;
-	int				m_stageSize;
-	ImageWrapper	m_stageWork;
-
 	// Face detection timeouts
 	int				m_timeout;
     int             m_trackingTimeout;
     int             m_detectionTimeout;
-	int				w;
-	int				h;
+	int				resizeWidth;
+	int				resizeHeight;
 	int count;
 
 	// Tracking time-slicer

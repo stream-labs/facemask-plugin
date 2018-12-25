@@ -273,8 +273,8 @@ namespace Plugin {
 					smll::MorphData     morphData;
 					std::mutex			mutex;
 					TimeStamp			timestamp;
-					int					w;
-					int					h;
+					int					resizeWidth;
+					int					resizeHeight;
 					bool				active;
 					struct obs_source_frame * obs_frame;
 				};
