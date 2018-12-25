@@ -157,6 +157,7 @@ namespace smll {
 
 		ConvertFrameToGrayMat(frame);
 
+		// Resize and cut out region of interest
 		cv::resize(grayImage, currentImage, cv::Size(w, h), 0, 0, cv::INTER_LINEAR);
 		CropInfo cropInfo = GetCropInfo();
 		currentImage = currentImage(cv::Rect(cropInfo.offsetX, cropInfo.offsetY, cropInfo.width, cropInfo.height));
