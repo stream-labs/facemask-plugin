@@ -1063,10 +1063,6 @@ namespace smll {
 			// Detect features on full-size frame
 			full_object_detection d68;
 
-			//cv::rectangle(grayImage, cv::Point(m_faces[f].m_bounds.left(), m_faces[f].m_bounds.top()), cv::Point(m_faces[f].m_bounds.right(), m_faces[f].m_bounds.bottom()), cv::Scalar(0,0,255), 3 );
-			//cv::imshow("image", grayImage);
-			//cv::waitKey(0);
-
 			dlib::cv_image<unsigned char> img(grayImage);
 			d68 = m_predictor68(img, m_faces[f].m_bounds);
 
