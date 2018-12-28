@@ -1,6 +1,6 @@
-[submodule "thirdparty/dlib"]
+[submodule "dlib"]
 	path = thirdparty/dlib
-	url = https://github.com/stream-labs/dlib
+	url = https://github.com/stream-labs/dlib.git
 [submodule "freetype2"]
 	path = thirdparty/freetype2
 	url = https://github.com/stream-labs/freetype2.git
