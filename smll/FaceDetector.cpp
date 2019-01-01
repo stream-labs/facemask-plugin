@@ -133,20 +133,21 @@ namespace smll {
 			m_camera_matrix =
 				(cv::Mat_<float>(3, 3) <<
 					focal_length, 0,			center.x, 
-					0,			  focal_length, center.y, 
+					0, 			  focal_length, center.y,
 					0,			  0,			1);
 			// We assume no lens distortion
 			m_dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<float>::type);
 		}
 	}
 	void FaceDetector::computeDifference(const ImageWrapper& detect, DetectionResults& results) {
-
-		if (!isPrevInit) {
+		CropInfo cropInfo = GetCropInfo();
+		
+		if (!isPrevInit ) {
 			isPrevInit = true;
-			results.motionRect.set_bottom(currentImage.rows);
-			results.motionRect.set_left(currentImage.cols);
-			results.motionRect.set_top(0);
-			results.motionRect.set_right(0);
+			results.motionRect.set_bottom(currentImage.rows - 3);
+			results.motionRect.set_right(currentImage.cols - 3);
+			results.motionRect.set_left(3);
+			results.motionRect.set_top(3);
 			prevImage = currentImage.clone();
 			return;
 		}
@@ -187,14 +188,18 @@ namespace smll {
 	}
 	void FaceDetector::addFaceRectangles(DetectionResults& results) {
 		float scale = (float)m_detect.w / m_capture.width;
+		float paddingPercentage = Config::singleton().get_double(CONFIG_MOTION_RECTANGLE_PADDING);
 
 		for (int i = 0; i < m_faces.length; i++) {
 			// scale rectangle up to video frame size
-			results.motionRect.set_left(std::min((int)results.motionRect.left(), (int)(m_faces[i].m_bounds.left() * scale)));
-			results.motionRect.set_right(std::max((int)results.motionRect.right(), (int)(m_faces[i].m_bounds.right() * scale)));
-			results.motionRect.set_top(std::min((int)results.motionRect.top(), (int)(m_faces[i].m_bounds.top() * scale)));
-			results.motionRect.set_bottom(std::max((int)results.motionRect.bottom(), (int)(m_faces[i].m_bounds.bottom() * scale)));
+			float delta_w = m_faces[i].m_bounds.width()*paddingPercentage;
+			float delta_h = m_faces[i].m_bounds.height()*paddingPercentage;
+			results.motionRect.set_left(std::min((int)results.motionRect.left(), (int)((m_faces[i].m_bounds.left() - delta_w) * scale)));
+			results.motionRect.set_right(std::max((int)results.motionRect.right(), (int)((m_faces[i].m_bounds.right() + delta_w) * scale)));
+			results.motionRect.set_top(std::min((int)results.motionRect.top(), (int)((m_faces[i].m_bounds.top() - delta_h) * scale)));
+			results.motionRect.set_bottom(std::max((int)results.motionRect.bottom(), (int)((m_faces[i].m_bounds.bottom() + delta_h) * scale)));
 		}
+
 		results.motionRect.set_left(std::max((int)results.motionRect.left(), 0));
 		results.motionRect.set_right(std::min((int)results.motionRect.right(), currentImage.cols - 1));
 		results.motionRect.set_top(std::max((int)results.motionRect.top(), 0));
@@ -205,9 +210,21 @@ namespace smll {
 	void FaceDetector::computeCurrentImage(const ImageWrapper& detect, DetectionResults& results) {
 		computeDifference(detect, results);
 		addFaceRectangles(results);
+
+		float minMotionRectangle = Config::singleton().get_double(CONFIG_MIN_MOTION_RECTANGLE);
+		int MRectMinW = minMotionRectangle *detect.w;
+		int MRectMinH = minMotionRectangle *detect.h;
+		if (results.motionRect.width() < MRectMinW || results.motionRect.height() < MRectMinH) {
+			results.motionRect.set_bottom(currentImage.rows - 3);
+			results.motionRect.set_right(currentImage.cols - 3);
+			results.motionRect.set_left(3);
+			results.motionRect.set_top(3);
+			prevImage = currentImage.clone();
+		}
 		SetCropInfo(results);
 		// Do image cropping and cv::Mat initialization in single shot
 		CropInfo cropInfo = GetCropInfo();
+		
 		cv::Mat cropped = currentImage(cv::Rect(cropInfo.offsetX, cropInfo.offsetY, cropInfo.width, cropInfo.height));
 		currentImage = cropped.clone();
 	}
@@ -991,7 +1008,7 @@ namespace smll {
 		cropInfo = CropInfo(xx, yy, ww, hh);
 	}
 
-    void FaceDetector::DoFaceDetection() {
+   void FaceDetector::DoFaceDetection() {
 
 		// get cropping info from config and detect image dimensions
 		CropInfo cropInfo = GetCropInfo();
@@ -1005,7 +1022,7 @@ namespace smll {
 
 		// only consider the face detection results if:
         //
-        // - tracking is disabled (so we have to)
+        // - tracking is disabled (so we have to) 
         // - we currently have no faces
         // - face detection just found some faces
         //
