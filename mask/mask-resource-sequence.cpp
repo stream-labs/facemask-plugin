@@ -126,6 +126,7 @@ void Mask::Resource::Sequence::Update(Mask::Part* part, float time) {
 		}
 		else {
 			instData->Reset();
+			instData->current = 0;
 		}
 	}
 
@@ -160,14 +161,39 @@ void Mask::Resource::Sequence::Update(Mask::Part* part, float time) {
 			}
 			instData->current += (instData->delta * numIntervals);
 
+			auto update_repeating_mode = [&instData, m_first=m_first, m_last=m_last](bool is_bounce_mode) {
+				if (is_bounce_mode) {
+					// this will account for more than one bounce
+					int round = instData->current / (m_last - m_first);
+					int positive_mod = (instData->current - m_first) % (m_last - m_first);
+					positive_mod += m_last - m_first;
+					positive_mod %= m_last - m_first;
+					if ((round % 2 + 2) % 2 == 0)
+					{
+						instData->delta = 1;
+						instData->current = positive_mod + m_first;
+					}
+					else
+					{
+						instData->delta = -1;
+						instData->current = m_last - positive_mod;
+					}
+				}
+				else {
+					int positive_mod = (instData->current - m_first) % (m_last - m_first + 1);
+					positive_mod += (m_last - m_first + 1);
+					positive_mod %= (m_last - m_first + 1);
+					instData->current = positive_mod + m_first;
+				}
+			};
+
 			// past last?
 			if (instData->current > m_last) {
 				if (IsBounceMode()) {
-					instData->delta = -1;
-					instData->current = m_last - 1;
+					update_repeating_mode(true);
 				}
 				else if (IsRepeatMode()) {
-					instData->current = m_first;
+					update_repeating_mode(false);
 				}
 				else if (m_mode == Mask::Resource::Sequence::ONCE) {
 					instData->current = m_last;
@@ -181,8 +207,10 @@ void Mask::Resource::Sequence::Update(Mask::Part* part, float time) {
 			if (instData->current < m_first) {
 				pastFirst = true;
 				if (IsBounceMode()) {
-					instData->delta = 1;
-					instData->current = m_first + 1;
+					update_repeating_mode(true);
+				}
+				else if (IsRepeatMode()) {
+					update_repeating_mode(false);
 				}
 				else {
 					instData->delta = 1;
