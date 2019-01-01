@@ -194,7 +194,6 @@ SET(smll_HEADERS
 	"${SMLLDir}/landmarks.hpp"
 	"${SMLLDir}/MorphData.hpp"
 	"${SMLLDir}/OBSRenderer.hpp"
-	"${SMLLDir}/OBSTexture.hpp"
 	"${SMLLDir}/sarray.hpp"
 	"${SMLLDir}/TriangulationResult.hpp"
 	"${SMLLDir}/TestingPipe.hpp"

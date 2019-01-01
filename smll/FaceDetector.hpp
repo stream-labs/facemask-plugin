@@ -23,7 +23,6 @@
 
 #include "Face.hpp"
 #include "Config.hpp"
-#include "OBSTexture.hpp"
 #include "ImageWrapper.hpp"
 #include "DetectionResults.hpp"
 #include "TriangulationResult.hpp"
@@ -60,10 +59,10 @@ class FaceDetector
 public:
 
 	FaceDetector();
-	~FaceDetector();
 
-	void DetectFaces(const ImageWrapper& detect, const OBSTexture& capture, DetectionResults& results);
-	void DetectLandmarks(const OBSTexture& capture, DetectionResults& results);
+	cv::Mat ConvertFrameToGrayMat(obs_source_frame* frame);
+	void DetectFaces(struct obs_source_frame * frame, int w, int h, DetectionResults& results);
+	void DetectLandmarks(DetectionResults& results);
 	void DoPoseEstimation(DetectionResults& results);
 	void ResetFaces();
 
@@ -71,10 +70,12 @@ public:
 		TriangulationResult& result);
 
 	int CaptureWidth() const {
-		return m_capture.width;
+		//return m_capture.width;
+		return grayImage.cols;
 	}
 	int CaptureHeight() const {
-		return m_capture.height;
+		//return m_capture.height;
+		return grayImage.rows;
 	}
 
 private:
@@ -85,19 +86,13 @@ private:
 	// Saved Poses
 	ThreeDPoses		m_poses;
 
-	// Image Buffers
-	OBSTexture		m_capture;
-	ImageWrapper	m_detect;
-
-	// For staging the capture texture
-	gs_stagesurf_t* m_captureStage;
-	int				m_stageSize;
-	ImageWrapper	m_stageWork;
-
 	// Face detection timeouts
 	int				m_timeout;
     int             m_trackingTimeout;
     int             m_detectionTimeout;
+	int				resizeWidth;
+	int				resizeHeight;
+	int count;
 
 	// Tracking time-slicer
 	int				m_trackingFaceIndex;
@@ -140,11 +135,7 @@ private:
 	CropInfo	GetCropInfo();
 	// Current Image
 	cv::Mat currentImage;
-	void computeCurrentImage(const ImageWrapper& detect);
-
-	// Staging the capture texture
-	void 	StageCaptureTexture();
-	void 	UnstageCaptureTexture();
+	cv::Mat grayImage;
 
 	// For 3d pose
 	float	ReprojectionError(const std::vector<cv::Point3f>& model_points,
