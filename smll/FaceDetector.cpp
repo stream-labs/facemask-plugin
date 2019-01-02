@@ -1019,10 +1019,6 @@ namespace smll {
         
     void FaceDetector::StartObjectTracking() {
 
-		// TODO: Complete full OpenCV 4.0.0 integration
-		//		Debug and Release and necessary dll's
-		//		Change the Face Data Structure
-		//		Log everything and then peace!
 		// get crop info from config and track image dimensions
 		CropInfo cropInfo = GetCropInfo();
 
