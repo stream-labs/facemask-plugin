@@ -1098,9 +1098,6 @@ namespace smll {
 	void FaceDetector::DoPoseEstimation(DetectionResults& results)
 	{
 		// Build a set of model points to use for solving 3D pose
-		// NOTE: The keypoints sould be selected w.r.t stability
-		// TODO: Reduce Keypoints, change pose solver,
-		//       change per-frame pose to temporal pose
 		std::vector<int> model_indices;
 		model_indices.push_back(LEFT_OUTER_EYE_CORNER);
 		model_indices.push_back(RIGHT_OUTER_EYE_CORNER);

@@ -70,11 +70,9 @@ public:
 		TriangulationResult& result);
 
 	int CaptureWidth() const {
-		//return m_capture.width;
 		return grayImage.cols;
 	}
 	int CaptureHeight() const {
-		//return m_capture.height;
 		return grayImage.rows;
 	}
 
