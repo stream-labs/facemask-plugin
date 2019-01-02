@@ -211,7 +211,7 @@ namespace smll {
 		nStates = 18;
 		nMeasurements = 6;
 		nInputs = 0;
-		dt = 0.125;
+		dt = 0.125; // TODO: Change this as per the FPS of tracker.
 	}
 
 	DetectionResult::~DetectionResult() {
