@@ -266,7 +266,7 @@ namespace smll {
 	void DetectionResult::InitStartPose() {
 		if (!initedStartPose) {
 			startPose.rotation[0] = 0.0;
-			startPose.rotation[1] = 0.0;
+			startPose.rotation[1] = 1.0;
 			startPose.rotation[2] = 0.0;
 			startPose.rotation[3] = 0.0;
 			startPose.translation[0] = 0.0;
