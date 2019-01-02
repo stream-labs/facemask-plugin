@@ -259,10 +259,6 @@ namespace smll {
 		pose.CopyPoseFrom(r.pose);
 	}
 
-	bool DetectionResult::PoseValid() {
-		return pose.PoseValid();
-	}
-
 	void DetectionResult::ResetPose() {
 		pose.ResetPose();
 	}
