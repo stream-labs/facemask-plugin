@@ -38,7 +38,6 @@
 
 #include "landmarks.hpp"
 #include "Face.hpp"
-#include "SingleValueKalman.hpp"
 #include <opencv2/opencv.hpp>
 
 namespace smll {
