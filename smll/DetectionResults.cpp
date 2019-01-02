@@ -259,10 +259,6 @@ namespace smll {
 		pose.CopyPoseFrom(r.pose);
 	}
 
-	void DetectionResult::ResetPose() {
-		pose.ResetPose();
-	}
-
 	void DetectionResult::InitStartPose() {
 		if (!initedStartPose) {
 			startPose.rotation[0] = 0.0;
