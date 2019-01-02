@@ -648,18 +648,6 @@ namespace smll {
 		const cv::Mat& rot = face.GetCVRotation();
 		cv::Mat trx = face.GetCVTranslation();
 
-		/*
-		blog(LOG_DEBUG, "HEADPOINTS-----------------------");
-		blog(LOG_DEBUG, " trans: %5.2f, %5.2f, %5.2f",
-			(float)trx.at<double>(0, 0),
-			(float)trx.at<double>(1, 0),
-			(float)trx.at<double>(2, 0));
-		blog(LOG_DEBUG, "   rot: %5.2f, %5.2f, %5.2f",
-			(float)rot.at<double>(0, 0),
-			(float)rot.at<double>(1, 0),
-			(float)rot.at<double>(2, 0));
-			*/
-
 		std::vector<cv::Point2f> projheadpoints;
 		cv::projectPoints(headpoints, rot, trx, GetCVCamMatrix(), GetCVDistCoeffs(), projheadpoints);
 
