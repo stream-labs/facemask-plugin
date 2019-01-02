@@ -835,9 +835,7 @@ namespace smll {
 				triangles[TriangulationResult::IDXBUFF_HULL].push_back(i1);
 				triangles[TriangulationResult::IDXBUFF_HULL].push_back(i2);
 			}
-			else /*if ((b0 & bgmask).any() ||
-				(b1 & bgmask).any() ||
-				(b2 & bgmask).any())*/ { 
+			else { 
 				triangles[TriangulationResult::IDXBUFF_BACKGROUND].push_back(i0);
 				triangles[TriangulationResult::IDXBUFF_BACKGROUND].push_back(i1);
 				triangles[TriangulationResult::IDXBUFF_BACKGROUND].push_back(i2);
