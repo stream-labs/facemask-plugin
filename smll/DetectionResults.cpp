@@ -59,10 +59,9 @@ namespace smll {
 	}
 
 	cv::Mat ThreeDPose::GetCVRotation() const {
-		cv::Mat m = cv::Mat::zeros(3, 1, CV_64F);
-		m.at<double>(0, 0) = rotation[0] * rotation[3];
-		m.at<double>(1, 0) = rotation[1] * rotation[3];
-		m.at<double>(2, 0) = rotation[2] * rotation[3];
+		cv::Mat m = (cv::Mat_<double>(3, 1) << rotation[0] * rotation[3],
+											   rotation[1] * rotation[3],
+											   rotation[2] * rotation[3]);
 		return m;
 	}
 
