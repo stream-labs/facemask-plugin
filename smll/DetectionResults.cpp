@@ -67,16 +67,9 @@ namespace smll {
 	}
 
 	cv::Mat ThreeDPose::GetCVTranslation() const {
-		cv::Mat m = cv::Mat::zeros(3, 1, CV_64F);
-		cv::Mat m1 = (cv::Mat_<double>(3, 1) << translation[0],
-											    translation[1],
-											    translation[2]);
-		m.at<double>(0, 0) = translation[0];
-		m.at<double>(1, 0) = translation[1];
-		m.at<double>(2, 0) = translation[2];
-		cv::Mat diff = m != m1;
-		bool eq = cv::countNonZero(diff) == 0;
-		blog(LOG_DEBUG, "Check Mat initialization = %d\n", eq);
+		cv::Mat m = (cv::Mat_<double>(3, 1) << translation[0],
+											   translation[1],
+											   translation[2]);
 		return m;
 	}
 
