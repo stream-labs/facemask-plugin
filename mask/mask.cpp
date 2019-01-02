@@ -483,6 +483,37 @@ void  Mask::MaskData::AddSortedDrawObject(SortedDrawObject* obj) {
 	m_drawBuckets[idx] = obj;
 }
 
+void Mask::MaskData::Decompose(const matrix4 *src, vec3 *s, matrix4 *R, vec3 *t)
+{
+	// Decompose the matrix fully
+	// in case of negative scalings
+	// the exact scale axis is not
+	// known anymore, and we just pick
+	// x-axis as the best we can.
+	// See the following links for more information:
+	//  - Last Paragraph:
+	//    http://callumhay.blogspot.com/2010/10/decomposing-affine-transforms.html
+	//  - Three.js PR:
+	//    https://github.com/mrdoob/three.js/pull/4272
+
+	float sx = vec4_len(&src->x);
+	float sy = vec4_len(&src->y);
+	float sz = vec4_len(&src->z);
+
+	if (matrix4_determinant(src) < 0)
+		sx = -sx;
+
+	vec3_set(s, sx, sy, sz);
+	vec3_from_vec4(t, &src->t);
+
+	vec3 inv_s;
+	vec3_set(&inv_s, 1/sx, 1/sy, 1/sz);
+
+	matrix4_scale_i(R, &inv_s, src);
+	vec4_set(&(R->t), 0, 0, 0, 1.0);
+
+}
+
 void  Mask::MaskData::PartCalcMatrix(Part *part) {
 
 	// Only if we're dirty
@@ -537,7 +568,6 @@ void  Mask::MaskData::PartCalcMatrix(Part *part) {
 
 			} while (current_part && current_part->local_to.length() > 0 && current_part->local_to == part->name);
 		}
-		
 		// Calculate global
 		matrix4_copy(&part->global, &part->local);
 		if (current_part) {
@@ -545,57 +575,86 @@ void  Mask::MaskData::PartCalcMatrix(Part *part) {
 			if (part->inherit_type == Part::Inherit_RSrs) {
 				matrix4_mul(&part->global, &part->global, &current_part->global);
 			}
-			else if (part->inherit_type == Part::Inherit_RrSs) {
-				blog(LOG_WARNING, "RrSs not supported, reverting to normal transformation inheritance.");
-				matrix4_mul(&part->global, &part->global, &current_part->global);
-			}
-			else if (part->inherit_type == Part::Inherit_Rrs) {
+			else {
 				/*
-					In this inherit type we shouldn't inherit parent scaling.
-
-					This is what happens in a normal chain:
-
-					Parent_Matrix = T * R * S
-					Local_Matrix  =  t * r * s
-
-					Global_Matrix = Parent_Matrix * Local_Matrix
-					Global_Matrix = (T * R * S) * (t * r * s)
-
-					We want to cancel out the effect of S.
-					As the order of matrix multiplication is important,
-					we inject the inverse of S in between parent and local matrices
-					to cancel out scaling correctly.
-
-					Local_Matrix = inv_S * (t * r * s)
-
-					Global_Matrix = Parent_Matrix * Local_Matrix
-					Global_Matrix = (T * R * S) * (inv_S * t * r * s)
-					Global_Matrix = (T * R) * (S * inv_S) * (t * r * s)
-					Global_Matrix = (T * R) * (t * r * s)
-
-					The way FBX SDK is doing this is more complex and requires 
-					more matrix multiplications for separating translation.
-
-					See their sample code for more info:
+					The other two types of inherit types are more complex, and need
+					several matrix decompositions. The details of the process can
+					be seen in FBX SDK example here:
 					http://help.autodesk.com/cloudhelp/2018/ENU/FBX-Developer-Help/cpp_ref/_transformations_2main_8cxx-example.html
 
+					Naming reference:
+					L: Local
+					G: Global
+					P: Parent
+					M: Matrix
+					v: Vector
+					R: rotation
+					T: translation
 				*/
-				// extract scale information from parent global matrix
-				// Note: negative scaling is not considered here
-				//       if we end up needing that, we'll have to
-				//       do full matrix decomposition
-				float sx = vec4_len(&current_part->global.x);
-				float sy = vec4_len(&current_part->global.y);
-				float sz = vec4_len(&current_part->global.z);
 
-				matrix4_copy(&part->global, &part->local);
-				matrix4_scale3f(&part->global, &part->global,
-					1.0 / sx, 1.0 / sy, 1.0 / sz);
-				matrix4_mul(&part->global, &part->global, &current_part->global);
+				// Local Matrix
+				const matrix4 &LM = part->local;
+				vec3 ls_v, lt_v;
+				matrix4 LR, LS;
+				Decompose(&LM, &ls_v, &LR, &lt_v);
+
+				matrix4_identity(&LS);
+				matrix4_scale(&LS, &LS, &ls_v);
+
+				// Parent Global Matrix
+				const matrix4 &PGM = current_part->global;
+				vec3 pgs_v, pgt_v;
+				matrix4 PGR;
+				Decompose(&PGM, &pgs_v, &PGR, &pgt_v);
+
+				// pgs_v will have scale information
+				// if we need to have shear information as well
+				// we'll have to find PGS matrix using the following:
+				// PGS = PGM * inv_PGT * inv_PGR
+				matrix4 PGS;
+				matrix4_identity(&PGS);
+				matrix4_scale(&PGS, &PGS, &pgs_v);
+
+				// Global Rotation x Scale Matrix
+				matrix4 GSR;
+				matrix4_identity(&GSR);
+
+				if (part->inherit_type == Part::Inherit_Rrs) {
+					
+					// Parent Local Matrix
+					const matrix4 &PLM = current_part->local;
+					vec3 pls_v, plt_v;
+					matrix4 PLR;
+					Decompose(&PLM, &pls_v, &PLR, &plt_v);
+
+					matrix4 PGS_nolocal;
+					matrix4_scale3f(&PGS_nolocal, &PGS, 1 / pls_v.x, 1 / pls_v.y, 1 / pls_v.z);
+
+					// GSR = LS x PGS_nolocal x LR x PGR
+					matrix4_mul(&GSR, &GSR, &LS);
+					matrix4_mul(&GSR, &GSR, &PGS_nolocal);
+					matrix4_mul(&GSR, &GSR, &LR);
+					matrix4_mul(&GSR, &GSR, &PGR);
+				}
+				else if (part->inherit_type == Part::Inherit_RrSs) {
+					// GSR = LS x PGS x LR x PGR
+					matrix4_mul(&GSR, &GSR, &LS);
+					matrix4_mul(&GSR, &GSR, &PGS);
+					matrix4_mul(&GSR, &GSR, &LR);
+					matrix4_mul(&GSR, &GSR, &PGR);
+				}
+
+				vec3 gt_v;
+				matrix4 GT;
+				vec3_transform(&gt_v, &lt_v, &PGM);
+
+				matrix4_identity(&GT);
+				matrix4_translate3v(&GT, &GT, &gt_v);
+
+				matrix4_mul(&part->global, &GSR, &GT);
 
 			}
 		}
-
 		part->dirty = false;
 	}
 }

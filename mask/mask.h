@@ -170,6 +170,7 @@ namespace Mask {
 	private:
 		std::shared_ptr<Part> LoadPart(std::string name, obs_data_t* data);
 		static void PartCalcMatrix(Part *part);
+		static void Decompose(const matrix4 *src, vec3 *s, matrix4 *R, vec3 *t);
 
 		struct {
 			std::string name;
