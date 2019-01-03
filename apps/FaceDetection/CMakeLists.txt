@@ -108,3 +108,5 @@ endif()
 ################################################################################
 # Building
 ################################################################################
+add_executable( FaceDetection main.cpp )
+target_link_libraries( FaceDetection FaceDetection_LIBRARIES )
