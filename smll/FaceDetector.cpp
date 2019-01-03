@@ -967,10 +967,9 @@ namespace smll {
 		// need to scale back
 		float scale = (float)grayImage.rows / resizeHeight;
 
-        // detect faces
+		// Detect faces using FaceLib::FaceDetector::DetectFaces
 		std::vector<rectangle> faces;
-		dlib::cv_image<unsigned char> img(currentImage);
-		faces = m_detector(img);
+		_faceDetector.DetectFaces(currentImage, faces);
 
 		// only consider the face detection results if:
         //
