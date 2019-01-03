@@ -238,7 +238,11 @@ namespace smll {
 		resizeHeight = height;
 
 		ConvertFrameToGrayMat(frame);
-		
+
+		// Resize and cut out region of interest
+		cv::resize(grayImage, currentImage, cv::Size(resizeWidth, resizeHeight), 0, 0, cv::INTER_LINEAR);
+		currentOrigImage = currentImage.clone();
+
 		bool trackingFailed = false;
 		// if number of frames before the last detection is bigger than the threshold or if there are no faces to track
 		if (m_detectionTimeout == 0 || m_faces.length == 0) {
@@ -582,8 +586,7 @@ namespace smll {
 		if (frame->flip) {
 			cv::flip(grayImage, grayImage, 0);
 		}
-		currentImage = grayImage;
-		currentOrigImage = currentImage.clone();
+
 	}
 
 
