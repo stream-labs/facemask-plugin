@@ -29,50 +29,6 @@
 
 namespace smll {
 
-	static void CheckForPoseFlip(double* r, double* t) {
-
-		// check for pose flip
-		if (t[2] < 0.0)
-		{
-			//blog(LOG_DEBUG, "***** POSE FLIP *****");
-
-			// flip translation
-			t[0] = -t[0];
-			t[1] = -t[1];
-			t[2] = -t[2];
-
-			// flip rotation
-			// this is odd, but works...
-
-			// flip z and the angle
-			r[0] = r[0];
-			r[1] = r[1];
-			r[2] = -r[2];
-			r[3] = -r[3];
-
-			// rotate 180 around z
-			// use Rodrigues formula, simplified for rotation around Z
-			//
-			double cos1 = cos(r[3] / 2.0);
-			double sin1 = sin(r[3] / 2.0);
-			double cos2 = cos(M_PI / 2.0);
-			double sin2 = sin(M_PI / 2.0);
-
-			double a = acos(cos1 * cos2 - sin1 * sin2 * r[2]) * 2.0;
-			double x = sin1 * cos2 * r[0] + sin1 * sin2 * r[1];
-			double y = sin1 * cos2 * r[1] + sin1 * sin2 * r[0];
-			double z = sin1 * cos2 * r[2] + cos1 * sin2;
-
-			double sina = sin(a / 2.0);
-			if (sina < 0.0001)
-				sina = 1.0;
-			r[0] = x / sina;
-			r[1] = y / sina;
-			r[2] = z / sina;
-			r[3] = a;
-		}
-	}
-
 	ThreeDPose::ThreeDPose() {
 		ResetPose();
 	}
@@ -100,23 +56,19 @@ namespace smll {
 		translation[0] = cvTrs.at<double>(0, 0);
 		translation[1] = cvTrs.at<double>(1, 0);
 		translation[2] = cvTrs.at<double>(2, 0);
-
-		CheckForPoseFlip(rotation, translation);
 	}
 
 	cv::Mat ThreeDPose::GetCVRotation() const {
-		cv::Mat m = cv::Mat::zeros(3, 1, CV_64F);
-		m.at<double>(0, 0) = rotation[0] * rotation[3];
-		m.at<double>(1, 0) = rotation[1] * rotation[3];
-		m.at<double>(2, 0) = rotation[2] * rotation[3];
+		cv::Mat m = (cv::Mat_<double>(3, 1) << rotation[0] * rotation[3],
+											   rotation[1] * rotation[3],
+											   rotation[2] * rotation[3]);
 		return m;
 	}
 
 	cv::Mat ThreeDPose::GetCVTranslation() const {
-		cv::Mat m = cv::Mat::zeros(3, 1, CV_64F);
-		m.at<double>(0, 0) = translation[0];
-		m.at<double>(1, 0) = translation[1];
-		m.at<double>(2, 0) = translation[2];
+		cv::Mat m = (cv::Mat_<double>(3, 1) << translation[0],
+											   translation[1],
+											   translation[2]);
 		return m;
 	}
 
@@ -257,8 +209,11 @@ namespace smll {
 
 
 	DetectionResult::DetectionResult() 
-		: matched(false), numFramesLost(0), kalmanFiltersInitialized(false), initedStartPose(false) {
-
+		: matched(false), numFramesLost(0), kalmanFilterInitialized(false), initedStartPose(false) {
+		nStates = 18;
+		nMeasurements = 6;
+		nInputs = 0;
+		dt = 0.125; // TODO: Change this as per the FPS of tracker.
 	}
 
 	DetectionResult::~DetectionResult() {
@@ -271,9 +226,8 @@ namespace smll {
 		for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
 			landmarks68[i] = r.landmarks68[i];
 		}
-		CheckForPoseFlip(pose.rotation, pose.translation);
 
-		kalmanFiltersInitialized = false;
+		kalmanFilterInitialized = false;
 		initedStartPose = false;
 		return *this;
 	}
@@ -285,12 +239,12 @@ namespace smll {
 
 	void DetectionResult::SetPose(const ThreeDPose& p) {
 		pose.CopyPoseFrom(p);
-		kalmanFiltersInitialized = false;
+		kalmanFilterInitialized = false;
 	}
 
 	void DetectionResult::SetPose(cv::Mat cvRot, cv::Mat cvTrs) {
 		pose.SetPose(cvRot, cvTrs);
-		kalmanFiltersInitialized = false;
+		kalmanFilterInitialized = false;
 	}
 
 	cv::Mat DetectionResult::GetCVRotation() const {
@@ -309,18 +263,10 @@ namespace smll {
 		pose.CopyPoseFrom(r.pose);
 	}
 
-	bool DetectionResult::PoseValid() {
-		return pose.PoseValid();
-	}
-
-	void DetectionResult::ResetPose() {
-		pose.ResetPose();
-	}
-
 	void DetectionResult::InitStartPose() {
 		if (!initedStartPose) {
 			startPose.rotation[0] = 0.0;
-			startPose.rotation[1] = 0.0;
+			startPose.rotation[1] = 1.0;
 			startPose.rotation[2] = 0.0;
 			startPose.rotation[3] = 0.0;
 			startPose.translation[0] = 0.0;
@@ -332,34 +278,66 @@ namespace smll {
 
 	void DetectionResult::UpdateResultsFrom(const DetectionResult& r) {
 
-		if (!kalmanFiltersInitialized) {
+		if (!kalmanFilterInitialized) {
 			*this = r;
-			InitKalmanFilters();
+			InitKalmanFilter();
 		}
 
 		double ntx[3] = { r.pose.translation[0], r.pose.translation[1], r.pose.translation[2] };
 		double nrot[4] = { r.pose.rotation[0], r.pose.rotation[1], r.pose.rotation[2], r.pose.rotation[3] };
 		dlib::rectangle bnd = r.bounds;
 
-		CheckForPoseFlip(nrot, ntx);
-
 		// kalman filtering enabled?
 		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE)) {
 			
-			// update smoothing factor
-			double smoothing = Config::singleton().get_double(CONFIG_FLOAT_SMOOTHING_FACTOR);
-			for (int i = 0; i < KF_NUM_FILTERS; i++) {
-				kalmanFilters[i].SetMeasurementNoiseCovariance(smoothing);
+			// Get the measured translation
+			cv::Mat translationMeasured = r.pose.GetCVTranslation();
+			// Get the measured rotation
+			cv::Mat eulersMeasured = r.pose.GetCVRotation();
+
+			cv::Mat measurements(6, 1, CV_64F);
+
+			// Fill the measurements vector
+			measurements.at<double>(0) = translationMeasured.at<double>(0, 0); // x
+			measurements.at<double>(1) = translationMeasured.at<double>(1, 0); // y
+			measurements.at<double>(2) = translationMeasured.at<double>(2, 0); // z
+			measurements.at<double>(3) = eulersMeasured.at<double>(0, 0);	   // roll
+			measurements.at<double>(4) = eulersMeasured.at<double>(1, 0);	   // pitch
+			measurements.at<double>(5) = eulersMeasured.at<double>(2, 0);	   // yaw
+
+			// Update the Kalman filter with good measurements
+			cv::Mat translationEstimated(3, 1, CV_64F), eulersEstimated(3, 1, CV_64F);
+			UpdateKalmanFilter(measurements, translationEstimated, eulersEstimated);
+
+			cv::Mat smoothEulers = pose.GetCVRotation();
+			cv::Mat smoothTranslation = pose.GetCVTranslation();
+			cv::Mat eulersDiff; cv::absdiff(eulersEstimated, smoothEulers, eulersDiff);
+			double eulerUpdateValue = cv::sum(eulersDiff)[0] / 3.0;
+			cv::Mat translationDiff; cv::absdiff(translationEstimated, smoothTranslation, translationDiff);
+			double translationUpdateValue = cv::sum(translationDiff)[0] / 3.0;
+
+			double eulerUpdateThreshold = 0.05; // < 3 degrees is considered as noise
+			double translationUpdateThreshold = 0.09; // Reduces noise to an extent (not fully)
+
+			if (eulerUpdateValue > eulerUpdateThreshold) {
+				smoothEulers += 0.8 * dt * (eulersEstimated - smoothEulers);
 			}
 
-			// update the kalman filters
-			ntx[0] = kalmanFilters[KF_TRANS_X].Update(ntx[0]);
-			ntx[1] = kalmanFilters[KF_TRANS_Y].Update(ntx[1]);
-			ntx[2] = kalmanFilters[KF_TRANS_Z].Update(ntx[2]);
-			nrot[0] = kalmanFilters[KF_ROT_X].Update(nrot[0]);
-			nrot[1] = kalmanFilters[KF_ROT_Y].Update(nrot[1]);
-			nrot[2] = kalmanFilters[KF_ROT_Z].Update(nrot[2]);
-			nrot[3] = kalmanFilters[KF_ROT_A].Update(nrot[3]);
+			if (translationUpdateValue > translationUpdateThreshold) {
+				smoothTranslation += 5 * 0.8 * dt * (translationEstimated - smoothTranslation);
+			}
+
+			// Update Pose 
+			pose.SetPose(smoothEulers, smoothTranslation);
+		}
+		else {
+			pose.translation[0] = ntx[0];
+			pose.translation[1] = ntx[1];
+			pose.translation[2] = ntx[2];
+			pose.rotation[0] = nrot[0];
+			pose.rotation[1] = nrot[1];
+			pose.rotation[2] = nrot[2];
+			pose.rotation[3] = nrot[3];
 		}
 
 		// copy values
@@ -368,27 +346,93 @@ namespace smll {
 		for (int i = 0; i < smll::NUM_FACIAL_LANDMARKS; i++) {
 			landmarks68[i] = r.landmarks68[i];
 		}
-		pose.translation[0] = ntx[0];
-		pose.translation[1] = ntx[1];
-		pose.translation[2] = ntx[2];
-		pose.rotation[0] = nrot[0];
-		pose.rotation[1] = nrot[1];
-		pose.rotation[2] = nrot[2];
-		pose.rotation[3] = nrot[3];
+		
 	}
 
-
-	void DetectionResult::InitKalmanFilters() {
+	void DetectionResult::InitKalmanFilter() {
 		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE)) {
-			kalmanFilters[KF_TRANS_X].Init(pose.translation[0]);
-			kalmanFilters[KF_TRANS_Y].Init(pose.translation[1]);
-			kalmanFilters[KF_TRANS_Z].Init(pose.translation[2]);
-			kalmanFilters[KF_ROT_X].Init(pose.rotation[0]);
-			kalmanFilters[KF_ROT_Y].Init(pose.rotation[1]);
-			kalmanFilters[KF_ROT_Z].Init(pose.rotation[2]);
-			kalmanFilters[KF_ROT_A].Init(pose.rotation[3]);
-			kalmanFiltersInitialized = true;
+			kalmanFilter.init(nStates, nMeasurements, nInputs, CV_64F);					// init Kalman Filter
+
+			cv::setIdentity(kalmanFilter.processNoiseCov, cv::Scalar::all(1e-5));		// set process noise
+			cv::setIdentity(kalmanFilter.measurementNoiseCov, cv::Scalar::all(1e-4));   // set measurement noise
+			cv::setIdentity(kalmanFilter.errorCovPost, cv::Scalar::all(1));             // error covariance
+
+			/* DYNAMIC MODEL*/
+			//  [1 0 0 dt  0  0 dt2   0   0 0 0 0  0  0  0   0   0   0]  
+			//  [0 1 0  0 dt  0   0 dt2   0 0 0 0  0  0  0   0   0   0]  
+			//  [0 0 1  0  0 dt   0   0 dt2 0 0 0  0  0  0   0   0   0]  
+			//  [0 0 0  1  0  0  dt   0   0 0 0 0  0  0  0   0   0   0]  
+			//  [0 0 0  0  1  0   0  dt   0 0 0 0  0  0  0   0   0   0]  
+			//  [0 0 0  0  0  1   0   0  dt 0 0 0  0  0  0   0   0   0]  
+			//  [0 0 0  0  0  0   1   0   0 0 0 0  0  0  0   0   0   0]  
+			//  [0 0 0  0  0  0   0   1   0 0 0 0  0  0  0   0   0   0]  
+			//  [0 0 0  0  0  0   0   0   1 0 0 0  0  0  0   0   0   0]  
+			//  [0 0 0  0  0  0   0   0   0 1 0 0 dt  0  0 dt2   0   0]  
+			//  [0 0 0  0  0  0   0   0   0 0 1 0  0 dt  0   0 dt2   0]  
+			//  [0 0 0  0  0  0   0   0   0 0 0 1  0  0 dt   0   0 dt2]  
+			//  [0 0 0  0  0  0   0   0   0 0 0 0  1  0  0  dt   0   0]  
+			//  [0 0 0  0  0  0   0   0   0 0 0 0  0  1  0   0  dt   0]  
+			//  [0 0 0  0  0  0   0   0   0 0 0 0  0  0  1   0   0  dt]  
+			//  [0 0 0  0  0  0   0   0   0 0 0 0  0  0  0   1   0   0]  
+			//  [0 0 0  0  0  0   0   0   0 0 0 0  0  0  0   0   1   0]  
+			//  [0 0 0  0  0  0   0   0   0 0 0 0  0  0  0   0   0   1]  
+
+			// position  
+			kalmanFilter.transitionMatrix.at<double>(0, 3) = dt;
+			kalmanFilter.transitionMatrix.at<double>(1, 4) = dt;
+			kalmanFilter.transitionMatrix.at<double>(2, 5) = dt;
+			kalmanFilter.transitionMatrix.at<double>(3, 6) = dt;
+			kalmanFilter.transitionMatrix.at<double>(4, 7) = dt;
+			kalmanFilter.transitionMatrix.at<double>(5, 8) = dt;
+			kalmanFilter.transitionMatrix.at<double>(0, 6) = 0.5*pow(dt, 2);
+			kalmanFilter.transitionMatrix.at<double>(1, 7) = 0.5*pow(dt, 2);
+			kalmanFilter.transitionMatrix.at<double>(2, 8) = 0.5*pow(dt, 2);
+
+			// orientation  
+			kalmanFilter.transitionMatrix.at<double>(9, 12) = dt;
+			kalmanFilter.transitionMatrix.at<double>(10, 13) = dt;
+			kalmanFilter.transitionMatrix.at<double>(11, 14) = dt;
+			kalmanFilter.transitionMatrix.at<double>(12, 15) = dt;
+			kalmanFilter.transitionMatrix.at<double>(13, 16) = dt;
+			kalmanFilter.transitionMatrix.at<double>(14, 17) = dt;
+			kalmanFilter.transitionMatrix.at<double>(9, 15) = 0.5*pow(dt, 2);
+			kalmanFilter.transitionMatrix.at<double>(10, 16) = 0.5*pow(dt, 2);
+			kalmanFilter.transitionMatrix.at<double>(11, 17) = 0.5*pow(dt, 2);
+
+			/* MEASUREMENT MODEL */
+			//  [1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]  
+			//  [0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]  
+			//  [0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]  
+			//  [0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0]  
+			//  [0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0]  
+			//  [0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0]  
+			kalmanFilter.measurementMatrix.at<double>(0, 0) = 1;  // x  
+			kalmanFilter.measurementMatrix.at<double>(1, 1) = 1;  // y  
+			kalmanFilter.measurementMatrix.at<double>(2, 2) = 1;  // z  
+			kalmanFilter.measurementMatrix.at<double>(3, 9) = 1;  // roll  
+			kalmanFilter.measurementMatrix.at<double>(4, 10) = 1; // pitch  
+			kalmanFilter.measurementMatrix.at<double>(5, 11) = 1; // yaw  
+
+			kalmanFilterInitialized = true;
 		}
+	}
+
+	void DetectionResult::UpdateKalmanFilter(cv::Mat& measurements, cv::Mat& translationEstimated, cv::Mat& eulersEstimated) {
+		// First predict, to update the internal statePre variable  
+		cv::Mat prediction = kalmanFilter.predict();
+
+		// The "correct" phase that is going to use the predicted value and our measurement  
+		cv::Mat estimated = kalmanFilter.correct(measurements);
+
+		// Estimated translation  
+		translationEstimated.at<double>(0) = estimated.at<double>(0);
+		translationEstimated.at<double>(1) = estimated.at<double>(1);
+		translationEstimated.at<double>(2) = estimated.at<double>(2);
+
+		// Estimated euler angles  
+		eulersEstimated.at<double>(0) = estimated.at<double>(9);
+		eulersEstimated.at<double>(1) = estimated.at<double>(10);
+		eulersEstimated.at<double>(2) = estimated.at<double>(11);
 	}
 
 }

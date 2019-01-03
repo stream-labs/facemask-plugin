@@ -36,7 +36,7 @@ namespace Mask {
 				elapsed(0.0f), delay(0.0f), playback_started(false), playback_ended(false) {}
 
 			void Reset() override {
-				current = 0;
+				current = -1;
 				elapsed = 0.0f;
 				playback_started = false;
 				playback_ended = false;

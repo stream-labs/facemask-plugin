@@ -9,6 +9,13 @@ set(DLIB_NO_GUI_SUPPORT OFF CACHE STRING "DLib GUI support" FORCE)
 set(DLIB_GIF_SUPPORT OFF CACHE STRING "DLib GIF support" FORCE)
 set(DLIB_JPEG_SUPPORT OFF CACHE STRING "DLib JPEG support"  FORCE)
 set(DLIB_PNG_SUPPORT OFF CACHE STRING "DLib PNG support"  FORCE)
+set(DLIB_USE_BLAS OFF CACHE STRING "DLib BLAS support"  FORCE)
+set(DLIB_USE_LAPACK OFF CACHE STRING "DLib LAPACK support"  FORCE)
+set(DLIB_USE_MKL_FFT OFF CACHE STRING "DLib MKL FFT support"  FORCE)
+set(DLIB_USE_MKL_SEQUENTIAL OFF CACHE STRING "DLib MKL Sequential support"  FORCE)
+set(DLIB_USE_MKL_WITH_TBB OFF CACHE STRING "DLib MKL with TBB support"  FORCE)
+
+
 
 SET(PATH_FREETYPE "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/freetype2")
 
@@ -182,16 +189,13 @@ SET(smll_HEADERS
 	"${SMLLDir}/DetectionResults.hpp"
 	"${SMLLDir}/Face.hpp"
 	"${SMLLDir}/FaceDetector.hpp"
-	"${SMLLDir}/Kalman.hpp"
 	"${SMLLDir}/ImageWrapper.hpp"
 	"${SMLLDir}/landmarks.hpp"
 	"${SMLLDir}/MorphData.hpp"
 	"${SMLLDir}/OBSRenderer.hpp"
-	"${SMLLDir}/OBSTexture.hpp"
 	"${SMLLDir}/sarray.hpp"
 	"${SMLLDir}/TriangulationResult.hpp"
 	"${SMLLDir}/TestingPipe.hpp"
-	"${SMLLDir}/SingleValueKalman.hpp"
 )
 SET(gs_HEADERS
 	"${PROJECT_SOURCE_DIR}/gs/gs-effect.h"
@@ -242,7 +246,6 @@ SET(smll_SOURCES
 	"${SMLLDir}/MorphData.cpp"
 	"${SMLLDir}/TriangulationResult.cpp"
 	"${SMLLDir}/TestingPipe.cpp"
-	"${SMLLDir}/SingleValueKalman.cpp"
 )
 SET(gs_SOURCES
 	"${PROJECT_SOURCE_DIR}/gs/gs-effect.cpp"
@@ -284,13 +287,11 @@ if(BUILD_UNIT_TESTS)
 		"${PROJECT_SOURCE_DIR}/test/test.cpp"
 		"${PROJECT_SOURCE_DIR}/test/test-utils.cpp"
 		"${PROJECT_SOURCE_DIR}/test/test-image.cpp"
-		"${PROJECT_SOURCE_DIR}/test/test-kalman.cpp"
 		"${PROJECT_SOURCE_DIR}/test/test-base64.cpp"
 		"${PROJECT_SOURCE_DIR}/plugin/base64.cpp"
 		"${PROJECT_SOURCE_DIR}/plugin/exceptions.cpp"
 		"${PROJECT_SOURCE_DIR}/plugin/utils.cpp"
 		"${SMLLDir}/ImageWrapper.cpp"
-		"${SMLLDir}/SingleValueKalman.cpp"
 	)
 endif()
 SET(facemask-plugin_DATA
