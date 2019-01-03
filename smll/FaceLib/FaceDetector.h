@@ -50,7 +50,7 @@ namespace FaceLib {
 		Returns all the faces in the image in std::vector<dlib::rectangle> format.
 
 		@param image The image to detect faces.
-		@param faces The return vector filled with current face detections.
+		@param faces Fills current face detections in vector<dlib::rectangle>.
 		@return None.
 		*/
 		void DetectFaces(cv::Mat& image, std::vector<dlib::rectangle>& faces);
