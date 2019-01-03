@@ -418,7 +418,7 @@ namespace smll {
 		MakeAreaIndices(result, triangleList);
 	}
 
-	cv::Mat FaceDetector::ConvertFrameToGrayMat(obs_source_frame* frame) {
+	void FaceDetector::ConvertFrameToGrayMat(obs_source_frame* frame) {
 		int img_width, img_height;
 
 		switch (frame->format) {
@@ -495,8 +495,6 @@ namespace smll {
 		if (frame->flip) {
 			cv::flip(grayImage, grayImage, 0);
 		}
-
-		return grayImage;
 	}
 
 
