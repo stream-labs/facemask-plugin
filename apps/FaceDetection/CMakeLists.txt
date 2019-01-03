@@ -56,6 +56,14 @@ SET(OpenCV_LIBS
 )
 include_directories("${OpenCV_DIR}/include")
 
+# zlib
+include_directories("${OpenCV_DIR}/3rdparty/include")
+
+# intel IPP
+include_directories("${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_${OpenCV_VERSION}/include")
+include_directories("${OpenCV_DIR}/3rdparty/ippicv/ippiw_win_${OpenCV_VERSION}/include")
+
+
 # FaceLib
 include_directories("FaceLib")
 SET(FaceLibDir "${CMAKE_CURRENT_SOURCE_DIR}/../../smll/FaceLib")
@@ -107,5 +115,5 @@ endif()
 ################################################################################
 # Building
 ################################################################################
-add_executable( FaceDetection main.cpp )
+add_executable( FaceDetection ${FaceDetection_SOURCES} ${FaceLib_SOURCES} ${FaceLib_HEADERS})
 target_link_libraries( FaceDetection ${FaceDetection_LIBRARIES} )
