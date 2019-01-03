@@ -9,6 +9,11 @@ set(DLIB_NO_GUI_SUPPORT OFF CACHE STRING "DLib GUI support" FORCE)
 set(DLIB_GIF_SUPPORT OFF CACHE STRING "DLib GIF support" FORCE)
 set(DLIB_JPEG_SUPPORT OFF CACHE STRING "DLib JPEG support"  FORCE)
 set(DLIB_PNG_SUPPORT OFF CACHE STRING "DLib PNG support"  FORCE)
+set(DLIB_USE_BLAS OFF CACHE STRING "DLib BLAS support"  FORCE)
+set(DLIB_USE_LAPACK OFF CACHE STRING "DLib LAPACK support"  FORCE)
+set(DLIB_USE_MKL_FFT OFF CACHE STRING "DLib MKL FFT support"  FORCE)
+set(DLIB_USE_MKL_SEQUENTIAL OFF CACHE STRING "DLib MKL Sequential support"  FORCE)
+set(DLIB_USE_MKL_WITH_TBB OFF CACHE STRING "DLib MKL with TBB support"  FORCE)
 
 ################################################################################
 # Configuration
@@ -72,7 +77,7 @@ SET(FaceLibDir "${CMAKE_CURRENT_SOURCE_DIR}/../../smll/FaceLib")
 
 # Code
 SET(FaceLib_HEADERS
-	"${FaceLibDir}/FaceDetector.hpp"
+	"${FaceLibDir}/FaceDetector.h"
 )
 
 SET(FaceDetection_HEADERS
