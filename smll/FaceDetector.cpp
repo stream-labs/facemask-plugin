@@ -149,7 +149,6 @@ namespace smll {
 			CONFIG_DOUBLE_BLUR_FACTOR);
 		cv::GaussianBlur(diffImage, diffImage, cv::Size(blur_factor, blur_factor), 0, 0);
 
-		prevImage = currentImage.clone();
 		int threshold = Config::singleton().get_double(
 			CONFIG_DOUBLE_MOVEMENT_THRESHOLD);
 		int minY = diffImage.rows;
@@ -209,7 +208,6 @@ namespace smll {
 			results.motionRect.set_right(currentImage.cols - 3);
 			results.motionRect.set_left(3);
 			results.motionRect.set_top(3);
-			prevImage = currentImage.clone();
 		}
 		SetCropInfo(results);
 		// Do image cropping and cv::Mat initialization in single shot
@@ -291,6 +289,9 @@ namespace smll {
 		}
 		results.length = m_faces.length;
 
+		if (trackingFailed || m_faces.length == 0) {
+
+		}
 		// If faces are not found
 		if (m_faces.length == 0 && !trackingFailed) {
             // Wait for 5 frames and do face detection
@@ -1082,7 +1083,7 @@ namespace smll {
         if ((m_faces.length == 0) || (faces.size() > 0)) {
             // clamp to max faces
 			m_faces.length = (int)faces.size() > MAX_FACES ? MAX_FACES : (int)faces.size();
-
+			prevImage = currentOrigImage.clone();
             // copy rects into our faces, start tracking
             for (int i = 0; i < m_faces.length; i++) {
                 // scale rectangle up to video frame size
@@ -1095,6 +1096,7 @@ namespace smll {
                 m_faces[i].m_bounds.set_bottom((long)((float)(faces[i].bottom() +
 					cropInfo.offsetY) * scale));
             }
+
         }
     }
     
