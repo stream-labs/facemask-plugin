@@ -66,7 +66,7 @@ SET(FaceLib_HEADERS
 )
 
 SET(FaceDetection_HEADERS
-	"${FaceLib_HEADERS}"
+
 )
 
 SET(FaceLib_SOURCES
@@ -75,7 +75,6 @@ SET(FaceLib_SOURCES
 
 SET(FaceDetection_SOURCES
 	"main.cpp"
-	"${FaceLib_SOURCES}"
 )
 
 SET(FaceDetection_LIBRARIES
@@ -109,4 +108,4 @@ endif()
 # Building
 ################################################################################
 add_executable( FaceDetection main.cpp )
-target_link_libraries( FaceDetection FaceDetection_LIBRARIES )
+target_link_libraries( FaceDetection ${FaceDetection_LIBRARIES} )
