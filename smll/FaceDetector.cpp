@@ -485,9 +485,9 @@ namespace smll {
 			// TODO check if this works
 			img_width = frame->width;
 			img_height = frame->height;
-			cv::Mat img(img_height, img_width, CV_8UC4, frame->data[0], int(frame->linesize[0]));
+			cv::Mat img(img_height, img_width, CV_8UC3, frame->data[0], int(frame->linesize[0]));
 			cv::cvtColor(img, img, cv::COLOR_YCrCb2BGR);
-			cv::cvtColor(img, grayImage, cv::COLOR_RGB2GRAY);
+			cv::cvtColor(img, grayImage, cv::COLOR_BGR2GRAY);
 			break;
 		}
 		}
