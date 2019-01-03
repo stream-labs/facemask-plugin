@@ -29,50 +29,6 @@
 
 namespace smll {
 
-	static void CheckForPoseFlip(double* r, double* t) {
-
-		// check for pose flip
-		if (t[2] < 0.0)
-		{
-			//blog(LOG_DEBUG, "***** POSE FLIP *****");
-
-			// flip translation
-			t[0] = -t[0];
-			t[1] = -t[1];
-			t[2] = -t[2];
-
-			// flip rotation
-			// this is odd, but works...
-
-			// flip z and the angle
-			r[0] = r[0];
-			r[1] = r[1];
-			r[2] = -r[2];
-			r[3] = -r[3];
-
-			// rotate 180 around z
-			// use Rodrigues formula, simplified for rotation around Z
-			//
-			double cos1 = cos(r[3] / 2.0);
-			double sin1 = sin(r[3] / 2.0);
-			double cos2 = cos(M_PI / 2.0);
-			double sin2 = sin(M_PI / 2.0);
-
-			double a = acos(cos1 * cos2 - sin1 * sin2 * r[2]) * 2.0;
-			double x = sin1 * cos2 * r[0] + sin1 * sin2 * r[1];
-			double y = sin1 * cos2 * r[1] + sin1 * sin2 * r[0];
-			double z = sin1 * cos2 * r[2] + cos1 * sin2;
-
-			double sina = sin(a / 2.0);
-			if (sina < 0.0001)
-				sina = 1.0;
-			r[0] = x / sina;
-			r[1] = y / sina;
-			r[2] = z / sina;
-			r[3] = a;
-		}
-	}
-
 	ThreeDPose::ThreeDPose() {
 		ResetPose();
 	}
@@ -100,23 +56,19 @@ namespace smll {
 		translation[0] = cvTrs.at<double>(0, 0);
 		translation[1] = cvTrs.at<double>(1, 0);
 		translation[2] = cvTrs.at<double>(2, 0);
-
-		CheckForPoseFlip(rotation, translation);
 	}
 
 	cv::Mat ThreeDPose::GetCVRotation() const {
-		cv::Mat m = cv::Mat::zeros(3, 1, CV_64F);
-		m.at<double>(0, 0) = rotation[0] * rotation[3];
-		m.at<double>(1, 0) = rotation[1] * rotation[3];
-		m.at<double>(2, 0) = rotation[2] * rotation[3];
+		cv::Mat m = (cv::Mat_<double>(3, 1) << rotation[0] * rotation[3],
+											   rotation[1] * rotation[3],
+											   rotation[2] * rotation[3]);
 		return m;
 	}
 
 	cv::Mat ThreeDPose::GetCVTranslation() const {
-		cv::Mat m = cv::Mat::zeros(3, 1, CV_64F);
-		m.at<double>(0, 0) = translation[0];
-		m.at<double>(1, 0) = translation[1];
-		m.at<double>(2, 0) = translation[2];
+		cv::Mat m = (cv::Mat_<double>(3, 1) << translation[0],
+											   translation[1],
+											   translation[2]);
 		return m;
 	}
 
@@ -257,7 +209,7 @@ namespace smll {
 		nStates = 18;
 		nMeasurements = 6;
 		nInputs = 0;
-		dt = 0.125;
+		dt = 0.125; // TODO: Change this as per the FPS of tracker.
 	}
 
 	DetectionResult::~DetectionResult() {
@@ -270,7 +222,6 @@ namespace smll {
 		for (int i = 0; i < NUM_FACIAL_LANDMARKS; i++) {
 			landmarks68[i] = r.landmarks68[i];
 		}
-		CheckForPoseFlip(pose.rotation, pose.translation);
 
 		kalmanFilterInitialized = false;
 		initedStartPose = false;
@@ -308,18 +259,10 @@ namespace smll {
 		pose.CopyPoseFrom(r.pose);
 	}
 
-	bool DetectionResult::PoseValid() {
-		return pose.PoseValid();
-	}
-
-	void DetectionResult::ResetPose() {
-		pose.ResetPose();
-	}
-
 	void DetectionResult::InitStartPose() {
 		if (!initedStartPose) {
 			startPose.rotation[0] = 0.0;
-			startPose.rotation[1] = 0.0;
+			startPose.rotation[1] = 1.0;
 			startPose.rotation[2] = 0.0;
 			startPose.rotation[3] = 0.0;
 			startPose.translation[0] = 0.0;
@@ -339,8 +282,6 @@ namespace smll {
 		double ntx[3] = { r.pose.translation[0], r.pose.translation[1], r.pose.translation[2] };
 		double nrot[4] = { r.pose.rotation[0], r.pose.rotation[1], r.pose.rotation[2], r.pose.rotation[3] };
 		dlib::rectangle bnd = r.bounds;
-
-		CheckForPoseFlip(nrot, ntx);
 
 		// kalman filtering enabled?
 		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE)) {

@@ -90,9 +90,7 @@ namespace smll {
 		cv::Mat GetCVTranslation() const;
 
 		void CopyPoseFrom(const DetectionResult& r);
-		void ResetPose();
 		void InitStartPose();
-		bool PoseValid();
 		void UpdateResultsFrom(const DetectionResult& r);
 
 		double DistanceTo(const DetectionResult& r) const;
