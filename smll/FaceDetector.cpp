@@ -418,7 +418,7 @@ namespace smll {
 		MakeAreaIndices(result, triangleList);
 	}
 
-	cv::Mat FaceDetector::ConvertFrameToGrayMat(obs_source_frame* frame) {
+	void FaceDetector::ConvertFrameToGrayMat(obs_source_frame* frame) {
 		int img_width, img_height;
 
 		switch (frame->format) {
@@ -442,9 +442,9 @@ namespace smll {
 		}
 		case VIDEO_FORMAT_UYVY:
 		{
-			img_width = frame->width / 2;
+			img_width = frame->width;
 			img_height = frame->height;
-			cv::Mat img(img_height, img_width, CV_8UC4, frame->data[0], int(frame->linesize[0]));
+			cv::Mat img(img_height, img_width, CV_8UC2, frame->data[0], int(frame->linesize[0]));
 			cv::cvtColor(img, grayImage, cv::COLOR_YUV2GRAY_UYVY);
 			break;
 		}
@@ -485,9 +485,9 @@ namespace smll {
 			// TODO check if this works
 			img_width = frame->width;
 			img_height = frame->height;
-			cv::Mat img(img_height, img_width, CV_8UC4, frame->data[0], int(frame->linesize[0]));
+			cv::Mat img(img_height, img_width, CV_8UC3, frame->data[0], int(frame->linesize[0]));
 			cv::cvtColor(img, img, cv::COLOR_YCrCb2BGR);
-			cv::cvtColor(img, grayImage, cv::COLOR_RGB2GRAY);
+			cv::cvtColor(img, grayImage, cv::COLOR_BGR2GRAY);
 			break;
 		}
 		}
@@ -495,8 +495,6 @@ namespace smll {
 		if (frame->flip) {
 			cv::flip(grayImage, grayImage, 0);
 		}
-
-		return grayImage;
 	}
 
 
@@ -647,18 +645,6 @@ namespace smll {
 		// project all the head points
 		const cv::Mat& rot = face.GetCVRotation();
 		cv::Mat trx = face.GetCVTranslation();
-
-		/*
-		blog(LOG_DEBUG, "HEADPOINTS-----------------------");
-		blog(LOG_DEBUG, " trans: %5.2f, %5.2f, %5.2f",
-			(float)trx.at<double>(0, 0),
-			(float)trx.at<double>(1, 0),
-			(float)trx.at<double>(2, 0));
-		blog(LOG_DEBUG, "   rot: %5.2f, %5.2f, %5.2f",
-			(float)rot.at<double>(0, 0),
-			(float)rot.at<double>(1, 0),
-			(float)rot.at<double>(2, 0));
-			*/
 
 		std::vector<cv::Point2f> projheadpoints;
 		cv::projectPoints(headpoints, rot, trx, GetCVCamMatrix(), GetCVDistCoeffs(), projheadpoints);
@@ -847,9 +833,7 @@ namespace smll {
 				triangles[TriangulationResult::IDXBUFF_HULL].push_back(i1);
 				triangles[TriangulationResult::IDXBUFF_HULL].push_back(i2);
 			}
-			else /*if ((b0 & bgmask).any() ||
-				(b1 & bgmask).any() ||
-				(b2 & bgmask).any())*/ { 
+			else { 
 				triangles[TriangulationResult::IDXBUFF_BACKGROUND].push_back(i0);
 				triangles[TriangulationResult::IDXBUFF_BACKGROUND].push_back(i1);
 				triangles[TriangulationResult::IDXBUFF_BACKGROUND].push_back(i2);
@@ -1019,10 +1003,6 @@ namespace smll {
         
     void FaceDetector::StartObjectTracking() {
 
-		// TODO: Complete full OpenCV 4.0.0 integration
-		//		Debug and Release and necessary dll's
-		//		Change the Face Data Structure
-		//		Log everything and then peace!
 		// get crop info from config and track image dimensions
 		CropInfo cropInfo = GetCropInfo();
 
@@ -1098,9 +1078,6 @@ namespace smll {
 	void FaceDetector::DoPoseEstimation(DetectionResults& results)
 	{
 		// Build a set of model points to use for solving 3D pose
-		// NOTE: The keypoints sould be selected w.r.t stability
-		// TODO: Reduce Keypoints, change pose solver,
-		//       change per-frame pose to temporal pose
 		std::vector<int> model_indices;
 		model_indices.push_back(LEFT_OUTER_EYE_CORNER);
 		model_indices.push_back(RIGHT_OUTER_EYE_CORNER);

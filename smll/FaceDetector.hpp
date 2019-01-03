@@ -60,7 +60,7 @@ public:
 
 	FaceDetector();
 
-	cv::Mat ConvertFrameToGrayMat(obs_source_frame* frame);
+	void ConvertFrameToGrayMat(obs_source_frame* frame);
 	void DetectFaces(struct obs_source_frame * frame, int w, int h, DetectionResults& results);
 	void DetectLandmarks(DetectionResults& results);
 	void DoPoseEstimation(DetectionResults& results);
@@ -70,11 +70,9 @@ public:
 		TriangulationResult& result);
 
 	int CaptureWidth() const {
-		//return m_capture.width;
 		return grayImage.cols;
 	}
 	int CaptureHeight() const {
-		//return m_capture.height;
 		return grayImage.rows;
 	}
 
