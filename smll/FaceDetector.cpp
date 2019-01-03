@@ -442,7 +442,7 @@ namespace smll {
 		}
 		case VIDEO_FORMAT_UYVY:
 		{
-			img_width = frame->width / 2;
+			img_width = frame->width;
 			img_height = frame->height;
 			cv::Mat img(img_height, img_width, CV_8UC2, frame->data[0], int(frame->linesize[0]));
 			cv::cvtColor(img, grayImage, cv::COLOR_YUV2GRAY_UYVY);
