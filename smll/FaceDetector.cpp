@@ -1080,10 +1080,12 @@ namespace smll {
         // otherwise, we are tracking faces, and the tracking is still trusted, so don't trust
         // the FD results
         //
+		if (faces.size() > 0) {
+			prevImage = currentOrigImage.clone();
+		}
         if ((m_faces.length == 0) || (faces.size() > 0)) {
             // clamp to max faces
 			m_faces.length = (int)faces.size() > MAX_FACES ? MAX_FACES : (int)faces.size();
-			prevImage = currentOrigImage.clone();
             // copy rects into our faces, start tracking
             for (int i = 0; i < m_faces.length; i++) {
                 // scale rectangle up to video frame size
