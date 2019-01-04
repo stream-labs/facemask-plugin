@@ -82,6 +82,7 @@ private:
 	// Face Detector variables
 	FaceLib::FaceDetector _faceDetector;
 	FaceLib::FaceLandmarks _faceLandmarks;
+	std::vector<int> _modelIndices;
 
 	// Saved Faces
 	Faces			m_faces;

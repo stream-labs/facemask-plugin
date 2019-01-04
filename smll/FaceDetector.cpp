@@ -52,6 +52,15 @@ namespace smll {
 		char *filename = obs_module_file(kFileShapePredictor68);
 		_faceLandmarks.Init(filename);
 		bfree(filename);
+
+		// Initialize Model Indices
+		_modelIndices.push_back(LEFT_OUTER_EYE_CORNER);
+		_modelIndices.push_back(RIGHT_OUTER_EYE_CORNER);
+		_modelIndices.push_back(NOSE_1);
+		_modelIndices.push_back(NOSE_2);
+		_modelIndices.push_back(NOSE_3);
+		_modelIndices.push_back(NOSE_4);
+		_modelIndices.push_back(NOSE_7);
 	}
 
 	void FaceDetector::MakeVtxBitmaskLookup() {
@@ -1035,16 +1044,7 @@ namespace smll {
 
 	void FaceDetector::DoPoseEstimation(DetectionResults& results)
 	{
-		// Build a set of model points to use for solving 3D pose
-		std::vector<int> model_indices;
-		model_indices.push_back(LEFT_OUTER_EYE_CORNER);
-		model_indices.push_back(RIGHT_OUTER_EYE_CORNER);
-		model_indices.push_back(NOSE_1);
-		model_indices.push_back(NOSE_2);
-		model_indices.push_back(NOSE_3);
-		model_indices.push_back(NOSE_4);
-		model_indices.push_back(NOSE_7);
-
+		// Sanity Check
 		if (m_poses.length != results.length) {
 			m_poses.length = results.length;
 			for (int i = 0; i < m_poses.length; i++) {
@@ -1052,7 +1052,7 @@ namespace smll {
 			}
 		}
 
-		double threshold = 4.0 * model_indices.size();
+		double threshold = 4.0 * _modelIndices.size();
 		threshold *= ((double)CaptureWidth() / 1920.0);
 
 		bool resultsBad = false;
@@ -1060,8 +1060,8 @@ namespace smll {
 			std::vector<cv::Point2d> image_points;
 			// copy 2D image points. 
 			point* p = results[i].landmarks68;
-			for (int j = 0; j < model_indices.size(); j++) {
-				int idx = model_indices[j];
+			for (int j = 0; j < _modelIndices.size(); j++) {
+				int idx = _modelIndices[j];
 				image_points.push_back(cv::Point2d(p[idx].x(), p[idx].y()));
 			}
 
