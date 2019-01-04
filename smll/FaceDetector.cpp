@@ -181,18 +181,18 @@ namespace smll {
 
 		for (int i = 0; i < m_faces.length; i++) {
 			// scale rectangle up to video frame size
-			float delta_w = m_faces[i].m_bounds.width()*paddingPercentage;
-			float delta_h = m_faces[i].m_bounds.height()*paddingPercentage;
-			results.motionRect.set_left(std::min((int)results.motionRect.left(), (int)((m_faces[i].m_bounds.left() - delta_w) * scale)));
-			results.motionRect.set_right(std::max((int)results.motionRect.right(), (int)((m_faces[i].m_bounds.right() + delta_w) * scale)));
-			results.motionRect.set_top(std::min((int)results.motionRect.top(), (int)((m_faces[i].m_bounds.top() - delta_h) * scale)));
-			results.motionRect.set_bottom(std::max((int)results.motionRect.bottom(), (int)((m_faces[i].m_bounds.bottom() + delta_h) * scale)));
+			results.motionRect.set_left(std::min((int)results.motionRect.left(), (int)((m_faces[i].m_bounds.left()) * scale)));
+			results.motionRect.set_right(std::max((int)results.motionRect.right(), (int)((m_faces[i].m_bounds.right()) * scale)));
+			results.motionRect.set_top(std::min((int)results.motionRect.top(), (int)((m_faces[i].m_bounds.top()) * scale)));
+			results.motionRect.set_bottom(std::max((int)results.motionRect.bottom(), (int)((m_faces[i].m_bounds.bottom()) * scale)));
 		}
 
-		results.motionRect.set_left(std::max((int)results.motionRect.left(), 0));
-		results.motionRect.set_right(std::min((int)results.motionRect.right(), currentImage.cols - 1));
-		results.motionRect.set_top(std::max((int)results.motionRect.top(), 0));
-		results.motionRect.set_bottom(std::min((int)results.motionRect.bottom(), currentImage.rows - 1));
+		int delta_w = (int)currentImage.cols*paddingPercentage;
+		int delta_h = (int)currentImage.rows*paddingPercentage;
+		results.motionRect.set_left(std::max((int)results.motionRect.left() - delta_w, 0));
+		results.motionRect.set_right(std::min((int)results.motionRect.right()+ delta_w, currentImage.cols - 1));
+		results.motionRect.set_top(std::max((int)results.motionRect.top() - delta_h, 0));
+		results.motionRect.set_bottom(std::min((int)results.motionRect.bottom() + delta_h, currentImage.rows - 1));
 	}
 
 
