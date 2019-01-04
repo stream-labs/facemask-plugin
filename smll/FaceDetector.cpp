@@ -46,30 +46,11 @@ namespace smll {
 		, m_trackingFaceIndex(0)
 		, m_camera_w(0)
 		, m_camera_h(0) {
-		// Load face detection and pose estimation models.
-		m_detector = get_frontal_face_detector();
 
 		count = 0;
 
 		char *filename = obs_module_file(kFileShapePredictor68);
-#ifdef _WIN32
-		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-		std::wstring wide_filename(converter.from_bytes(filename));
-
-		/* DLIB will not accept a wifstream or widestring to construct
-		 * an ifstream or wifstream itself. Here we use a non-standard
-		 * constructor provided by Microsoft and then the direct
-		 * serialization function with an ifstream. */
-		std::ifstream predictor68_file(wide_filename.c_str(), std::ios::binary);
-
-		if (!predictor68_file) {
-			throw std::runtime_error("Failed to open predictor68 file");
-		}
-
-		deserialize(m_predictor68, predictor68_file);
-#else
-		deserialize(filename) >> m_predictor68;
-#endif
+		_faceLandmarks.Init(filename);
 		bfree(filename);
 	}
 
@@ -1040,18 +1021,11 @@ namespace smll {
 		// detect landmarks
 		for (int f = 0; f < m_faces.length; f++) {
 			// Detect features on full-size frame
-			full_object_detection d68;
-
-			dlib::cv_image<unsigned char> img(grayImage);
-			d68 = m_predictor68(img, m_faces[f].m_bounds);
-
-			// Sanity check
-			if (d68.num_parts() != NUM_FACIAL_LANDMARKS)
-				throw std::invalid_argument(
-					"shape predictor got wrong number of landmarks");
+			std::vector<dlib::point> landmarks;
+			_faceLandmarks.DetectLandmarks(grayImage, m_faces[f].m_bounds, landmarks);
 
 			for (int j = 0; j < NUM_FACIAL_LANDMARKS; j++) {
-				results[f].landmarks68[j] = point(d68.part(j).x(), d68.part(j).y());
+				results[f].landmarks68[j] = landmarks[j];
 			}
 		}
 
@@ -1110,11 +1084,9 @@ namespace smll {
 			// Solve for pose
 			cv::Mat translation = m_poses[i].GetCVTranslation();
 			cv::Mat rotation = m_poses[i].GetCVRotation();
-			cv::solvePnP(model_points, image_points,
-				GetCVCamMatrix(), GetCVDistCoeffs(),
-				rotation, translation,
-				m_poses[i].PoseValid(),
-				cv::SOLVEPNP_EPNP);
+			_faceLandmarks.DetectPose(image_points, model_points,
+				GetCVCamMatrix(), GetCVDistCoeffs(), rotation,
+				translation, m_poses[i].PoseValid());
 
 
 			// TODO: Check if we still get wrong results.

@@ -50,6 +50,7 @@
 #include <codecvt>
 #include <opencv2/opencv.hpp>
 #include "FaceLib/FaceDetector.h"
+#include "FaceLib/FaceLandmarks.h"
 #pragma warning( pop )
 
 namespace smll {
@@ -80,6 +81,7 @@ public:
 private:
 	// Face Detector variables
 	FaceLib::FaceDetector _faceDetector;
+	FaceLib::FaceLandmarks _faceLandmarks;
 
 	// Saved Faces
 	Faces			m_faces;
@@ -97,12 +99,6 @@ private:
 
 	// Tracking time-slicer
 	int				m_trackingFaceIndex;
-
-	// dlib HOG face detector
-	dlib::frontal_face_detector		m_detector;
-
-	// dlib landmark predictors (68 point)
-	dlib::shape_predictor			m_predictor68;
 
 	// openCV camera (saved for convenience)
 	int				m_camera_w, m_camera_h;

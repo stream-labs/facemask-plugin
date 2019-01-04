@@ -91,6 +91,5 @@ namespace FaceLib {
 		std::vector<cv::Point3d> _landmarks3D;
 
 		void InitLandmarks3D();
-		void CorrectPoseFlip(cv::Mat& R, cv::Mat& t);
 	};
 }

@@ -79,18 +79,10 @@ namespace FaceLib {
 
 	void FaceLandmarks::DetectPose(std::vector<cv::Point2f>& landmarks2D, std::vector<cv::Point3f>& landmarks3D, const cv::Mat& K, const cv::Mat& D, cv::Mat& R, cv::Mat& t, bool useExtrinsicGuess) {
 		cv::solvePnP(landmarks3D, landmarks2D, K, D, R, t, useExtrinsicGuess, cv::SOLVEPNP_EPNP);
-
-		if (t.at<double>(2, 0) < 0) {
-			CorrectPoseFlip(R, t);
-		}
 	}
 
 	void FaceLandmarks::DetectPose(std::vector<cv::Point2d>& landmarks2D, cv::Mat& K, cv::Mat& D, cv::Mat& R, cv::Mat& t) {
 		cv::solvePnP(_landmarks3D, landmarks2D, K, D, R, t, false, cv::SOLVEPNP_EPNP);
-		
-		if (t.at<double>(2, 0) < 0) {
-			CorrectPoseFlip(R, t);
-		}
 	}
 
 	void FaceLandmarks::InitLandmarks3D() {
@@ -104,57 +96,6 @@ namespace FaceLib {
 		_landmarks3D.emplace_back(0.0f, -0.5915072192f, 0.3310879765f);
 		_landmarks3D.emplace_back(0.0, -0.0, -0.0);
 		_landmarks3D.emplace_back(0.0, 0.7203533372, 0.8644320921);
-	}
-
-	void FaceLandmarks::CorrectPoseFlip(cv::Mat& R, cv::Mat& t) {
-		// TODO: Buggy!!!!
-		// Convert Eulers to Quaternion
-		double angle = sqrt(R.dot(R));
-		double quatRot[4];
-		if (angle < 0.0001) {
-			quatRot[0] = 0.0;
-			quatRot[1] = 1.0;
-			quatRot[2] = 0.0;
-			quatRot[3] = 0.0;
-		}
-		else {
-			quatRot[0] = R.at<double>(0, 0) / angle;
-			quatRot[1] = R.at<double>(1, 0) / angle;
-			quatRot[2] = R.at<double>(2, 0) / angle;
-			quatRot[3] = angle;
-		}
-
-		// Flip translation
-		t = -t;
-
-		// Flip z and angle
-		quatRot[2] = -quatRot[2];
-		quatRot[3] = -quatRot[3];
-
-		// Flip 180 degrees around z
-		// Simplified Rodrigues for rotation around Z
-		double cos1 = cos(quatRot[3] / 2.0);
-		double sin1 = sin(quatRot[3] / 2.0);
-		double cos2 = cos(CV_PI / 2.0);
-		double sin2 = sin(CV_PI / 2.0);
-
-		double a = acos(cos1 * cos2 - sin1 * sin2 * quatRot[2]) * 2.0;
-		double x = sin1 * cos2 * quatRot[0] + sin1 * sin2 * quatRot[1];
-		double y = sin1 * cos2 * quatRot[1] + sin1 * sin2 * quatRot[0];
-		double z = sin1 * cos2 * quatRot[2] + cos1 * sin2;
-
-		double sina = sin(a / 2.0);
-		if (sina < 0.0001)
-			sina = 1.0;
-		quatRot[0] = x / sina;
-		quatRot[1] = y / sina;
-		quatRot[2] = z / sina;
-		quatRot[3] = a;
-
-		// Replace the contents of R
-		R.at<double>(0, 0) = quatRot[0] * quatRot[3];
-		R.at<double>(1, 0) = quatRot[1] * quatRot[3];
-		R.at<double>(2, 0) = quatRot[2] * quatRot[3];
 	}
 
 	//void FaceLandmarks::DetectLandmarks(cv::Mat& image, dlib::rectangle& face, std::vector<cv::Point2d>& landmarks) {
