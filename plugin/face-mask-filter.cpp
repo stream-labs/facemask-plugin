@@ -1157,7 +1157,9 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		smllRenderer->DrawFaces(faces);
 
 	// draw crop rectangles
-	drawCropRects(baseWidth, baseHeight);
+	if (drawFDRect) {
+		drawCropRects(baseWidth, baseHeight);
+	}
 	
 	// draw motion rectangle
 	drawMotionRects(baseWidth, baseHeight);
@@ -1657,12 +1659,10 @@ void Plugin::FaceMaskFilter::Instance::drawCropRects(int width, int height) {
 void Plugin::FaceMaskFilter::Instance::drawMotionRects(int width, int height) {
 	if (drawMotionRect) {
 		dlib::rectangle rect;
-		float k = (float)width / (float)smll::Config::singleton().get_int(
-			smll::CONFIG_INT_FACE_DETECT_WIDTH);
-		int t = k*faces.motionRect.top();
-		int b = k*faces.motionRect.bottom();
-		int l = k*faces.motionRect.left();
-		int r = k*faces.motionRect.right();
+		int t = faces.motionRect.top();
+		int b = faces.motionRect.bottom();
+		int l = faces.motionRect.left();
+		int r = faces.motionRect.right();
 		if (t < b && l < r) {
 			rect.set_top(t);
 			rect.set_bottom(b);

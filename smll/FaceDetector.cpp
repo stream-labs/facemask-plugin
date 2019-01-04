@@ -132,13 +132,13 @@ namespace smll {
 	}
 	void FaceDetector::computeDifference(DetectionResults& results) {
 		CropInfo cropInfo = GetCropInfo();
-		
+		float scale = (float) grayImage.rows / resizeHeight ;
 		if (!isPrevInit ) {
 			isPrevInit = true;
-			results.motionRect.set_bottom(currentImage.rows - 3);
-			results.motionRect.set_right(currentImage.cols - 3);
-			results.motionRect.set_left(3);
-			results.motionRect.set_top(3);
+			results.motionRect.set_bottom(currentImage.rows);
+			results.motionRect.set_right(currentImage.cols);
+			results.motionRect.set_left(0);
+			results.motionRect.set_top(0);
 			prevImage = currentImage.clone();
 			return;
 		}
@@ -169,30 +169,30 @@ namespace smll {
 				}
 			}
 		}
-		results.motionRect.set_left(minX);
-		results.motionRect.set_right(maxX);
-		results.motionRect.set_top(minY);
-		results.motionRect.set_bottom(maxY);
+		results.motionRect.set_left(minX*scale);
+		results.motionRect.set_right(maxX*scale);
+		results.motionRect.set_top(minY*scale);
+		results.motionRect.set_bottom(maxY*scale);
 
 	}
 	void FaceDetector::addFaceRectangles(DetectionResults& results) {
-		float scale = (float) resizeHeight / grayImage.rows;
+
 		float paddingPercentage = Config::singleton().get_double(CONFIG_MOTION_RECTANGLE_PADDING);
 
 		for (int i = 0; i < m_faces.length; i++) {
 			// scale rectangle up to video frame size
-			results.motionRect.set_left(std::min((int)results.motionRect.left(), (int)((m_faces[i].m_bounds.left()) * scale)));
-			results.motionRect.set_right(std::max((int)results.motionRect.right(), (int)((m_faces[i].m_bounds.right()) * scale)));
-			results.motionRect.set_top(std::min((int)results.motionRect.top(), (int)((m_faces[i].m_bounds.top()) * scale)));
-			results.motionRect.set_bottom(std::max((int)results.motionRect.bottom(), (int)((m_faces[i].m_bounds.bottom()) * scale)));
+			results.motionRect.set_left(std::min((int)results.motionRect.left(), (int)((m_faces[i].m_bounds.left()))));
+			results.motionRect.set_right(std::max((int)results.motionRect.right(), (int)((m_faces[i].m_bounds.right()))));
+			results.motionRect.set_top(std::min((int)results.motionRect.top(), (int)((m_faces[i].m_bounds.top()))));
+			results.motionRect.set_bottom(std::max((int)results.motionRect.bottom(), (int)((m_faces[i].m_bounds.bottom()))));
 		}
 
-		int delta_w = (int)currentImage.cols*paddingPercentage;
-		int delta_h = (int)currentImage.rows*paddingPercentage;
+		int delta_w = (int)grayImage.cols*paddingPercentage;
+		int delta_h = (int)grayImage.rows*paddingPercentage;
 		results.motionRect.set_left(std::max((int)results.motionRect.left() - delta_w, 0));
-		results.motionRect.set_right(std::min((int)results.motionRect.right()+ delta_w, currentImage.cols - 1));
+		results.motionRect.set_right(std::min((int)results.motionRect.right()+ delta_w, grayImage.cols - 1));
 		results.motionRect.set_top(std::max((int)results.motionRect.top() - delta_h, 0));
-		results.motionRect.set_bottom(std::min((int)results.motionRect.bottom() + delta_h, currentImage.rows - 1));
+		results.motionRect.set_bottom(std::min((int)results.motionRect.bottom() + delta_h, grayImage.rows - 1));
 	}
 
 
@@ -201,19 +201,19 @@ namespace smll {
 		addFaceRectangles(results);
 
 		float minMotionRectangle = Config::singleton().get_double(CONFIG_MIN_MOTION_RECTANGLE);
-		int MRectMinW = minMotionRectangle *currentImage.cols;
-		int MRectMinH = minMotionRectangle *currentImage.rows;
+		int MRectMinW = minMotionRectangle *grayImage.cols;
+		int MRectMinH = minMotionRectangle *grayImage.rows;
 		if (results.motionRect.width() < MRectMinW || results.motionRect.height() < MRectMinH) {
-			results.motionRect.set_bottom(currentImage.rows - 3);
-			results.motionRect.set_right(currentImage.cols - 3);
-			results.motionRect.set_left(3);
-			results.motionRect.set_top(3);
+			results.motionRect.set_bottom(grayImage.rows);
+			results.motionRect.set_right(grayImage.cols);
+			results.motionRect.set_left(0);
+			results.motionRect.set_top(0);
 		}
 		SetCropInfo(results);
 		// Do image cropping and cv::Mat initialization in single shot
 		CropInfo cropInfo = GetCropInfo();
 		
-		cv::Mat cropped = currentImage(cv::Rect(cropInfo.offsetX, cropInfo.offsetY, cropInfo.width, cropInfo.height));
+		cv::Mat cropped = grayImage(cv::Rect(cropInfo.offsetX, cropInfo.offsetY, cropInfo.width, cropInfo.height));
 		currentImage = cropped.clone();
 	}
 
@@ -1051,8 +1051,8 @@ namespace smll {
 		int xx = results.motionRect.left() + ww / 2;
 		int yy = results.motionRect.top()  + hh / 2;
 		if (ww <= 0 || hh <= 0 || results.motionRect.left() < 0 || results.motionRect.right() < 0 || results.motionRect.top() < 0 || results.motionRect.bottom() < 0) {
-			ww = currentImage.cols;
-			hh = currentImage.rows;
+			ww = grayImage.cols;
+			hh = grayImage.rows;
 			xx = ww/2;
 			yy = hh/2;
 		}
@@ -1065,10 +1065,17 @@ namespace smll {
 		CropInfo cropInfo = GetCropInfo();
 		// need to scale back
 		float scale = (float)grayImage.rows / resizeHeight;
-
+		cv::Mat detectionImg;
+		if (currentImage.cols*currentImage.rows <= resizeWidth*resizeHeight || scale == 0) {
+			scale = 1;
+			detectionImg = currentImage;
+		} else {
+			cv::resize(currentImage, detectionImg, cv::Size(currentImage.cols / scale, currentImage.rows / scale), 0, 0, cv::INTER_LINEAR);
+		}
+		
         // detect faces
 		std::vector<rectangle> faces;
-		dlib::cv_image<unsigned char> img(currentImage);
+		dlib::cv_image<unsigned char> img(detectionImg);
 		faces = m_detector(img);
 
 		// only consider the face detection results if:
@@ -1089,14 +1096,14 @@ namespace smll {
             // copy rects into our faces, start tracking
             for (int i = 0; i < m_faces.length; i++) {
                 // scale rectangle up to video frame size
-				m_faces[i].m_bounds.set_left((long)((float)(faces[i].left() +
-					cropInfo.offsetX) * scale));
-                m_faces[i].m_bounds.set_right((long)((float)(faces[i].right() +
-					cropInfo.offsetX) * scale));
-                m_faces[i].m_bounds.set_top((long)((float)(faces[i].top() +
-					cropInfo.offsetY) * scale));
-                m_faces[i].m_bounds.set_bottom((long)((float)(faces[i].bottom() +
-					cropInfo.offsetY) * scale));
+				m_faces[i].m_bounds.set_left((long)((float)(faces[i].left()*scale +
+					cropInfo.offsetX )));
+                m_faces[i].m_bounds.set_right((long)((float)(faces[i].right()*scale +
+					cropInfo.offsetX)));
+                m_faces[i].m_bounds.set_top((long)((float)(faces[i].top()*scale +
+					cropInfo.offsetY)));
+                m_faces[i].m_bounds.set_bottom((long)((float)(faces[i].bottom()*scale +
+					cropInfo.offsetY)));
             }
 
         }
