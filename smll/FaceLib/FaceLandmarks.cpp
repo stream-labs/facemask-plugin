@@ -77,10 +77,6 @@ namespace FaceLib {
 		landmarks.swap(results);
 	}
 
-	void FaceLandmarks::DetectPose(std::vector<cv::Point2f>& landmarks2D, std::vector<cv::Point3f>& landmarks3D, const cv::Mat& K, const cv::Mat& D, cv::Mat& R, cv::Mat& t, bool useExtrinsicGuess) {
-		cv::solvePnP(landmarks3D, landmarks2D, K, D, R, t, useExtrinsicGuess, cv::SOLVEPNP_EPNP);
-	}
-
 	void FaceLandmarks::DetectPose(std::vector<cv::Point2d>& landmarks2D, const cv::Mat& K, const cv::Mat& D, cv::Mat& R, cv::Mat& t, bool useExtrinsicGuess) {
 		cv::solvePnP(_landmarks3D, landmarks2D, K, D, R, t, useExtrinsicGuess, cv::SOLVEPNP_EPNP);
 		ComputeReprojectionError(landmarks2D, K, D, R, t);
@@ -113,20 +109,4 @@ namespace FaceLib {
 	double FaceLandmarks::GetReprojectionError() {
 		return _reprojectionError;
 	}
-
-	//void FaceLandmarks::DetectLandmarks(cv::Mat& image, dlib::rectangle& face, std::vector<cv::Point2d>& landmarks) {
-	//	//// Convert OpenCV image to DLIB style
-	//	//dlib::cv_image<unsigned char> imageDLIB(image);
-
-	//	//// Detect landmarks using the image and face rect
-	//	//dlib::full_object_detection predictedLandmarks = _landmarksPredictor(image, face);
-
-	//	//std::vector<dlib::point> results;
-	//	//results.reserve(68); // 68 landmarks
-	//	//for (int j = 0; j < 68; j++) {
-	//	//	results.emplace_back(predictedLandmarks.part(j));
-	//	//}
-
-	//	//landmarks.swap(results);
-	//}
 }
