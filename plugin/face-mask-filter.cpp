@@ -1368,8 +1368,6 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 		blog(LOG_DEBUG, "[FaceMask] Failed to set MM thread characteristics");
 	}
 
-	obs_source_t *parent = obs_filter_get_parent(source);
-
 	// run until we're shut down
 	TimeStamp lastTimestamp;
 	while (true) {
