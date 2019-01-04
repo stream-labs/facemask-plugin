@@ -81,8 +81,9 @@ namespace FaceLib {
 		cv::solvePnP(landmarks3D, landmarks2D, K, D, R, t, useExtrinsicGuess, cv::SOLVEPNP_EPNP);
 	}
 
-	void FaceLandmarks::DetectPose(std::vector<cv::Point2d>& landmarks2D, cv::Mat& K, cv::Mat& D, cv::Mat& R, cv::Mat& t) {
-		cv::solvePnP(_landmarks3D, landmarks2D, K, D, R, t, false, cv::SOLVEPNP_EPNP);
+	void FaceLandmarks::DetectPose(std::vector<cv::Point2d>& landmarks2D, const cv::Mat& K, const cv::Mat& D, cv::Mat& R, cv::Mat& t, bool useExtrinsicGuess) {
+		cv::solvePnP(_landmarks3D, landmarks2D, K, D, R, t, useExtrinsicGuess, cv::SOLVEPNP_EPNP);
+		ComputeReprojectionError(landmarks2D, K, D, R, t);
 	}
 
 	void FaceLandmarks::InitLandmarks3D() {
@@ -96,6 +97,21 @@ namespace FaceLib {
 		_landmarks3D.emplace_back(0.0f, -0.5915072192f, 0.3310879765f);
 		_landmarks3D.emplace_back(0.0, -0.0, -0.0);
 		_landmarks3D.emplace_back(0.0, 0.7203533372, 0.8644320921);
+	}
+
+	void FaceLandmarks::ComputeReprojectionError(std::vector<cv::Point2d>& landmarks2D, const cv::Mat& K, const cv::Mat& D, cv::Mat& R, cv::Mat& t) {
+
+		// reproject to check error
+		std::vector<cv::Point2d> projectedPoints;
+		cv::projectPoints(_landmarks3D, R, t, K, D, projectedPoints);
+		// Compute error
+		std::vector<cv::Point2d> absDiff;
+		cv::absdiff(landmarks2D, projectedPoints, absDiff);
+		_reprojectionError = cv::sum(cv::mean(absDiff))[0];
+	}
+
+	double FaceLandmarks::GetReprojectionError() {
+		return _reprojectionError;
 	}
 
 	//void FaceLandmarks::DetectLandmarks(cv::Mat& image, dlib::rectangle& face, std::vector<cv::Point2d>& landmarks) {
