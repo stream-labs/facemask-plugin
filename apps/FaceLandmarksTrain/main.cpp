@@ -19,25 +19,6 @@
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 
-// The contents of this file are in the public domain. See LICENSE_FOR_EXAMPLE_PROGRAMS.txt
-/*
-
-	This example program shows how to use dlib's implementation of the paper:
-		One Millisecond Face Alignment with an Ensemble of Regression Trees by
-		Vahid Kazemi and Josephine Sullivan, CVPR 2014
-
-	In particular, we will train a face landmarking model based on a small dataset
-	and then evaluate it.  If you want to visualize the output of the trained
-	model on some images then you can run the face_landmark_detection_ex.cpp
-	example program with sp.dat as the input model.
-
-	It should also be noted that this kind of model, while often used for face
-	landmarking, is quite general and can be used for a variety of shape
-	prediction tasks.  But here we demonstrate it only on a simple face
-	landmarking task.
-*/
-
-
 #include <dlib/image_processing.h>
 #include <dlib/data_io.h>
 #include <iostream>
@@ -141,7 +122,7 @@ int main(int argc, char** argv)
 {
 	try
 	{
-		// Path to DLIB's facial landmarks directory
+		// TODO: Path to dataset. Change it to your current system path.
 		const std::string faces_directory = "C:/Users/srira/streamLabs/facemask-plugin/apps/FaceLandmarksTrain/data/landmarks_dataset_v_0_1";
 
 		// Initialize images and faces data holders
@@ -151,8 +132,7 @@ int main(int argc, char** argv)
 
 		cout << "Loading Train data..." << endl;
 		load_image_dataset(images_train, faces_train, faces_directory + "/labels_dataset_v_0_1.xml");
-		/*cout << "Loading Test data..." << endl;
-		load_image_dataset(images_test, faces_test, faces_directory + "/labels_dataset_v_0_1_test.xml");*/
+		
 
 		// Now make the object responsible for training the model.  
 		cout << "Intialize Trainer..." << endl;
@@ -186,22 +166,24 @@ int main(int argc, char** argv)
 		images_train.clear();
 		faces_train.clear();
 
-		/*std::cout << "Loading Test data..." << std::endl;
+		// Save the model
+		// Finally, we save the model to disk so we can use it later.
+		std::cout << "Saving the model..." << std::endl;
+		serialize("sp_v0.1_custom.dat") << sp; // Mean Training Error: 0.00928328
+
+		std::cout << "Loading Test data..." << std::endl;
 		dlib::load_image_dataset(images_test, faces_test, faces_directory + "/labels_dataset_v_0_1_test.xml");
 
 		cout << "Mean Testing Error: " <<
-			test_shape_predictor(sp, images_test, faces_test, get_interocular_distances(faces_test)) << endl;*/
+			test_shape_predictor(sp, images_test, faces_test, get_interocular_distances(faces_test)) << endl;
 
 			// The real test is to see how well it does on data it wasn't trained
 			// on.  We trained it on a very small dataset so the accuracy is not
 			// extremely high, but it's still doing quite good.  Moreover, if you
 			// train it on one of the large face landmarking datasets you will
 			// obtain state-of-the-art results, as shown in the Kazemi paper.
-			/*cout << "mean testing error:  " <<
+			cout << "mean testing error:  " <<
 				test_shape_predictor(sp, images_test, faces_test, get_interocular_distances(faces_test)) << endl;
-	*/
-	// Finally, we save the model to disk so we can use it later.
-		serialize("sp_v0.1_custom.dat") << sp; // Mean Training Error: 0.00928328
 	}
 	catch (exception& e)
 	{
