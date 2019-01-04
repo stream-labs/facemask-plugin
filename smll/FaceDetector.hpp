@@ -134,11 +134,6 @@ private:
 	cv::Mat currentImage;
 	cv::Mat grayImage;
 
-	// For 3d pose
-	float	ReprojectionError(const std::vector<cv::Point3f>& model_points,
-		const std::vector<cv::Point2f>& image_points,
-		const cv::Mat& rotation, const cv::Mat& translation);
-
 	// Morph Triangulation Helpers
 	void	Subdivide(std::vector<cv::Point2f>& points);
 	void	CatmullRomSmooth(std::vector<cv::Point2f>& points, 

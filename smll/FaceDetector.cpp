@@ -1032,21 +1032,6 @@ namespace smll {
 		results.length = m_faces.length;
 	}
 
-	float FaceDetector::ReprojectionError(const std::vector<cv::Point3f>& model_points,
-		const std::vector<cv::Point2f>& image_points,
-		const cv::Mat& rotation, const cv::Mat& translation) {
-
-		// reproject to check error
-		std::vector<cv::Point2f> projectedPoints;
-		cv::projectPoints(model_points, rotation, translation,
-			GetCVCamMatrix(), GetCVDistCoeffs(), projectedPoints);
-		// Compute error
-		std::vector<cv::Point2f> absDiff;
-		cv::absdiff(image_points, projectedPoints, absDiff);
-		float error = cv::sum(cv::mean(absDiff))[0];
-		return error;
-	}
-
 
 	void FaceDetector::DoPoseEstimation(DetectionResults& results)
 	{
@@ -1059,7 +1044,6 @@ namespace smll {
 		model_indices.push_back(NOSE_3);
 		model_indices.push_back(NOSE_4);
 		model_indices.push_back(NOSE_7);
-		std::vector<cv::Point3f> model_points = GetLandmarkPoints(model_indices);
 
 		if (m_poses.length != results.length) {
 			m_poses.length = results.length;
@@ -1068,25 +1052,26 @@ namespace smll {
 			}
 		}
 
-		float threshold = 4.0f * model_points.size();
-		threshold *= ((float)CaptureWidth() / 1920.0f);
+		double threshold = 4.0 * model_indices.size();
+		threshold *= ((double)CaptureWidth() / 1920.0);
 
 		bool resultsBad = false;
 		for (int i = 0; i < results.length; i++) {
-			std::vector<cv::Point2f> image_points;
+			std::vector<cv::Point2d> image_points;
 			// copy 2D image points. 
 			point* p = results[i].landmarks68;
 			for (int j = 0; j < model_indices.size(); j++) {
 				int idx = model_indices[j];
-				image_points.push_back(cv::Point2f((float)p[idx].x(), (float)p[idx].y()));
+				image_points.push_back(cv::Point2d(p[idx].x(), p[idx].y()));
 			}
 
 			// Solve for pose
 			cv::Mat translation = m_poses[i].GetCVTranslation();
 			cv::Mat rotation = m_poses[i].GetCVRotation();
-			_faceLandmarks.DetectPose(image_points, model_points,
+			_faceLandmarks.DetectPose(image_points,
 				GetCVCamMatrix(), GetCVDistCoeffs(), rotation,
 				translation, m_poses[i].PoseValid());
+			
 
 
 			// TODO: Check if we still get wrong results.
@@ -1100,7 +1085,7 @@ namespace smll {
 			// TODO: If possible, remove these sanity checks
 			// NOTE: If no pose is generated, use previous pose.
 			if (m_poses[i].PoseValid() &&
-				ReprojectionError(model_points, image_points, rotation, translation) > threshold) {
+				_faceLandmarks.GetReprojectionError() > threshold) {
 				// reset pose
 				translation = m_poses[i].GetCVTranslation();
 				rotation = m_poses[i].GetCVRotation();
