@@ -129,7 +129,7 @@ namespace smll {
 		}
 	}
 
-	void FaceDetector::DetectFaces(cv::Mat inputImage, int width, int height, DetectionResults& results) {
+	void FaceDetector::DetectFaces(cv::Mat &inputImage, int width, int height, DetectionResults& results) {
 		// Wait for CONFIG_INT_FACE_DETECT_FREQUENCY after all faces are lost before trying to detect them again
 		if (m_timeout > 0) {
 			m_timeout--;
