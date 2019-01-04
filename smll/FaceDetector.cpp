@@ -119,7 +119,7 @@ namespace smll {
 		}
 	}
 
-	void FaceDetector::DetectFaces(struct obs_source_frame * frame, int width, int height, DetectionResults& results) {
+	void FaceDetector::DetectFaces(cv::Mat &inputImage, int width, int height, DetectionResults& results) {
 		// Wait for CONFIG_INT_FACE_DETECT_FREQUENCY after all faces are lost before trying to detect them again
 		if (m_timeout > 0) {
 			m_timeout--;
@@ -136,7 +136,7 @@ namespace smll {
 		resizeWidth = width;
 		resizeHeight = height;
 
-		ConvertFrameToGrayMat(frame);
+		grayImage = inputImage;
 
 		// Resize and cut out region of interest
 		cv::resize(grayImage, currentImage, cv::Size(resizeWidth, resizeHeight), 0, 0, cv::INTER_LINEAR);
@@ -408,84 +408,7 @@ namespace smll {
 		MakeAreaIndices(result, triangleList);
 	}
 
-	void FaceDetector::ConvertFrameToGrayMat(obs_source_frame* frame) {
-		int img_width, img_height;
-
-		switch (frame->format) {
-		case VIDEO_FORMAT_I420:
-		case VIDEO_FORMAT_NV12:
-		{
-			img_width = frame->width;
-			img_height = frame->height*1.5;
-			cv::Mat img(img_height, img_width, CV_8UC1, frame->data[0], int(frame->linesize[0]));
-			cv::cvtColor(img, grayImage, cv::COLOR_YUV2GRAY_I420);
-			break;
-		}
-		case VIDEO_FORMAT_YVYU:
-		case VIDEO_FORMAT_YUY2:
-		{
-			img_width = frame->width;
-			img_height = frame->height;
-			cv::Mat img(img_height, img_width, CV_8UC2, frame->data[0], int(frame->linesize[0]));
-			cv::cvtColor(img, grayImage, cv::COLOR_YUV2GRAY_YUY2);
-			break;
-		}
-		case VIDEO_FORMAT_UYVY:
-		{
-			img_width = frame->width;
-			img_height = frame->height;
-			cv::Mat img(img_height, img_width, CV_8UC2, frame->data[0], int(frame->linesize[0]));
-			cv::cvtColor(img, grayImage, cv::COLOR_YUV2GRAY_UYVY);
-			break;
-		}
-		case VIDEO_FORMAT_Y800:
-		{
-			img_width = frame->width;
-			img_height = frame->height;
-			cv::Mat img(img_height, img_width, CV_8UC1, frame->data[0], int(frame->linesize[0]));
-			grayImage = img;
-			break;
-		}
-		case VIDEO_FORMAT_RGBA:
-		{
-			img_width = frame->width;
-			img_height = frame->height;
-			cv::Mat img(img_height, img_width, CV_8UC4, frame->data[0], int(frame->linesize[0]));
-			cv::cvtColor(img, grayImage, cv::COLOR_RGBA2GRAY);
-			break;
-		}
-		case VIDEO_FORMAT_BGRA:
-		{
-			img_width = frame->width;
-			img_height = frame->height;
-			cv::Mat img(img_height, img_width, CV_8UC4, frame->data[0], int(frame->linesize[0]));
-			cv::cvtColor(img, grayImage, cv::COLOR_BGRA2GRAY);
-			break;
-		}
-		case VIDEO_FORMAT_BGRX:
-		{
-			img_width = frame->width;
-			img_height = frame->height;
-			cv::Mat img(img_height, img_width, CV_8UC4, frame->data[0], int(frame->linesize[0]));
-			cv::cvtColor(img, grayImage, cv::COLOR_BGR2GRAY);
-			break;
-		}
-		case VIDEO_FORMAT_I444:
-		{
-			// TODO check if this works
-			img_width = frame->width;
-			img_height = frame->height;
-			cv::Mat img(img_height, img_width, CV_8UC3, frame->data[0], int(frame->linesize[0]));
-			cv::cvtColor(img, img, cv::COLOR_YCrCb2BGR);
-			cv::cvtColor(img, grayImage, cv::COLOR_BGR2GRAY);
-			break;
-		}
-		}
-
-		if (frame->flip) {
-			cv::flip(grayImage, grayImage, 0);
-		}
-	}
+	
 
 
 	void FaceDetector::AddSelectivePoints(cv::Subdiv2D& subdiv,
