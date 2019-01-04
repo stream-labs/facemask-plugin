@@ -1368,6 +1368,8 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 		blog(LOG_DEBUG, "[FaceMask] Failed to set MM thread characteristics");
 	}
 
+	obs_source_t *parent = obs_filter_get_parent(source);
+
 	// run until we're shut down
 	TimeStamp lastTimestamp;
 	while (true) {
@@ -1863,6 +1865,7 @@ cv::Mat Plugin::FaceMaskFilter::Instance::convert_frame_to_gray_mat(obs_source_f
 		img_width = frame->width;
 		img_height = frame->height*1.5;
 		cv::Mat img(img_height, img_width, CV_8UC1, frame->data[0], int(frame->linesize[0]));
+		cv::cvtColor(img, grayImage, cv::COLOR_YUV2GRAY_I420);
 		break;
 	}
 	case VIDEO_FORMAT_YVYU:
