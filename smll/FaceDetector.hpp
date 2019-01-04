@@ -60,8 +60,7 @@ public:
 
 	FaceDetector();
 
-	void ConvertFrameToGrayMat(obs_source_frame* frame);
-	void DetectFaces(struct obs_source_frame * frame, int w, int h, DetectionResults& results);
+	void DetectFaces(cv::Mat &inputImage, int w, int h, DetectionResults& results);
 	void DetectLandmarks(DetectionResults& results);
 	void DoPoseEstimation(DetectionResults& results);
 	void ResetFaces();
