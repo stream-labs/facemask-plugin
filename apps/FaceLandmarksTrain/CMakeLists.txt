@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.12)
-PROJECT(FaceDetection)
+PROJECT(FaceLandmarksTrain)
 math(EXPR BITS "8*${CMAKE_SIZEOF_VOID_P}")
 
 SET(PATH_DLIB "${CMAKE_CURRENT_SOURCE_DIR}/../../thirdparty/dlib")
@@ -78,28 +78,30 @@ SET(FaceLibDir "${CMAKE_CURRENT_SOURCE_DIR}/../../smll/FaceLib")
 # Code
 SET(FaceLib_HEADERS
 	"${FaceLibDir}/FaceDetector.h"
+	"${FaceLibDir}/FaceLandmarks.h"
 )
 
-SET(FaceDetection_HEADERS
+SET(FaceLandmarksTrain_HEADERS
 
 )
 
 SET(FaceLib_SOURCES
 	"${FaceLibDir}/FaceDetector.cpp"
+	"${FaceLibDir}/FaceLandmarks.cpp"
 )
 
-SET(FaceDetection_SOURCES
+SET(FaceLandmarksTrain_SOURCES
 	"main.cpp"
 )
 
-SET(FaceDetection_LIBRARIES
+SET(FaceLandmarksTrain_LIBRARIES
 	dlib::dlib
 	${OpenCV_LIBS}
 )
 
 
-source_group("FaceDetection\\Headers" FILES ${FaceDetection_HEADERS})
-source_group("FaceDetection\\Sources" FILES ${FaceDetection_SOURCES})
+source_group("FaceLandmarksTrain\\Headers" FILES ${FaceLandmarks_HEADERS})
+source_group("FaceLandmarksTrain\\Sources" FILES ${FaceLandmarks_SOURCES})
 source_group("FaceLib\\Headers" FILES ${FaceLib_HEADERS})
 source_group("FaceLib\\Sources" FILES ${FaceLib_SOURCES})
 
@@ -122,5 +124,5 @@ endif()
 ################################################################################
 # Building
 ################################################################################
-add_executable( FaceDetection ${FaceDetection_SOURCES} ${FaceLib_SOURCES} ${FaceLib_HEADERS})
-target_link_libraries( FaceDetection ${FaceDetection_LIBRARIES} Vfw32.lib)
+add_executable( FaceLandmarksTrain ${FaceLandmarksTrain_SOURCES} ${FaceLib_SOURCES} ${FaceLib_HEADERS})
+target_link_libraries( FaceLandmarksTrain ${FaceLandmarksTrain_LIBRARIES} Vfw32.lib)
