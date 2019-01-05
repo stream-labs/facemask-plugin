@@ -83,7 +83,24 @@ namespace FaceLib {
 		*/
 		void DetectLandmarks(cv::Mat& image, dlib::rectangle& face, std::vector<dlib::point>& landmarks);
 
+		/**
+		Returns the face pose in cv::Mat {R, t} format
+
+		@param landmarks2D Face landmarks in 2D from the image.
+		@param K Camera intrinsics matrix.
+		@param D Camera distortion coefficients.
+		@param R Return rotation matrix for the face pose in euler angles format.
+		@param t Return translation vector for the face pose.
+		@param useExtrinsicGuess Boolean value to use the previous {R, t} values.
+		@return None.
+		*/
 		void DetectPose(std::vector<cv::Point2d>& landmarks2D, const cv::Mat& K, const cv::Mat& D, cv::Mat& R, cv::Mat& t, bool useExtrinsicGuess = false);
+
+		/**
+		Returns the reprojection error for the 2D<->3D landmarks
+
+		@return reprojection error in double format.
+		*/
 		double GetReprojectionError();
 
 	private:
@@ -91,7 +108,23 @@ namespace FaceLib {
 		std::vector<cv::Point3d> _landmarks3D;
 		double _reprojectionError;
 
+		/**
+		Initializes the 3D model landmarks to compute pose
+
+		@return None.
+		*/
 		void InitLandmarks3D();
+
+		/**
+		Computes the reprojection error for the 2D<->3D landmarks 
+
+		@param landmarks2D Face landmarks in 2D from the image.
+		@param K Camera intrinsics matrix.
+		@param D Camera distortion coefficients.
+		@param R Rotation matrix for the face pose in euler angles format.
+		@param t translation vector for the face pose.
+		@return None.
+		*/
 		void ComputeReprojectionError(std::vector<cv::Point2d>& landmarks2D, const cv::Mat& K, const cv::Mat& D, cv::Mat& R, cv::Mat& t);
 	};
 }

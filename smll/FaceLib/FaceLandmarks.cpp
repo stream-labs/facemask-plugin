@@ -90,7 +90,7 @@ namespace FaceLib {
 		_landmarks3D.emplace_back(2.379, -1.8, 2.442238431);
 		_landmarks3D.emplace_back(0.0, -1.83012447, 1.2548274);
 		_landmarks3D.emplace_back(0.0, -1.146743411, 0.7348212125);
-		_landmarks3D.emplace_back(0.0f, -0.5915072192f, 0.3310879765f);
+		_landmarks3D.emplace_back(0.0, -0.5915072192, 0.3310879765);
 		_landmarks3D.emplace_back(0.0, -0.0, -0.0);
 		_landmarks3D.emplace_back(0.0, 0.7203533372, 0.8644320921);
 	}
