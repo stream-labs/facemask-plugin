@@ -19,32 +19,6 @@
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 
-// The contents of this file are in the public domain. See LICENSE_FOR_EXAMPLE_PROGRAMS.txt
-/*
-
-    This example program shows how you can use dlib to make an object detector
-    for things like faces, pedestrians, and any other semi-rigid object.  In
-    particular, we go though the steps to train the kind of sliding window
-    object detector first published by Dalal and Triggs in 2005 in the paper
-    Histograms of Oriented Gradients for Human Detection.  
-
-    Note that this program executes fastest when compiled with at least SSE2
-    instructions enabled.  So if you are using a PC with an Intel or AMD chip
-    then you should enable at least SSE2 instructions.  If you are using cmake
-    to compile this program you can enable them by using one of the following
-    commands when you create the build project:
-        cmake path_to_dlib_root/examples -DUSE_SSE2_INSTRUCTIONS=ON
-        cmake path_to_dlib_root/examples -DUSE_SSE4_INSTRUCTIONS=ON
-        cmake path_to_dlib_root/examples -DUSE_AVX_INSTRUCTIONS=ON
-    This will set the appropriate compiler options for GCC, clang, Visual
-    Studio, or the Intel compiler.  If you are using another compiler then you
-    need to consult your compiler's manual to determine how to enable these
-    instructions.  Note that AVX is the fastest but requires a CPU from at least
-    2011.  SSE4 is the next fastest and is supported by most current machines.  
-
-*/
-
-
 #include <dlib/svm_threaded.h>
 #include <dlib/gui_widgets.h>
 #include <dlib/image_processing.h>
@@ -59,11 +33,55 @@ using namespace dlib;
 
 // ----------------------------------------------------------------------------------------
 
+void pick_best_window_size(
+	const std::vector<std::vector<rectangle> >& boxes,
+	unsigned long& width,
+	unsigned long& height,
+	const unsigned long target_size
+)
+/*!
+	ensures
+		- Finds the average aspect ratio of the elements of boxes and outputs a width
+		  and height such that the aspect ratio is equal to the average and also the
+		  area is equal to target_size.  That is, the following will be approximately true:
+			- #width*#height == target_size
+			- #width/#height == the average aspect ratio of the elements of boxes.
+!*/
+{
+	// find the average width and height
+	running_stats<double> avg_width, avg_height;
+	for (unsigned long i = 0; i < boxes.size(); ++i)
+	{
+		for (unsigned long j = 0; j < boxes[i].size(); ++j)
+		{
+			avg_width.add(boxes[i][j].width());
+			avg_height.add(boxes[i][j].height());
+		}
+	}
+
+	// now adjust the box size so that it is about target_pixels pixels in size
+	double size = avg_width.mean()*avg_height.mean();
+	double scale = std::sqrt(target_size / size);
+
+	width = (unsigned long)(avg_width.mean()*scale + 0.5);
+	height = (unsigned long)(avg_height.mean()*scale + 0.5);
+	// make sure the width and height never round to zero.
+	if (width == 0)
+		width = 1;
+	if (height == 0)
+		height = 1;
+}
+
+// ----------------------------------------------------------------------------------------
+
 int main(int argc, char** argv)
 {  
 
     try
     {
+		// Path to the dataset directory.
+		std::string faces_directory;
+
         // In this example we are going to train a face detector based on the
         // small faces dataset in the examples/faces directory.  So the first
         // thing we do is load that dataset.  This means you need to supply the
@@ -71,14 +89,21 @@ int main(int argc, char** argv)
         // where it is.
         if (argc != 2)
         {
-            cout << "Give the path to the examples/faces directory as the argument to this" << endl;
+			cout << "No arguments related to path of dataset given." << endl;
+			faces_directory = "C:/Users/srira/streamLabs/facemask-plugin/apps/FaceDetectorTrain/data/dlib_face_detector_training_data";
+			cout << "Setting it to = " << faces_directory << endl;
+
+            cout << "\nGive the path to the examples/faces directory as the argument to this" << endl;
             cout << "program.  For example, if you are in the examples folder then execute " << endl;
             cout << "this program by running: " << endl;
             cout << "   ./fhog_object_detector_ex faces" << endl;
             cout << endl;
-            return 0;
+            
         }
-        const std::string faces_directory = argv[1];
+		else {
+			faces_directory = argv[1];
+		}
+        
         // The faces directory contains a training dataset and a separate
         // testing dataset.  The training data consists of 4 images, each
         // annotated with rectangles that bound each human face.  The idea is 
@@ -96,8 +121,8 @@ int main(int argc, char** argv)
         // holds the locations of the faces in the training images.  So for
         // example, the image images_train[0] has the faces given by the
         // rectangles in face_boxes_train[0].
-        dlib::array<array2d<unsigned char> > images_train, images_test;
-        std::vector<std::vector<rectangle> > face_boxes_train, face_boxes_test;
+        dlib::array<array2d<unsigned char> > images_train;
+        std::vector<std::vector<rectangle> > face_boxes_train;
 
         // Now we load the data.  These XML files list the images in each
         // dataset and also contain the positions of the face boxes.  Obviously
@@ -109,8 +134,9 @@ int main(int argc, char** argv)
         // folder.  It is a simple graphical tool for labeling objects in images
         // with boxes.  To see how to use it read the tools/imglab/README.txt
         // file.
-        load_image_dataset(images_train, face_boxes_train, faces_directory+"/training.xml");
-        load_image_dataset(images_test, face_boxes_test, faces_directory+"/testing.xml");
+		cout << "Loading Train Data...";
+		load_image_dataset(images_train, face_boxes_train, faces_directory+"/frontal_faces.xml");
+		cout << "DONE" << endl;
 
         // Now we do a little bit of pre-processing.  This is optional but for
         // this training data it improves the results.  The first thing we do is
@@ -120,17 +146,24 @@ int main(int argc, char** argv)
         // in addition to resizing the images, these functions also make the
         // appropriate adjustments to the face boxes so that they still fall on
         // top of the faces after the images are resized.
+		cout << "Upsample Image Data...";
         upsample_image_dataset<pyramid_down<2> >(images_train, face_boxes_train);
-        upsample_image_dataset<pyramid_down<2> >(images_test,  face_boxes_test);
+		cout << "DONE" << endl;
+        //upsample_image_dataset<pyramid_down<2> >(images_test,  face_boxes_test);
         // Since human faces are generally left-right symmetric we can increase
         // our training dataset by adding mirrored versions of each image back
         // into images_train.  So this next step doubles the size of our
         // training dataset.  Again, this is obviously optional but is useful in
         // many object detection tasks.
+		cout << "Add Left/Right Flips...";
         add_image_left_right_flips(images_train, face_boxes_train);
+		cout << "DONE" << endl;
         cout << "num training images: " << images_train.size() << endl;
-        cout << "num testing images:  " << images_test.size() << endl;
 
+		// DEBUG: Before Training check the box aspect ratios
+		unsigned long width, height, target_size = 80*80;
+		pick_best_window_size(face_boxes_train, width, height, target_size);
+		cout << "Best window size = " << width << " x " << height << endl;
 
         // Finally we get to the training code.  dlib contains a number of
         // object detectors.  This typedef tells it that you want to use the one
@@ -139,11 +172,12 @@ int main(int argc, char** argv)
         // it to use an image pyramid that downsamples the image at a ratio of
         // 5/6.  Recall that HOG detectors work by creating an image pyramid and
         // then running the detector over each pyramid level in a sliding window
-        // fashion.   
+        // fashion.
+		cout << "Initialize Scanner...";
         typedef scan_fhog_pyramid<pyramid_down<6> > image_scanner_type; 
         image_scanner_type scanner;
         // The sliding window detector will be 80 pixels wide and 80 pixels tall.
-        scanner.set_detection_window_size(80, 80); 
+        scanner.set_detection_window_size(width, height); 
         structural_object_detection_trainer<image_scanner_type> trainer(scanner);
         // Set this to the number of processing cores on your machine.
         trainer.set_num_threads(4);  
@@ -153,7 +187,7 @@ int main(int argc, char** argv)
         // empirically by checking how well the trained detector works on a test set of
         // images you haven't trained on.  Don't just leave the value set at 1.  Try a few
         // different C values and see what works best for your data.
-        trainer.set_c(1);
+        trainer.set_c(700);
         // We can tell the trainer to print it's progress to the console if we want.  
         trainer.be_verbose();
         // The trainer will run until the "risk gap" is less than 0.01.  Smaller values
@@ -161,11 +195,14 @@ int main(int argc, char** argv)
         // take longer to train.  For most problems a value in the range of 0.1 to 0.01 is
         // plenty accurate.  Also, when in verbose mode the risk gap is printed on each
         // iteration so you can see how close it is to finishing the training.  
-        trainer.set_epsilon(0.01);
-
-
+        trainer.set_epsilon(0.05);
+		trainer.set_loss_per_missed_target(1);
+		trainer.set_match_eps(0.2); // Default 0.5 (Need to change this as per the current rect area/needed rect area)
+		cout << "DONE" << endl;
+		
         // Now we run the trainer.  For this example, it should take on the order of 10
         // seconds to train.
+		cout << "Start training..." << endl;
         object_detector<image_scanner_type> detector = trainer.train(images_train, face_boxes_train);
 
         // Now that we have a face detector we can test it.  The first statement tests it
@@ -174,7 +211,7 @@ int main(int argc, char** argv)
         // However, to get an idea if it really worked without overfitting we need to run
         // it on images it wasn't trained on.  The next line does this.  Happily, we see
         // that the object detector works perfectly on the testing images.
-        cout << "testing results:  " << test_object_detection_function(detector, images_test, face_boxes_test) << endl;
+        //cout << "testing results:  " << test_object_detection_function(detector, images_test, face_boxes_test) << endl;
 
 
         // If you have read any papers that use HOG you have probably seen the nice looking
@@ -187,12 +224,12 @@ int main(int argc, char** argv)
         // show the output of the face detector overlaid on each image.  You will see that
         // it finds all the faces without false alarming on any non-faces.
         image_window win; 
-        for (unsigned long i = 0; i < images_test.size(); ++i)
+        for (unsigned long i = 0; i < 10; ++i)
         {
             // Run the detector and get the face detections.
-            std::vector<rectangle> dets = detector(images_test[i]);
+            std::vector<rectangle> dets = detector(images_train[i]);
             win.clear_overlay();
-            win.set_image(images_test[i]);
+            win.set_image(images_train[i]);
             win.add_overlay(dets, rgb_pixel(255,0,0));
             cout << "Hit enter to process the next image..." << endl;
             cin.get();
