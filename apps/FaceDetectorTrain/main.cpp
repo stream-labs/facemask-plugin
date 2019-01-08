@@ -74,6 +74,48 @@ void pick_best_window_size(
 
 // ----------------------------------------------------------------------------------------
 
+bool contains_any_boxes(
+	const std::vector<std::vector<rectangle> >& boxes
+)
+{
+	for (unsigned long i = 0; i < boxes.size(); ++i)
+	{
+		if (boxes[i].size() != 0)
+			return true;
+	}
+	return false;
+}
+
+// ----------------------------------------------------------------------------------------
+
+void throw_invalid_box_error_message(
+	const std::string& dataset_filename,
+	const std::vector<std::vector<rectangle> >& removed,
+	const unsigned long target_size
+)
+{
+	image_dataset_metadata::dataset data;
+	load_image_dataset_metadata(data, dataset_filename);
+
+	std::ostringstream sout;
+	sout << "Error!  An impossible set of object boxes was given for training. ";
+	sout << "All the boxes need to have a similar aspect ratio and also not be ";
+	sout << "smaller than about " << target_size << " pixels in area. ";
+	sout << "The following images contain invalid boxes:\n";
+	std::ostringstream sout2;
+	for (unsigned long i = 0; i < removed.size(); ++i)
+	{
+		if (removed[i].size() != 0)
+		{
+			const std::string imgname = data.images[i].filename;
+			sout2 << "  " << imgname << "\n";
+		}
+	}
+	throw error("\n" + wrap_string(sout.str()) + "\n" + sout2.str());
+}
+
+// ----------------------------------------------------------------------------------------
+
 int main(int argc, char** argv)
 {  
 
@@ -121,8 +163,8 @@ int main(int argc, char** argv)
         // holds the locations of the faces in the training images.  So for
         // example, the image images_train[0] has the faces given by the
         // rectangles in face_boxes_train[0].
-        dlib::array<array2d<unsigned char> > images_train;
-        std::vector<std::vector<rectangle> > face_boxes_train;
+        dlib::array<array2d<unsigned char> > images, images_train;
+        std::vector<std::vector<rectangle> > face_boxes, face_boxes_train;
 
         // Now we load the data.  These XML files list the images in each
         // dataset and also contain the positions of the face boxes.  Obviously
@@ -135,8 +177,17 @@ int main(int argc, char** argv)
         // with boxes.  To see how to use it read the tools/imglab/README.txt
         // file.
 		cout << "Loading Train Data...";
-		load_image_dataset(images_train, face_boxes_train, faces_directory+"/frontal_faces.xml");
+		load_image_dataset(images, face_boxes, faces_directory+"/frontal_faces.xml");
 		cout << "DONE" << endl;
+
+		// Delete image_index = {151, 215, 434}
+		for (int i = 0; i < images.size(); i++) {
+			if (i == 151 || i == 215 || i == 434 || i == 475 || i == 659 || i == 670 || i == 1193) {
+				continue;
+			}
+			images_train.push_back(images[i]);
+			face_boxes_train.push_back(face_boxes[i]);
+		}
 
         // Now we do a little bit of pre-processing.  This is optional but for
         // this training data it improves the results.  The first thing we do is
@@ -158,7 +209,7 @@ int main(int argc, char** argv)
 		cout << "Add Left/Right Flips...";
         add_image_left_right_flips(images_train, face_boxes_train);
 		cout << "DONE" << endl;
-        cout << "num training images: " << images_train.size() << endl;
+        cout << "Num training images: " << images_train.size() << " / " << images.size()*2 << endl;
 
 		// DEBUG: Before Training check the box aspect ratios
 		unsigned long width, height, target_size = 80*80;
@@ -197,7 +248,7 @@ int main(int argc, char** argv)
         // iteration so you can see how close it is to finishing the training.  
         trainer.set_epsilon(0.05);
 		trainer.set_loss_per_missed_target(1);
-		trainer.set_match_eps(0.2); // Default 0.5 (Need to change this as per the current rect area/needed rect area)
+		trainer.set_match_eps(0.5); // Default 0.5 (Need to change this as per the current rect area/needed rect area)
 		cout << "DONE" << endl;
 		
         // Now we run the trainer.  For this example, it should take on the order of 10
