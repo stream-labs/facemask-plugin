@@ -228,7 +228,9 @@ int main(int argc, char** argv)
         typedef scan_fhog_pyramid<pyramid_down<6> > image_scanner_type; 
         image_scanner_type scanner;
         // The sliding window detector will be 80 pixels wide and 80 pixels tall.
-        scanner.set_detection_window_size(width, height); 
+        scanner.set_detection_window_size(width, height);
+		scanner.set_padding(0);
+		scanner.set_nuclear_norm_regularization_strength(9.0);
         structural_object_detection_trainer<image_scanner_type> trainer(scanner);
         // Set this to the number of processing cores on your machine.
         trainer.set_num_threads(4);  
@@ -360,12 +362,20 @@ int main(int argc, char** argv)
         cout << "num filters: "<< num_separable_filters(detector) << endl;
         // You can also control how many filters there are by explicitly thresholding the
         // singular values of the filters like this:
-        detector = threshold_filter_singular_values(detector,0.1);
+		double singular_value_threshold = 0.15;
+        detector = threshold_filter_singular_values(detector, singular_value_threshold);
         // That removes filter components with singular values less than 0.1.  The bigger
         // this number the fewer separable filters you will have and the faster the
         // detector will run.  However, a large enough threshold will hurt detection
         // accuracy.  
+		cout << "Num filters(after thresholding): " << num_separable_filters(detector) << endl;
 
+		// Finally save the detector
+		serialize("face_detector_frontal.svm") << detector;
+
+		// Now that we have a face detector we can test it.  The first statement tests it
+		// on the training data.  It will print the precision, recall, and then average precision.
+		cout << "training results(after thresholding): " << test_object_detection_function(detector, images_train, face_boxes_train) << endl;
     }
     catch (exception& e)
     {
