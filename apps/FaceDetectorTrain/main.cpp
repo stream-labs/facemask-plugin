@@ -76,7 +76,15 @@ void pick_best_window_size(
 
 int main(int argc, char** argv)
 {  
-
+	unsigned long _detection_window_size_width = 80;
+	unsigned long _detection_window_size_height = 80;
+	double _padding = 0;
+	double _nuclear_norm_regularization_strength = 9.0;
+	int _num_threads = 4;
+	double _C = 700;
+	double _epsilon = 0.05;
+	double _loss_per_missed_target = 1;
+	double _match_eps = 0.5;
     try
     {
 		// Path to the dataset directory.
@@ -90,7 +98,7 @@ int main(int argc, char** argv)
         if (argc != 2)
         {
 			cout << "No arguments related to path of dataset given." << endl;
-			faces_directory = "C:/Users/srira/streamLabs/facemask-plugin/apps/FaceDetectorTrain/data/dlib_face_detector_training_data";
+			faces_directory = "C:/Users/Administrator/Documents/streamLabs/facemask-plugin/apps/FaceDetectorTrain/data/dlib_face_detector_training_data";
 			cout << "Setting it to = " << faces_directory << endl;
 
             cout << "\nGive the path to the examples/faces directory as the argument to this" << endl;
@@ -103,7 +111,7 @@ int main(int argc, char** argv)
 		else {
 			faces_directory = argv[1];
 		}
-        
+         
         // The faces directory contains a training dataset and a separate
         // testing dataset.  The training data consists of 4 images, each
         // annotated with rectangles that bound each human face.  The idea is 
@@ -138,7 +146,7 @@ int main(int argc, char** argv)
 		load_image_dataset(images, face_boxes, faces_directory+"/frontal_faces.xml");
 		cout << "DONE" << endl;
 
-		// Delete image_index = {151, 215, 434}
+		// Delete image_index = {151, 215, 434, 475, 659, 670, 1193}
 		for (int i = 0; i < images.size(); i++) {
 			if (i == 151 || i == 215 || i == 434 || i == 475 || i == 659 || i == 670 || i == 1193) {
 				continue;
@@ -170,9 +178,9 @@ int main(int argc, char** argv)
         cout << "Num training images: " << images_train.size() << " / " << images.size()*2 << endl;
 
 		// DEBUG: Before Training check the box aspect ratios
-		unsigned long width, height, target_size = 80*80;
-		pick_best_window_size(face_boxes_train, width, height, target_size);
-		cout << "Best window size = " << width << " x " << height << endl;
+		unsigned long target_size = 80*80;
+		pick_best_window_size(face_boxes_train, _detection_window_size_width, _detection_window_size_height, target_size);
+		cout << "Best window size = " << _detection_window_size_width << " x " << _detection_window_size_height << endl;
 
         // Finally we get to the training code.  dlib contains a number of
         // object detectors.  This typedef tells it that you want to use the one
@@ -186,19 +194,19 @@ int main(int argc, char** argv)
         typedef scan_fhog_pyramid<pyramid_down<6> > image_scanner_type; 
         image_scanner_type scanner;
         // The sliding window detector will be 80 pixels wide and 80 pixels tall.
-        scanner.set_detection_window_size(width, height);
-		scanner.set_padding(0);
-		scanner.set_nuclear_norm_regularization_strength(9.0);
+        scanner.set_detection_window_size(_detection_window_size_width, _detection_window_size_height);
+		scanner.set_padding(_padding);
+		scanner.set_nuclear_norm_regularization_strength(_nuclear_norm_regularization_strength);
         structural_object_detection_trainer<image_scanner_type> trainer(scanner);
         // Set this to the number of processing cores on your machine.
-        trainer.set_num_threads(4);  
+        trainer.set_num_threads(_num_threads);  
         // The trainer is a kind of support vector machine and therefore has the usual SVM
         // C parameter.  In general, a bigger C encourages it to fit the training data
         // better but might lead to overfitting.  You must find the best C value
         // empirically by checking how well the trained detector works on a test set of
         // images you haven't trained on.  Don't just leave the value set at 1.  Try a few
         // different C values and see what works best for your data.
-        trainer.set_c(700);
+        trainer.set_c(_C);
         // We can tell the trainer to print it's progress to the console if we want.  
         trainer.be_verbose();
         // The trainer will run until the "risk gap" is less than 0.01.  Smaller values
@@ -206,9 +214,9 @@ int main(int argc, char** argv)
         // take longer to train.  For most problems a value in the range of 0.1 to 0.01 is
         // plenty accurate.  Also, when in verbose mode the risk gap is printed on each
         // iteration so you can see how close it is to finishing the training.  
-        trainer.set_epsilon(0.05);
-		trainer.set_loss_per_missed_target(1);
-		trainer.set_match_eps(0.5); // Default 0.5 (Need to change this as per the current rect area/needed rect area)
+        trainer.set_epsilon(_epsilon);
+		trainer.set_loss_per_missed_target(_loss_per_missed_target);
+		trainer.set_match_eps(_match_eps); // Default 0.5 (Need to change this as per the current rect area/needed rect area)
 		cout << "DONE" << endl;
 		
         // Now we run the trainer.  For this example, it should take on the order of 10
