@@ -60,6 +60,24 @@ namespace smll {
 
 	};
 
+	class ProcessedResults {
+	public:
+		ProcessedResults();
+		void FrameSkipped();
+		void DetectionMade();
+		void TrackingMade();
+		void TrackingFailed();
+		void DetectionFailed();
+		std::string to_string();
+	private:
+		bool skipped;
+		bool detection;
+		bool tracking;
+		bool tracking_failed;
+		bool detection_failed;
+	};
+
+
 	typedef sarray<ThreeDPose, MAX_FACES> ThreeDPoses;
 
 
@@ -126,6 +144,8 @@ namespace smll {
 		DetectionResults();
 		void CorrelateAndUpdateFrom(DetectionResults& other);
 		int findClosest(const smll::DetectionResult& result);
+
+		ProcessedResults processedResults;
 	};
 
 }

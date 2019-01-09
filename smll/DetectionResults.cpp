@@ -112,7 +112,45 @@ namespace smll {
 	}
 
 
+	ProcessedResults::ProcessedResults() 
+	: skipped(false), detection(false), tracking(false), tracking_failed(false), detection_failed(false) {
 
+	}
+
+	void ProcessedResults::FrameSkipped() {
+		skipped = true;
+	}
+
+	void ProcessedResults::DetectionMade() {
+		detection = true;
+	}
+
+	void ProcessedResults::TrackingMade() {
+		tracking = false;
+	}
+
+	void ProcessedResults::TrackingFailed() {
+		tracking_failed = false;
+	}
+
+	void ProcessedResults::DetectionFailed() {
+		detection_failed = false;
+	}
+
+	std::string ProcessedResults::to_string() {
+		std::string str;
+		str += "Frame Skipped: " + skipped;
+		str += " ";
+		str += "Detection Made: " + detection;
+		str += " ";
+		str += "Tracking Made: " + tracking;
+		str += " ";
+		str += "Tracking Failed: " + tracking_failed;
+		str += " ";
+		str += "Detection Failed: " + detection_failed;
+		str += " ";
+		return str;
+	}
 
 	DetectionResults::DetectionResults() 
 		: sarray<DetectionResult, MAX_FACES>() {
