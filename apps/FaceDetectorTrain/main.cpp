@@ -74,48 +74,6 @@ void pick_best_window_size(
 
 // ----------------------------------------------------------------------------------------
 
-bool contains_any_boxes(
-	const std::vector<std::vector<rectangle> >& boxes
-)
-{
-	for (unsigned long i = 0; i < boxes.size(); ++i)
-	{
-		if (boxes[i].size() != 0)
-			return true;
-	}
-	return false;
-}
-
-// ----------------------------------------------------------------------------------------
-
-void throw_invalid_box_error_message(
-	const std::string& dataset_filename,
-	const std::vector<std::vector<rectangle> >& removed,
-	const unsigned long target_size
-)
-{
-	image_dataset_metadata::dataset data;
-	load_image_dataset_metadata(data, dataset_filename);
-
-	std::ostringstream sout;
-	sout << "Error!  An impossible set of object boxes was given for training. ";
-	sout << "All the boxes need to have a similar aspect ratio and also not be ";
-	sout << "smaller than about " << target_size << " pixels in area. ";
-	sout << "The following images contain invalid boxes:\n";
-	std::ostringstream sout2;
-	for (unsigned long i = 0; i < removed.size(); ++i)
-	{
-		if (removed[i].size() != 0)
-		{
-			const std::string imgname = data.images[i].filename;
-			sout2 << "  " << imgname << "\n";
-		}
-	}
-	throw error("\n" + wrap_string(sout.str()) + "\n" + sout2.str());
-}
-
-// ----------------------------------------------------------------------------------------
-
 int main(int argc, char** argv)
 {  
 
