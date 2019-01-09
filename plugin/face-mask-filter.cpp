@@ -1167,12 +1167,18 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// restore rendering state
 	gs_blend_state_pop();
 
+
+	auto processEnd = std::chrono::steady_clock::now();
+	auto elapsedMs =  std::chrono::duration_cast<std::chrono::milliseconds>(processEnd - timestamp);
+	if (faces.length > 0) {
+		blog(LOG_DEBUG, "[FaceMask] Latency: %d", (int)elapsedMs.count());
+	}
 	// since we are on the gpu right now anyway, here is 
 	// a good spot to unload mask data if we need to.
 	checkForMaskUnloading();
 
 	videoTicked = false;
-
+	
 }
 
 void Plugin::FaceMaskFilter::Instance::checkForMaskUnloading() {
@@ -1689,9 +1695,8 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 			if (!drawMorphTris) {
 				triangulation.DestroyLineBuffer();
 			}
-
 			// new timestamp
-			timestamp = NEW_TIMESTAMP;
+			timestamp = detection.faces[fidx].timestamp;
 
 			// update our results
 			faces.CorrelateAndUpdateFrom(newFaces);
