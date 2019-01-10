@@ -75,16 +75,79 @@ void pick_best_window_size(
 // ----------------------------------------------------------------------------------------
 
 int main(int argc, char** argv)
-{  
+{
+	//// Parameters to train frontal faces
+	//unsigned long _detection_window_size_width = 80;
+	//unsigned long _detection_window_size_height = 80;
+	//double _padding = 0;
+	//double _nuclear_norm_regularization_strength = 9.0;
+	//int _num_threads = 4;
+	//double _C = 700;
+	//double _epsilon = 0.05;
+	//double _loss_per_missed_target = 1;
+	//double _match_eps = 0.5;
+	//double _singular_value_threshold = 0.15;
+	//unsigned long _cell_size = 8;
+	//std::string _xml_name = "frontal_faces.xml";
+	//std::vector<int> _images_to_disregard = { 151, 215, 434, 475, 659, 670, 1193 };
+	//bool _addLRFlip = true;
+	//bool _useRightOnly = false;
+	//bool _modelName = "face_detector_frontal.svm";
+
+	//// Parameters to train left faces
+	//unsigned long _detection_window_size_width = 80;
+	//unsigned long _detection_window_size_height = 80;
+	//double _padding = 0;
+	//unsigned long _cell_size = 8;
+	//double _nuclear_norm_regularization_strength = 9.0;
+	//int _num_threads = 4;
+	//double _C = 700;
+	//double _epsilon = 0.05;
+	//double _loss_per_missed_target = 2;
+	//double _match_eps = 0.5;
+	//double _singular_value_threshold = 0.15;
+	//std::string _xml_name = "left_faces.xml";
+	//std::vector<int> _images_to_disregard = { 467 };
+	//bool _addLRFlip = false;
+	//bool _useRightOnly = false;
+	//bool _modelName = "face_detector_left.svm";
+
+	//// Parameters to train right faces
+	//unsigned long _detection_window_size_width = 80;
+	//unsigned long _detection_window_size_height = 80;
+	//double _padding = 0;
+	//unsigned long _cell_size = 8;
+	//double _nuclear_norm_regularization_strength = 9.0;
+	//int _num_threads = 4;
+	//double _C = 700;
+	//double _epsilon = 0.05;
+	//double _loss_per_missed_target = 2;
+	//double _match_eps = 0.5;
+	//double _singular_value_threshold = 0.15;
+	//std::string _xml_name = "left_faces.xml";
+	//std::vector<int> _images_to_disregard = { 467 };
+	//bool _addLRFlip = true;
+	//bool _useRightOnly = true;
+	//bool _modelName = "face_detector_right.svm";
+
+	// Parameters to train frontal - left faces
 	unsigned long _detection_window_size_width = 80;
 	unsigned long _detection_window_size_height = 80;
 	double _padding = 0;
+	unsigned long _cell_size = 8;
 	double _nuclear_norm_regularization_strength = 9.0;
 	int _num_threads = 4;
 	double _C = 700;
 	double _epsilon = 0.05;
-	double _loss_per_missed_target = 1;
+	double _loss_per_missed_target = 2;
 	double _match_eps = 0.5;
+	double _singular_value_threshold = 0.15;
+	std::string _xml_name = "left_faces.xml";
+	std::vector<int> _images_to_disregard = { 467 };
+	bool _addLRFlip = true;
+	bool _useRightOnly = true;
+	bool _modelName = "face_detector_frontal_left.svm";
+
     try
     {
 		// Path to the dataset directory.
@@ -98,7 +161,7 @@ int main(int argc, char** argv)
         if (argc != 2)
         {
 			cout << "No arguments related to path of dataset given." << endl;
-			faces_directory = "C:/Users/Administrator/Documents/streamLabs/facemask-plugin/apps/FaceDetectorTrain/data/dlib_face_detector_training_data";
+			faces_directory = "C:/Users/Administrator/Documents/streamLabs/facemask-plugin/apps/FaceDetectorTrain/data/dlib_face_detector_training_data/";
 			cout << "Setting it to = " << faces_directory << endl;
 
             cout << "\nGive the path to the examples/faces directory as the argument to this" << endl;
@@ -143,16 +206,22 @@ int main(int argc, char** argv)
         // with boxes.  To see how to use it read the tools/imglab/README.txt
         // file.
 		cout << "Loading Train Data...";
-		load_image_dataset(images, face_boxes, faces_directory+"/frontal_faces.xml");
+		load_image_dataset(images, face_boxes, faces_directory+_xml_name);
 		cout << "DONE" << endl;
 
 		// Delete image_index = {151, 215, 434, 475, 659, 670, 1193}
 		for (int i = 0; i < images.size(); i++) {
-			if (i == 151 || i == 215 || i == 434 || i == 475 || i == 659 || i == 670 || i == 1193) {
-				continue;
+			bool skipImage = false;
+			for (auto img_index : _images_to_disregard) {
+				if (i == img_index) {
+					skipImage = true;
+					break;
+				}
 			}
-			images_train.push_back(images[i]);
-			face_boxes_train.push_back(face_boxes[i]);
+			if (!skipImage) {
+				images_train.push_back(images[i]);
+				face_boxes_train.push_back(face_boxes[i]);
+			}
 		}
 
         // Now we do a little bit of pre-processing.  This is optional but for
@@ -172,9 +241,28 @@ int main(int argc, char** argv)
         // into images_train.  So this next step doubles the size of our
         // training dataset.  Again, this is obviously optional but is useful in
         // many object detection tasks.
-		cout << "Add Left/Right Flips...";
-        add_image_left_right_flips(images_train, face_boxes_train);
-		cout << "DONE" << endl;
+		int temp_size = images_train.size();
+		if (_addLRFlip) {
+			cout << "Add Left/Right Flips...";
+			add_image_left_right_flips(images_train, face_boxes_train);
+			cout << "DONE" << endl;
+		}
+		if (_useRightOnly) {
+			images.clear();
+			face_boxes.clear();
+			for (int i = temp_size; i < images_train.size(); i++) {
+				images.push_back(images_train[i]);
+				face_boxes.push_back(face_boxes_train[i]);
+			}
+
+			images_train.clear();
+			face_boxes_train.clear();
+			for (int i = 0; i < temp_size; i++) {
+				images_train.push_back(images[i]);
+				face_boxes_train.push_back(face_boxes[i]);
+			}
+		}
+		
         cout << "Num training images: " << images_train.size() << " / " << images.size()*2 << endl;
 
 		// DEBUG: Before Training check the box aspect ratios
@@ -197,6 +285,7 @@ int main(int argc, char** argv)
         scanner.set_detection_window_size(_detection_window_size_width, _detection_window_size_height);
 		scanner.set_padding(_padding);
 		scanner.set_nuclear_norm_regularization_strength(_nuclear_norm_regularization_strength);
+		scanner.set_cell_size(_cell_size);
         structural_object_detection_trainer<image_scanner_type> trainer(scanner);
         // Set this to the number of processing cores on your machine.
         trainer.set_num_threads(_num_threads);  
@@ -259,9 +348,10 @@ int main(int argc, char** argv)
         // serialize() function.
         serialize("face_detector.svm") << detector;
 
-        // Then you can recall it using the deserialize() function.
-        object_detector<image_scanner_type> detector2;
-        deserialize("face_detector.svm") >> detector2;
+		//// NOTE: Use this code to load the image detector
+		//// Then you can recall it using the deserialize() function.
+  //      object_detector<image_scanner_type> detector2;
+  //      deserialize("face_detector.svm") >> detector2;
 
 
 
@@ -325,11 +415,10 @@ int main(int argc, char** argv)
         // well.  This is analogous to giving a C value that is too small.
         //
         // You can see how many separable filters are inside your detector like so:
-        cout << "num filters: "<< num_separable_filters(detector) << endl;
+        cout << "Num filters: "<< num_separable_filters(detector) << endl;
         // You can also control how many filters there are by explicitly thresholding the
         // singular values of the filters like this:
-		double singular_value_threshold = 0.15;
-        detector = threshold_filter_singular_values(detector, singular_value_threshold);
+        detector = threshold_filter_singular_values(detector, _singular_value_threshold);
         // That removes filter components with singular values less than 0.1.  The bigger
         // this number the fewer separable filters you will have and the faster the
         // detector will run.  However, a large enough threshold will hurt detection
@@ -341,7 +430,7 @@ int main(int argc, char** argv)
 
 		// Now that we have a face detector we can test it.  The first statement tests it
 		// on the training data.  It will print the precision, recall, and then average precision.
-		cout << "training results(after thresholding): " << test_object_detection_function(detector, images_train, face_boxes_train) << endl;
+		cout << "Training results(after thresholding): " << test_object_detection_function(detector, images_train, face_boxes_train) << endl;
     }
     catch (exception& e)
     {
