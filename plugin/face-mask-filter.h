@@ -237,6 +237,9 @@ namespace Plugin {
 			smll::DetectionResults		faces;
 			smll::TriangulationResult	triangulation;
 			TimeStamp					timestamp;
+			smll::ProcessedResults		processedFrameResults;
+			int lastResultIndex;
+			bool sameFrameResults;
 
 			// flags
 			bool				drawMask;

@@ -131,7 +131,8 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	demoCurrentMask(0),
 	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), 
 	drawMask(true),	drawAlert(false), drawFaces(false), drawMorphTris(false), drawFDRect(false), 
-	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr), testMode(false), custom_effect(nullptr){
+	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr),
+	testMode(false), custom_effect(nullptr), lastResultIndex(-1), sameFrameResults(false) {
 
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
 
@@ -1167,12 +1168,12 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// restore rendering state
 	gs_blend_state_pop();
 
-
 	auto processEnd = std::chrono::steady_clock::now();
-	auto elapsedMs =  std::chrono::duration_cast<std::chrono::milliseconds>(processEnd - timestamp);
-	if (faces.length > 0) {
-		blog(LOG_DEBUG, "[FaceMask] Latency: %d", (int)elapsedMs.count());
-	}
+	auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(processEnd - timestamp);
+
+	int elapsedLatency = elapsedMs.count();
+	blog(LOG_DEBUG, "[FaceMask] Latency: %d Latency # Frames: %.1f %s, sameFrameResults: %s", elapsedLatency, (float)elapsedLatency / 33.3f, processedFrameResults.to_string().c_str(), B2S(sameFrameResults));
+	
 	// since we are on the gpu right now anyway, here is 
 	// a good spot to unload mask data if we need to.
 	checkForMaskUnloading();
@@ -1450,6 +1451,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 				detection.faces[face_idx].detectionResults[i] = detect_results[i];
 			}
 			detection.faces[face_idx].detectionResults.length = detect_results.length;
+			detection.faces[face_idx].detectionResults.processedResults = detect_results.processedResults;
 		}
 
 		{
@@ -1664,8 +1666,11 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 		if (lock.owns_lock()) {
 			fidx = detection.facesIndex;
 		}
+		;
+		sameFrameResults;
 	}
 
+	sameFrameResults = true;
 	// other thread ready?
 	if (fidx >= 0) {
 		// read index is right behind the write index
@@ -1695,11 +1700,15 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 			if (!drawMorphTris) {
 				triangulation.DestroyLineBuffer();
 			}
-			// new timestamp
 			timestamp = detection.faces[fidx].timestamp;
-
+			processedFrameResults = detection.faces[fidx].detectionResults.processedResults;
 			// update our results
 			faces.CorrelateAndUpdateFrom(newFaces);
+			if (lastResultIndex != fidx) {
+				sameFrameResults = false;
+				lastResultIndex = fidx;
+			}
+			
 		}
 	}
 }
