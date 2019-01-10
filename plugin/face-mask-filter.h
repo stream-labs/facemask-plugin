@@ -237,6 +237,7 @@ namespace Plugin {
 			smll::DetectionResults		faces;
 			smll::TriangulationResult	triangulation;
 			TimeStamp					timestamp;
+			TimeStamp					lastActualTimetamp;
 			smll::ProcessedResults		processedFrameResults;
 			int lastResultIndex;
 			bool sameFrameResults;
@@ -250,7 +251,7 @@ namespace Plugin {
 			bool				filterPreviewMode;
 			bool				autoBGRemoval;
 			bool				cartoonMode;
-
+			bool				logMode;
 			// for testing/thumbs/writing textures to files
 			gs_stagesurf_t*		testingStage;
 

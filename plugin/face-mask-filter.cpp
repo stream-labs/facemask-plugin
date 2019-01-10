@@ -132,7 +132,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), 
 	drawMask(true),	drawAlert(false), drawFaces(false), drawMorphTris(false), drawFDRect(false), 
 	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr),
-	testMode(false), custom_effect(nullptr), lastResultIndex(-1), sameFrameResults(false) {
+	testMode(false), custom_effect(nullptr), lastResultIndex(-1), sameFrameResults(false), logMode(true) {
 
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
 
@@ -278,6 +278,7 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	obs_data_set_default_bool(data, P_CARTOON, false);
 	obs_data_set_default_bool(data, P_BGREMOVAL, false);
 	obs_data_set_default_bool(data, P_TEST_MODE, false);
+	obs_data_set_default_bool(data, P_LOG_MODE, false);
 
 	obs_data_set_default_bool(data, P_GENTHUMBS, false);
 	obs_data_set_default_bool(data, P_RECORD, false);
@@ -382,6 +383,7 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 	add_bool_property(props, P_ALERT_DOOUTRO);
 
 	add_bool_property(props, P_TEST_MODE);
+	add_bool_property(props, P_LOG_MODE);
 
 	// force mask/alert drawing
 	add_bool_property(props, P_DRAWMASK);
@@ -514,6 +516,7 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	autoBGRemoval = obs_data_get_bool(data, P_BGREMOVAL);
 	cartoonMode = obs_data_get_bool(data, P_CARTOON);
 	testMode = obs_data_get_bool(data, P_TEST_MODE);
+	logMode = obs_data_get_bool(data, P_LOG_MODE);
 
 	// Anti-aliasing
 	antialiasing_method = (int)obs_data_get_int(data, P_ANTI_ALIASING);
@@ -886,7 +889,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			mask_data = demoMaskDatas[demoCurrentMask].get();
 		}
 	}
-	
+
 	// set up alphas
 	bool introActive = false;
 	bool outroActive = false;
@@ -915,7 +918,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			maskAlpha = 0.0f;
 		else if (alertElapsedTime > t1)
 			maskAlpha = Utils::hermite((alertElapsedTime - t1) / (t2 - t1), 1.0f, 0.0f);
-		if (alertElapsedTime < alertDuration && 
+		if (alertElapsedTime < alertDuration &&
 			alertElapsedTime >= (alertDuration - outroData->GetIntroDuration()))
 			outroActive = true;
 	}
@@ -1114,8 +1117,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		gs_blend_type::GS_BLEND_INVSRCALPHA);
 
 
-    if ((!mask_data->DrawVideoWithMask() &&
-			!genThumbs) && mask_data->GetMorph()) {
+	if ((!mask_data->DrawVideoWithMask() &&
+		!genThumbs) && mask_data->GetMorph()) {
 
 		// Draw the source video 
 		if (mask_data) {
@@ -1161,19 +1164,24 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// demo mode render stuff
 		// generate previews?
-	if ( recordTriggered || (demoModeGenPreviews && demoMaskDatas.size() > 0) ) {
+	if (recordTriggered || (demoModeGenPreviews && demoMaskDatas.size() > 0)) {
 		demoModeRender(vidTex, mask_tex, mask_data);
 	}
 
 	// restore rendering state
 	gs_blend_state_pop();
+	if (logMode){
+		auto processEnd = std::chrono::steady_clock::now();
+		auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(processEnd - timestamp);
+		if (!sameFrameResults && !processedFrameResults.isSkipped()) {
+			lastActualTimetamp = timestamp;
+		}
 
-	auto processEnd = std::chrono::steady_clock::now();
-	auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(processEnd - timestamp);
-
-	int elapsedLatency = elapsedMs.count();
-	blog(LOG_DEBUG, "[FaceMask] Latency: %d Latency # Frames: %.1f %s, sameFrameResults: %s", elapsedLatency, (float)elapsedLatency / 33.3f, processedFrameResults.to_string().c_str(), B2S(sameFrameResults));
-	
+		int actualLatency = std::chrono::duration_cast<std::chrono::milliseconds>(processEnd - lastActualTimetamp).count();
+		int elapsedLatency = elapsedMs.count();
+		blog(LOG_DEBUG, "[FaceMask] Latency: %d Latency # Frames: %.1f %s, sameFrameResults: %s", elapsedLatency, (float)elapsedLatency / 33.3f, processedFrameResults.to_string().c_str(), B2S(sameFrameResults));
+		blog(LOG_DEBUG, "[FaceMask] Actual Latency: %d Act. Latency # Frames: %.1f", actualLatency, (float)actualLatency / 33.3f);
+	}
 	// since we are on the gpu right now anyway, here is 
 	// a good spot to unload mask data if we need to.
 	checkForMaskUnloading();

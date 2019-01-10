@@ -38,6 +38,7 @@
 
 #include "landmarks.hpp"
 #include "Face.hpp"
+#include "../Plugin/utils.h"
 #include <opencv2/opencv.hpp>
 
 namespace smll {
@@ -68,6 +69,7 @@ namespace smll {
 		void TrackingMade();
 		void TrackingFailed();
 		void DetectionFailed();
+		bool isSkipped();
 		std::string to_string();
 	private:
 		bool skipped;

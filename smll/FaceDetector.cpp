@@ -199,6 +199,7 @@ namespace smll {
 		{
 			m_detectionTimeout--;
 			m_trackingTimeout--;
+			results.processedResults.FrameSkipped();
 		}
 
 		// copy faces to results
