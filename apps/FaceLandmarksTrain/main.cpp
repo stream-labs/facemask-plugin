@@ -101,13 +101,21 @@ void add_image_left_right_flips_68points(
 			swap(rects.back().part(40), rects.back().part(47));
 			swap(rects.back().part(41), rects.back().part(46));
 
-			// Mouth
+			// Mouth (upper outer)
 			swap(rects.back().part(48), rects.back().part(54));
 			swap(rects.back().part(49), rects.back().part(53));
 			swap(rects.back().part(50), rects.back().part(52));
+
+			// Mouth (upper inner)
 			swap(rects.back().part(61), rects.back().part(63));
+
+			// Mouth (inner corner)
 			swap(rects.back().part(60), rects.back().part(64));
+
+			// Mouth (lower inner)
 			swap(rects.back().part(67), rects.back().part(65));
+
+			// Mouth (lower outer)
 			swap(rects.back().part(59), rects.back().part(55));
 			swap(rects.back().part(58), rects.back().part(56));
 		}
@@ -123,7 +131,7 @@ int main(int argc, char** argv)
 	try
 	{
 		// TODO: Path to dataset. Change it to your current system path.
-		const std::string faces_directory = "C:/Users/srira/streamLabs/facemask-plugin/apps/FaceLandmarksTrain/data/landmarks_dataset_v_0_1";
+		const std::string faces_directory = "C:/Users/srira/streamLabs/facemask-plugin/apps/FaceLandmarksTrain/data/SL_landmarks_dataset_v_1_0";
 
 		// Initialize images and faces data holders
 		dlib::array<array2d<unsigned char> > images_train, images_test;
@@ -131,8 +139,9 @@ int main(int argc, char** argv)
 
 
 		cout << "Loading Train data..." << endl;
-		load_image_dataset(images_train, faces_train, faces_directory + "/labels_dataset_v_0_1.xml");
-		
+		load_image_dataset(images_train, faces_train, faces_directory + "/face_landmarks_v1.0.xml");
+		cout << "Add image left/right flips" << endl;
+		add_image_left_right_flips_68points(images_train, faces_train);
 
 		// Now make the object responsible for training the model.  
 		cout << "Intialize Trainer..." << endl;
