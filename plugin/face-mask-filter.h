@@ -106,6 +106,7 @@ namespace Plugin {
 			// callbacks
 			static bool generate_videos(obs_properties_t *pr, obs_property_t *p, void *data);
 			bool generate_videos(obs_properties_t *pr, obs_property_t *p);
+			cv::Mat convert_frame_to_gray_mat(obs_source_frame* frame);
 
 		protected:
 			// face detection thread
@@ -270,7 +271,7 @@ namespace Plugin {
 					int					resizeWidth;
 					int					resizeHeight;
 					bool				active;
-					struct obs_source_frame * obs_frame;
+					cv::Mat             grayImage;
 				};
 				Frame frame;
 

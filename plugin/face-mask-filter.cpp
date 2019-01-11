@@ -614,6 +614,7 @@ void Plugin::FaceMaskFilter::Instance::hide() {
 struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(void *ptr, struct obs_source_frame *frame) {
 	if (ptr == nullptr)
 		return NULL;
+
 	obs_source_frame * frame_to_render = reinterpret_cast<Instance*>(ptr)->filter_video(frame);
 	return frame_to_render;
 }
@@ -664,7 +665,7 @@ struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct 
 			detection.frame.active = true;
 			detection.frame.timestamp = sourceTimestamp;
 
-			detection.frame.obs_frame = frame;
+			detection.frame.grayImage = convert_frame_to_gray_mat(frame);
 			detection.frame.resizeWidth = smll::Config::singleton().get_int(smll::CONFIG_INT_FACE_DETECT_WIDTH);
 			detection.frame.resizeHeight = (int)((float)detection.frame.resizeWidth * (float)baseHeight / (float)baseWidth);
 
@@ -1373,6 +1374,8 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 		blog(LOG_DEBUG, "[FaceMask] Failed to set MM thread characteristics");
 	}
 
+	obs_source_t *parent = obs_filter_get_parent(source);
+
 	// run until we're shut down
 	TimeStamp lastTimestamp;
 	while (true) {
@@ -1405,7 +1408,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			}
 			else {
 				// new frame - do the face detection
-				smllFaceDetector->DetectFaces(detection.frame.obs_frame, detection.frame.resizeWidth, detection.frame.resizeHeight, detect_results);
+				smllFaceDetector->DetectFaces(detection.frame.grayImage, detection.frame.resizeWidth, detection.frame.resizeHeight, detect_results);
 
 		 		smllFaceDetector->DetectLandmarks(detect_results);
 
@@ -1874,4 +1877,86 @@ Plugin::FaceMaskFilter::Instance::PreviewFrame::operator=(const PreviewFrame& ot
 }
 
 Plugin::FaceMaskFilter::Instance::PreviewFrame::~PreviewFrame() {
+}
+
+cv::Mat Plugin::FaceMaskFilter::Instance::convert_frame_to_gray_mat(obs_source_frame* frame) {
+	int img_width, img_height;
+	cv::Mat grayImage;
+
+	switch (frame->format) {
+	case VIDEO_FORMAT_I420:
+	case VIDEO_FORMAT_NV12:
+	{
+		img_width = frame->width;
+		img_height = frame->height*1.5;
+		cv::Mat img(img_height, img_width, CV_8UC1, frame->data[0], int(frame->linesize[0]));
+		cv::cvtColor(img, grayImage, cv::COLOR_YUV2GRAY_I420);
+		break;
+	}
+	case VIDEO_FORMAT_YVYU:
+	case VIDEO_FORMAT_YUY2:
+	{
+		img_width = frame->width;
+		img_height = frame->height;
+		cv::Mat img(img_height, img_width, CV_8UC2, frame->data[0], int(frame->linesize[0]));
+		cv::cvtColor(img, grayImage, cv::COLOR_YUV2GRAY_YUY2);
+		break;
+	}
+	case VIDEO_FORMAT_UYVY:
+	{
+		img_width = frame->width;
+		img_height = frame->height;
+		cv::Mat img(img_height, img_width, CV_8UC2, frame->data[0], int(frame->linesize[0]));
+		cv::cvtColor(img, grayImage, cv::COLOR_YUV2GRAY_UYVY);
+		break;
+	}
+	case VIDEO_FORMAT_Y800:
+	{
+		img_width = frame->width;
+		img_height = frame->height;
+		cv::Mat img(img_height, img_width, CV_8UC1, frame->data[0], int(frame->linesize[0]));
+		grayImage = img;
+		break;
+	}
+	case VIDEO_FORMAT_RGBA:
+	{
+		img_width = frame->width;
+		img_height = frame->height;
+		cv::Mat img(img_height, img_width, CV_8UC4, frame->data[0], int(frame->linesize[0]));
+		cv::cvtColor(img, grayImage, cv::COLOR_RGBA2GRAY);
+		break;
+	}
+	case VIDEO_FORMAT_BGRA:
+	{
+		img_width = frame->width;
+		img_height = frame->height;
+		cv::Mat img(img_height, img_width, CV_8UC4, frame->data[0], int(frame->linesize[0]));
+		cv::cvtColor(img, grayImage, cv::COLOR_BGRA2GRAY);
+		break;
+	}
+	case VIDEO_FORMAT_BGRX:
+	{
+		img_width = frame->width;
+		img_height = frame->height;
+		cv::Mat img(img_height, img_width, CV_8UC4, frame->data[0], int(frame->linesize[0]));
+		cv::cvtColor(img, grayImage, cv::COLOR_BGR2GRAY);
+		break;
+	}
+	case VIDEO_FORMAT_I444:
+	{
+		// TODO check if this works
+		img_width = frame->width;
+		img_height = frame->height;
+		cv::Mat img(img_height, img_width, CV_8UC3, frame->data[0], int(frame->linesize[0]));
+		cv::cvtColor(img, img, cv::COLOR_YCrCb2BGR);
+		cv::cvtColor(img, grayImage, cv::COLOR_BGR2GRAY);
+		break;
+	}
+	}
+
+	if (frame->flip) {
+		cv::flip(grayImage, grayImage, 0);
+	}
+
+	return grayImage;
 }
