@@ -130,7 +130,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	alertElapsedTime(BIG_FLOAT), alertTriggered(false), alertShown(false), alertsLoaded(false),
 	demoCurrentMask(0),
 	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), 
-	drawMask(true),	drawAlert(false), drawFaces(false), drawMorphTris(false), drawFDRect(false), 
+	drawMask(true),	drawAlert(false), drawFaces(false), drawMorphTris(false), drawFDRect(false), drawMotionRect(false),
 	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr), testMode(false), custom_effect(nullptr){
 
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
@@ -285,6 +285,7 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	obs_data_set_default_bool(data, P_DRAWFACEDATA, false);
 	obs_data_set_default_bool(data, P_DRAWMORPHTRIS, false);
 	obs_data_set_default_bool(data, P_DRAWCROPRECT, false);
+	obs_data_set_default_bool(data, P_DRAWMOTIONRECT, false);
 
 	obs_data_set_default_string(data, P_BEFORE_TEXT, kDefaultBeforeText);
 	obs_data_set_default_string(data, P_AFTER_TEXT, kDefaultAfterText);
@@ -416,6 +417,7 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 		generate_videos);
 
 	// debug drawing flags
+	add_bool_property(props, P_DRAWMOTIONRECT);
 	add_bool_property(props, P_DRAWFACEDATA);
 	add_bool_property(props, P_DRAWMORPHTRIS);
 	add_bool_property(props, P_DRAWCROPRECT);
@@ -553,6 +555,7 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	drawFaces = obs_data_get_bool(data, P_DRAWFACEDATA);
 	drawMorphTris = obs_data_get_bool(data, P_DRAWMORPHTRIS);
 	drawFDRect = obs_data_get_bool(data, P_DRAWCROPRECT);
+	drawMotionRect = obs_data_get_bool(data, P_DRAWMOTIONRECT);
 	beforeText = (char*)obs_data_get_string(data, P_BEFORE_TEXT);
 	beforeFile = (char*)obs_data_get_string(data, P_BEFORE);
 	afterText = (char*)obs_data_get_string(data, P_AFTER_TEXT);
@@ -1158,7 +1161,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	if (drawFDRect) {
 		drawCropRects(baseWidth, baseHeight);
 	}
-
+	
+	// draw motion rectangle
+	drawMotionRects(baseWidth, baseHeight);
+	
 	// demo mode render stuff
 		// generate previews?
 	if ( recordTriggered || (demoModeGenPreviews && demoMaskDatas.size() > 0) ) {
@@ -1447,6 +1453,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 				detection.faces[face_idx].detectionResults[i] = detect_results[i];
 			}
 			detection.faces[face_idx].detectionResults.length = detect_results.length;
+			detection.faces[face_idx].detectionResults.motionRect = detect_results.motionRect;
 		}
 
 		{
@@ -1650,6 +1657,24 @@ void Plugin::FaceMaskFilter::Instance::drawCropRects(int width, int height) {
 	r.set_right(x + w);
 	smllRenderer->SetDrawColor(255, 0, 255);
 	smllRenderer->DrawRect(r);
+}
+
+void Plugin::FaceMaskFilter::Instance::drawMotionRects(int width, int height) {
+	if (drawMotionRect) {
+		dlib::rectangle rect;
+		int t = faces.motionRect.top();
+		int b = faces.motionRect.bottom();
+		int l = faces.motionRect.left();
+		int r = faces.motionRect.right();
+		if (t < b && l < r) {
+			rect.set_top(t);
+			rect.set_bottom(b);
+			rect.set_left(l);
+			rect.set_right(r);
+			smllRenderer->SetDrawColor(0, 0, 255);
+			smllRenderer->DrawRect(rect, 3);
+		}
+	}
 }
 
 void Plugin::FaceMaskFilter::Instance::updateFaces() {
