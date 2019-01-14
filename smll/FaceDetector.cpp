@@ -154,12 +154,15 @@ namespace smll {
 		currentImage = currentImage(cv::Rect(cropInfo.offsetX, cropInfo.offsetY, cropInfo.width, cropInfo.height));
 		
 		bool trackingFailed = false;
+		bool wasFaceDetected = (m_faces.length > 0);
 		// if number of frames before the last detection is bigger than the threshold or if there are no faces to track
-		if (m_detectionTimeout == 0 || m_faces.length == 0) {
+		if (m_detectionTimeout == 0 || !wasFaceDetected) {
 			DoFaceDetection();
-			m_detectionTimeout =
-				Config::singleton().get_int(CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY);
-			StartObjectTracking();
+			if (m_faces.length > 0) {
+				m_detectionTimeout =
+					Config::singleton().get_int(CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY);
+				StartObjectTracking();
+			}
 		}
 		else if (m_trackingTimeout == 0) {
 			m_detectionTimeout--;
@@ -201,7 +204,7 @@ namespace smll {
 		results.length = m_faces.length;
 
 		// If faces are not found
-		if (m_faces.length == 0 && !trackingFailed) {
+		if (m_faces.length == 0 && !trackingFailed && !wasFaceDetected) {
             // Wait for 5 frames and do face detection
             m_timeout = Config::singleton().get_int(CONFIG_INT_FACE_DETECT_FREQUENCY);
 		}
@@ -904,22 +907,19 @@ namespace smll {
         // otherwise, we are tracking faces, and the tracking is still trusted, so don't trust
         // the FD results
         //
-        if ((m_faces.length == 0) || (faces.size() > 0)) {
-            // clamp to max faces
-			m_faces.length = (int)faces.size() > MAX_FACES ? MAX_FACES : (int)faces.size();
+		m_faces.length = (int)faces.size() > MAX_FACES ? MAX_FACES : (int)faces.size();
 
-            // copy rects into our faces, start tracking
-            for (int i = 0; i < m_faces.length; i++) {
-                // scale rectangle up to video frame size
-				m_faces[i].m_bounds.set_left((long)((float)(faces[i].left() +
-					cropInfo.offsetX) * scale));
-                m_faces[i].m_bounds.set_right((long)((float)(faces[i].right() +
-					cropInfo.offsetX) * scale));
-                m_faces[i].m_bounds.set_top((long)((float)(faces[i].top() +
-					cropInfo.offsetY) * scale));
-                m_faces[i].m_bounds.set_bottom((long)((float)(faces[i].bottom() +
-					cropInfo.offsetY) * scale));
-            }
+        // copy rects into our faces, start tracking
+        for (int i = 0; i < m_faces.length; i++) {
+            // scale rectangle up to video frame size
+			m_faces[i].m_bounds.set_left((long)((float)(faces[i].left() +
+				cropInfo.offsetX) * scale));
+            m_faces[i].m_bounds.set_right((long)((float)(faces[i].right() +
+				cropInfo.offsetX) * scale));
+            m_faces[i].m_bounds.set_top((long)((float)(faces[i].top() +
+				cropInfo.offsetY) * scale));
+            m_faces[i].m_bounds.set_bottom((long)((float)(faces[i].bottom() +
+				cropInfo.offsetY) * scale));
         }
     }
     
