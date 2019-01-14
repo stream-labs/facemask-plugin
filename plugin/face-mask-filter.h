@@ -238,8 +238,8 @@ namespace Plugin {
 			smll::DetectionResults		faces;
 			smll::TriangulationResult	triangulation;
 			TimeStamp					timestamp;
-			TimeStamp					lastActualTimetamp;
-			TimeStamp					renderTimetamp;
+			TimeStamp					lastActualTimestamp;
+			TimeStamp					renderTimestamp;
 			smll::ProcessedResults		processedFrameResults;
 			int lastResultIndex;
 			bool sameFrameResults;

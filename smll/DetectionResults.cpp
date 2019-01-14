@@ -144,19 +144,18 @@ namespace smll {
 		std::string str;
 		str += "Frame Skipped: ";
 		str += B2S(skipped);
-		str += " ";
+		str += ", ";
 		str += "Detection Made: ";
 		str += B2S(detection);
-		str += " ";
+		str += ", ";
 		str += "Tracking Made: ";
 		str += B2S(tracking);
-		str += " ";
+		str += ", ";
 		str += "Tracking Failed: ";
 		str += B2S(tracking_failed);
-		str += " ";
+		str += ", ";
 		str += "Detection Failed: ";
 		str += B2S(detection_failed);
-		str += " ";
 		return str;
 	}
 

@@ -840,7 +840,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	}
 
 	if (logMode) {
-		renderTimetamp = NEW_TIMESTAMP;
+		renderTimestamp = NEW_TIMESTAMP;
 	}
 
 	// Grab parent and target source.
@@ -1179,15 +1179,15 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		auto processEnd = NEW_TIMESTAMP;
 		auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(processEnd - timestamp);
 		if (!sameFrameResults && !processedFrameResults.isSkipped()) {
-			lastActualTimetamp = timestamp;
+			lastActualTimestamp = timestamp;
 		}
 
-		int actualLatency = std::chrono::duration_cast<std::chrono::milliseconds>(processEnd - lastActualTimetamp).count();
-		int renderTime = std::chrono::duration_cast<std::chrono::microseconds>(processEnd - renderTimetamp).count();
+		int actualLatency = std::chrono::duration_cast<std::chrono::milliseconds>(processEnd - lastActualTimestamp).count();
+		int renderTime = std::chrono::duration_cast<std::chrono::microseconds>(processEnd - renderTimestamp).count();
 		int elapsedLatency = elapsedMs.count();
-		blog(LOG_DEBUG, "[FaceMask] Latency: %d Latency # Frames: %.1f %s, sameFrameResults: %s", elapsedLatency, (float)elapsedLatency / 33.3f, processedFrameResults.to_string().c_str(), B2S(sameFrameResults));
-		blog(LOG_DEBUG, "[FaceMask] Actual Latency: %d Act. Latency # Frames: %.1f", actualLatency, (float)actualLatency / 33.3f);
-		blog(LOG_DEBUG, "[FaceMask] Render Time: %d micro sec", renderTime);
+		blog(LOG_DEBUG, "[FaceMask] Latency: %d, Latency # Frames: %.1f, %s, sameFrameResults: %s", elapsedLatency, (float)elapsedLatency / 33.3f, processedFrameResults.to_string().c_str(), B2S(sameFrameResults));
+		blog(LOG_DEBUG, "[FaceMask] Actual Latency: %d, Act. Latency # Frames: %.1f", actualLatency, (float)actualLatency / 33.3f);
+		blog(LOG_DEBUG, "[FaceMask] Render Time: %d micro secs.", renderTime);
 	}
 	// since we are on the gpu right now anyway, here is 
 	// a good spot to unload mask data if we need to.
