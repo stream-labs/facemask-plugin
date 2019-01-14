@@ -1013,6 +1013,7 @@ namespace smll {
 		if (faces.size() > 0) {
 			prevImage = currentOrigImage.clone();
 		}
+
 		m_faces.length = (int)faces.size() > MAX_FACES ? MAX_FACES : (int)faces.size();
 
         // copy rects into our faces, start tracking
