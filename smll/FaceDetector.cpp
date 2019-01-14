@@ -45,7 +45,9 @@ namespace smll {
         , m_detectionTimeout(0)
 		, m_trackingFaceIndex(0)
 		, m_camera_w(0)
-		, m_camera_h(0) {
+		, m_camera_h(0)
+		, isPrevInit(false)
+		, cropInfo(0,0,0,0) {
 		// Load face detection and pose estimation models.
 		m_detector = get_frontal_face_detector();
 
@@ -122,11 +124,97 @@ namespace smll {
 			m_camera_matrix =
 				(cv::Mat_<float>(3, 3) <<
 					focal_length, 0,			center.x, 
-					0,			  focal_length, center.y, 
+					0, 			  focal_length, center.y,
 					0,			  0,			1);
 			// We assume no lens distortion
 			m_dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<float>::type);
 		}
+	}
+	void FaceDetector::computeDifference(DetectionResults& results) {
+		CropInfo cropInfo = GetCropInfo();
+		float scale = (float) grayImage.rows / resizeHeight ;
+		if (!isPrevInit ) {
+			isPrevInit = true;
+			results.motionRect.set_bottom(currentImage.rows);
+			results.motionRect.set_right(currentImage.cols);
+			results.motionRect.set_left(0);
+			results.motionRect.set_top(0);
+			prevImage = currentImage.clone();
+			return;
+		}
+
+		cv::Mat diffImage;
+		cv::absdiff(prevImage, currentImage, diffImage);
+		int blur_factor = Config::singleton().get_double(
+			CONFIG_DOUBLE_BLUR_FACTOR);
+		cv::GaussianBlur(diffImage, diffImage, cv::Size(blur_factor, blur_factor), 0, 0);
+
+		int threshold = Config::singleton().get_double(
+			CONFIG_DOUBLE_MOVEMENT_THRESHOLD);
+		int minY = diffImage.rows;
+		int minX = diffImage.cols;
+		int maxY = 0;
+		int maxX = 0;
+	
+		for (int j = 0; j < diffImage.rows; ++j){
+			for (int i = 0; i < diffImage.cols; ++i) 
+			{
+				int pix = (int)diffImage.at<uchar>(j, i);
+				if (pix > threshold)
+				{
+					minX = std::min(i, minX);
+					minY = std::min(j, minY);
+					maxX = std::max(i, maxX);
+					maxY = std::max(j, maxY);
+				}
+			}
+		}
+		results.motionRect.set_left(minX*scale);
+		results.motionRect.set_right(maxX*scale);
+		results.motionRect.set_top(minY*scale);
+		results.motionRect.set_bottom(maxY*scale);
+
+	}
+	void FaceDetector::addFaceRectangles(DetectionResults& results) {
+
+		float paddingPercentage = Config::singleton().get_double(CONFIG_MOTION_RECTANGLE_PADDING);
+
+		for (int i = 0; i < m_faces.length; i++) {
+			// scale rectangle up to video frame size
+			results.motionRect.set_left(std::min((int)results.motionRect.left(), (int)((m_faces[i].m_bounds.left()))));
+			results.motionRect.set_right(std::max((int)results.motionRect.right(), (int)((m_faces[i].m_bounds.right()))));
+			results.motionRect.set_top(std::min((int)results.motionRect.top(), (int)((m_faces[i].m_bounds.top()))));
+			results.motionRect.set_bottom(std::max((int)results.motionRect.bottom(), (int)((m_faces[i].m_bounds.bottom()))));
+		}
+
+		int delta_w = (int)grayImage.cols*paddingPercentage;
+		int delta_h = (int)grayImage.rows*paddingPercentage;
+		results.motionRect.set_left(std::max((int)results.motionRect.left() - delta_w, 0));
+		results.motionRect.set_right(std::min((int)results.motionRect.right()+ delta_w, grayImage.cols - 1));
+		results.motionRect.set_top(std::max((int)results.motionRect.top() - delta_h, 0));
+		results.motionRect.set_bottom(std::min((int)results.motionRect.bottom() + delta_h, grayImage.rows - 1));
+	}
+
+
+	void FaceDetector::computeCurrentImage(DetectionResults& results) {
+		computeDifference(results);
+		addFaceRectangles(results);
+
+		float minMotionRectangle = Config::singleton().get_double(CONFIG_MIN_MOTION_RECTANGLE);
+		int MRectMinW = minMotionRectangle *grayImage.cols;
+		int MRectMinH = minMotionRectangle *grayImage.rows;
+		if (results.motionRect.width() < MRectMinW || results.motionRect.height() < MRectMinH) {
+			results.motionRect.set_bottom(grayImage.rows);
+			results.motionRect.set_right(grayImage.cols);
+			results.motionRect.set_left(0);
+			results.motionRect.set_top(0);
+		}
+		SetCropInfo(results);
+		// Do image cropping and cv::Mat initialization in single shot
+		CropInfo cropInfo = GetCropInfo();
+		
+		cv::Mat cropped = grayImage(cv::Rect(cropInfo.offsetX, cropInfo.offsetY, cropInfo.width, cropInfo.height));
+		currentImage = cropped.clone();
 	}
 
 	void FaceDetector::DetectFaces(cv::Mat &inputImage, int width, int height, DetectionResults& results) {
@@ -142,6 +230,7 @@ namespace smll {
 			(resizeHeight != height)) {
 			// forget whatever we thought were faces
 			m_faces.length = 0;
+			isPrevInit = false;
 		}
 
 		resizeWidth = width;
@@ -151,12 +240,12 @@ namespace smll {
 
 		// Resize and cut out region of interest
 		cv::resize(grayImage, currentImage, cv::Size(resizeWidth, resizeHeight), 0, 0, cv::INTER_LINEAR);
-		CropInfo cropInfo = GetCropInfo();
-		currentImage = currentImage(cv::Rect(cropInfo.offsetX, cropInfo.offsetY, cropInfo.width, cropInfo.height));
-		
+		currentOrigImage = currentImage.clone();
+
 		bool trackingFailed = false;
 		// if number of frames before the last detection is bigger than the threshold or if there are no faces to track
 		if (m_detectionTimeout == 0 || m_faces.length == 0) {
+			computeCurrentImage(results);
 			DoFaceDetection();
 			m_detectionTimeout =
 				Config::singleton().get_int(CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY);
@@ -208,6 +297,9 @@ namespace smll {
 		}
 		results.length = m_faces.length;
 
+		if (trackingFailed || m_faces.length == 0) {
+
+		}
 		// If faces are not found
 		if (m_faces.length == 0 && !trackingFailed) {
             // Wait for 5 frames and do face detection
@@ -425,9 +517,6 @@ namespace smll {
 		// Make Index Buffers
 		MakeAreaIndices(result, triangleList);
 	}
-
-	
-
 
 	void FaceDetector::AddSelectivePoints(cv::Subdiv2D& subdiv,
 		const std::vector<cv::Point2f>& points,
@@ -880,81 +969,89 @@ namespace smll {
 	}
 
 	FaceDetector::CropInfo FaceDetector::GetCropInfo() {
-		int ww = (int)((float)resizeWidth * Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_WIDTH));
-		int hh = (int)((float)resizeHeight * Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_HEIGHT));
-		int xx = (int)((float)(resizeWidth / 2) * Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_X)) +
-			(resizeWidth / 2);
-		int yy = (int)((float)(resizeHeight / 2) * Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_Y)) +
-			(resizeHeight / 2);
-
-		CropInfo cropInfo(xx, yy, ww, hh);
 		return cropInfo;
 	}
 
-    void FaceDetector::DoFaceDetection() {
+	void FaceDetector::SetCropInfo(DetectionResults& results) {
+		int ww = results.motionRect.right() - results.motionRect.left();
+		int hh = results.motionRect.bottom() - results.motionRect.top();
+		int xx = results.motionRect.left() + ww / 2;
+		int yy = results.motionRect.top()  + hh / 2;
+		if (ww <= 0 || hh <= 0 || results.motionRect.left() < 0 || results.motionRect.right() < 0 || results.motionRect.top() < 0 || results.motionRect.bottom() < 0) {
+			ww = grayImage.cols;
+			hh = grayImage.rows;
+			xx = ww/2;
+			yy = hh/2;
+		}
+		cropInfo = CropInfo(xx, yy, ww, hh);
+	}
+
+   void FaceDetector::DoFaceDetection() {
 
 		// get cropping info from config and detect image dimensions
 		CropInfo cropInfo = GetCropInfo();
 		// need to scale back
 		float scale = (float)grayImage.rows / resizeHeight;
-
+		cv::Mat detectionImg;
+		if (currentImage.cols*currentImage.rows <= resizeWidth*resizeHeight || scale == 0) {
+			scale = 1;
+			detectionImg = currentImage;
+		} else {
+			cv::resize(currentImage, detectionImg, cv::Size(currentImage.cols / scale, currentImage.rows / scale), 0, 0, cv::INTER_LINEAR);
+		}
+		
         // detect faces
 		std::vector<rectangle> faces;
-		dlib::cv_image<unsigned char> img(currentImage);
+		dlib::cv_image<unsigned char> img(detectionImg);
 		faces = m_detector(img);
 
 		// only consider the face detection results if:
         //
-        // - tracking is disabled (so we have to)
+        // - tracking is disabled (so we have to) 
         // - we currently have no faces
         // - face detection just found some faces
         //
         // otherwise, we are tracking faces, and the tracking is still trusted, so don't trust
         // the FD results
         //
+		if (faces.size() > 0) {
+			prevImage = currentOrigImage.clone();
+		}
         if ((m_faces.length == 0) || (faces.size() > 0)) {
             // clamp to max faces
 			m_faces.length = (int)faces.size() > MAX_FACES ? MAX_FACES : (int)faces.size();
-
             // copy rects into our faces, start tracking
             for (int i = 0; i < m_faces.length; i++) {
                 // scale rectangle up to video frame size
-				m_faces[i].m_bounds.set_left((long)((float)(faces[i].left() +
-					cropInfo.offsetX) * scale));
-                m_faces[i].m_bounds.set_right((long)((float)(faces[i].right() +
-					cropInfo.offsetX) * scale));
-                m_faces[i].m_bounds.set_top((long)((float)(faces[i].top() +
-					cropInfo.offsetY) * scale));
-                m_faces[i].m_bounds.set_bottom((long)((float)(faces[i].bottom() +
-					cropInfo.offsetY) * scale));
+				m_faces[i].m_bounds.set_left((long)((float)(faces[i].left()*scale +
+					cropInfo.offsetX )));
+                m_faces[i].m_bounds.set_right((long)((float)(faces[i].right()*scale +
+					cropInfo.offsetX)));
+                m_faces[i].m_bounds.set_top((long)((float)(faces[i].top()*scale +
+					cropInfo.offsetY)));
+                m_faces[i].m_bounds.set_bottom((long)((float)(faces[i].bottom()*scale +
+					cropInfo.offsetY)));
             }
+
         }
     }
     
         
     void FaceDetector::StartObjectTracking() {
-
-		// get crop info from config and track image dimensions
-		CropInfo cropInfo = GetCropInfo();
-
 		// need to scale back
 		float scale = (float)grayImage.rows / resizeHeight;
 
         // start tracking
-		dlib::cv_image<unsigned char> img(currentImage);
+		dlib::cv_image<unsigned char> img(currentOrigImage);
 		for (int i = 0; i < m_faces.length; ++i) {
-			m_faces[i].StartTracking(img, scale, cropInfo.offsetX, cropInfo.offsetY);
+			m_faces[i].StartTracking(img, scale, 0, 0);
 		}
 	}
     
     
     void FaceDetector::UpdateObjectTracking() {
-
-		// get crop info from config and track image dimensions
-		CropInfo cropInfo = GetCropInfo();
-
 		// update object tracking
-		dlib::cv_image<unsigned char> img(currentImage);
+		dlib::cv_image<unsigned char> img(currentOrigImage);
 		for (int i = 0; i < m_faces.length; i++) {
 			if (i == m_trackingFaceIndex) {
 				double confidence = m_faces[i].UpdateTracking(img);

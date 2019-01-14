@@ -146,8 +146,8 @@ namespace smll {
 		DetectionResults();
 		void CorrelateAndUpdateFrom(DetectionResults& other);
 		int findClosest(const smll::DetectionResult& result);
-
 		ProcessedResults processedResults;
+		dlib::rectangle motionRect;
 	};
 
 }
