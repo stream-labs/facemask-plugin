@@ -650,7 +650,7 @@ struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct 
 	// Target base width and height.
 	baseWidth = obs_source_get_base_width(target);
 	baseHeight = obs_source_get_base_height(target);
-	if (baseWidth < 0 || baseHeight < 0) {
+	if (baseWidth <= 0 || baseHeight <= 0) {
 		return frame;
 	}
 
