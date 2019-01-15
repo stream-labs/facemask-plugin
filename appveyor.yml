@@ -3,6 +3,10 @@ image:
 
 clone_folder: c:\projects\source
 
+
+install:
+  - git submodule update --init --recursive
+
 build_script:
 - cmd: mkdir build
 - cmd: cd build
