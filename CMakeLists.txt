@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 2.8.12)
 PROJECT(facemask-plugin)
 math(EXPR BITS "8*${CMAKE_SIZEOF_VOID_P}")
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
+
 include(DownloadProject)
 
 SET(PATH_DLIB "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dlib")
@@ -17,7 +19,7 @@ set(DLIB_USE_MKL_FFT OFF CACHE STRING "DLib MKL FFT support"  FORCE)
 set(DLIB_USE_MKL_SEQUENTIAL OFF CACHE STRING "DLib MKL Sequential support"  FORCE)
 set(DLIB_USE_MKL_WITH_TBB OFF CACHE STRING "DLib MKL with TBB support"  FORCE)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
+
 
 SET(PATH_FREETYPE "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/freetype2")
 
