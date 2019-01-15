@@ -6,7 +6,6 @@ image:
 
 platform: x64
 
-FMPluginVersion: 9
 SLBuildDirectory: streamlabs-build
 SLGenerator: Visual Studio 15 2017 Win64
 SLDistributeDirectory: distribute
