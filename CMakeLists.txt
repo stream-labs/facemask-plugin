@@ -178,7 +178,7 @@ else()
 	SET(PATH_OBS_STUDIO ${CMAKE_SOURCE_DIR})
 endif()
 
-INCLUDE("${PATH_OBS_STUDIO}/cmake/external/Findlibobs.cmake")
+include("${libobs_SOURCE_DIR}/cmake/LibObs/LibObsConfig.cmake")
 
 # Distribute format
 OPTION(BUILD_FOR_PUBLIC "Build for public release" ON)
