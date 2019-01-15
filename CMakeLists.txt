@@ -25,9 +25,31 @@ else()
 	set(FACEMASK_EXTERNAL TRUE)
 endif()
 
+set(FACEMASK_EXTERNAL FALSE)
+
 ################################################################################
 # Configuration
 ################################################################################
+
+string(
+	CONCAT DEFAULT_LIBOBS_URL
+	"https://obsstudios3.streamlabs.com/"
+	"libobs-release-22.0.3-sl.281-win32-x64.7z"
+)
+
+set(
+	LIBOBS_URL
+	${DEFAULT_LIBOBS_URL}
+	CACHE STRING "Location of libobs archive to base on"
+)
+
+download_project(
+	PROJ libobs
+	URL ${LIBOBS_URL}
+	UPDATE_DISCONNECTED 1
+)
+
+include("${libobs_SOURCE_DIR}/cmake/LibObs/LibObsConfig.cmake")
 
 # dlib
 if(PATH_DLIB STREQUAL "")
@@ -133,6 +155,8 @@ SET(freetype_SOURCES
 add_definitions(-DFT2_BUILD_LIBRARY)
 include_directories(${PATH_FREETYPE}/include)
 
+include_directories(${LIBOBS_INCLUDE_DIRS})
+
 # OBS Studio
 if(FACEMASK_EXTERNAL)
 	SET(PATH_OBS_STUDIO "" CACHE PATH "OBS Studio Source Code Directory")
@@ -149,6 +173,8 @@ if(FACEMASK_EXTERNAL)
 else()
 	SET(PATH_OBS_STUDIO ${CMAKE_SOURCE_DIR})
 endif()
+
+INCLUDE("${PATH_OBS_STUDIO}/cmake/external/Findlibobs.cmake")
 
 # Distribute format
 OPTION(BUILD_FOR_PUBLIC "Build for public release" ON)
@@ -306,6 +332,7 @@ SET(facemask-plugin_DATA
 )
 SET(facemask-plugin_LIBRARIES
 	dlib::dlib
+	${LIBOBS_LIBRARIES}
 	${OpenCV_LIBS}
 	avrt.lib
 	Shlwapi.lib
@@ -369,7 +396,7 @@ if(FACEMASK_EXTERNAL)
 	endif()	
 else()
 	TARGET_LINK_LIBRARIES(facemask-plugin
-		libobs
+		"${PATH_OBS_STUDIO}/obs"
 		${facemask-plugin_LIBRARIES}
 	)
 endif()
@@ -399,6 +426,6 @@ if(FACEMASK_EXTERNAL)
 		"$<TARGET_FILE_DIR:facemask-plugin>/facemask-plugin.pdb"
 		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/facemask-plugin.pdb"
 	)
-else()
-	install_obs_plugin_with_data(facemask-plugin data)
+#else()
+#	install_obs_plugin_with_data(facemask-plugin data)
 endif()
