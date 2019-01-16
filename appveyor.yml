@@ -35,6 +35,7 @@ before_deploy:
 - tar cvaf "%SignedArtifact%.tar.gz" "distribute" 
 - ps: Push-AppveyorArtifact "$env:SignedArtifact.tar.gz"
 - echo %CD%
+- dir
 
 deploy:
   - provider: S3
