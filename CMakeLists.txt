@@ -387,7 +387,9 @@ ADD_LIBRARY(facemask-plugin MODULE
 
 target_include_directories(facemask-plugin PUBLIC "${LIBOBS_INCLUDE_DIRS}")
 file(MAKE_DIRECTORY "libobs")
+file(MAKE_DIRECTORY "deps")
 file(COPY "${LIBOBS_INCLUDE_DIRS}/" DESTINATION "libobs" FILES_MATCHING PATTERN "*")
+file(COPY "${libobs_SOURCE_DIR}/deps/" DESTINATION "deps" FILES_MATCHING PATTERN "*")
 
 
 if(FACEMASK_EXTERNAL)
