@@ -63,7 +63,7 @@ int main()
 	// Initialize DLIB Face detector
 	FaceLib::FaceDetector faceDetector;
 	// TODO: Replace the path here to the file on your system.
-	FaceLib::FaceLandmarks landmarksDetector("C:/Users/srira/streamLabs/facemask-plugin/data/shape_predictor_68_face_landmarks.dat");
+	FaceLib::FaceLandmarks landmarksDetector("C:/Users/srira/streamlabs/facemask-plugin/apps/FaceLandmarks/build/sp_v1.2_custom.dat");
 
 	int imageWriterCounter = 0;
 
