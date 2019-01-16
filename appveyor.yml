@@ -10,12 +10,16 @@ clone_folder: c:\projects\source
 
 install:
   - git submodule update --init --recursive
+  - ps: $env:UnsignedArtifact = "facemask-plugin-$env:APPVEYOR_BUILD_NUMBER"
 
 build_script:
 - cmd: mkdir build
 - cmd: cd build
 - cmd: cmake c:\projects\source -G "Visual Studio 15 Win64"
 - cmd: cmake --build . --config RelWithDebInfo
+
+after_build:
+- cmd: tar cvaf "%UnsignedArtifact%.tar.gz" -C "distribute"
 
 
 
