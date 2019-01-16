@@ -19,6 +19,6 @@ build_script:
 - cmd: cmake --build . --config "RelWithDebugInfo"
 
 after_build:
-- copy "RelWithDebugInfo\data\*" distribute\data\
-- copy "RelWithDebugInfo\obs-plugins\*" distribute\obs-plugins\
+- copy "RelWithDebugInfo\data\*" "distribute\data\"
+- copy "RelWithDebugInfo\obs-plugins\*" "distribute\obs-plugins\""
 
