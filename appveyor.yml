@@ -39,6 +39,18 @@ before_deploy:
 - ps: Push-AppveyorArtifact "$env:SignedArtifact.tar.gz"
 - dir
 
+deploy:
+  - provider: S3
+    access_key_id:
+      secure: mCkabszlS+XuJkjmIFM4t6Hom4jvUfNqbxlmQXKPJNE=
+    secret_access_key:
+      secure: dGl7YDpzqXV+ucEwwo6QEiTjQBSThcakfE70aKWrgjUeLy3jFJsjgbnnGPeUIU+k
+    bucket: faces-internal.streamlabs.com
+    folder: facemask-plugin-deployment
+    region: us-west-2
+    set_public: true
+    artifact: $(SignedArtifact).tar.gz
+
 
 artifacts:
   - path: $(UnsignedArtifact).tar.gz
