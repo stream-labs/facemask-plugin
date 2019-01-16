@@ -21,6 +21,7 @@ install:
   - ps: $env:UnsignedArtifact = "facemask-plugin-$env:APPVEYOR_BUILD_NUMBER"
 
 build_script:
+- dir
 - cmd: mkdir build
 - cmd: cd build
 - cmd: cmake c:\projects\source -G "Visual Studio 15 Win64"
@@ -30,12 +31,11 @@ after_build:
 - cmd: tar cvaf "%UnsignedArtifact%.tar.gz" "distribute" 
 
 before_deploy:
-- nuget install secure-file -ExcludeVersion
-- ps: c:\projects\source\facemask-plugin\ci\win-signed-build.ps1
-- tar cvaf "%SignedArtifact%.tar.gz" "distribute" 
-- ps: Push-AppveyorArtifact "$env:SignedArtifact.tar.gz"
 - echo %CD%
 - dir
+- ps: Push-AppveyorArtifact "$env:UnsignedArtifact.tar.gz"
+- dir
+
 
 deploy:
   - provider: S3
@@ -46,7 +46,7 @@ deploy:
     bucket: faces-internal.streamlabs.com
     region: us-west-2
     set_public: true
-    artifact: $(SignedArtifact).tar.gz
+    artifact: $(UnsignedArtifact).tar.gz
 
 artifacts:
   - path: $(UnsignedArtifact).tar.gz
