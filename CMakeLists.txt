@@ -342,12 +342,12 @@ SET(facemask-plugin_LIBRARIES
 	Shlwapi.lib
 )
 
-file(RENAME "${LIBOBS_INCLUDE_DIRS}" "libobs")
+
 
 INCLUDE_DIRECTORIES(
 	"${PROJECT_BINARY_DIR}"
 	"${PROJECT_SOURCE_DIR}"
-	"libobs"
+	"${LIBOBS_INCLUDE_DIRS}"
 )
 
 source_group("Data Files" FILES ${facemask-plugin_DATA})
@@ -385,7 +385,9 @@ ADD_LIBRARY(facemask-plugin MODULE
 	${facemask-plugin_DATA}
 )
 
-target_include_directories(facemask-plugin PUBLIC "libobs")
+target_include_directories(facemask-plugin PUBLIC "${LIBOBS_INCLUDE_DIRS}")
+file(MAKE_DIRECTORY "libobs")
+file(COPY "${LIBOBS_INCLUDE_DIRS}/" DESTINATION "libobs" FILES_MATCHING PATTERN "*")
 
 
 if(FACEMASK_EXTERNAL)
