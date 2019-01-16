@@ -76,12 +76,23 @@ namespace FaceLib {
 		Returns all the landmarks for the given face in the image in
 		std::vector<dlib::point> format.
 
-		@param image The image to detect landmarks.
+		@param image The image in cv::Mat format to detect landmarks.
 		@param face The bounding box of face in dlib::rectangle format.
 		@param landmarks Return current landmarks in std::vector<dlib::point>
 		@return None.
 		*/
 		void DetectLandmarks(cv::Mat& image, dlib::rectangle& face, std::vector<dlib::point>& landmarks);
+
+		/**
+		Returns all the landmarks for the given face in the image in
+		std::vector<dlib::point> format.
+
+		@param image The image in dlib::array2d<unsigned char> format to detect landmarks.
+		@param face The bounding box of face in dlib::rectangle format.
+		@param landmarks Return current landmarks in std::vector<dlib::point>
+		@return None.
+		*/
+		void DetectLandmarks(dlib::array2d<unsigned char>& image, dlib::rectangle& face, std::vector<dlib::point>& landmarks);
 
 		/**
 		Returns the face pose in cv::Mat {R, t} format

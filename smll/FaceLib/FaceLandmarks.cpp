@@ -77,6 +77,20 @@ namespace FaceLib {
 		landmarks.swap(results);
 	}
 
+	void FaceLandmarks::DetectLandmarks(dlib::array2d<unsigned char>& image, dlib::rectangle& face, std::vector<dlib::point>& landmarks) {
+		
+		// Detect landmarks using the image and face rect
+		dlib::full_object_detection predictedLandmarks = _landmarksPredictor(image, face);
+
+		std::vector<dlib::point> results;
+		results.reserve(68); // 68 landmarks
+		for (int j = 0; j < 68; j++) {
+			results.emplace_back(predictedLandmarks.part(j).x(), predictedLandmarks.part(j).y());
+		}
+
+		landmarks.swap(results);
+	}
+
 	void FaceLandmarks::DetectPose(std::vector<cv::Point2d>& landmarks2D, const cv::Mat& K, const cv::Mat& D, cv::Mat& R, cv::Mat& t, bool useExtrinsicGuess) {
 		cv::solvePnP(_landmarks3D, landmarks2D, K, D, R, t, useExtrinsicGuess, cv::SOLVEPNP_EPNP);
 		ComputeReprojectionError(landmarks2D, K, D, R, t);
