@@ -50,4 +50,4 @@ deploy:
 
 artifacts:
   - path: $(UnsignedArtifact).tar.gz
-  name: Unsigned Aritfact
+    name: Unsigned Aritfact
