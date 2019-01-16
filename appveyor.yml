@@ -1,8 +1,12 @@
+matrix:
+  fast_finish: true
+  
 image:
   - Visual Studio 2017
 
-clone_folder: c:\projects\source
+platform: x64
 
+clone_folder: c:\projects\source
 
 install:
   - git submodule update --init --recursive
