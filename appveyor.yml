@@ -16,9 +16,9 @@ build_script:
 - cmd: mkdir build
 - cmd: cd build
 - cmd: cmake c:\projects\source -G "Visual Studio 15 Win64"
-- cmd: cmake --build . --config "RelWithDebugInfo"
+- cmd: cmake --build . --config RelWithDebugInfo
 
 after_build:
 - copy "RelWithDebugInfo\data\*" "distribute\data\"
-- copy "RelWithDebugInfo\obs-plugins\*" "distribute\obs-plugins\""
+- copy "RelWithDebugInfo\obs-plugins\*" "distribute\obs-plugins\"
 
