@@ -421,22 +421,22 @@ endif()
 ################################################################################
 # Installation / Distribution
 ################################################################################
-if(FACEMASK_EXTERNAL)
-	add_custom_command(TARGET facemask-plugin POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_directory
-		"${PROJECT_SOURCE_DIR}/data"
-		"${DISTRIBUTE_PATH}/$<CONFIG>/data/obs-plugins/facemask-plugin"
-	)
-	add_custom_command(TARGET facemask-plugin POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy
-		"$<TARGET_FILE:facemask-plugin>"
-		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/$<TARGET_FILE_NAME:facemask-plugin>"
-	)
-	add_custom_command(TARGET facemask-plugin POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy
-		"$<TARGET_FILE_DIR:facemask-plugin>/facemask-plugin.pdb"
-		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/facemask-plugin.pdb"
-	)
+#if(FACEMASK_EXTERNAL)
+add_custom_command(TARGET facemask-plugin POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_directory
+	"${PROJECT_SOURCE_DIR}/data"
+	"${DISTRIBUTE_PATH}/$<CONFIG>/data/obs-plugins/facemask-plugin"
+)
+add_custom_command(TARGET facemask-plugin POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy
+	"$<TARGET_FILE:facemask-plugin>"
+	"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/$<TARGET_FILE_NAME:facemask-plugin>"
+)
+add_custom_command(TARGET facemask-plugin POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy
+	"$<TARGET_FILE_DIR:facemask-plugin>/facemask-plugin.pdb"
+	"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/facemask-plugin.pdb"
+)
 #else()
 #	install_obs_plugin_with_data(facemask-plugin data)
-endif()
+#endif()
