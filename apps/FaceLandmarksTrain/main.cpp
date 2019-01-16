@@ -22,6 +22,9 @@
 #include <dlib/image_processing.h>
 #include <dlib/data_io.h>
 #include <iostream>
+#include "../../smll/FaceLib/FaceLandmarks.h"
+#include <opencv2/opencv.hpp>
+#include <dlib/opencv.h>
 
 using namespace dlib;
 using namespace std;
@@ -131,7 +134,7 @@ int main(int argc, char** argv)
 	try
 	{
 		// TODO: Path to dataset. Change it to your current system path.
-		const std::string faces_directory = "C:/Users/srira/streamLabs/facemask-plugin/apps/FaceLandmarksTrain/data/SL_landmarks_dataset_v_1_0";
+		const std::string faces_directory = "C:/Users/Administrator/Documents/streamlabs/facemask-plugin/apps/FaceLandmarksTrain/data/landmarks_dataset_v_0_1";
 
 		// Initialize images and faces data holders
 		dlib::array<array2d<unsigned char> > images_train, images_test;
@@ -139,22 +142,27 @@ int main(int argc, char** argv)
 
 
 		cout << "Loading Train data..." << endl;
-		load_image_dataset(images_train, faces_train, faces_directory + "/face_landmarks_v1.0.xml");
+		load_image_dataset(images_train, faces_train, faces_directory + "/labels_dataset_v_0_2_no_mirror.xml");
 		cout << "Add image left/right flips" << endl;
 		add_image_left_right_flips_68points(images_train, faces_train);
+
+		cout << "Total images to train = " << images_train.size() << endl;
 
 		// Now make the object responsible for training the model.  
 		cout << "Intialize Trainer..." << endl;
 		shape_predictor_trainer trainer;
 		trainer.set_cascade_depth(15);
-		//trainer.set_nu(0.05);
-		//trainer.set_oversampling_amount(100);
-		//trainer.set_num_test_splits(100);
+		trainer.set_tree_depth(4);
+		trainer.set_nu(0.1);
+		trainer.set_oversampling_amount(20);
+		trainer.set_oversampling_translation_jitter(20); // Default: 0
+		trainer.set_feature_pool_size(400);
+		trainer.set_lambda(0.1);
+		trainer.set_num_test_splits(20);
+		trainer.set_feature_pool_region_padding(0);
+		trainer.be_verbose();
 		trainer.set_num_threads(4);
 
-		// Tell the trainer to print status messages to the console so we can
-		// see how long the training will take.
-		trainer.be_verbose();
 
 		// Now finally generate the shape model
 		cout << "Training Shape predictor..." << endl;
@@ -178,21 +186,9 @@ int main(int argc, char** argv)
 		// Save the model
 		// Finally, we save the model to disk so we can use it later.
 		std::cout << "Saving the model..." << std::endl;
-		serialize("sp_v0.1_custom.dat") << sp; // Mean Training Error: 0.00928328
+		serialize("sp_v1.2_custom_1.dat") << sp; // Mean Training Error: 0.0299926
 
-		std::cout << "Loading Test data..." << std::endl;
-		dlib::load_image_dataset(images_test, faces_test, faces_directory + "/labels_dataset_v_0_1_test.xml");
 
-		cout << "Mean Testing Error: " <<
-			test_shape_predictor(sp, images_test, faces_test, get_interocular_distances(faces_test)) << endl;
-
-			// The real test is to see how well it does on data it wasn't trained
-			// on.  We trained it on a very small dataset so the accuracy is not
-			// extremely high, but it's still doing quite good.  Moreover, if you
-			// train it on one of the large face landmarking datasets you will
-			// obtain state-of-the-art results, as shown in the Kazemi paper.
-			cout << "mean testing error:  " <<
-				test_shape_predictor(sp, images_test, faces_test, get_interocular_distances(faces_test)) << endl;
 	}
 	catch (exception& e)
 	{
