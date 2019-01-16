@@ -1,4 +1,4 @@
-& secure-file\tools\secure-file -decrypt c:\projects\source\ci\streamlabsp12.pfx.enc -secret "$env:StreamlabsPfxSecret" -out CI\streamlabsp12.pfx
+& secure-file\tools\secure-file -decrypt c:\projects\source\ci\streamlabsp12.pfx.enc -secret "$env:StreamlabsPfxSecret" -out c:\projects\source\ci\streamlabsp12.pfx
 
 if ($LASTEXITCODE -ne 0) {
 	exit 1
