@@ -1,6 +1,6 @@
 matrix:
   fast_finish: true
-  
+
 image:
   - Visual Studio 2017
 
@@ -14,6 +14,6 @@ install:
 build_script:
 - cmd: mkdir build
 - cmd: cd build
-- cmd: cmake c:\projects\source -G "Visual Studio 15"
+- cmd: cmake c:\projects\source -G "Visual Studio 15 Win64"
 - cmd: cmake --build . --config "Debug"
 
