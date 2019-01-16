@@ -159,8 +159,6 @@ SET(freetype_SOURCES
 add_definitions(-DFT2_BUILD_LIBRARY)
 include_directories(${PATH_FREETYPE}/include)
 
-target_include_directories(${PROJECT_NAME} PUBLIC ${LIBOBS_INCLUDE_DIRS})
-
 # OBS Studio
 if(FACEMASK_EXTERNAL)
 	SET(PATH_OBS_STUDIO "" CACHE PATH "OBS Studio Source Code Directory")
@@ -384,6 +382,8 @@ ADD_LIBRARY(facemask-plugin MODULE
 	${facemask-plugin_SOURCES}
 	${facemask-plugin_DATA}
 )
+
+target_include_directories(facemask-plugin PUBLIC ${LIBOBS_INCLUDE_DIRS})
 
 
 if(FACEMASK_EXTERNAL)
