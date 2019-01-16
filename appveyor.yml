@@ -35,3 +35,19 @@ before_deploy:
 - tar cvaf "%SignedArtifact%.tar.gz" "distribute" 
 - ps: Push-AppveyorArtifact "$env:SignedArtifact.tar.gz"
 
+deploy:
+  - provider: S3
+    access_key_id:
+      secure: C1Qzrf1+tbRDGmnXR6OpXwWuJr33d2JCVwn0KC/V7jw=
+    secret_access_key:
+      secure: dRSFQBZKAAVvDmZ0DOaoF54189P0b0mFCMSyTwn4eHZVBFdaET8C4Nb6VCJ4kT+a
+    bucket: faces-internal.streamlabs.com
+    region: us-west-2
+    set_public: true
+    artifact: $(SignedArtifact).tar.gz
+    on:
+      appveyor_repo_tag: true
+
+artifacts:
+  - path: $(UnsignedArtifact).tar.gz
+  name: Unsigned Aritfact
