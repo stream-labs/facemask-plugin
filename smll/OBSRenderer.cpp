@@ -130,7 +130,6 @@ namespace smll {
 		gs_effect_t    *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
 		gs_eparam_t    *color = gs_effect_get_param_by_name(solid, "color");
 
-		struct vec4 veccol;
 		vec4_from_rgba(&veccol, MakeColor(red, green, blue, alpha));
 		gs_effect_set_vec4(color, &veccol);
 	}
@@ -250,14 +249,22 @@ namespace smll {
 		drawLines(points, MOUTH_INNER_1, MOUTH_INNER_8, true);
 	}
 
-	void OBSRenderer::DrawRect(const dlib::rectangle& r) {
+	void OBSRenderer::DrawRect(const dlib::rectangle& r, int width) {
 		// rect
 		dlib::point p[4];
-		p[0] = dlib::point(r.left(), r.top());
-		p[1] = dlib::point(r.right(), r.top());
-		p[2] = dlib::point(r.right(), r.bottom());
-		p[3] = dlib::point(r.left(), r.bottom());
-		drawLines(p, 0, 3, true);
+		gs_effect_t    *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
+		gs_eparam_t    *color = gs_effect_get_param_by_name(solid, "color");
+
+		for (size_t i = 0; i < width; i++)
+		{
+			gs_effect_set_vec4(color, &veccol);
+			p[0] = dlib::point(r.left() + i, r.top() + i);
+			p[1] = dlib::point(r.right() - i, r.top() + i);
+			p[2] = dlib::point(r.right() - i, r.bottom() - i);
+			p[3] = dlib::point(r.left() + i, r.bottom() - i);
+			drawLines(p, 0, 3, true);
+		}
+		
 	}
 
 	void   OBSRenderer::DrawGlasses(const DetectionResult& face, int texture) {

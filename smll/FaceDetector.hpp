@@ -129,10 +129,21 @@ private:
 			offsetY = y - height / 2;
 		}
 	};
+	CropInfo    cropInfo;
 	CropInfo	GetCropInfo();
+	void		SetCropInfo(DetectionResults& results);
 	// Current Image
-	cv::Mat currentImage;
 	cv::Mat grayImage;
+	cv::Mat currentImage;
+	cv::Mat currentOrigImage;
+	void computeCurrentImage(DetectionResults& results);
+	void addFaceRectangles(DetectionResults& results);
+	void computeDifference(DetectionResults& results);
+
+	cv::Mat prevImage;
+	cv::Mat diffImage;
+	cv::Mat diff;
+	bool isPrevInit;
 
 	// For 3d pose
 	float	ReprojectionError(const std::vector<cv::Point3f>& model_points,

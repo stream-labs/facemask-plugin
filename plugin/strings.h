@@ -42,6 +42,7 @@
 #define P_DRAWFACEDATA			"drawfaces"
 #define P_DRAWMORPHTRIS			"drawmorphtris"
 #define P_DRAWCROPRECT			"drawFDCropRect"
+#define P_DRAWMOTIONRECT		"Draw Motion Rectangle"
 #define P_DEMOMODEON			"demoMode"
 #define P_DEMOFOLDER			"demoFolder"
 #define P_TEST_MODE				"Enable Testing Mode"
