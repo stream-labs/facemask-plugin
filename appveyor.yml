@@ -20,4 +20,4 @@ build_script:
 
 after_build:
 - echo %CD%
-- cmd: tar cvaf "%UnsignedArtifact%.tar.gz" -C "distribute\""
+- cmd: tar cvaf "%UnsignedArtifact%.tar.gz" "distribute" 
