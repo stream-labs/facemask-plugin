@@ -6,6 +6,9 @@ image:
 
 platform: x64
 
+environment:
+  DistributeDirectory: distribute
+
 clone_folder: c:\projects\source
 
 install:
@@ -16,4 +19,8 @@ build_script:
 - cmd: cd build
 - cmd: cmake c:\projects\source -G "Visual Studio 15 Win64"
 - cmd: cmake --build . --config "RelWithDebugInfo"
+
+after_build:
+- copy "RelWithDebugInfo\data\*" DistributeDirectory\data\
+- copy "RelWithDebugInfo\obs-plugins\*" DistributeDirectory\obs-plugins\
 
