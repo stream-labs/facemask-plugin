@@ -985,8 +985,7 @@ namespace smll {
 	
     // Detect faces using FaceLib::FaceDetector::DetectFaces
 		std::vector<rectangle> faces;
-    dlib::cv_image<unsigned char> img(detectionImg);
-		_faceDetector.DetectFaces(img, faces);
+		_faceDetector.DetectFaces(detectionImg, faces);
 
 		// only consider the face detection results if:
         //
