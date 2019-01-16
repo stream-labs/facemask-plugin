@@ -33,7 +33,10 @@ after_build:
 before_deploy:
 - echo %CD%
 - dir
-- ps: Push-AppveyorArtifact "$env:UnsignedArtifact.tar.gz"
+- nuget install secure-file -ExcludeVersion
+- ps: c:\projects\source\ci\win-signed-build.ps1
+- tar cvaf "%SignedArtifact%.tar.gz" "distribute"
+- ps: Push-AppveyorArtifact "$env:SignedArtifact.tar.gz"
 - dir
 
 
@@ -46,7 +49,7 @@ deploy:
     bucket: faces-internal.streamlabs.com
     region: us-west-2
     set_public: true
-    artifact: $(UnsignedArtifact).tar.gz
+    artifact: $(SignedArtifact).tar.gz
 
 artifacts:
   - path: $(UnsignedArtifact).tar.gz
