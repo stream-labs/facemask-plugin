@@ -6,8 +6,6 @@ image:
 
 platform: x64
 
-environment:
-  DistributeDirectory: distribute
 
 clone_folder: c:\projects\source
 
@@ -21,6 +19,6 @@ build_script:
 - cmd: cmake --build . --config "RelWithDebugInfo"
 
 after_build:
-- copy "RelWithDebugInfo\data\*" DistributeDirectory\data\
-- copy "RelWithDebugInfo\obs-plugins\*" DistributeDirectory\obs-plugins\
+- copy "RelWithDebugInfo\data\*" distribute\data\
+- copy "RelWithDebugInfo\obs-plugins\*" distribute\obs-plugins\
 
