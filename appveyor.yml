@@ -19,7 +19,5 @@ build_script:
 - cmd: cmake --build . --config RelWithDebInfo
 
 after_build:
-- cmd: tar cvaf "%UnsignedArtifact%.tar.gz" -C "distribute"
-
-
-
+- echo %CD%
+- cmd: tar cvaf "%UnsignedArtifact%.tar.gz" -C "distribute\""
