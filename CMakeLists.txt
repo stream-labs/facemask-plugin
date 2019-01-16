@@ -174,8 +174,8 @@ if(FACEMASK_EXTERNAL)
 	endif()
 	SET(obsPath "${PATH_OBS_STUDIO}")
 	INCLUDE("${PATH_OBS_STUDIO}/cmake/external/Findlibobs.cmake")
-else()
-	SET(PATH_OBS_STUDIO ${CMAKE_SOURCE_DIR})
+#else()
+#	SET(PATH_OBS_STUDIO ${CMAKE_SOURCE_DIR})
 endif()
 
 include("${libobs_SOURCE_DIR}/cmake/LibObs/LibObsConfig.cmake")
@@ -345,7 +345,7 @@ SET(facemask-plugin_LIBRARIES
 INCLUDE_DIRECTORIES(
 	"${PROJECT_BINARY_DIR}"
 	"${PROJECT_SOURCE_DIR}"
-	"${PATH_OBS_STUDIO}/"
+	"${LIBOBS_INCLUDE_DIRS}"
 )
 
 source_group("Data Files" FILES ${facemask-plugin_DATA})
@@ -400,7 +400,6 @@ if(FACEMASK_EXTERNAL)
 	endif()	
 else()
 	TARGET_LINK_LIBRARIES(facemask-plugin
-		"${PATH_OBS_STUDIO}/obs"
 		${facemask-plugin_LIBRARIES}
 	)
 endif()
