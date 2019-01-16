@@ -37,8 +37,8 @@ set(FACEMASK_EXTERNAL FALSE)
 
 string(
 	CONCAT DEFAULT_LIBOBS_URL
-	"https://obsstudios3.streamlabs.com/"
-	"libobs-release-22.0.3-sl.281-win32-x64.7z"
+	"https://s3-us-west-2.amazonaws.com/faces-internal.streamlabs.com/"
+	"libobs-debug-22.0.3-sl.219-win32-x64-wdeps.7z"
 )
 
 set(
