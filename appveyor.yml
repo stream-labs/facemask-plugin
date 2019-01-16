@@ -27,7 +27,7 @@ build_script:
 - cmd: cmake --build . --config RelWithDebInfo
 
 after_build:
-- cmd: tar cvaf "%UnsignedArtifact%.tar.gz" 
+- cmd: tar cvaf "%UnsignedArtifact%.tar.gz" "distribute" 
 
 before_deploy:
 - nuget install secure-file -ExcludeVersion
