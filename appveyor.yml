@@ -31,7 +31,7 @@ after_build:
 
 before_deploy:
 - nuget install secure-file -ExcludeVersion
-- ps: ci\win-signed-build.ps1
+- ps: ..\ci\win-signed-build.ps1
 - tar cvaf "%SignedArtifact%.tar.gz" "distribute" 
 - ps: Push-AppveyorArtifact "$env:SignedArtifact.tar.gz"
 - echo %CD%
