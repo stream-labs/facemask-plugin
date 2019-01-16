@@ -53,7 +53,7 @@ download_project(
 	UPDATE_DISCONNECTED 1
 )
 
-include("${libobs_SOURCE_DIR}/cmake/LibObs/LibObsConfig.cmake")
+
 
 # dlib
 if(PATH_DLIB STREQUAL "")
@@ -159,7 +159,7 @@ SET(freetype_SOURCES
 add_definitions(-DFT2_BUILD_LIBRARY)
 include_directories(${PATH_FREETYPE}/include)
 
-include_directories(${LIBOBS_INCLUDE_DIRS})
+target_include_directories(${PROJECT_NAME} PUBLIC ${LIBOBS_INCLUDE_DIRS})
 
 # OBS Studio
 if(FACEMASK_EXTERNAL)
@@ -177,6 +177,8 @@ if(FACEMASK_EXTERNAL)
 #else()
 #	SET(PATH_OBS_STUDIO ${CMAKE_SOURCE_DIR})
 endif()
+
+
 
 include("${libobs_SOURCE_DIR}/cmake/LibObs/LibObsConfig.cmake")
 
