@@ -29,7 +29,6 @@ else()
 	set(FACEMASK_EXTERNAL TRUE)
 endif()
 
-set(FACEMASK_EXTERNAL FALSE)
 
 ################################################################################
 # Configuration
@@ -172,8 +171,8 @@ if(FACEMASK_EXTERNAL)
 	endif()
 	SET(obsPath "${PATH_OBS_STUDIO}")
 	INCLUDE("${PATH_OBS_STUDIO}/cmake/external/Findlibobs.cmake")
-#else()
-#	SET(PATH_OBS_STUDIO ${CMAKE_SOURCE_DIR})
+else()
+	SET(PATH_OBS_STUDIO ${CMAKE_SOURCE_DIR})
 endif()
 
 
@@ -336,7 +335,6 @@ SET(facemask-plugin_DATA
 )
 SET(facemask-plugin_LIBRARIES
 	dlib::dlib
-	${LIBOBS_LIBRARIES}
 	${OpenCV_LIBS}
 	avrt.lib
 	Shlwapi.lib
@@ -421,22 +419,25 @@ endif()
 ################################################################################
 # Installation / Distribution
 ################################################################################
-#if(FACEMASK_EXTERNAL)
-add_custom_command(TARGET facemask-plugin POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy_directory
-	"${PROJECT_SOURCE_DIR}/data"
-	"${DISTRIBUTE_PATH}/$<CONFIG>/data/obs-plugins/facemask-plugin"
-)
-add_custom_command(TARGET facemask-plugin POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy
-	"$<TARGET_FILE:facemask-plugin>"
-	"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/$<TARGET_FILE_NAME:facemask-plugin>"
-)
-add_custom_command(TARGET facemask-plugin POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy
-	"$<TARGET_FILE_DIR:facemask-plugin>/facemask-plugin.pdb"
-	"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/facemask-plugin.pdb"
-)
-#else()
-#	install_obs_plugin_with_data(facemask-plugin data)
-#endif()
+
+if(FACEMASK_EXTERNAL)
+	add_custom_command(TARGET facemask-plugin POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_directory
+		"${PROJECT_SOURCE_DIR}/data"
+		"${DISTRIBUTE_PATH}/$<CONFIG>/data/obs-plugins/facemask-plugin"
+	)
+	add_custom_command(TARGET facemask-plugin POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy
+		"$<TARGET_FILE:facemask-plugin>"
+		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/$<TARGET_FILE_NAME:facemask-plugin>"
+	)
+	add_custom_command(TARGET facemask-plugin POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy
+		"$<TARGET_FILE_DIR:facemask-plugin>/facemask-plugin.pdb"
+		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/facemask-plugin.pdb"
+	)
+else()
+	install_obs_plugin_with_data(facemask-plugin data)
+endif()
+
+
