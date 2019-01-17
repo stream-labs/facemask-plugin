@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 2.8.12)
 PROJECT(facemask-plugin)
 math(EXPR BITS "8*${CMAKE_SIZEOF_VOID_P}")
 
+OPTION(DOWNLOAD_LIBOBS "Download libobs from S3" ON)
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
 include(DownloadProject)
@@ -19,8 +21,6 @@ set(DLIB_USE_MKL_FFT OFF CACHE STRING "DLib MKL FFT support"  FORCE)
 set(DLIB_USE_MKL_SEQUENTIAL OFF CACHE STRING "DLib MKL Sequential support"  FORCE)
 set(DLIB_USE_MKL_WITH_TBB OFF CACHE STRING "DLib MKL with TBB support"  FORCE)
 
-
-
 SET(PATH_FREETYPE "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/freetype2")
 
 if(TARGET libobs)
@@ -33,26 +33,6 @@ endif()
 ################################################################################
 # Configuration
 ################################################################################
-
-string(
-	CONCAT DEFAULT_LIBOBS_URL
-	"https://s3-us-west-2.amazonaws.com/faces-internal.streamlabs.com/"
-	"libobs-debug-22.0.3-sl.219-win32-x64-wdeps.7z"
-)
-
-set(
-	LIBOBS_URL
-	${DEFAULT_LIBOBS_URL}
-	CACHE STRING "Location of libobs archive to base on"
-)
-
-download_project(
-	PROJ libobs
-	URL ${LIBOBS_URL}
-	UPDATE_DISCONNECTED 1
-)
-
-
 
 # dlib
 if(PATH_DLIB STREQUAL "")
@@ -160,24 +140,53 @@ include_directories(${PATH_FREETYPE}/include)
 
 # OBS Studio
 if(FACEMASK_EXTERNAL)
-	SET(PATH_OBS_STUDIO "" CACHE PATH "OBS Studio Source Code Directory")
-	if(PATH_OBS_STUDIO STREQUAL "")
-		message(FATAL_ERROR "PATH_OBS_STUDIO not set!")
-		return()
+	if(DOWNLOAD_LIBOBS)
+		message(STATUS "Downloading libobs from S3.")
+
+		string(
+			CONCAT DEFAULT_LIBOBS_URL
+			"https://s3-us-west-2.amazonaws.com/faces-internal.streamlabs.com/"
+			"libobs-debug-22.0.3-sl.219-win32-x64-wdeps.7z"
+		)
+
+		set(
+			LIBOBS_URL
+			${DEFAULT_LIBOBS_URL}
+			CACHE STRING "Location of libobs archive to base on"
+		)
+
+		download_project(
+			PROJ libobs
+			URL ${LIBOBS_URL}
+			UPDATE_DISCONNECTED 1
+		)
+
+		include("${libobs_SOURCE_DIR}/cmake/LibObs/LibObsConfig.cmake")
+
+		file(MAKE_DIRECTORY "libobs")
+		file(MAKE_DIRECTORY "deps")
+		file(COPY "${LIBOBS_INCLUDE_DIRS}/" DESTINATION "libobs" FILES_MATCHING PATTERN "*")
+		file(COPY "${libobs_SOURCE_DIR}/deps/" DESTINATION "deps" FILES_MATCHING PATTERN "*")
+		INCLUDE_DIRECTORIES("${LIBOBS_INCLUDE_DIRS}/")
+	else()
+		SET(PATH_OBS_STUDIO "" CACHE PATH "OBS Studio Source Code Directory")
+		if(PATH_OBS_STUDIO STREQUAL "")
+			message(FATAL_ERROR "PATH_OBS_STUDIO not set!")
+			return()
+		endif()
+		if(NOT EXISTS "${PATH_OBS_STUDIO}/libobs/obs-module.h")
+			message(FATAL_ERROR "PATH_OBS_STUDIO is invalid!")
+			return()
+		endif()
+
+		SET(obsPath "${PATH_OBS_STUDIO}")
+		INCLUDE("${PATH_OBS_STUDIO}/cmake/external/Findlibobs.cmake")
+		INCLUDE_DIRECTORIES("${PATH_OBS_STUDIO}/")
 	endif()
-	if(NOT EXISTS "${PATH_OBS_STUDIO}/libobs/obs-module.h")
-		message(FATAL_ERROR "PATH_OBS_STUDIO is invalid!")
-		return()
-	endif()
-	SET(obsPath "${PATH_OBS_STUDIO}")
-	INCLUDE("${PATH_OBS_STUDIO}/cmake/external/Findlibobs.cmake")
 else()
 	SET(PATH_OBS_STUDIO ${CMAKE_SOURCE_DIR})
 endif()
 
-
-
-include("${libobs_SOURCE_DIR}/cmake/LibObs/LibObsConfig.cmake")
 
 # Distribute format
 OPTION(BUILD_FOR_PUBLIC "Build for public release" ON)
@@ -345,8 +354,9 @@ SET(facemask-plugin_LIBRARIES
 INCLUDE_DIRECTORIES(
 	"${PROJECT_BINARY_DIR}"
 	"${PROJECT_SOURCE_DIR}"
-	"${LIBOBS_INCLUDE_DIRS}"
 )
+
+
 
 source_group("Data Files" FILES ${facemask-plugin_DATA})
 source_group("Plugin\\Headers" FILES ${facemask-plugin_HEADERS})
@@ -383,11 +393,6 @@ ADD_LIBRARY(facemask-plugin MODULE
 	${facemask-plugin_DATA}
 )
 
-target_include_directories(facemask-plugin PUBLIC "${LIBOBS_INCLUDE_DIRS}")
-file(MAKE_DIRECTORY "libobs")
-file(MAKE_DIRECTORY "deps")
-file(COPY "${LIBOBS_INCLUDE_DIRS}/" DESTINATION "libobs" FILES_MATCHING PATTERN "*")
-file(COPY "${libobs_SOURCE_DIR}/deps/" DESTINATION "deps" FILES_MATCHING PATTERN "*")
 
 
 if(FACEMASK_EXTERNAL)
