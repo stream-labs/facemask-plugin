@@ -833,63 +833,49 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		return;
 	}
 
-	if (maskData == nullptr) {
-		obs_source_skip_video_filter(source);
-		return;
-	}
+
 
 	// Grab parent and target source.
 	obs_source_t *parent = obs_filter_get_parent(source);
 	obs_source_t *target = obs_filter_get_target(source);
 
-	// OBS rendering state
-	gs_blend_state_push();
-	setupRenderingState();
-
+	// get mask data to draw
 	Mask::MaskData* mask_data = maskData.get();
-
-	gs_texture_t *vidTex = nullptr;
-	if (mask_data->GetMorph() || recordTriggered || (demoModeGenPreviews && demoMaskDatas.size() > 0)) {
-		gs_texrender_reset(sourceRenderTarget);
-		if (gs_texrender_begin(sourceRenderTarget, parent->async_width, parent->async_height)) {
-
-			gs_blend_state_push();
-			gs_projection_push();
-
-			gs_ortho(0, (float)baseWidth, 0, (float)baseHeight, -1, 1);
-
-			obs_source_video_render(parent);
-			gs_texrender_end(sourceRenderTarget);
-
-			gs_projection_pop();
-			gs_blend_state_pop();
-
-		}
-		vidTex = gs_texrender_get_texture(sourceRenderTarget);
-	}
-	if (!mask_data->GetMorph()) {
-		obs_source_video_render(parent);
-	}
-
-	if ((parent == NULL) || (target == NULL)) {
-		return;
-	}
-
-	// Target base width and height.
-	if ((baseWidth <= 0) || (baseHeight <= 0)) {
-		return;
-	}
-
-	// smll needs a "viewport" to draw
-	smllRenderer->SetViewport(baseWidth, baseHeight);
-
 	if (demoModeGenPreviews && demoMaskDatas.size() > 0) {
 		if (demoCurrentMask >= 0 &&
 			demoCurrentMask < demoMaskDatas.size()) {
 			mask_data = demoMaskDatas[demoCurrentMask].get();
 		}
 	}
-	
+
+
+
+	if ((parent == NULL) || (target == NULL)) {
+		return;
+	}
+
+	baseWidth = obs_source_get_base_width(target);
+	baseHeight = obs_source_get_base_height(target);
+
+	// Target base width and height.
+	if ((baseWidth <= 0) || (baseHeight <= 0)) {
+		return;
+	}
+	// Effects
+	gs_effect_t* defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
+
+	// Render source frame to a texture
+	gs_texture* sourceTexture = RenderSourceTexture(effect ? effect : defaultEffect);
+	// Draw always current frame to be up to date, even it's processing is delayd
+	gs_texture_t* vidTex = sourceTexture;
+
+
+	// smll needs a "viewport" to draw
+	smllRenderer->SetViewport(baseWidth, baseHeight);
+
+
+
+
 	// set up alphas
 	bool introActive = false;
 	bool outroActive = false;
@@ -935,6 +921,11 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		mask_data->SetGlobalAlpha(maskAlpha);
 	}
 
+
+	// OBS rendering state
+	gs_blend_state_push();
+	setupRenderingState();
+
 	// some reasons triangulation should be destroyed
 	if (!mask_data || faces.length == 0) {
 		triangulation.DestroyBuffers();
@@ -942,6 +933,15 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// flags
 	bool genThumbs = mask_data && demoModeGenPreviews && demoModeSavingFrames;
+	
+	// Draw the source video
+	gs_enable_depth_test(false);
+	gs_set_cull_mode(GS_NEITHER);
+	while (gs_effect_loop(defaultEffect, "Draw")) {
+		gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+			"image"), vidTex);
+		gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
+	}
 
 	// Get current method to use for anti-aliasing
 	if (antialiasing_method == NO_ANTI_ALIASING ||
@@ -1116,15 +1116,23 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	gs_blend_function(gs_blend_type::GS_BLEND_SRCALPHA,
 		gs_blend_type::GS_BLEND_INVSRCALPHA);
 
+	if (!mask_data ||
+		(!mask_data->DrawVideoWithMask() &&
+			!genThumbs)) {
 
-    if ((!mask_data->DrawVideoWithMask() &&
-			!genThumbs) && mask_data->GetMorph()) {
-
-		// Draw the source video 
+		// Draw the source video
 		if (mask_data) {
 			triangulation.autoBGRemoval = autoBGRemoval;
 			triangulation.cartoonMode = cartoonMode;
 			mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
+		}
+		else {
+			// Draw the source video
+			while (gs_effect_loop(defaultEffect, "Draw")) {
+				gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+					"image"), vidTex);
+				gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
+			}
 		}
 	}
 
@@ -1801,7 +1809,7 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 
 			// crop
 
-			int offset = (baseWidth - baseHeight) * 2;
+			int offset = (baseWidth - baseHeight) / 2;
 			cv::Mat cropf;
 			if (recordTriggered) {
 				cropf = cvm.clone();
