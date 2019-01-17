@@ -196,8 +196,7 @@ endif()
 
 
 # Distribute format
-OPTION(BUILD_SLOBS "Build for Streamlabs OBS" ON)
-if(BUILD_SLOBS)
+if(FACEMASK_EXTERNAL)
 	SET(DISTRIBUTE_PATH "${PROJECT_BINARY_DIR}/distribute/slobs")
 	SET(DISTRIBUTE_PATH_BIN "obs-plugins")
 	add_definitions(-DSLOBS_BUILD)
