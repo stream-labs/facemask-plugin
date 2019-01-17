@@ -38,7 +38,7 @@
 
 #include "landmarks.hpp"
 #include "Face.hpp"
-#include "SingleValueKalman.hpp"
+#include <opencv2/opencv.hpp>
 
 namespace smll {
 
@@ -90,9 +90,7 @@ namespace smll {
 		cv::Mat GetCVTranslation() const;
 
 		void CopyPoseFrom(const DetectionResult& r);
-		void ResetPose();
 		void InitStartPose();
-		bool PoseValid();
 		void UpdateResultsFrom(const DetectionResult& r);
 
 		double DistanceTo(const DetectionResult& r) const;
@@ -108,26 +106,17 @@ namespace smll {
 
 
 	private:
+		// Kalman Filter variables
+		cv::KalmanFilter kalmanFilter; // Initialize Kalman Filter
+		int nStates;
+		int nMeasurements;
+		int nInputs;
+		double dt; // 1/FPS. TODO: Get it from current FPS.
+		bool kalmanFilterInitialized;
 
-		// kalman filters. 
-		// see: 'An Introduction to the Kalman Filter' - Gary Bishop
-		//      http://www.cs.unc.edu/~tracker/media/pdf/SIGGRAPH2001_CoursePack_08.pdf
-		//
-		enum FilterIndex : uint32_t {
-			KF_TRANS_X,
-			KF_TRANS_Y,
-			KF_TRANS_Z,
-			KF_ROT_X,
-			KF_ROT_Y,
-			KF_ROT_Z,
-			KF_ROT_A,
-
-			KF_NUM_FILTERS
-		};
-		std::array<SingleValueKalman, KF_NUM_FILTERS> kalmanFilters;
-
-		bool	kalmanFiltersInitialized;
-		void InitKalmanFilters();
+		// Kalman Filter methods
+		void InitKalmanFilter();
+		void UpdateKalmanFilter(cv::Mat& measurements, cv::Mat& translationEstimated, cv::Mat& eulersEstimated);
 	};
 
 
@@ -137,9 +126,7 @@ namespace smll {
 		DetectionResults();
 		void CorrelateAndUpdateFrom(DetectionResults& other);
 		int findClosest(const smll::DetectionResult& result);
-
-	private:
-
+		dlib::rectangle motionRect;
 	};
 
 }

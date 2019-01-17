@@ -33,7 +33,6 @@
 #pragma warning( pop )
 
 
-#include "OBSTexture.hpp"
 #include "ImageWrapper.hpp"
 #include "FaceDetector.hpp"
 #include "DetectionResults.hpp"
@@ -67,7 +66,7 @@ namespace smll {
 		void	DrawFaces(const DetectionResults& faces);
 		void	DrawLandmarks(const dlib::point* points, uint8_t r, 
 			uint8_t g, uint8_t b);
-		void	DrawRect(const dlib::rectangle& r);
+		void	DrawRect(const dlib::rectangle& r, int width = 1);
 
 		void    DrawGlasses(const DetectionResult& face, int texture);
 		void    DrawMask(const DetectionResult& face, int texture);
@@ -99,6 +98,8 @@ namespace smll {
 
 		gs_texrender_t*				drawTexRender;
 
+		//color vector
+		struct vec4					veccol;
 		void						drawLines(const dlib::point* points,
 			int start, int end, bool closed = false);
 		void						drawLine(const dlib::point* points,

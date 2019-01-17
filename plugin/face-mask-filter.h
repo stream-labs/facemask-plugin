@@ -40,11 +40,22 @@ extern "C" {
 #include <libobs/obs-source.h>
 #include <libobs/graphics/matrix4.h>
 #pragma warning( pop )
+#define private private_var_name
+#include <libobs/obs-internal.h>
+#undef private
 }
 
 #define SSAA_UPSAMPLE_FACTOR 2
 
 using namespace std;
+
+enum convert_type {
+	CONVERT_NONE,
+	CONVERT_NV12,
+	CONVERT_420,
+	CONVERT_422_U,
+	CONVERT_422_Y,
+};
 
 namespace Plugin {
 	class FaceMaskFilter {
@@ -88,12 +99,14 @@ namespace Plugin {
 			void hide();
 			static void video_tick(void *, float);
 			void video_tick(float);
+			static struct obs_source_frame * filter_video(void *, struct obs_source_frame *);
+			struct obs_source_frame * filter_video(struct obs_source_frame *);
 			static void video_render(void *, gs_effect_t *);
 			void video_render(gs_effect_t *);
 			// callbacks
 			static bool generate_videos(obs_properties_t *pr, obs_property_t *p, void *data);
 			bool generate_videos(obs_properties_t *pr, obs_property_t *p);
-
+			cv::Mat convert_frame_to_gray_mat(obs_source_frame* frame);
 
 		protected:
 			// face detection thread
@@ -108,6 +121,7 @@ namespace Plugin {
 			Mask::MaskData*	LoadMask(std::string filename);
 			void LoadDemo();
 			void drawCropRects(int width, int height);
+			void drawMotionRects(int width, int height);
 			void updateFaces();
 			void setFaceTransform(const smll::ThreeDPose& pose,
 				bool billboard = false);
@@ -115,7 +129,6 @@ namespace Plugin {
 			void drawMaskData(Mask::MaskData*	maskData, bool depthOnly, 
 				bool staticOnly, bool rotationDisable);
 			gs_texture* RenderSourceTexture(gs_effect_t* effect);
-			bool SendSourceTextureToThread(gs_texture* sourceTexture);
 			void clearFramesActiveStatus();
 
 		private:
@@ -131,7 +144,7 @@ namespace Plugin {
 
 			// Face detector
 			smll::FaceDetector*		smllFaceDetector;
-			smll::OBSRenderer*		smllRenderer;
+			smll::OBSRenderer*      smllRenderer;
 
 			gs_effect_t*		custom_effect = nullptr;
 			int					m_scale_rate = 1;
@@ -141,8 +154,6 @@ namespace Plugin {
 			gs_texrender_t*		sourceRenderTarget;
 			gs_texrender_t*		drawTexRender;
 			gs_texrender_t*		alertTexRender;
-			gs_texrender_t*		detectTexRender;
-			gs_stagesurf_t*		detectStage;
 
 			// mask filenames
 			std::string			maskFolder;
@@ -172,6 +183,8 @@ namespace Plugin {
 			std::unique_ptr<Mask::MaskData>	maskData;
 			std::unique_ptr<Mask::MaskData>	introData;
 			std::unique_ptr<Mask::MaskData>	outroData;
+
+			std::mutex          passFrameToDetection;
 
 			// alert location
 			enum AlertLocation {
@@ -221,7 +234,6 @@ namespace Plugin {
 			};
 			std::vector<PreviewFrame>	previewFrames;
 			void WritePreviewFrames();
-			void WriteTextureToFile(gs_texture* tex, std::string filename);
 
 			// our current face detection results
 			smll::DetectionResults		faces;
@@ -234,6 +246,7 @@ namespace Plugin {
 			bool				drawFaces;
 			bool				drawMorphTris;
 			bool				drawFDRect;
+			bool				drawMotionRect;
 			bool				filterPreviewMode;
 			bool				autoBGRemoval;
 			bool				cartoonMode;
@@ -252,12 +265,13 @@ namespace Plugin {
 
 				// frames circular buffer (video_render()'s thread -> detection thread)
 				struct Frame {
-					smll::OBSTexture	capture;
-					smll::ImageWrapper	detect;
 					smll::MorphData     morphData;
 					std::mutex			mutex;
 					TimeStamp			timestamp;
+					int					resizeWidth;
+					int					resizeHeight;
 					bool				active;
+					cv::Mat             grayImage;
 				};
 				Frame frame;
 

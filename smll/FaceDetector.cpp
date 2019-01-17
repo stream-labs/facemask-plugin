@@ -40,17 +40,18 @@ using namespace std;
 namespace smll {
 
 	FaceDetector::FaceDetector()
-		: m_captureStage(nullptr)
-		, m_stageSize(0)
-		, m_timeout(0)
+		: m_timeout(0)
         , m_trackingTimeout(0)
         , m_detectionTimeout(0)
 		, m_trackingFaceIndex(0)
 		, m_camera_w(0)
-		, m_camera_h(0) {
+		, m_camera_h(0)
+		, isPrevInit(false)
+		, cropInfo(0,0,0,0) {
 		// Load face detection and pose estimation models.
 		m_detector = get_frontal_face_detector();
 
+		count = 0;
 
 		char *filename = obs_module_file(kFileShapePredictor68);
 #ifdef _WIN32
@@ -73,14 +74,6 @@ namespace smll {
 #endif
 		bfree(filename);
 	}
-
-	FaceDetector::~FaceDetector() {
-		obs_enter_graphics();
-		if (m_captureStage)
-			gs_stagesurface_destroy(m_captureStage);
-		obs_leave_graphics();
-	}
-
 
 	void FaceDetector::MakeVtxBitmaskLookup() {
 		if (m_vtxBitmaskLookup.size() == 0) {
@@ -131,64 +124,100 @@ namespace smll {
 			m_camera_matrix =
 				(cv::Mat_<float>(3, 3) <<
 					focal_length, 0,			center.x, 
-					0,			  focal_length, center.y, 
+					0, 			  focal_length, center.y,
 					0,			  0,			1);
 			// We assume no lens distortion
 			m_dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<float>::type);
 		}
 	}
-
-	void FaceDetector::computeCurrentImage(const ImageWrapper& detect) {
-		// Do image cropping and cv::Mat initialization in single shot
+	void FaceDetector::computeDifference(DetectionResults& results) {
 		CropInfo cropInfo = GetCropInfo();
+		float scale = (float) grayImage.rows / resizeHeight ;
+		if (!isPrevInit ) {
+			isPrevInit = true;
+			results.motionRect.set_bottom(currentImage.rows);
+			results.motionRect.set_right(currentImage.cols);
+			results.motionRect.set_left(0);
+			results.motionRect.set_top(0);
+			prevImage = currentImage.clone();
+			return;
+		}
 
-		char* cropData = detect.data +
-			(detect.getStride() * cropInfo.offsetY) +
-			(detect.getNumElems() * cropInfo.offsetX);
-		switch (detect.type) {
-		case IMAGETYPE_GRAY:
-		{
-			cv::Mat gray(cropInfo.height, cropInfo.width, CV_8UC1, cropData, m_detect.getStride());
-			currentImage = gray.clone();
-			break;
+		cv::Mat diffImage;
+		cv::absdiff(prevImage, currentImage, diffImage);
+		int blur_factor = Config::singleton().get_double(
+			CONFIG_DOUBLE_BLUR_FACTOR);
+		cv::GaussianBlur(diffImage, diffImage, cv::Size(blur_factor, blur_factor), 0, 0);
+
+		int threshold = Config::singleton().get_double(
+			CONFIG_DOUBLE_MOVEMENT_THRESHOLD);
+		int minY = diffImage.rows;
+		int minX = diffImage.cols;
+		int maxY = 0;
+		int maxX = 0;
+	
+		for (int j = 0; j < diffImage.rows; ++j){
+			for (int i = 0; i < diffImage.cols; ++i) 
+			{
+				int pix = (int)diffImage.at<uchar>(j, i);
+				if (pix > threshold)
+				{
+					minX = std::min(i, minX);
+					minY = std::min(j, minY);
+					maxX = std::max(i, maxX);
+					maxY = std::max(j, maxY);
+				}
+			}
 		}
-		case IMAGETYPE_RGB:
-		{
-			cv::Mat rgbImage(cropInfo.height, cropInfo.width, CV_8UC3, cropData, detect.getStride());
-			cv::Mat gray; cv::cvtColor(rgbImage, gray, cv::COLOR_RGB2GRAY);
-			currentImage = gray.clone();
-			break;
+		results.motionRect.set_left(minX*scale);
+		results.motionRect.set_right(maxX*scale);
+		results.motionRect.set_top(minY*scale);
+		results.motionRect.set_bottom(maxY*scale);
+
+	}
+	void FaceDetector::addFaceRectangles(DetectionResults& results) {
+
+		float paddingPercentage = Config::singleton().get_double(CONFIG_MOTION_RECTANGLE_PADDING);
+
+		for (int i = 0; i < m_faces.length; i++) {
+			// scale rectangle up to video frame size
+			results.motionRect.set_left(std::min((int)results.motionRect.left(), (int)((m_faces[i].m_bounds.left()))));
+			results.motionRect.set_right(std::max((int)results.motionRect.right(), (int)((m_faces[i].m_bounds.right()))));
+			results.motionRect.set_top(std::min((int)results.motionRect.top(), (int)((m_faces[i].m_bounds.top()))));
+			results.motionRect.set_bottom(std::max((int)results.motionRect.bottom(), (int)((m_faces[i].m_bounds.bottom()))));
 		}
-		case IMAGETYPE_BGR:
-		{
-			cv::Mat bgrImage(cropInfo.height, cropInfo.width, CV_8UC3, cropData, detect.getStride());
-			cv::Mat gray; cv::cvtColor(bgrImage, gray, cv::COLOR_BGR2GRAY);
-			currentImage = gray.clone();
-			break;
-		}
-		case IMAGETYPE_RGBA:
-		{
-			cv::Mat rgbaImage(cropInfo.height, cropInfo.width, CV_8UC4, cropData, detect.getStride());
-			cv::Mat gray; cv::cvtColor(rgbaImage, gray, cv::COLOR_RGBA2GRAY);
-			currentImage = gray.clone();
-			break;
-		}
-		case IMAGETYPE_BGRA:
-		{
-			cv::Mat bgraImage(cropInfo.height, cropInfo.width, CV_8UC4, cropData, detect.getStride());
-			cv::Mat gray; cv::cvtColor(bgraImage, gray, cv::COLOR_BGRA2GRAY);
-			currentImage = gray.clone();
-			break;
-		}
-		default:
-			throw std::invalid_argument(
-				"INVALID IMAGE TYPE - Check if the frame is valid");
-			break;
-		}
+
+		int delta_w = (int)grayImage.cols*paddingPercentage;
+		int delta_h = (int)grayImage.rows*paddingPercentage;
+		results.motionRect.set_left(std::max((int)results.motionRect.left() - delta_w, 0));
+		results.motionRect.set_right(std::min((int)results.motionRect.right()+ delta_w, grayImage.cols - 1));
+		results.motionRect.set_top(std::max((int)results.motionRect.top() - delta_h, 0));
+		results.motionRect.set_bottom(std::min((int)results.motionRect.bottom() + delta_h, grayImage.rows - 1));
 	}
 
-	void FaceDetector::DetectFaces(const ImageWrapper& detect, const OBSTexture& capture, DetectionResults& results) {
 
+	void FaceDetector::computeCurrentImage(DetectionResults& results) {
+		computeDifference(results);
+		addFaceRectangles(results);
+
+		float minMotionRectangle = Config::singleton().get_double(CONFIG_MIN_MOTION_RECTANGLE);
+		int MRectMinW = minMotionRectangle *grayImage.cols;
+		int MRectMinH = minMotionRectangle *grayImage.rows;
+		if (results.motionRect.width() < MRectMinW || results.motionRect.height() < MRectMinH) {
+			results.motionRect.set_bottom(grayImage.rows);
+			results.motionRect.set_right(grayImage.cols);
+			results.motionRect.set_left(0);
+			results.motionRect.set_top(0);
+		}
+		SetCropInfo(results);
+		// Do image cropping and cv::Mat initialization in single shot
+		CropInfo cropInfo = GetCropInfo();
+		
+		cv::Mat cropped = grayImage(cv::Rect(cropInfo.offsetX, cropInfo.offsetY, cropInfo.width, cropInfo.height));
+		currentImage = cropped.clone();
+	}
+
+	void FaceDetector::DetectFaces(cv::Mat &inputImage, int width, int height, DetectionResults& results) {
 		// Wait for CONFIG_INT_FACE_DETECT_FREQUENCY after all faces are lost before trying to detect them again
 		if (m_timeout > 0) {
 			m_timeout--;
@@ -196,22 +225,26 @@ namespace smll {
 		}
 
 		// better check if the camera res has changed on us
-		if ((detect.w != m_detect.w) ||
-			(detect.h != m_detect.h)) {
+		if ((resizeWidth != width) ||
+			(resizeHeight != height)) {
 			// forget whatever we thought were faces
 			m_faces.length = 0;
+			isPrevInit = false;
 		}
 
-		// save detect for convenience
-		m_detect = detect;
-		m_capture = capture;
-		// Compute GrayScale image.
-		// This will be used for the rest of the Computer Vision.
-		computeCurrentImage(detect);
+		resizeWidth = width;
+		resizeHeight = height;
+
+		grayImage = inputImage;
+
+		// Resize and cut out region of interest
+		cv::resize(grayImage, currentImage, cv::Size(resizeWidth, resizeHeight), 0, 0, cv::INTER_LINEAR);
+		currentOrigImage = currentImage.clone();
 
 		bool trackingFailed = false;
 		// if number of frames before the last detection is bigger than the threshold or if there are no faces to track
 		if (m_detectionTimeout == 0 || m_faces.length == 0) {
+			computeCurrentImage(results);
 			DoFaceDetection();
 			m_detectionTimeout =
 				Config::singleton().get_int(CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY);
@@ -234,7 +267,7 @@ namespace smll {
 			else {
 				m_trackingFaceIndex = 0;
 				// force detection on the next frame, do not wait for 5 frames
-				m_timeout == 0;
+				m_timeout = 0;
 				trackingFailed = true;
 			}
 
@@ -256,6 +289,9 @@ namespace smll {
 		}
 		results.length = m_faces.length;
 
+		if (trackingFailed || m_faces.length == 0) {
+
+		}
 		// If faces are not found
 		if (m_faces.length == 0 && !trackingFailed) {
             // Wait for 5 frames and do face detection
@@ -474,7 +510,6 @@ namespace smll {
 		MakeAreaIndices(result, triangleList);
 	}
 
-
 	void FaceDetector::AddSelectivePoints(cv::Subdiv2D& subdiv,
 		const std::vector<cv::Point2f>& points,
 		const std::vector<cv::Point2f>& warpedpoints, std::map<int, int>& vtxMap) {
@@ -612,7 +647,6 @@ namespace smll {
 		}
 	}
 
-
 	void FaceDetector::AddHeadPoints(std::vector<cv::Point2f>& points, const DetectionResult& face) {
 
 		points.reserve(points.size() + HP_NUM_HEAD_POINTS);
@@ -623,18 +657,6 @@ namespace smll {
 		// project all the head points
 		const cv::Mat& rot = face.GetCVRotation();
 		cv::Mat trx = face.GetCVTranslation();
-
-		/*
-		blog(LOG_DEBUG, "HEADPOINTS-----------------------");
-		blog(LOG_DEBUG, " trans: %5.2f, %5.2f, %5.2f",
-			(float)trx.at<double>(0, 0),
-			(float)trx.at<double>(1, 0),
-			(float)trx.at<double>(2, 0));
-		blog(LOG_DEBUG, "   rot: %5.2f, %5.2f, %5.2f",
-			(float)rot.at<double>(0, 0),
-			(float)rot.at<double>(1, 0),
-			(float)rot.at<double>(2, 0));
-			*/
 
 		std::vector<cv::Point2f> projheadpoints;
 		cv::projectPoints(headpoints, rot, trx, GetCVCamMatrix(), GetCVDistCoeffs(), projheadpoints);
@@ -823,9 +845,7 @@ namespace smll {
 				triangles[TriangulationResult::IDXBUFF_HULL].push_back(i1);
 				triangles[TriangulationResult::IDXBUFF_HULL].push_back(i2);
 			}
-			else /*if ((b0 & bgmask).any() ||
-				(b1 & bgmask).any() ||
-				(b2 & bgmask).any())*/ { 
+			else { 
 				triangles[TriangulationResult::IDXBUFF_BACKGROUND].push_back(i0);
 				triangles[TriangulationResult::IDXBUFF_BACKGROUND].push_back(i1);
 				triangles[TriangulationResult::IDXBUFF_BACKGROUND].push_back(i2);
@@ -941,96 +961,89 @@ namespace smll {
 	}
 
 	FaceDetector::CropInfo FaceDetector::GetCropInfo() {
-		// get cropping info from config and detect image dimensions
-		int ww = (int)((float)m_detect.w *
-			Config::singleton().get_double(
-				CONFIG_DOUBLE_FACE_DETECT_CROP_WIDTH));
-		int hh = (int)((float)m_detect.h *
-			Config::singleton().get_double(
-				CONFIG_DOUBLE_FACE_DETECT_CROP_HEIGHT));
-		int xx = (int)((float)(m_detect.w / 2) *
-			Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_X)) +
-			(m_detect.w / 2);
-		int yy = (int)((float)(m_detect.h / 2) *
-			Config::singleton().get_double(CONFIG_DOUBLE_FACE_DETECT_CROP_Y)) +
-			(m_detect.h / 2);
-
-		CropInfo cropInfo(xx, yy, ww, hh);
 		return cropInfo;
 	}
 
-    void FaceDetector::DoFaceDetection() {
+	void FaceDetector::SetCropInfo(DetectionResults& results) {
+		int ww = results.motionRect.right() - results.motionRect.left();
+		int hh = results.motionRect.bottom() - results.motionRect.top();
+		int xx = results.motionRect.left() + ww / 2;
+		int yy = results.motionRect.top()  + hh / 2;
+		if (ww <= 0 || hh <= 0 || results.motionRect.left() < 0 || results.motionRect.right() < 0 || results.motionRect.top() < 0 || results.motionRect.bottom() < 0) {
+			ww = grayImage.cols;
+			hh = grayImage.rows;
+			xx = ww/2;
+			yy = hh/2;
+		}
+		cropInfo = CropInfo(xx, yy, ww, hh);
+	}
+
+   void FaceDetector::DoFaceDetection() {
 
 		// get cropping info from config and detect image dimensions
 		CropInfo cropInfo = GetCropInfo();
 		// need to scale back
-		float scale = (float)m_capture.width / m_detect.w;
-
+		float scale = (float)grayImage.rows / resizeHeight;
+		cv::Mat detectionImg;
+		if (currentImage.cols*currentImage.rows <= resizeWidth*resizeHeight || scale == 0) {
+			scale = 1;
+			detectionImg = currentImage;
+		} else {
+			cv::resize(currentImage, detectionImg, cv::Size(currentImage.cols / scale, currentImage.rows / scale), 0, 0, cv::INTER_LINEAR);
+		}
+		
         // detect faces
 		std::vector<rectangle> faces;
-		dlib::cv_image<unsigned char> img(currentImage);
+		dlib::cv_image<unsigned char> img(detectionImg);
 		faces = m_detector(img);
 
 		// only consider the face detection results if:
         //
-        // - tracking is disabled (so we have to)
+        // - tracking is disabled (so we have to) 
         // - we currently have no faces
         // - face detection just found some faces
         //
         // otherwise, we are tracking faces, and the tracking is still trusted, so don't trust
         // the FD results
         //
+		if (faces.size() > 0) {
+			prevImage = currentOrigImage.clone();
+		}
         if ((m_faces.length == 0) || (faces.size() > 0)) {
             // clamp to max faces
 			m_faces.length = (int)faces.size() > MAX_FACES ? MAX_FACES : (int)faces.size();
-
             // copy rects into our faces, start tracking
             for (int i = 0; i < m_faces.length; i++) {
                 // scale rectangle up to video frame size
-				m_faces[i].m_bounds.set_left((long)((float)(faces[i].left() +
-					cropInfo.offsetX) * scale));
-                m_faces[i].m_bounds.set_right((long)((float)(faces[i].right() +
-					cropInfo.offsetX) * scale));
-                m_faces[i].m_bounds.set_top((long)((float)(faces[i].top() +
-					cropInfo.offsetY) * scale));
-                m_faces[i].m_bounds.set_bottom((long)((float)(faces[i].bottom() +
-					cropInfo.offsetY) * scale));
+				m_faces[i].m_bounds.set_left((long)((float)(faces[i].left()*scale +
+					cropInfo.offsetX )));
+                m_faces[i].m_bounds.set_right((long)((float)(faces[i].right()*scale +
+					cropInfo.offsetX)));
+                m_faces[i].m_bounds.set_top((long)((float)(faces[i].top()*scale +
+					cropInfo.offsetY)));
+                m_faces[i].m_bounds.set_bottom((long)((float)(faces[i].bottom()*scale +
+					cropInfo.offsetY)));
             }
+
         }
     }
     
         
     void FaceDetector::StartObjectTracking() {
-
-		// TODO: Complete full OpenCV 4.0.0 integration
-		//		Debug and Release and necessary dll's
-		//		Change the Face Data Structure
-		//		Log everything and then peace!
-		// get crop info from config and track image dimensions
-		CropInfo cropInfo = GetCropInfo();
-
 		// need to scale back
-		float scale = (float)m_capture.width / m_detect.w;
+		float scale = (float)grayImage.rows / resizeHeight;
 
         // start tracking
-		dlib::cv_image<unsigned char> img(currentImage);
+		dlib::cv_image<unsigned char> img(currentOrigImage);
 		for (int i = 0; i < m_faces.length; ++i) {
-			m_faces[i].StartTracking(img, scale, cropInfo.offsetX, cropInfo.offsetY);
+			m_faces[i].StartTracking(img, scale, 0, 0);
 		}
 	}
     
     
     void FaceDetector::UpdateObjectTracking() {
-
-		// get crop info from config and track image dimensions
-		CropInfo cropInfo = GetCropInfo();
-
-		char* cropdata = m_detect.data +
-			(m_detect.getStride() * cropInfo.offsetY) +
-			(m_detect.getNumElems() * cropInfo.offsetX);
-
 		// update object tracking
-		dlib::cv_image<unsigned char> img(currentImage);
+		dlib::cv_image<unsigned char> img(currentOrigImage);
 		for (int i = 0; i < m_faces.length; i++) {
 			if (i == m_trackingFaceIndex) {
 				double confidence = m_faces[i].UpdateTracking(img);
@@ -1043,58 +1056,15 @@ namespace smll {
 		}
 	}
     
-    
-    void FaceDetector::DetectLandmarks(const OBSTexture& capture, DetectionResults& results)
+	void FaceDetector::DetectLandmarks(DetectionResults& results)
     {
-		// convenience
-		m_capture = capture;
-
 		// detect landmarks
-		obs_enter_graphics();
 		for (int f = 0; f < m_faces.length; f++) {
-			StageCaptureTexture();
-
 			// Detect features on full-size frame
 			full_object_detection d68;
-			switch (m_stageWork.type) {
-			case IMAGETYPE_BGR:
-			{
-				cv::Mat bgrImage(m_stageWork.h, m_stageWork.w, CV_8UC3, m_stageWork.data, m_stageWork.getStride());
-				cv::Mat gray; cv::cvtColor(bgrImage, gray, cv::COLOR_BGR2GRAY);
-				dlib::cv_image<unsigned char> img(gray);
-				d68 = m_predictor68(img, m_faces[f].m_bounds);
-				break;
-			}
-			case IMAGETYPE_RGB:
-			{
-				cv::Mat rgbImage(m_stageWork.h, m_stageWork.w, CV_8UC3, m_stageWork.data, m_stageWork.getStride());
-				cv::Mat gray; cv::cvtColor(rgbImage, gray, cv::COLOR_RGB2GRAY);
-				dlib::cv_image<unsigned char> img(gray);
-				d68 = m_predictor68(img, m_faces[f].m_bounds);
-				break;
-			}
-			case IMAGETYPE_RGBA:
-			{
-				cv::Mat rgbaImage(m_stageWork.h, m_stageWork.w, CV_8UC4, m_stageWork.data, m_stageWork.getStride());
-				cv::Mat gray; cv::cvtColor(rgbaImage, gray, cv::COLOR_RGBA2GRAY);
-				dlib::cv_image<unsigned char> img(gray);
-				d68 = m_predictor68(img, m_faces[f].m_bounds);
-				break;
-			}
-			case IMAGETYPE_GRAY:
-			{
-				cv::Mat gray(m_stageWork.h, m_stageWork.w, CV_8UC1, m_stageWork.data, m_stageWork.getStride());
-				dlib::cv_image<unsigned char> img(gray);
-				d68 = m_predictor68(img, m_faces[f].m_bounds);
-				break;
-			}
-			default:
-				throw std::invalid_argument(
-					"bad image type for face detection - handle better");
-				break;
-			}
 
-			UnstageCaptureTexture();
+			dlib::cv_image<unsigned char> img(grayImage);
+			d68 = m_predictor68(img, m_faces[f].m_bounds);
 
 			// Sanity check
 			if (d68.num_parts() != NUM_FACIAL_LANDMARKS)
@@ -1105,7 +1075,7 @@ namespace smll {
 				results[f].landmarks68[j] = point(d68.part(j).x(), d68.part(j).y());
 			}
 		}
-		obs_leave_graphics();
+
 		results.length = m_faces.length;
 	}
 
@@ -1128,9 +1098,6 @@ namespace smll {
 	void FaceDetector::DoPoseEstimation(DetectionResults& results)
 	{
 		// Build a set of model points to use for solving 3D pose
-		// NOTE: The keypoints sould be selected w.r.t stability
-		// TODO: Reduce Keypoints, change pose solver,
-		//       change per-frame pose to temporal pose
 		std::vector<int> model_indices;
 		model_indices.push_back(LEFT_OUTER_EYE_CORNER);
 		model_indices.push_back(RIGHT_OUTER_EYE_CORNER);
@@ -1167,9 +1134,11 @@ namespace smll {
 			cv::solvePnP(model_points, image_points,
 				GetCVCamMatrix(), GetCVDistCoeffs(),
 				rotation, translation,
-				m_poses[i].PoseValid());
+				m_poses[i].PoseValid(),
+				cv::SOLVEPNP_EPNP);
 
-			// sometimes we get crap
+
+			// TODO: Check if we still get wrong results.
 			if (translation.at<double>(2, 0) > 1000.0 ||
 				translation.at<double>(2, 0) < -1000.0) {
 				resultsBad = true;
@@ -1177,7 +1146,8 @@ namespace smll {
 				break;
 			}
 
-			// check error again, still bad, use previous pose
+			// TODO: If possible, remove these sanity checks
+			// NOTE: If no pose is generated, use previous pose.
 			if (m_poses[i].PoseValid() &&
 				ReprojectionError(model_points, image_points, rotation, translation) > threshold) {
 				// reset pose
@@ -1194,42 +1164,6 @@ namespace smll {
 			// discard results
 			results.length = 0;
 		}
-	}
-
-	void FaceDetector::StageCaptureTexture() {
-		// need to stage the surface so we can read from it
-		// (re)alloc the stage surface if necessary
-		if (m_captureStage == nullptr ||
-			(int)gs_stagesurface_get_width(m_captureStage) != m_capture.width ||
-			(int)gs_stagesurface_get_height(m_captureStage) != m_capture.height) {
-			if (m_captureStage)
-				gs_stagesurface_destroy(m_captureStage);
-			m_captureStage = gs_stagesurface_create(m_capture.width, m_capture.height,
-				gs_texture_get_color_format(m_capture.texture));
-		}
-		gs_stage_texture(m_captureStage, m_capture.texture);
-
-		// mapping the stage surface 
-		uint8_t *data; uint32_t linesize;
-		if (gs_stagesurface_map(m_captureStage, &data, &linesize)) {
-
-			// Wrap the staged texture data
-			m_stageWork.w = m_capture.width;
-			m_stageWork.h = m_capture.height;
-			m_stageWork.stride = linesize;
-			m_stageWork.type = OBSRenderer::OBSToSMLL(
-				gs_texture_get_color_format(m_capture.texture));
-			m_stageWork.data = (char*)data;
-		}
-		else {
-			blog(LOG_DEBUG, "unable to stage texture!!! bad news!");
-			m_stageWork = ImageWrapper();
-		}
-	}
-
-	void FaceDetector::UnstageCaptureTexture() {
-		// unstage the surface and leave graphics context
-		gs_stagesurface_unmap(m_captureStage);
 	}
 
 	void FaceDetector::ResetFaces() {
