@@ -132,7 +132,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), 
 	drawMask(true),	drawAlert(false), drawFaces(false), drawMorphTris(false), drawFDRect(false), drawMotionRect(false),
 	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr), testMode(false), custom_effect(nullptr),
-	lastResultIndex(-1), sameFrameResults(false), logMode(true) {
+	lastResultIndex(-1), sameFrameResults(false), logMode(false), lastLogMode(false) {
 
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
 
@@ -191,6 +191,8 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 	if (T) {
 		T->SendString("stopping threads");
 	}
+
+
 	{
 		std::unique_lock<std::mutex> lock(maskDataMutex);
 		maskDataShutdown = true;
@@ -207,6 +209,10 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 		T->SendString("threads stopped");
 	}
 	PLOG_DEBUG("<%" PRIXPTR "> Worker Thread stopped.", this);
+
+	if (logOutput.is_open()) {
+		logOutput.close();
+	}
 
 	obs_enter_graphics();
 	gs_texrender_destroy(sourceRenderTarget);
@@ -297,6 +303,7 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 #endif
 }
 
+static std::string getTextTimestamp();
 
 obs_properties_t * Plugin::FaceMaskFilter::Instance::get_properties(void *ptr) {
 	obs_properties_t* props = obs_properties_create();
@@ -518,8 +525,7 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	autoBGRemoval = obs_data_get_bool(data, P_BGREMOVAL);
 	cartoonMode = obs_data_get_bool(data, P_CARTOON);
 	testMode = obs_data_get_bool(data, P_TEST_MODE);
-	logMode = obs_data_get_bool(data, P_LOG_MODE);
-
+	
 	// Anti-aliasing
 	antialiasing_method = (int)obs_data_get_int(data, P_ANTI_ALIASING);
 
@@ -550,6 +556,21 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 			demoModeFolder.pop_back();
 		}
 	}
+
+	logMode = obs_data_get_bool(data, P_LOG_MODE);
+
+	if (!lastLogMode && logMode) {
+		if (logOutput.is_open()) {
+			logOutput.close();
+		}
+		std::string fileLog = getTextTimestamp() + ".txt";
+		if (!demoModeFolder.empty()) {
+			fileLog = demoModeFolder + "\\" + fileLog;
+		}
+		logOutput.open(fileLog);
+		logOutput.setf(ios::fixed);
+	}
+	lastLogMode = logMode;
 
 	// update our param values
 	drawMask = obs_data_get_bool(data, P_DRAWMASK);
@@ -1191,9 +1212,13 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		int actualLatency = std::chrono::duration_cast<std::chrono::milliseconds>(processEnd - lastActualTimestamp).count();
 		int renderTime = std::chrono::duration_cast<std::chrono::microseconds>(processEnd - renderTimestamp).count();
 		int elapsedLatency = elapsedMs.count();
-		blog(LOG_DEBUG, "[FaceMask] Latency: %d, Latency # Frames: %.1f, %s, sameFrameResults: %s", elapsedLatency, (float)elapsedLatency / 33.3f, processedFrameResults.to_string().c_str(), B2S(sameFrameResults));
-		blog(LOG_DEBUG, "[FaceMask] Actual Latency: %d, Act. Latency # Frames: %.1f", actualLatency, (float)actualLatency / 33.3f);
-		blog(LOG_DEBUG, "[FaceMask] Render Time: %d micro secs.", renderTime);
+		if (logOutput.is_open()) {
+			logOutput << "Latency: " << elapsedLatency << ", Latency # Frames: " << setprecision(1) << (float)elapsedLatency / 33.3f << ", " << processedFrameResults.to_string() << ", SameFrameResults: " << B2S(sameFrameResults) << endl; 
+			logOutput <<"Actual Latency: "<< setprecision(1) << actualLatency <<", Act. Latency  # Frames: %.1f" << (float)actualLatency << std::endl;
+			logOutput << "Render Time: " << renderTime << " micro secs." << std::endl;
+			logOutput.flush();
+		}
+
 	}
 	// since we are on the gpu right now anyway, here is 
 	// a good spot to unload mask data if we need to.
