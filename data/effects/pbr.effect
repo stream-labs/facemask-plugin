@@ -39,10 +39,21 @@ uniform int normalMap = 0;
 uniform texture2d normalTex;
 uniform int reflectMap = 0;
 uniform texture2d reflectTex;
+
+uniform int iblSpecMap = 0;
+uniform texture2d iblSpecTex;
+uniform int iblDiffMap = 0;
+uniform texture2d iblDiffTex;
+uniform int iblBRDFMap = 0;
+uniform texture2d iblBRDFTex;
+
 uniform int roughnessMap = 0;
 uniform texture2d roughnessTex;
 uniform int metalnessMap = 0;
 uniform texture2d metalnessTex;
+uniform int metalnessRoughnessMap = 0;
+uniform texture2d metallicRoughnessTex;
+uniform int metallicRoughnessMap = 0;
 
 // MATERIAL COLORS
 uniform float4 ambientColor = {0.2, 0.2, 0.2, 1.0};
@@ -95,53 +106,23 @@ uniform float3 light3Diffuse = {0.8, 0.8, 0.8};
 uniform float3 light3Specular = {1.0, 1.0, 1.0};
 uniform float  light3Angle = 45.0;
 
+// PBR VARS
+uniform float metalness = 0.0;
+uniform float roughness = 0.5;
+
 // OTHER VARS
 uniform float shininess = 8.0;
 uniform int transformNormals = 1;
 uniform float alpha = 1.0;
 
-
 // TEXTURE SAMPLERS
-sampler_state normalSampler {
+sampler_state tex_sampler {
 	Filter    = Linear;
-	AddressU  = Clamp;
-	AddressV  = Clamp;
+	AddressU  = Wrap;
+	AddressV  = Wrap;
 };
-sampler_state ambientSampler {
-	Filter    = Linear;
-	AddressU  = Clamp;
-	AddressV  = Clamp;
-};
-sampler_state diffuseSampler {
-	Filter    = Linear;
-	AddressU  = Clamp;
-	AddressV  = Clamp;
-};
-sampler_state specularSampler {
-	Filter    = Linear;
-	AddressU  = Clamp;
-	AddressV  = Clamp;
-};
-sampler_state emissiveSampler {
-	Filter    = Linear;
-	AddressU  = Clamp;
-	AddressV  = Clamp;
-};
-sampler_state reflectSampler {
-	Filter    = Linear;
-	AddressU  = Clamp;
-	AddressV  = Clamp;
-};
-sampler_state roughnessSampler {
-	Filter    = Linear;
-	AddressU  = Clamp;
-	AddressV  = Clamp;
-};
-sampler_state metalnessSampler {
-	Filter    = Linear;
-	AddressU  = Clamp;
-	AddressV  = Clamp;
-};
+
+
 
 // VERTEX IN (to vertex shader)
 //
@@ -180,45 +161,23 @@ struct VertDataOut {
 	float3 bitangent: TEXCOORD2;
 };
 
-
-// smoothstep : used for light attenuation
-//
-float smoothstep(float edge0, float edge1, float x) {
-    float t = clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
-    return t; //* t * (3.0 - 2.0 * t);
-}
-
-float GGX(float3 normal, float3 view_dir, float3 light_dir, float roughness, float F0)
-{
-	float alpha = roughness * roughness;
-	float3 halfway_dir = normalize(view_dir + light_dir);
+float get_fresnel_contrib() {
 	
-	float NdL = saturate(dot(normal,light_dir));
-	float NdV = saturate(dot(normal,view_dir));
-	float NdH = saturate(dot(normal,halfway_dir));
-	float LdH = saturate(dot(light_dir,H));
-
-	// distribution (how microfacet normals are distributed)
-	float alpha_2 = alpha * alpha;
-	float denom = NdH * NdH *(alpha_2-1.0) + 1.0;
-	float distribution = alpha_2 / (pi * denom * denom);
-
-	// fresnel (grazing angle reflectivity)
-	float LdH_5 = NdH * NdH * (alpha_2 - 1.0) + 1.0;
-	float fresnel = F0 + (1-F0)*LdH_5;
-
-	// geometry term (visiblity)
-	float k = alpha / 2.0;
-	float G1V = NdV*(1.0-k)+k;
-	float G1L = NdL*(1.0-k)+k
-	float geometry = 0.25 * rcp(G1V*G1L);
-
-	return distribution * fresnel * geometry;
+	float3 view_dir = normalize(-vpos);
+	float VdH = clamp(dot(view_dir,halfway_dir), 0.0, 1.0);
+	
+	float3 halfway_dir = normalize(view_dir + light_dir);
+	float3 F0_vec = {F0,F0,F0};
+	float3 specular_color = lerp(F0, albedo.rgb, metalness);
+	float reflectance = max(specular_color.r,max(specular_color.g,specular_color.b));
+	float reflectance90 = clamp(reflectance*25.0, 0.0 ,1.0);
+	float3 spec_env_R0 = specular_color.rgb;
+	float3 spec_env_R90 = float3(1.0, 1.0, 1.0)* reflectance90;
+	float fresnel_spec_color = spec_env_R0 + (spec_env_R90 - spec_env_R0) * pow(saturate(1.0-VdH), 5.0);
 }
 
-// DoLighting:  Calculates lighting for a single light and vert
-//
-float3 DoLighting(
+
+float4 DoLighting(
 float3 vpos,
 float3 normal,
 float4 ambColor,
@@ -238,7 +197,7 @@ float3 lightSpecular,
 float  lightAngle) {
 
 	// ambient
-	float3 result = ambColor.xyz * lightAmbient;
+	float4 result = float4(0,0,0,0);
 	
 	// non-ambient lights
 	if (lightType != 0) {
@@ -262,11 +221,13 @@ float  lightAngle) {
 		float attenuation = 1.0;
 		// point and spot lights have attenuation
 		if (lightType == 2 || lightType == 3) {
-			float d = length(lightV) / 100.0;
-			float attenuation = 1.0 / 
-				(lightAttenuation.x + 
+			float d = length(lightPosition - vpos) / 100.0;
+			float decay_denom = lightAttenuation.x + 
 				 (lightAttenuation.y * d) +
-				 (lightAttenuation.z * d * d));
+				 (lightAttenuation.z * d * d);
+
+			if(decay_denom > 0.0)
+				attenuation = 1.0 / decay_denom;
 			
 			// spot lights have angle 
 			if (lightType == 3) {
@@ -275,26 +236,55 @@ float  lightAngle) {
 				float cosAngle = dot( light_dir, -lightV );
 				attenuation *= smoothstep( minCos, maxCos, cosAngle ); 
 			}
+			attenuation = saturate(attenuation);
 		}
-
 		float3 view_dir = normalize(-vpos);
 		float light_intensity = saturate(dot(light_dir, normal));
 		
-		float NdL = saturate(dot(normal,light_dir));
-		
-		float3 specular = float3(0.0);
-		if(light_intensity > 0.0)
-			specular = GGX(normal, view_dir, light_dir, roughness, F0);
+		float3 F0_vec = {F0,F0,F0};
+		float3 diffuse_color = albedo.rgb * (1.0-F0);
+		diffuse_color *= 1.0 - metalness;
+		float3 specular_color = lerp(F0, albedo.rgb, metalness);
+		float reflectance = max(specular_color.r,max(specular_color.g,specular_color.b));
+		float reflectance90 = clamp(reflectance*25.0, 0.0 ,1.0);
+		float3 spec_env_R0 = specular_color.rgb;
+		float3 spec_env_R90 = float3(1.0, 1.0, 1.0)* reflectance90;
+		float3 reflection = -normalize(reflect(view_dir, normal));
 
-		float3 diffuse = albedo * (1.0 - metalness);
+		float3 halfway_dir = normalize(view_dir + light_dir);
+	
+		float NdL = clamp(dot(normal,light_dir), 0.001, 1.0);
+		float NdV = clamp(dot(normal,view_dir), 0.001, 1.0);
+		float NdH = clamp(dot(normal,halfway_dir), 0.0, 1.0);
+		float LdH = clamp(dot(light_dir,halfway_dir), 0.0, 1.0);
+		float VdH = clamp(dot(view_dir,halfway_dir), 0.0, 1.0);
 
-		float3 color = NdL * lightDiffuse * attenuation * (diffuse + specular);
+		float fresnel_spec_color = spec_env_R0 + (spec_env_R90 - spec_env_R0) * pow(saturate(1.0-VdH), 5.0);
+
+
+		float alpha = roughness * roughness;
+		float alpha_2 = alpha * alpha;
+		float denom = NdH * NdH *(alpha_2-1.0) + 1.0;
+		float distribution = alpha_2 / (PI * denom * denom);
+
+		float attenuationL = 2.0 * NdL / (NdL + sqrt(alpha_2 + (1.0-alpha_2)*(NdL*NdL)));
+		float attenuationV = 2.0 * NdV / (NdV + sqrt(alpha_2 + (1.0-alpha_2)*(NdV*NdV)));
+		float geometry = attenuationL * attenuationV;
+
+		float3 diffuse_contrib = (1.0 - fresnel_spec_color) * albedo.rgb / PI;
+		float3 spec_contrib = fresnel_spec_color * geometry * distribution / (4.0 * NdL * NdV);
+		float3 final_spec_color = NdL*lightSpecular*spec_contrib;
+		float3 final_diff_color = NdL*lightDiffuse*diffuse_contrib;
+		float3 color_rgb = final_diff_color*albedo.a + final_spec_color;
+		float4 color = float4(color_rgb, max(albedo.a, spec_contrib.g));
+		// color *= 0.0001;
+
 		result += color;
 	}
+	result += float4(ambColor.xyz * lightAmbient,0);
+
 	return result;
 }
-
-
 
 
 // VSPhong : Vertex Shader
@@ -441,60 +431,127 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 {
 	// world space vertex position
 	float3 vpos = v_in.vpos.xyz;
-	
+
+
 	// normal
 	float3 normal = normalize(v_in.norm);
+
+#ifdef NORMAL_TEX	
 	if (normalMap != 0) {
 		float3 tangent = normalize(v_in.tangent);
 		float3 bitangent = normalize(v_in.bitangent);
 		float3x3 TBN = float3x3( tangent, bitangent, normal );
 
-		normal = normalTex.Sample(normalSampler, v_in.uv).xyz * 2.0 - 1.0;
+		normal = normalTex.Sample(tex_sampler, v_in.uv).xyz * 2.0 - 1.0;
 		normal = normalize(mul(normal, TBN));
 	}
+#endif
 
 	// material colors
 	float4 ambColor = ambientColor;
-	float4 dffColor = diffuseColor;
+	float4 albedoColor = diffuseColor;
 	float4 spcColor = specularColor;
 	float4 emmColor = emissiveColor;
 
-	float metalness = 0.0;
-	float roughness = 0.5;
-	
-	// texture maps
-	if (ambientMap != 0)
-		ambColor = ambientTex.Sample(ambientSampler, v_in.uv);
-	if (diffuseMap != 0)
-		dffColor = diffuseTex.Sample(diffuseSampler, v_in.uv);
-	if (specularMap != 0)
-		spcColor = specularTex.Sample(specularSampler, v_in.uv);
-	if (emissiveMap != 0)
-		emmColor = emissiveTex.Sample(emissiveSampler, v_in.uv);
-	// TODO: pack roughness/metalness/AO in one texture
-	if (roughnessMap != 0)
-		roughness = max(0.001, roughnessTex.Sample(roughnessSampler, v_in.uv).r);
-	if (metalnessMap != 0)
-		metalness = metalnessTex.Sample(metalnessSampler, v_in.uv).r;
+	float F0 = 0.04;
+	float _roughness = max(roughness , 0.04);
+	float _metalness = metalness;
 
-	float4 reflect_color(0.0);
+	// texture maps
+#ifdef AMBIENT_TEX
+	if (ambientMap != 0)
+		ambColor = ambientTex.Sample(tex_sampler, v_in.uv);
+#endif
+
+#ifdef DIFFUSE_TEX
+	if (diffuseMap != 0)
+		albedoColor = diffuseTex.Sample(tex_sampler, v_in.uv);
+#endif
+
+#ifdef SPECULAR_TEX
+	if (specularMap != 0)
+		spcColor = specularTex.Sample(tex_sampler, v_in.uv);
+#endif
+
+#ifdef EMISSIVE_TEX
+	if (emissiveMap != 0)
+		emmColor = emissiveTex.Sample(tex_sampler, v_in.uv);
+#endif
+
+#ifdef ROUGHNESS_TEX
+	if (roughnessMap != 0)
+		_roughness = max(0.04, roughnessTex.Sample(tex_sampler, v_in.uv).r);
+#endif
+
+#ifdef METALNESS_TEX
+	if (metalnessMap != 0)
+		_metalness = metalnessTex.Sample(tex_sampler, v_in.uv).r;
+#endif
+
+#ifdef METALLICROUGHNESS_TEX
+	if (metallicRoughnessMap != 0) {
+		// R: Occlusion
+		// G: Roughness
+		// B: Metalness
+		// occlusion = metalnessTex.Sample(tex_sampler, v_in.uv).r;
+		_roughness = max(0.04, metallicRoughnessTex.Sample(tex_sampler, v_in.uv).g);
+		_metalness = metallicRoughnessTex.Sample(tex_sampler, v_in.uv).b;
+	}
+#endif
+
+	// Start with full transparent color
+	float4 base_color = {0,0,0,0};
+	// base_color -= emmColor.xyz;
 	
-	if (reflectMap != 0) {
-		float3 r = reflect(normalize(-vpos), normal);
+	
+	float3 view_dir = normalize(-vpos);
+	float NdV = clamp(dot(normal,view_dir), 0.001, 1.0);
+	float3 diffuse_color = albedoColor.rgb * (1.0-F0);
+	diffuse_color *= 1.0 - _metalness;
+	float3 specular_color = lerp(F0, albedoColor.rgb, _metalness);
+
+#ifdef IBL_SPEC_TEX
+	if (iblSpecMap != 0 && iblBRDFMap != 0 && iblDiffMap != 0) {
+		float3 r = -normalize(reflect(-vpos, normal));
 		float m = 2.0 * sqrt( pow( r.x, 2.0 ) + pow( r.y, 2.0 ) + pow( r.z + 1.0, 2.0 ) );
 		float2 vN = r.xy / m + 0.5;
-		vN.y = 1.0 - vN.y; // need to flip Y
-		
-		reflect_color = reflectTex.Sample(reflectSampler, vN);
-	}
-	
-	// emmissive
-	float3 base_color = emmColor.xyz;
-	float F0 = 0.04;
 
+		// float3 refr = normalize(refract(-vpos, normal, 1.125));
+		// float m_rfr = 2.0 * sqrt( pow( refr.x, 2.0 ) + pow( refr.y, 2.0 ) + pow( refr.z + 1.0, 2.0 ) );
+		// float2 vN_rfr = refr.xy / m_rfr + 0.5;
+		// vN_rfr.y = 1.0 - vN_rfr.y;
+		// this is incorrect but it is to avoid the edges of the ball
+		// float4 ibl_refr_light = iblSpecTex.Sample(tex_sampler, vN_rfr);
+		
+		float4 ibl_spec_light = iblSpecTex.Sample(tex_sampler, vN);
+		// ibl_diff_light = iblDiffTex.Sample(tex_sampler, normal);
+		// ibl_diff_light *= 0.0001;
+		float mdf = 2.0 * sqrt( pow( normal.x, 2.0 ) + pow( normal.y, 2.0 ) + pow( normal.z + 1.0, 2.0 ) );
+		float2 vNdf = normal.xy / mdf + 0.5;
+		float4 ibl_diff_light = iblDiffTex.Sample(tex_sampler, vNdf);
+		float3 diff_ibl = ibl_diff_light.rgb*diffuse_color.rgb;
+
+		// float3 spec_ibl = ibl_spec_light.rgb*();
+#ifdef IBL_BRDF_TEX
+		float3 brdf = iblBRDFTex.Sample(tex_sampler,float2(NdV, 1.0 - roughness)).rgb;
+		float3 reflectivity = specular_color*brdf.x+brdf.y;
+#else
+		// not accurate at all, just a fallback to avoid the shader fail fully
+		float3 reflectivity = specular_color*saturate((1.0-roughness)*NdV+1.0*(1.0-roughness));
+#endif
+
+		float3 spec_ibl = ibl_spec_light.rgb*reflectivity;
+		float ibl_luminance = 0.2126*reflectivity.r+0.7152*reflectivity.g+0.722*reflectivity.b;
+		// ibl_luminance = (ibl_luminance*brdf.x+brdf.y);
+		// base_color += float4(diff_ibl*albedoColor.a, albedoColor.a) + float4(spec_ibl, ibl_luminance);
+		base_color += float4(diff_ibl*albedoColor.a + spec_ibl, max(albedoColor.a,saturate(albedoColor.a+ibl_luminance)));
+		// base_color *= 0.0001;
+	}
+	#endif
+	
 	// NO LIGHTS
 	if (numLights == 0) {
-		base_color += dffColor.xyz;
+		base_color += albedoColor;
 	}
 	
 	// LIGHT 0
@@ -503,11 +560,11 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 			vpos,
 			normal,
 			ambColor,
-			dffColor,
+			albedoColor,
 			spcColor,
 			emmColor,
-			metalness,
-			roughness,
+			_metalness,
+			_roughness,
 			F0,
 			light0Type, 
 			light0Position, 
@@ -525,11 +582,11 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 			vpos,
 			normal,
 			ambColor,
-			dffColor,
+			albedoColor,
 			spcColor,
 			emmColor,
-			metalness,
-			roughness,
+			_metalness,
+			_roughness,
 			F0,
 			light1Type, 
 			light1Position, 
@@ -547,11 +604,11 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 			vpos,
 			normal,
 			ambColor,
-			dffColor,
+			albedoColor,
 			spcColor,
 			emmColor,
-			metalness,
-			roughness,
+			_metalness,
+			_roughness,
 			F0,
 			light2Type, 
 			light2Position, 
@@ -569,11 +626,11 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 			vpos,
 			normal,
 			ambColor,
-			dffColor,
+			albedoColor,
 			spcColor,
 			emmColor,
-			metalness,
-			roughness,
+			_metalness,
+			_roughness,
 			F0,
 			light3Type, 
 			light3Position, 
@@ -585,9 +642,12 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 			light3Angle);
 	}
 
-	float3 final_color = saturate(base_color + reflect_color);
+	// NOTE here we don't let emissive material change opacity
+	float4 final_color = base_color;
+	final_color.rgb += emmColor.rgb;
+	final_color.a = saturate(final_color.a);
 	
-	return float4(final_color.rgb, dffColor.a * alpha);
+	return final_color;
 }
 
 

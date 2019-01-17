@@ -299,6 +299,13 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 		if(prmd)
 			obs_data_release(prmd);
 	}
+
+	std::vector<std::string> active_textures;
+	for (const auto &e : m_imageParameters) {
+		active_textures.push_back(e.first);
+	}
+
+	m_effect->SetActiveTextures(active_textures);
 }
 
 Mask::Resource::Material::~Material() {
