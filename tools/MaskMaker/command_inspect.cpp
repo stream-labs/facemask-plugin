@@ -459,11 +459,11 @@ void command_inspect(Args& args) {
 	// get filename
 	string resFile = args.value("file");
 	if (resFile.length() == 0) {
-		//cout << "You must specify a file with inspect." << endl;
+		//cerr << "You must specify a file with inspect." << endl;
 		return;
 	}
 
-	//cout << "Importing '" << resFile << "'..." << endl;
+	//cerr << "Importing '" << resFile << "'..." << endl;
 
 	// make new json
 	json j = args.createNewJson();
@@ -483,7 +483,7 @@ void command_inspect(Args& args) {
 
 	// If the import failed, report it
 	if (!scene) {
-		//cout << "Assimp is unable to import '" << resFile << "'." << endl;
+		//cerr << "Assimp is unable to import '" << resFile << "'." << endl;
 		return;
 	}
 
@@ -500,7 +500,7 @@ void command_inspect(Args& args) {
 	json rez;
 
 	// Add all the meshes
-	//cout << "Importing " << scene->mNumMeshes << " meshes..." << endl;
+	//cerr << "Importing " << scene->mNumMeshes << " meshes..." << endl;
 	for (unsigned int i = 0; i < scene->mNumMeshes; i++) {
 		// sometimes meshes don't have names
 		if (scene->mMeshes[i]->mName.length == 0) {
@@ -511,10 +511,10 @@ void command_inspect(Args& args) {
 		aiMesh* mesh = scene->mMeshes[i];
 
 		if (!mesh->mTangents) {
-			cout << "*** MESH HAS NO TANGENTS! (NO NORMAL MAPPING) ***" << endl;
+			cerr << "*** MESH HAS NO TANGENTS! (NO NORMAL MAPPING) ***" << endl;
 		}
 		if (!mesh->mTextureCoords[0]) {
-			cout << "*** MESH HAS NO TEXTURE COORDINATES! (NO TEXTURE MAPPING) ***" << endl;
+			cerr << "*** MESH HAS NO TEXTURE COORDINATES! (NO TEXTURE MAPPING) ***" << endl;
 		}
 
 		// is this a skinned mesh?
@@ -560,28 +560,28 @@ void command_inspect(Args& args) {
 			// sanity checks
 			for (unsigned int j = 0; j < mesh->mNumVertices; j++) {
 				if (verts[j].bones.size() == 0) {
-					cout << "WARNING! SKINNED MESH HAS ENTIRELY UNWEIGHTED VERTEX!" << endl;
+					cerr << "WARNING! SKINNED MESH HAS ENTIRELY UNWEIGHTED VERTEX!" << endl;
 				}
 				if (verts[j].bones.size() > MAX_BONES_PER_SKIN) {
-					cout << "WARNING! SKINNED MESH VERTEX " << j << " HAS TOO MANY WEIGHTS! " << verts[j].bones.size() << endl;
+					cerr << "WARNING! SKINNED MESH VERTEX " << j << " HAS TOO MANY WEIGHTS! " << verts[j].bones.size() << endl;
 					for (unsigned int k = 0; k < verts[j].bones.size(); k++) {
-						cout << " vert bone index: " << verts[j].bones[k].bone << " : " << verts[j].bones[k].weight << endl;
+						cerr << " vert bone index: " << verts[j].bones[k].bone << " : " << verts[j].bones[k].weight << endl;
 					}
 				}
 				float total = 0.0f;
 				for (unsigned int k = 0; k < verts[j].bones.size(); k++) {
 					total += verts[j].bones[k].weight;
 					if (verts[j].bones[k].weight < 0.001) {
-						cout << "WARNING! SKINNED MESH HAS VERTEX WITH ZERO WEIGHT!" << endl;
+						cerr << "WARNING! SKINNED MESH HAS VERTEX WITH ZERO WEIGHT!" << endl;
 					}
 				}
 				if (total < 0.99f) {
-					cout << "WARNING! SKINNED MESH HAS VERTEX WITH NON-UNITY SUM WEIGHTS!" << endl;
+					cerr << "WARNING! SKINNED MESH HAS VERTEX WITH NON-UNITY SUM WEIGHTS!" << endl;
 				}
 			}
 			for (unsigned int j = 0; j < mesh->mNumFaces; j++) {
 				if (tris[j].bones.size() > MAX_BONES_PER_SKIN) {
-					cout << "WARNING! SKINNED MESH TRIANGLE " << j << " HAS TOO MANY WEIGHTS! " << tris[j].bones.size() << endl;
+					cerr << "WARNING! SKINNED MESH TRIANGLE " << j << " HAS TOO MANY WEIGHTS! " << tris[j].bones.size() << endl;
 				}
 			}
 
@@ -735,12 +735,12 @@ void command_inspect(Args& args) {
 
 				// Break endless loop
 				if (numVertices == 0) {
-					cout << "COULD NOT CREATE SKINNED MESH. BAILING." << endl;
+					cerr << "COULD NOT CREATE SKINNED MESH. BAILING." << endl;
 					break;
 				}
 
 				vertices.num = numVertices;
-				//cout << "Creating skin with " << numVertices << " vertices, " << numIndices / 3 << " triangles" << endl;
+				//cerr << "Creating skin with " << numVertices << " vertices, " << numIndices / 3 << " triangles" << endl;
 
 				// encode 
 				size_t vbuffSize = vertices.size();
@@ -866,20 +866,20 @@ void command_inspect(Args& args) {
 
 	// Add all the textures
 	int count = 0;
-	//cout << "Importing textures..." << endl;
+	//cerr << "Importing textures..." << endl;
 	map<std::tuple<string, unsigned int>, bool> textureHasAlpha;
 	for (auto it = textureFiles.begin(); it != textureFiles.end(); it++, count++) {
 		json o = args.createImageResourceFromFile(it->second);
 		textureHasAlpha[it->first] = args.lastImageHadAlpha;
 		//if (args.lastImageHadAlpha)
-			//cout << std::get<string>(it->first) << " " << " has alpha" << endl;
+			//cerr << std::get<string>(it->first) << " " << " has alpha" << endl;
 		rez[std::get<string>(it->first) + "-" + std::to_string(std::get<unsigned int>(it->first))] = o;
 	}
-	//cout << "Imported " << count << " textures." << endl;
+	//cerr << "Imported " << count << " textures." << endl;
 
 	// Add all the materials
 	count = 0;
-	//cout << "Importing " << scene->mNumMaterials << " materials..." << endl;
+	//cerr << "Importing " << scene->mNumMaterials << " materials..." << endl;
 	for (unsigned int i = 0; i < scene->mNumMaterials; i++) {
 
 		aiMaterial* mtl = scene->mMaterials[i];
@@ -1007,9 +1007,9 @@ void command_inspect(Args& args) {
 		}
 
 		//if (opaque)
-		//	cout << "Material " << count << " is opaque." << endl;
+		//	cerr << "Material " << count << " is opaque." << endl;
 		//else
-		//	cout << "Material " << count << " is NOT opaque." << endl;
+		//	cerr << "Material " << count << " is NOT opaque." << endl;
 
 		int mode[10];
 		unsigned int max = 10;
@@ -1044,7 +1044,7 @@ void command_inspect(Args& args) {
 	}
 
 	// Add models
-	//cout << "Importing " << scene->mNumMeshes << " models..." << endl;
+	//cerr << "Importing " << scene->mNumMeshes << " models..." << endl;
 	for (unsigned int i = 0; i < scene->mNumMeshes; i++) {
 		aiMesh* mesh = scene->mMeshes[i];
 
@@ -1065,7 +1065,7 @@ void command_inspect(Args& args) {
 	}
 
 	// Add lights
-	//cout << "Importing " << scene->mNumLights << " lights..." << endl;
+	//cerr << "Importing " << scene->mNumLights << " lights..." << endl;
 	for (unsigned int i = 0; i < scene->mNumLights; i++) {
 		aiLight* light = scene->mLights[i];
 
@@ -1156,7 +1156,7 @@ void command_inspect(Args& args) {
 	}
 
 	// Add animations
-	//cout << "Adding animations..." << endl;
+	//cerr << "Adding animations..." << endl;
 	InspectAnimations(args, scene, rez);
 
 	// Set resources
@@ -1179,7 +1179,7 @@ void command_inspect(Args& args) {
 
 	// write it out
 	args.outputJson(j);
-	//cout << "Done!" << endl << endl;
+	//cerr << "Done!" << endl << endl;
 }
 
 

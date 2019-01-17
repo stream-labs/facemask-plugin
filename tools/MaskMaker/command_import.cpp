@@ -275,6 +275,7 @@ string AddNodes(const aiScene* scene, aiNode* node, json* parts) {
 
 	string nodeName = node->mName.C_Str();
 	bool needs_local_nodes = false;
+	string source_node_name = string();
 	if (nodeName != "root") {
 		json part;
 		if (node->mParent) {
@@ -322,10 +323,11 @@ string AddNodes(const aiScene* scene, aiNode* node, json* parts) {
 			int type;
 			if (node->mMetaData->Get("InheritType", type))
 			{
+				needs_local_nodes = true;
+				source_node_name = node->mName.C_Str();
 				if (type != INHERIT_TYPE_RSrs)
 				{
 					part["inherit-type"] = type;
-					needs_local_nodes = true;
 				}
 			}
 		}
@@ -369,10 +371,7 @@ string AddNodes(const aiScene* scene, aiNode* node, json* parts) {
 		AddNodes(scene, node->mChildren[i], parts);
 	}
 
-	if (needs_local_nodes)
-		return node->mName.C_Str();
-	else
-		return string();
+	return source_node_name;
 }
 
 aiNode* FindNode(aiNode* node, const string& name) {
@@ -993,11 +992,15 @@ void command_import(Args& args) {
 		aiColor4D scolor = aiColor4D(0.0f, 0.0f, 0.0f, 1.0f);
 		if (AI_SUCCESS == aiGetMaterialColor(mtl, AI_MATKEY_COLOR_SPECULAR, &scolor) &&
 			nspc == 0) {
+			// assimp stores specularfactor in shininess_strength
+			// attenuate specularcolor using this number
+			float strength = 1;
+			aiGetMaterialFloat(mtl, AI_MATKEY_SHININESS_STRENGTH, &strength);
 			json parm;
 			json cc;
-			cc["x"] = scolor.r;
-			cc["y"] = scolor.g;
-			cc["z"] = scolor.b;
+			cc["x"] = scolor.r * strength;
+			cc["y"] = scolor.g * strength;
+			cc["z"] = scolor.b * strength;
 			cc["w"] = scolor.a;
 			parm["type"] = "float4";
 			parm["value"] = cc;
@@ -1283,9 +1286,9 @@ void ImportAnimations(Args& args, const aiScene* scene, json& rez,
 			// Position
 			if (chan->mNumPositionKeys > 0) {
 				// get the key values
-				std::vector<float> xkeys;
-				std::vector<float> ykeys;
-				std::vector<float> zkeys;
+				std::vector<float> xkeys((int)std::ceil(anim->mDuration));
+				std::vector<float> ykeys((int)std::ceil(anim->mDuration));
+				std::vector<float> zkeys((int)std::ceil(anim->mDuration));
 				bool xch, ych, zch;
 				xch = ych = zch = false;
 				for (unsigned int k = 0; k < chan->mNumPositionKeys; k++) {
@@ -1297,18 +1300,88 @@ void ImportAnimations(Args& args, const aiScene* scene, json& rez,
 						ych = true;
 					if (FLT_NEQ((float)v.z, pos.z))
 						zch = true;
-					if (forMorph) {
-						int idx = GetDeltaIndex(chan->mNodeName.C_Str());
-						v = v - rest_points[idx];
-						v.y = -v.y;
-						v.z = -v.z;
+				}
+				bool found_keyframe;
+				for (size_t frame = 0; frame < anim->mDuration; frame++)
+				{
+					double timestamp = (double) frame;
+					found_keyframe = false;
+					for (size_t keyframe = 0; keyframe < chan->mNumPositionKeys-1; keyframe++)
+					{
+						const aiVectorKey& key = chan->mPositionKeys[keyframe];
+						double current_time = key.mTime;
+						const aiVector3D &cv = key.mValue;
+
+						const aiVectorKey& next_key = chan->mPositionKeys[keyframe+1];
+						double next_time = next_key.mTime;
+						const aiVector3D &nv = key.mValue;
+
+						if (current_time <= timestamp && next_time > timestamp) {
+							double delta_time = next_time - current_time;
+
+							// For now do linear interpolation
+							// In general case, we'll probably need bezier/spline curve evaluation
+							double x = (nv.x - cv.x) / delta_time * (timestamp - current_time) + cv.x;
+							double y = (nv.y - cv.y) / delta_time * (timestamp - current_time) + cv.y;
+							double z = (nv.z - cv.z) / delta_time * (timestamp - current_time) + cv.z;
+							aiVector3D v((float)x, (float)y,(float)z);
+
+							if (forMorph) {
+								int idx = GetDeltaIndex(chan->mNodeName.C_Str());
+								v = v - rest_points[idx];
+								v.y = -v.y;
+								v.z = -v.z;
+							}
+							else {
+								v.y = -v.y;
+							}
+
+							xkeys[frame] = v.x;
+							ykeys[frame] = v.y;
+							zkeys[frame] = v.z;
+							found_keyframe = true;
+							break;
+						}
+						else if (current_time > timestamp && next_time > timestamp) {
+							// the first keyframe is some time in the future
+							// use a constant repeat, until we reach to that time
+							aiVector3D v((float)cv.x, (float)cv.y, (float)cv.z);
+
+							if (forMorph) {
+								int idx = GetDeltaIndex(chan->mNodeName.C_Str());
+								v = v - rest_points[idx];
+								v.y = -v.y;
+								v.z = -v.z;
+							}
+							else {
+								v.y = -v.y;
+							}
+							xkeys[frame] = v.x;
+							ykeys[frame] = v.y;
+							zkeys[frame] = v.z;
+							found_keyframe = true;
+							break;
+						}
 					}
-					else {
-						v.y = -v.y;
+					if (!found_keyframe) {
+						// the frame is far past the last keyframe
+						// repeat the last keyframe
+						const aiVectorKey& last_key = chan->mPositionKeys[chan->mNumPositionKeys - 1];
+						aiVector3D v((float)last_key.mValue.x, (float)last_key.mValue.y, (float)last_key.mValue.z);
+
+						if (forMorph) {
+							int idx = GetDeltaIndex(chan->mNodeName.C_Str());
+							v = v - rest_points[idx];
+							v.y = -v.y;
+							v.z = -v.z;
+						}
+						else {
+							v.y = -v.y;
+						}
+						xkeys[frame] = v.x;
+						ykeys[frame] = v.y;
+						zkeys[frame] = v.z;
 					}
-					xkeys.emplace_back((float)v.x);
-					ykeys.emplace_back((float)v.y);
-					zkeys.emplace_back((float)v.z);
 				}
 				// only add non-static channels
 				if (xch) {
@@ -1366,18 +1439,14 @@ void ImportAnimations(Args& args, const aiScene* scene, json& rez,
 			// Rotation
 			if (chan->mNumRotationKeys > 0 && !forMorph) {
 				// get the key values
-				std::vector<float> xkeys;
-				std::vector<float> ykeys;
-				std::vector<float> zkeys;
-				std::vector<float> wkeys;
+				std::vector<float> xkeys((int)std::ceil(anim->mDuration));
+				std::vector<float> ykeys((int)std::ceil(anim->mDuration));
+				std::vector<float> zkeys((int)std::ceil(anim->mDuration));
+				std::vector<float> wkeys((int)std::ceil(anim->mDuration));
 				bool xch, ych, zch, wch;
 				xch = ych = zch = wch = false;
 				for (unsigned int k = 0; k < chan->mNumRotationKeys; k++) {
 					const aiQuatKey& key = chan->mRotationKeys[k];
-					xkeys.emplace_back((float)key.mValue.x);
-					ykeys.emplace_back(-(float)key.mValue.y); // flip y
-					zkeys.emplace_back((float)key.mValue.z);
-					wkeys.emplace_back(-(float)key.mValue.w); // flip rot
 					if (FLT_NEQ((float)key.mValue.x, rot.x))
 						xch = true;
 					if (FLT_NEQ((float)key.mValue.y, rot.y))
@@ -1386,6 +1455,59 @@ void ImportAnimations(Args& args, const aiScene* scene, json& rez,
 						zch = true;
 					if (FLT_NEQ((float)key.mValue.w, rot.w))
 						wch = true;
+				}
+				bool found_keyframe;
+				for (size_t frame = 0; frame < anim->mDuration; frame++)
+				{
+					double timestamp = (double)frame;
+					found_keyframe = false;
+					for (size_t keyframe = 0; keyframe < chan->mNumRotationKeys - 1; keyframe++)
+					{
+						const aiQuatKey& key = chan->mRotationKeys[keyframe];
+						double current_time = key.mTime;
+						const aiQuaternion &cv = key.mValue;
+
+						const aiQuatKey& next_key = chan->mRotationKeys[keyframe + 1];
+						double next_time = next_key.mTime;
+						const aiQuaternion &nv = next_key.mValue;
+
+						if (current_time <= timestamp && next_time > timestamp) {
+							double delta_time = next_time - current_time;
+
+							// For now do linear interpolation
+							// In general case, we'll probably need bezier/spline curve evaluation
+							double x = (nv.x - cv.x) / delta_time * (timestamp - current_time) + cv.x;
+							double y = (nv.y - cv.y) / delta_time * (timestamp - current_time) + cv.y;
+							double z = (nv.z - cv.z) / delta_time * (timestamp - current_time) + cv.z;
+							double w = (nv.w - cv.w) / delta_time * (timestamp - current_time) + cv.w;
+
+							xkeys[frame] = (float)x;
+							ykeys[frame] = (float)-y; // flip y
+							zkeys[frame] = (float)z;
+							wkeys[frame] = (float)-w; // flip rot
+							found_keyframe = true;
+							break;
+						}
+						else if (current_time > timestamp && next_time > timestamp) {
+							// the first keyframe is some time in the future
+							// use a constant repeat, until we reach to that time
+							xkeys[frame] = (float)cv.x;
+							ykeys[frame] = (float)-cv.y; // flip y
+							zkeys[frame] = (float)cv.z;
+							wkeys[frame] = (float)-cv.w; // flip rot
+							found_keyframe = true;
+							break;
+						}
+					}
+					if (!found_keyframe) {
+						// the frame is far past the last keyframe
+						// repeat the last keyframe
+						const aiQuatKey& last_key = chan->mRotationKeys[chan->mNumRotationKeys - 1];
+						xkeys[frame] = (float)last_key.mValue.x;
+						ykeys[frame] = (float)-last_key.mValue.y; // flip y
+						zkeys[frame] = (float)last_key.mValue.z;
+						wkeys[frame] = (float)-last_key.mValue.w; // flip rot
+					}
 				}
 				// only add non-static channels
 				if (xch) {
@@ -1435,23 +1557,68 @@ void ImportAnimations(Args& args, const aiScene* scene, json& rez,
 			}
 			if (chan->mNumScalingKeys > 0 && !forMorph) {
 				// get the key values
-				std::vector<float> xkeys;
-				std::vector<float> ykeys;
-				std::vector<float> zkeys;
+				std::vector<float> xkeys((int)std::ceil(anim->mDuration));
+				std::vector<float> ykeys((int)std::ceil(anim->mDuration));
+				std::vector<float> zkeys((int)std::ceil(anim->mDuration));
 				bool xch, ych, zch;
 				xch = ych = zch = false;
 				for (unsigned int k = 0; k < chan->mNumScalingKeys; k++) {
 					const aiVectorKey& key = chan->mScalingKeys[k];
-					snprintf(temp, sizeof(temp), "%d", k);
-					xkeys.emplace_back((float)key.mValue.x);
-					ykeys.emplace_back((float)key.mValue.y);
-					zkeys.emplace_back((float)key.mValue.z);
 					if (FLT_NEQ((float)key.mValue.x, scl.x))
 						xch = true;
 					if (FLT_NEQ((float)key.mValue.y, scl.y))
 						ych = true;
 					if (FLT_NEQ((float)key.mValue.z, scl.z))
 						zch = true;
+				}
+				bool found_keyframe;
+				for (size_t frame = 0; frame < anim->mDuration; frame++)
+				{
+					double timestamp = (double)frame;
+					found_keyframe = false;
+					for (size_t keyframe = 0; keyframe < chan->mNumScalingKeys - 1; keyframe++)
+					{
+						const aiVectorKey& key = chan->mScalingKeys[keyframe];
+						double current_time = key.mTime;
+						const aiVector3D &cv = key.mValue;
+
+						const aiVectorKey& next_key = chan->mScalingKeys[keyframe + 1];
+						double next_time = next_key.mTime;
+						const aiVector3D &nv = next_key.mValue;
+
+						if (current_time <= timestamp && next_time > timestamp) {
+							double delta_time = next_time - current_time;
+
+							// For now do linear interpolation
+							// In general case, we'll probably need bezier/spline curve evaluation
+							double x = (nv.x - cv.x) / delta_time * (timestamp - current_time) + cv.x;
+							double y = (nv.y - cv.y) / delta_time * (timestamp - current_time) + cv.y;
+							double z = (nv.z - cv.z) / delta_time * (timestamp - current_time) + cv.z;
+
+							xkeys[frame] = (float)x;
+							ykeys[frame] = (float)y;
+							zkeys[frame] = (float)z;
+							found_keyframe = true;
+							break;
+						}
+						else if (current_time > timestamp && next_time > timestamp) {
+							// the first keyframe is some time in the future
+							// use a constant repeat, until we reach to that time
+							xkeys[frame] = (float)cv.x;
+							ykeys[frame] = (float)cv.y;
+							zkeys[frame] = (float)cv.z;
+							found_keyframe = true;
+							break;
+						}
+					}
+					if (!found_keyframe) {
+						// the frame is far past the last keyframe
+						// repeat the last keyframe
+						const aiVectorKey& last_key = chan->mScalingKeys[chan->mNumScalingKeys - 1];
+						xkeys[frame] = (float)last_key.mValue.x;
+						ykeys[frame] = (float)last_key.mValue.y;
+						zkeys[frame] = (float)last_key.mValue.z;
+					}
 				}
 				// only add non-static channels
 				if (xch) {
