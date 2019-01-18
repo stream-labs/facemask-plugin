@@ -2,15 +2,12 @@ cmake_minimum_required(VERSION 2.8.12)
 PROJECT(facemask-plugin)
 math(EXPR BITS "8*${CMAKE_SIZEOF_VOID_P}")
 
-<<<<<<< Updated upstream
 OPTION(DOWNLOAD_LIBOBS "Download libobs from S3" ON)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
 include(DownloadProject)
-=======
-enable_testing()
->>>>>>> Stashed changes
+
 
 SET(PATH_DLIB "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dlib")
 set(USE_AVX_INSTRUCTIONS ON CACHE BOOL "Use AVX instructions" FORCE)
@@ -449,8 +446,6 @@ else()
 endif()
 
 
-<<<<<<< Updated upstream
-=======
 ADD_LIBRARY(facemask-plugin-static STATIC
 	${facemask-plugin_HEADERS}
 	${facemask-plugin_SOURCES}
@@ -461,8 +456,9 @@ TARGET_LINK_LIBRARIES(facemask-plugin-static
 
 
 add_executable(testing-detection-tracking test-detection-tracking/test-detection-tracking.cpp test-detection-tracking/test-detection-tracking.hpp)
+enable_testing()
 add_test(FaceDetectionTrackingTester testing-detection-tracking.exe)
 
 
 TARGET_LINK_LIBRARIES(testing-detection-tracking facemask-plugin-static ${LIBOBS_LIB})
->>>>>>> Stashed changes
+
