@@ -455,8 +455,8 @@ TARGET_LINK_LIBRARIES(facemask-plugin-static
 		${facemask-plugin_LIBRARIES})
 
 
+include (CTest)
 add_executable(testing-detection-tracking test-detection-tracking/test-detection-tracking.cpp test-detection-tracking/test-detection-tracking.hpp)
-enable_testing()
 add_test(FaceDetectionTrackingTester testing-detection-tracking.exe)
 
 

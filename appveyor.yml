@@ -30,6 +30,13 @@ build_script:
 after_build:
 - cmd: tar cvaf "%UnsignedArtifact%.tar.gz" "distribute" 
 
+test_script:
+- ctest -T Test
+- ps: |
+    $test_ouput_file=Get-ChildItem -Recurse *.xml | select fullname
+    $wc = New-Object 'System.Net.WebClient'
+    $wc.UploadFile("https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)", ($test_ouput_file.fullname))
+
 before_deploy:
 - echo %CD%
 - dir
