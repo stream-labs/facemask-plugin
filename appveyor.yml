@@ -34,6 +34,7 @@ test_script:
 - ctest -T Test
 - ps: |
     $test_ouput_file=Get-ChildItem -Recurse *.xml | select fullname
+    $env:APPVEYOR_JOB_ID
     $wc = New-Object 'System.Net.WebClient'
     $wc.UploadFile("https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)", ($test_ouput_file.fullname))
 
