@@ -1,6 +1,3 @@
-mkdir  %SLFullDistributePath%
-cd %SLFullDistributePath%
-mkdir facemask-plugin
 
 cmake ^
 	-H. ^
