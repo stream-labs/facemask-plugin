@@ -61,4 +61,4 @@ deploy:
 
 artifacts:
   - path: $(UnsignedArtifact).tar.gz
-name: Unsigned Artifact
+    name: Unsigned Artifact
