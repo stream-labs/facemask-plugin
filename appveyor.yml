@@ -35,6 +35,7 @@ test_script:
 - ps: |
     $test_ouput_file=Get-ChildItem -Recurse *.xml | select fullname
     $env:APPVEYOR_JOB_ID
+    Add-AppveyorTest -Name "DummyTest" -Framework "CTest" -FileName "c:\projects\source\test-detection-tracking\test-detection-tracking.cpp" -Outcome Passed -StdOut "Hello"
     $test_ouput_file.fullname
     $wc = New-Object 'System.Net.WebClient'
     $wc.UploadFile("https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)", ($test_ouput_file.fullname))
