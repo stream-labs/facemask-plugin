@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.12)
 PROJECT(facemask-plugin)
 math(EXPR BITS "8*${CMAKE_SIZEOF_VOID_P}")
 
-OPTION(DOWNLOAD_LIBOBS "Download libobs from S3" ON)
+OPTION(DOWNLOAD_LIBOBS "Download libobs from S3" OFF)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
@@ -387,13 +387,15 @@ endif()
 ################################################################################
 # Building
 ################################################################################
-ADD_LIBRARY(facemask-plugin MODULE
-	${facemask-plugin_HEADERS}
+add_library(facemask-plugin-objlib OBJECT 
+    ${facemask-plugin_HEADERS}
 	${facemask-plugin_SOURCES}
 	${facemask-plugin_DATA}
 )
 
-
+set_property(TARGET facemask-plugin-objlib PROPERTY POSITION_INDEPENDENT_CODE 1)
+add_library(facemask-plugin MODULE $<TARGET_OBJECTS:facemask-plugin-objlib>)
+add_library(facemask-plugin-static STATIC $<TARGET_OBJECTS:facemask-plugin-objlib>)
 
 if(FACEMASK_EXTERNAL)
 	TARGET_LINK_LIBRARIES(facemask-plugin
@@ -446,13 +448,7 @@ else()
 endif()
 
 
-ADD_LIBRARY(facemask-plugin-static STATIC
-	${facemask-plugin_HEADERS}
-	${facemask-plugin_SOURCES}
-	${facemask-plugin_DATA}
-)
-TARGET_LINK_LIBRARIES(facemask-plugin-static
-		${facemask-plugin_LIBRARIES})
+TARGET_LINK_LIBRARIES(facemask-plugin-static ${facemask-plugin_LIBRARIES})
 
 
 include (CTest)
