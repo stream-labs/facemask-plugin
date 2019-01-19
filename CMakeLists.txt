@@ -393,7 +393,7 @@ add_library(facemask-plugin-objlib OBJECT
 	${facemask-plugin_DATA}
 )
 
-#set_property(TARGET facemask-plugin-objlib PROPERTY POSITION_INDEPENDENT_CODE 1)
+set_property(TARGET facemask-plugin-objlib PROPERTY POSITION_INDEPENDENT_CODE 1)
 add_library(facemask-plugin MODULE $<TARGET_OBJECTS:facemask-plugin-objlib>)
 add_library(facemask-plugin-static STATIC $<TARGET_OBJECTS:facemask-plugin-objlib>)
 
