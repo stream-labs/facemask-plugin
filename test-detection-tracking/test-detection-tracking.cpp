@@ -1,5 +1,5 @@
 #include "test-detection-tracking.hpp"
-/*
+
 
 std::vector<int> generateTraceFromTimestamps(std::vector<uint64_t> timestamps, int originalFrameRate) {
 	std::vector<int> trace;
@@ -128,12 +128,10 @@ float GetAccurateFacesPercentage(std::vector<std::vector<dlib::rectangle>> simul
 	}
 
 	return float(foundFaces) / totalFaces;
-}*/
+}
 
 int main(int argc, char *argv[]) {
-	std::cout << "<DartMeasurement type=\"numeric / double\" name=\"Processors1\">< Value>1 < / Value >< / DartMeasurement>" << std::endl;
-	return 0;
-	/*std::vector<std::vector<dlib::rectangle> > ignore, groundTruth;
+	std::vector<std::vector<dlib::rectangle> > ignore, groundTruth;
 	dlib::array<dlib::array2d<unsigned char> > images;
 	std::vector<uint64_t> timestamps;
 	std::vector<int> trace;
@@ -148,5 +146,5 @@ int main(int argc, char *argv[]) {
 	groundTruth = loadImagesAndGroundTruth(imageFolder, trace, images, ignore);
 	std::vector<std::vector<dlib::rectangle>> simulationResult = SimulateDetectionAndTracking(images, format);
 
-	float p = GetAccurateFacesPercentage(simulationResult, groundTruth);*/
+	float p = GetAccurateFacesPercentage(simulationResult, groundTruth);
 }

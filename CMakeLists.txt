@@ -448,7 +448,7 @@ else()
 endif()
 
 
-TARGET_LINK_LIBRARIES(facemask-plugin-static ${facemask-plugin_LIBRARIES})
+TARGET_LINK_LIBRARIES(facemask-plugin-static ${facemask-plugin_LIBRARIES} ${LIBOBS_LIBRARIES})
 
 
 include (CTest)
@@ -456,5 +456,5 @@ add_executable(testing-detection-tracking test-detection-tracking/test-detection
 add_test(FaceDetectionTrackingTester testing-detection-tracking.exe)
 
 
-TARGET_LINK_LIBRARIES(testing-detection-tracking facemask-plugin-static ${LIBOBS_LIB})
+TARGET_LINK_LIBRARIES(testing-detection-tracking facemask-plugin-static ${LIBOBS_LIBRARIES})
 
