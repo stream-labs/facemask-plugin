@@ -16,8 +16,7 @@ environment:
 clone_folder: c:\projects\source
 
 before_test:
-- ps: |
-  Read-S3Object -BucketName faces-internal.streamlabs.com -KeyPrefix appveyor-test-utils/ -Folder c:\projects\ 
+- ps: Read-S3Object -BucketName faces-internal.streamlabs.com -KeyPrefix appveyor-test-utils/ -Folder c:\projects\ 
 - cd c:\projects
 - dir
 
