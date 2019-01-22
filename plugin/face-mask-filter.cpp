@@ -132,7 +132,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), 
 	drawMask(true),	drawAlert(false), drawFaces(false), drawMorphTris(false), drawFDRect(false), drawMotionRect(false),
 	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr), testMode(false), custom_effect(nullptr),
-	lastResultIndex(-1), sameFrameResults(false), logMode(false), lastLogMode(false) {
+	lastResultIndex(-1), sameFrameResults(false), logMode(false), lastLogMode(false), timestampInited(false), lastTimestampInited(false) {
 
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
 
@@ -1206,11 +1206,12 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// restore rendering state
 	gs_blend_state_pop();
-	if (logMode){
+	if (logMode && timestampInited){
 		auto processEnd = NEW_TIMESTAMP;
 		auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(processEnd - timestamp);
-		if (!sameFrameResults && !processedFrameResults.isSkipped()) {
+		if (!sameFrameResults && !processedFrameResults.isSkipped() || !lastTimestampInited) {
 			lastActualTimestamp = timestamp;
+			lastTimestampInited = true;
 		}
 
 		int actualLatency = std::chrono::duration_cast<std::chrono::milliseconds>(processEnd - lastActualTimestamp).count();
@@ -1771,6 +1772,7 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 				triangulation.DestroyLineBuffer();
 			}
 			timestamp = detection.faces[fidx].timestamp;
+			timestampInited = true;
 			processedFrameResults = detection.faces[fidx].detectionResults.processedResults;
 			// update our results
 			faces.CorrelateAndUpdateFrom(newFaces);
