@@ -1448,7 +1448,8 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 	
 
 			// Copy our detection results
-			for (int i = 0; i < detect_results.length; i++) {
+			#pragma loop(ivdep)
+			for (int i = 0, imax = detect_results.length; i < imax; i++) {
 				detection.faces[face_idx].detectionResults[i] = detect_results[i];
 			}
 			detection.faces[face_idx].detectionResults.length = detect_results.length;

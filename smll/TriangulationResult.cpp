@@ -149,6 +149,7 @@ namespace smll {
 
 	TriangulationResult::TriangulationResult() : vertexBuffer(nullptr),
 		buildLines(false), autoBGRemoval(false), cartoonMode(false) {
+		#pragma loop(ivdep)
 		for (int i = 0; i < NUM_INDEX_BUFFERS; i++) {
 			indexBuffers[i] = nullptr;
 		}

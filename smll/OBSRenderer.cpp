@@ -468,7 +468,7 @@ namespace smll {
 
 		// run through the verts first to get bounding box
 		for (size_t s = 0; s < shapes.size(); s++) {
-			for (size_t f = 0; f < shapes[s].mesh.indices.size() / 3; f++) {
+			for (size_t f = 0, fmax = shapes[s].mesh.indices.size() / 3; f < fmax; f++) {
 
 				tinyobj::index_t idx0 = shapes[s].mesh.indices[3 * f + 0];
 				tinyobj::index_t idx1 = shapes[s].mesh.indices[3 * f + 1];
@@ -513,7 +513,7 @@ namespace smll {
 		BeginVertexBuffer();
 
 		for (size_t s = 0; s < shapes.size(); s++) {
-			for (size_t f = 0; f < shapes[s].mesh.indices.size() / 3; f++) {
+			for (size_t f = 0, fmax = shapes[s].mesh.indices.size() / 3; f < fmax; f++) {
 
 				tinyobj::index_t idx0 = shapes[s].mesh.indices[3 * f + 0];
 				tinyobj::index_t idx1 = shapes[s].mesh.indices[3 * f + 1];

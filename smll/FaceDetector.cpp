@@ -155,7 +155,7 @@ namespace smll {
 		int minX = diffImage.cols;
 		int maxY = 0;
 		int maxX = 0;
-	
+
 		for (int j = 0; j < diffImage.rows; ++j){
 			for (int i = 0; i < diffImage.cols; ++i) 
 			{
@@ -272,7 +272,8 @@ namespace smll {
 			}
 
 			// copy faces to results
-			for (int i = 0; i < m_faces.length; i++) {
+			#pragma loop(ivdep)
+			for (int i = 0, imax = m_faces.length; i < imax; i++) {
 				results[i] = m_faces[i];
 			}
 			results.length = m_faces.length;
@@ -284,7 +285,9 @@ namespace smll {
 		}
 
 		// copy faces to results
-		for (int i = 0; i < m_faces.length; i++) {
+
+		#pragma loop(ivdep)
+		for (int i = 0, imax = m_faces.length; i < imax; i++) {
 			results[i] = m_faces[i];
 		}
 		results.length = m_faces.length;
@@ -1035,7 +1038,8 @@ namespace smll {
 
         // start tracking
 		dlib::cv_image<unsigned char> img(currentOrigImage);
-		for (int i = 0; i < m_faces.length; ++i) {
+		#pragma loop(ivdep)
+		for (int i = 0, imax = m_faces.length; i < imax; ++i) {
 			m_faces[i].StartTracking(img, scale, 0, 0);
 		}
 	}
@@ -1044,15 +1048,10 @@ namespace smll {
     void FaceDetector::UpdateObjectTracking() {
 		// update object tracking
 		dlib::cv_image<unsigned char> img(currentOrigImage);
-		for (int i = 0; i < m_faces.length; i++) {
-			if (i == m_trackingFaceIndex) {
-				double confidence = m_faces[i].UpdateTracking(img);
-				if (confidence < Config::singleton().get_double(
-					CONFIG_DOUBLE_TRACKING_THRESHOLD)) {
-					m_faces.length = 0;
-					break;
-				}
-			}
+		double confidence = m_faces[m_trackingFaceIndex].UpdateTracking(img);
+		if (confidence < Config::singleton().get_double(
+			CONFIG_DOUBLE_TRACKING_THRESHOLD)) {
+			m_faces.length = 0;
 		}
 	}
     

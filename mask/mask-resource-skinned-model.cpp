@@ -256,7 +256,7 @@ void Mask::Resource::SkinnedModel::DirectRender(Mask::Part* part) {
 
 		// set up bones list
 		bone_list.numBones = (int)skin.bones.size();
-		for (int j = 0; j < skin.bones.size(); j++) {
+		for (int j = 0, jmax = skin.bones.size(); j < jmax; j++) {
 			bone_list.bones[j] = &(m_bones[skin.bones[j]].global);
 		}
 		// draw
