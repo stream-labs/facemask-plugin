@@ -54,6 +54,12 @@ namespace smll {
 		count = 0;
 
 		char *filename = obs_module_file(kFileShapePredictor68);
+		bool filenameAllocated = false;
+		if (filename == NULL) {
+			filename = new char[1024];
+			sprintf(filename, "shape_predictor_68_face_landmarks.dat");
+			filenameAllocated = true;
+		}
 #ifdef _WIN32
 		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
 		std::wstring wide_filename(converter.from_bytes(filename));
@@ -72,7 +78,12 @@ namespace smll {
 #else
 		deserialize(filename) >> m_predictor68;
 #endif
-		bfree(filename);
+		if (!filenameAllocated) {
+			bfree(filename);
+		}
+		else {
+			delete filename;
+		}
 	}
 
 	void FaceDetector::MakeVtxBitmaskLookup() {
