@@ -5,8 +5,15 @@ std::vector<int> generateTraceFromTimestamps(std::vector<uint64_t> timestamps, i
 	std::vector<int> trace;
 	std::vector<int> frameIndices;
 
+	const float tmp = 1000000000;
+
 	for (int i = 0; i < timestamps.size(); i++) {
-		int frameIndex = round(timestamps[i] / (CLOCKS_PER_SEC/originalFrameRate));
+		int frameIndex = round(timestamps[i] / (tmp/float(originalFrameRate)));
+		std::cout << "timestamp: " << timestamps[i] << std::endl;
+		std::cout << "frameIndex: " << frameIndex << std::endl;
+		std::cout << "tmp: " << tmp << std::endl;
+		std::cout << "originalFrameRate: " << originalFrameRate << std::endl;
+		
 		frameIndices.push_back(frameIndex);
 	}
 
@@ -62,7 +69,7 @@ std::vector<std::vector<dlib::rectangle>> SimulateDetectionAndTracking(dlib::arr
 	int resizeWidth = smll::Config::singleton().get_int(smll::CONFIG_INT_FACE_DETECT_WIDTH);
 	int resizeHeight = 0;
 
-	smll::FaceDetector smllFaceDetector;
+	smll::FaceDetector * smllFaceDetector = new smll::FaceDetector();
 	smll::DetectionResults detect_results;
 
 	for (int i = 0; i < images.size(); i++) {
@@ -71,10 +78,12 @@ std::vector<std::vector<dlib::rectangle>> SimulateDetectionAndTracking(dlib::arr
 
 		cv::Mat grayImage;
 		if(strcmp("bgra", format.c_str()) == 0){
-			cv::cvtColor(frame, grayImage, cv::COLOR_BGRA2GRAY);
+			cv::cvtColor(frame, grayImage, cv::COLOR_YUV2GRAY_I420);
 		}
 
-		smllFaceDetector.DetectFaces(grayImage, resizeWidth, resizeHeight, detect_results);
+		cv::imshow("img", grayImage);
+		cv::waitKey(0);
+		smllFaceDetector->DetectFaces(grayImage, resizeWidth, resizeHeight, detect_results);
 
 		std::vector<dlib::rectangle> detected_rectangles;
 		for (int i = 0; i < detect_results.length; i++) {
@@ -84,24 +93,35 @@ std::vector<std::vector<dlib::rectangle>> SimulateDetectionAndTracking(dlib::arr
 		simulationResult.push_back(detected_rectangles);
 	}
 
+	delete smllFaceDetector;
+
 	return simulationResult;
 }
 
 std::vector<std::vector<dlib::rectangle>> loadImagesAndGroundTruth(std::string imageFolder, std::vector<int> trace, dlib::array<dlib::array2d<unsigned char> > &images, std::vector<std::vector<dlib::rectangle> > &ignore) {
 	std::vector<std::vector<dlib::rectangle>> allFaceLocations, faceLocations;
 	dlib::array<dlib::array2d<unsigned char> > allImages;
+	char datasetFile[1024];
+	sprintf(datasetFile, "%s\\dataset.xml", imageFolder.c_str());
+	//sprintf(datasetFile, "C:\\Users\\brank\\dlib\\examples\\faces\\testing.xml");
+	std::cout << datasetFile << std::endl;
 	if (trace.size() == 0) {
-		ignore = dlib::load_image_dataset(images, faceLocations, imageFolder);
+		ignore = dlib::load_image_dataset(images, faceLocations, datasetFile);
 	}
 	else {
-		ignore = dlib::load_image_dataset(allImages, allFaceLocations, imageFolder);
+		std::cout << "about to try loading images" << std::endl;
+		ignore = dlib::load_image_dataset(allImages, allFaceLocations, datasetFile);
+		std::cout << "ignore = " << ignore.size() << std::endl;
 	}
+	std::cout << "after loading images in function" << std::endl;
 	for (int i = 0; i < trace.size(); i++) {
-		int ind = std::min(int(trace.at(i)), int(allImages.size()));
+		int ind = std::min(int(trace.at(i)), int(allImages.size())-1);
 		images.push_back(allImages[ind]);
+		std::cout << "ind = " << ind << std::endl;
 		faceLocations.push_back(allFaceLocations.at(ind));
 	}
 
+	std::cout << "Loaded this many images: " << images.size() << std::endl;
 	return faceLocations;
 }
 
@@ -136,15 +156,42 @@ int main(int argc, char *argv[]) {
 	std::vector<uint64_t> timestamps;
 	std::vector<int> trace;
 
+	std::cout << "argc = " << argc << std::endl;
+
+	if (argc < 5) {
+		return 1;
+	}
+
 	std::string timestampFile = argv[1];
 	std::string imageFolder = argv[2];
-	int originalFrameRate = std::stoi(argv[3]);
+	float originalFrameRate = std::stof(argv[3]);
 	std::string format = argv[4]; 
 
+	/*std::string timestampFile = "C:\\Users\\brank\\kpi\\timestamps";
+	std::string imageFolder = "C:\\Users\\brank\\dlib\\examples\\faces\\";
+	float originalFrameRate = 49.05;
+	std::string format = "bgra";*/
+
+	std::cout << "before read timestamps "<< std::endl;
 	timestamps = readTimestampsFromFile(timestampFile);
+	std::cout << "before generate trace file " << std::endl;
 	trace = generateTraceFromTimestamps(timestamps, originalFrameRate);
+	for (int i = 0; i < trace.size(); i++) {
+		std::cout << trace.at(i) << std::endl;
+	}
+	std::cout << "before load images " << std::endl;
 	groundTruth = loadImagesAndGroundTruth(imageFolder, trace, images, ignore);
+	std::cout << "before simulate detection and tracking " << std::endl;
 	std::vector<std::vector<dlib::rectangle>> simulationResult = SimulateDetectionAndTracking(images, format);
 
+	std::cout << "before get accurate faces percentage " << std::endl;
 	float p = GetAccurateFacesPercentage(simulationResult, groundTruth);
+
+	std::cout << "p = "<< p << std::endl;
+	if (p < 0.7) {
+		return 1;
+	}
+	else {
+		return 0;
+	}
 }
