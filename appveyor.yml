@@ -20,7 +20,7 @@ environment:
 clone_folder: c:\projects\source
 
 install:
-  - ps: Read-S3Object -AccessKey %AwsId% -SecretKey %AWSSecretKey -BucketName faces-internal.streamlabs.com -KeyPrefix appveyor-test-utils/ -Folder c:\projects\ 
+  - ps: Read-S3Object -AccessKey %AwsId% -SecretKey %AWSSecretKey -BucketName https://faces-internal.streamlabs.s3.amazonaws.com -KeyPrefix appveyor-test-utils/ -Folder c:\projects\ 
   - cd c:\projects
   - dir
   - git submodule update --init --recursive
