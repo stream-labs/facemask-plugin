@@ -15,6 +15,19 @@ environment:
 
 clone_folder: c:\projects\source
 
+before_test:
+- ps: |
+  Read-S3Object
+  -BucketName faces-internal.streamlabs.com
+  -KeyPrefix appveyor-test-utils/
+  -Folder c:\projects\
+  -AccessKey:
+    secure: mCkabszlS+XuJkjmIFM4t6Hom4jvUfNqbxlmQXKPJNE=
+  -Credential:
+    secure: dGl7YDpzqXV+ucEwwo6QEiTjQBSThcakfE70aKWrgjUeLy3jFJsjgbnnGPeUIU+k
+- cd c:\projects
+- dir
+
 install:
   - git submodule update --init --recursive
   - ps: $env:SignedArtifact = "facemask-plugin-$(git describe --tags --abbrev=0)"
@@ -29,6 +42,9 @@ build_script:
 
 after_build:
 - cmd: tar cvaf "%UnsignedArtifact%.tar.gz" "distribute" 
+
+
+
 
 test_script:
 - ctest -T Test
