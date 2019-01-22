@@ -142,23 +142,28 @@ namespace smll {
 
 	std::string ProcessedResults::to_string() {
 		std::string str;
-		str += "Frame Skipped: ";
 		str += B2S(skipped);
-		str += ", ";
-		str += "Detection Made: ";
+		str += "\t";
 		str += B2S(detection);
-		str += ", ";
-		str += "Tracking Made: ";
+		str += "\t";
 		str += B2S(tracking);
-		str += ", ";
-		str += "Tracking Failed: ";
+		str += "\t";
 		str += B2S(tracking_failed);
-		str += ", ";
-		str += "Detection Failed: ";
+		str += "\t";
 		str += B2S(detection_failed);
+		str += "\t";
 		return str;
 	}
 
+	std::string ProcessedResults::titles_to_string() {
+		std::string str;
+		str += "Frame Skipped\t";
+		str += "Detection Made\t";
+		str += "Tracking Made\t";
+		str += "Tracking Failed\t";
+		str += "Detection Failed\t";
+		return str;
+	}
 	DetectionResults::DetectionResults() 
 		: sarray<DetectionResult, MAX_FACES>() {
 

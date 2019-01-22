@@ -569,6 +569,11 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 		}
 		logOutput.open(fileLog);
 		logOutput.setf(ios::fixed);
+		if (logOutput.is_open()) {
+			logOutput << "Latency" << "\t"<< "Latency # Frames" << "\t" << processedFrameResults.titles_to_string() << "SameFrameResults"  << "\t" << "Actual Latency" << "\t" << "Act. Latency  # Frames" << "\t" << "Render Time (ms)"<< endl;
+			logOutput.flush();
+		}
+
 	}
 	lastLogMode = logMode;
 
@@ -1213,9 +1218,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		int renderTime = std::chrono::duration_cast<std::chrono::microseconds>(processEnd - renderTimestamp).count();
 		int elapsedLatency = elapsedMs.count();
 		if (logOutput.is_open()) {
-			logOutput << "Latency: " << elapsedLatency << ", Latency # Frames: " << setprecision(1) << (float)elapsedLatency / 33.3f << ", " << processedFrameResults.to_string() << ", SameFrameResults: " << B2S(sameFrameResults) << endl; 
-			logOutput <<"Actual Latency: "<< setprecision(1) << actualLatency <<", Act. Latency  # Frames: %.1f" << (float)actualLatency << std::endl;
-			logOutput << "Render Time: " << renderTime << " micro secs." << std::endl;
+			logOutput << setprecision(1) <<elapsedLatency  << "\t" << (float)elapsedLatency / 33.3f << "\t" << processedFrameResults.to_string() << B2S(sameFrameResults) << "\t" << actualLatency << "\t" << (float)actualLatency / 33.3f << "\t" << renderTime << endl;
 			logOutput.flush();
 		}
 

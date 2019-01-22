@@ -71,6 +71,7 @@ namespace smll {
 		void DetectionFailed();
 		bool isSkipped();
 		std::string to_string();
+		std::string titles_to_string();
 	private:
 		bool skipped;
 		bool detection;
