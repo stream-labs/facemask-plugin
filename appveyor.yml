@@ -20,9 +20,6 @@ environment:
 clone_folder: c:\projects\source
 
 install:
-  - ps: Read-S3Object -AccessKey %AwsId% -SecretKey %AWSSecretKey -BucketName faces-internal.streamlabs.com -KeyPrefix appveyor-test-utils/ -Folder c:\projects\ -Region us-west-2
-  - cd c:\projects
-  - dir
   - git submodule update --init --recursive
   - ps: $env:SignedArtifact = "facemask-plugin-$(git describe --tags --abbrev=0)"
   - ps: $env:UnsignedArtifact = "facemask-plugin-$env:APPVEYOR_BUILD_NUMBER"
@@ -37,6 +34,8 @@ build_script:
 after_build:
 - cmd: tar cvaf "%UnsignedArtifact%.tar.gz" "distribute" 
 
+before_test:
+- ps: Read-S3Object -AccessKey %AwsId% -SecretKey %AWSSecretKey% -BucketName faces-internal.streamlabs.com -KeyPrefix appveyor-test-utils/ -Folder c:\projects\ -Region us-west-2
 
 
 
