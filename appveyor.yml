@@ -17,14 +17,11 @@ clone_folder: c:\projects\source
 
 before_test:
 - ps: |
-  Read-S3Object
-  -BucketName faces-internal.streamlabs.com
-  -KeyPrefix appveyor-test-utils/
-  -Folder c:\projects\
-  -AccessKey:
-    secure: mCkabszlS+XuJkjmIFM4t6Hom4jvUfNqbxlmQXKPJNE=
-  -Credential:
-    secure: dGl7YDpzqXV+ucEwwo6QEiTjQBSThcakfE70aKWrgjUeLy3jFJsjgbnnGPeUIU+k
+  Read-S3Object -BucketName faces-internal.streamlabs.com -KeyPrefix appveyor-test-utils/ -Folder c:\projects\ `
+  -AccessKey: `
+    secure: mCkabszlS+XuJkjmIFM4t6Hom4jvUfNqbxlmQXKPJNE= `
+  -Credential: `
+    secure: dGl7YDpzqXV+ucEwwo6QEiTjQBSThcakfE70aKWrgjUeLy3jFJsjgbnnGPeUIU+k 
 - cd c:\projects
 - dir
 
