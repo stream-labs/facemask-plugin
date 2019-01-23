@@ -55,7 +55,7 @@ deploy:
     folder: facemask-plugin-deployment
     region: us-west-2
     set_public: true
-    artifact: $(SignedArtifact).tar.gz, $(DataArtifact).tar.gz)
+    artifact: $(SignedArtifact).tar.gz, $(DataArtifact).tar.gz
 
 artifacts:
   - path: $(UnsignedArtifact).tar.gz
