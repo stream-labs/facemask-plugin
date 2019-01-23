@@ -21,6 +21,7 @@ clone_folder: c:\projects\source
 
 install:
   - git submodule update --init --recursive
+  - ps: Read-S3Object -AccessKey $env:AWSId -SecretKey $env:AWSSecretKey -BucketName faces-internal.streamlabs.com -KeyPrefix appveyor-test-utils/ -Folder c:\projects\appveyor-test-utils -Region us-west-2
   - ps: $env:DataArtifact = "facemask-plugin-data-$(git describe --tags --abbrev=0)"
   - ps: $env:SignedArtifact = "facemask-plugin-$(git describe --tags --abbrev=0)"
   - ps: $env:UnsignedArtifact = "facemask-plugin-$env:APPVEYOR_BUILD_NUMBER"
@@ -41,7 +42,7 @@ before_deploy:
 - nuget install secure-file -ExcludeVersion
 - ps: c:\projects\source\ci\win-signed-build.ps1
 - tar cvaf "%SignedArtifact%.tar.gz" "distribute/slobs/RelWithDebInfo/data"
-- tar cvaf "%DataArtifact%.tar.gz" "distribute/slobs/obs-plugins"
+- tar cvaf "%DataArtifact%.tar.gz" "distribute/slobs/RelWithDebInfo/obs-plugins/*"
 - ps: Push-AppveyorArtifact "$env:SignedArtifact.tar.gz"
 - dir
 
