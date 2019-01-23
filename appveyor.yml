@@ -20,14 +20,6 @@ environment:
 clone_folder: c:\projects\source
 
 install:
-  - cd c:\projects
-  - mkdir appveyor-test-utils
-  - ps: Read-S3Object -AccessKey $env:AWSId -SecretKey $env:AWSSecretKey -BucketName faces-internal.streamlabs.com -KeyPrefix appveyor-test-utils/ -Folder c:\projects\appveyor-test-utils -Region us-west-2
-  - 7z x appveyor-test-utils/*zip appveyor-test-utils/unzipped-utils
-  - 7z x appveyor-test-utils/*7z appveyor-test-utils/unzipped-utils
-  - cd appveyor-test-utils
-  - dir
-  - cd c:\projects\source
   - git submodule update --init --recursive
   - ps: $env:SignedArtifact = "facemask-plugin-$(git describe --tags --abbrev=0)"
   - ps: $env:UnsignedArtifact = "facemask-plugin-$env:APPVEYOR_BUILD_NUMBER"
@@ -41,25 +33,6 @@ build_script:
 
 after_build:
 - cmd: tar cvaf "%UnsignedArtifact%.tar.gz" "distribute" 
-
-before_test:
-- cd c:\projects
-- mkdir appveyor-test-utils
-- ps: Read-S3Object -AccessKey $env:AWSId -SecretKey $env:AWSSecretKey -BucketName faces-internal.streamlabs.com -KeyPrefix appveyor-test-utils/ -Folder c:\projects\appveyor-test-utils -Region us-west-2
-- 7z x appveyor-test-utils/*zip appveyor-test-utils/unzipped-utils
-- cd appveyor-test-utils
-- dir
-- cd c:\projects\source
-
-test_script:
-- ctest -T Test
-- ps: |
-    $test_ouput_file=Get-ChildItem -Recurse *.xml | select fullname
-    $env:APPVEYOR_JOB_ID
-    Add-AppveyorTest -Name "DummyTest" -Framework "CTest" -FileName "c:\projects\source\test-detection-tracking\test-detection-tracking.cpp" -Outcome Passed -StdOut "Hello"
-    $test_ouput_file.fullname
-    $wc = New-Object 'System.Net.WebClient'
-    $wc.UploadFile("https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)", ($test_ouput_file.fullname))
 
 before_deploy:
 - echo %CD%
