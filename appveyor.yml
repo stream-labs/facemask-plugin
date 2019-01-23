@@ -21,6 +21,7 @@ clone_folder: c:\projects\source
 
 install:
   - git submodule update --init --recursive
+  - ps: $env:DataArtifact = "facemask-plugin-data$(git describe --tags --abbrev=0)"
   - ps: $env:SignedArtifact = "facemask-plugin-$(git describe --tags --abbrev=0)"
   - ps: $env:UnsignedArtifact = "facemask-plugin-$env:APPVEYOR_BUILD_NUMBER"
 
@@ -32,14 +33,15 @@ build_script:
 - cmd: cmake --build . --config RelWithDebInfo
 
 after_build:
-- cmd: tar cvaf "%UnsignedArtifact%.tar.gz" "distribute" 
+- cmd: tar cvaf "%UnsignedArtifact%.tar.gz" "distribute/slobs/RelWithDebInfo" 
 
 before_deploy:
 - echo %CD%
 - dir
 - nuget install secure-file -ExcludeVersion
 - ps: c:\projects\source\ci\win-signed-build.ps1
-- tar cvaf "%SignedArtifact%.tar.gz" "distribute"
+- tar cvaf "%SignedArtifact%.tar.gz" "distribute/slobs/RelWithDebInfo/data"
+- tar cvaf "%DataArtifact%.tar.gz" "distribute/slobs/obs-plugins"
 - ps: Push-AppveyorArtifact "$env:SignedArtifact.tar.gz"
 - dir
 
@@ -53,7 +55,7 @@ deploy:
     folder: facemask-plugin-deployment
     region: us-west-2
     set_public: true
-    artifact: $(SignedArtifact).tar.gz
+    artifact: $(SignedArtifact).tar.gz, $(DataArtifact).tar.gz)
 
 artifacts:
   - path: $(UnsignedArtifact).tar.gz
