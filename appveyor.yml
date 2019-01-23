@@ -23,6 +23,9 @@ install:
   - cd c:\projects
   - mkdir appveyor-test-utils
   - ps: Read-S3Object -AccessKey $env:AWSId -SecretKey $env:AWSSecretKey -BucketName faces-internal.streamlabs.com -KeyPrefix appveyor-test-utils/ -Folder c:\projects\appveyor-test-utils -Region us-west-2
+  - cd appveyor-test-utils
+  - dir
+  - cd c:\projects\source
   - git submodule update --init --recursive
   - ps: $env:SignedArtifact = "facemask-plugin-$(git describe --tags --abbrev=0)"
   - ps: $env:UnsignedArtifact = "facemask-plugin-$env:APPVEYOR_BUILD_NUMBER"
