@@ -23,6 +23,8 @@ install:
   - cd c:\projects
   - mkdir appveyor-test-utils
   - ps: Read-S3Object -AccessKey $env:AWSId -SecretKey $env:AWSSecretKey -BucketName faces-internal.streamlabs.com -KeyPrefix appveyor-test-utils/ -Folder c:\projects\appveyor-test-utils -Region us-west-2
+  - 7z x appveyor-test-utils/*zip appveyor-test-utils/unzipped-utils
+  - 7z x appveyor-test-utils/*7z appveyor-test-utils/unzipped-utils
   - cd appveyor-test-utils
   - dir
   - cd c:\projects\source
@@ -41,9 +43,13 @@ after_build:
 - cmd: tar cvaf "%UnsignedArtifact%.tar.gz" "distribute" 
 
 before_test:
-- ps: Read-S3Object -AccessKey %AwsId% -SecretKey %AWSSecretKey% -BucketName faces-internal.streamlabs.com -KeyPrefix appveyor-test-utils/ -Folder c:\projects\ -Region us-west-2
-
-
+- cd c:\projects
+- mkdir appveyor-test-utils
+- ps: Read-S3Object -AccessKey $env:AWSId -SecretKey $env:AWSSecretKey -BucketName faces-internal.streamlabs.com -KeyPrefix appveyor-test-utils/ -Folder c:\projects\appveyor-test-utils -Region us-west-2
+- 7z x appveyor-test-utils/*zip appveyor-test-utils/unzipped-utils
+- cd appveyor-test-utils
+- dir
+- cd c:\projects\source
 
 test_script:
 - ctest -T Test
@@ -75,7 +81,6 @@ deploy:
     region: us-west-2
     set_public: true
     artifact: $(SignedArtifact).tar.gz
-
 
 artifacts:
   - path: $(UnsignedArtifact).tar.gz
