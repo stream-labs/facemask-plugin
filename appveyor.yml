@@ -21,7 +21,7 @@ clone_folder: c:\projects\source
 
 install:
   - git submodule update --init --recursive
-  - ps: $env:DataArtifact = "facemask-plugin-data$(git describe --tags --abbrev=0)"
+  - ps: $env:DataArtifact = "facemask-plugin-data-$(git describe --tags --abbrev=0)"
   - ps: $env:SignedArtifact = "facemask-plugin-$(git describe --tags --abbrev=0)"
   - ps: $env:UnsignedArtifact = "facemask-plugin-$env:APPVEYOR_BUILD_NUMBER"
 
