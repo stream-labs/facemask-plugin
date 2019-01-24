@@ -24,11 +24,8 @@ install:
   - mkdir build
   - cd build
   - ps: Read-S3Object -AccessKey $env:AWSId -SecretKey $env:AWSSecretKey -BucketName faces-internal.streamlabs.com -Key libobs-debug-22.0.3-sl.219-win32-x64-wdeps.7z -File c:\projects\source\build\libobs-debug-22.0.3-sl.219-win32-x64-wdeps.7z -Region us-west-2
-  - dir
   - 7z x libobs-debug-22.0.3-sl.219-win32-x64-wdeps.7z -oc:\projects\source\build\ -r
-  - dir
   - cd libobs-debug-22.0.3-sl.219-win32-x64-wdeps
-  - dir
   - ps: $env:SignedArtifact = "facemask-plugin-$(git describe --tags --abbrev=0)"
   - ps: $env:UnsignedArtifact = "facemask-plugin-$env:APPVEYOR_BUILD_NUMBER"
 
@@ -41,12 +38,10 @@ after_build:
 
 before_deploy:
 - echo %CD%
-- dir
 - nuget install secure-file -ExcludeVersion
 - ps: c:\projects\source\ci\win-signed-build.ps1
 - tar cvaf "%SignedArtifact%.tar.gz" "distribute"
 - ps: Push-AppveyorArtifact "$env:SignedArtifact.tar.gz"
-- dir
 
 deploy:
   - provider: S3
