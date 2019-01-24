@@ -147,8 +147,7 @@ endif()
 
 # OBS Studio
 if(FACEMASK_EXTERNAL)
-	if(APPVEYOR_BUILD)
-		ADD_SUBDIRECTORY(c:/projects/source/build/libobs-debug-22.0.3-sl.219-win32-x64-wdeps)		
+	if(APPVEYOR_BUILD)	
 
 		include("${libobs_SOURCE_DIR}/cmake/LibObs/LibObsConfig.cmake")
 
