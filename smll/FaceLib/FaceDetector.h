@@ -42,6 +42,15 @@ namespace FaceLib {
 		FaceDetector();
 
 		/**
+		Constructor to initialize the custom FaceDetector object.
+		Intializes the DLIB Frontal Face Detector.
+
+		@param filename The full path to the face detector file.
+		@usage FaceLib::FaceDetector detector(<path_to_model>)
+		*/
+		FaceDetector(std::string filename);
+
+		/**
 		Destructor for the FaceDetector object.
 		*/
 		~FaceDetector();

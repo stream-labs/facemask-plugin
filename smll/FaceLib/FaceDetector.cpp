@@ -27,6 +27,10 @@ namespace FaceLib {
 		Init();
 	}
 
+	FaceDetector::FaceDetector(std::string filename) {
+		dlib::deserialize(filename) >> _detector;
+	}
+
 	FaceDetector::~FaceDetector()
 	{
 	}
