@@ -19,6 +19,7 @@
 */
 #pragma once
 #include "utils.h"
+#include "p.h"
 #include <Windows.h>
 #include <string>
 #include <fstream>
@@ -264,3 +265,6 @@ namespace Utils {
 
 }
 
+int test() {
+	return 5;
+}

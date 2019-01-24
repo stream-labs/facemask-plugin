@@ -20,7 +20,7 @@
 */
 
 #include "FaceDetector.hpp"
-
+#include "../plugin/p.h"
 
 #define HULL_POINTS_SCALE		(1.25f)
 // border points = 4 corners + subdivide
@@ -52,7 +52,7 @@ namespace smll {
 		m_detector = get_frontal_face_detector();
 
 		count = 0;
-
+		cpu_has_avx_instructions();
 		char *filename = obs_module_file(kFileShapePredictor68);
 #ifdef _WIN32
 		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
@@ -195,8 +195,9 @@ namespace smll {
 		results.motionRect.set_bottom(std::min((int)results.motionRect.bottom() + delta_h, grayImage.rows - 1));
 	}
 
-
 	void FaceDetector::computeCurrentImage(DetectionResults& results) {
+
+		test();
 		computeDifference(results);
 		addFaceRectangles(results);
 

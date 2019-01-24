@@ -63,3 +63,4 @@ namespace Utils {
 	extern std::wstring ConvertStringToWstring(const std::string &str);
 	extern std::string ConvertWstringToString(const std::wstring& s);
 }
+

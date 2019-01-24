@@ -227,6 +227,7 @@ SET(facemask-plugin_HEADERS
 	"${PROJECT_SOURCE_DIR}/plugin/exceptions.h"
 	"${PROJECT_SOURCE_DIR}/plugin/face-mask-filter.h"
 	"${PROJECT_SOURCE_DIR}/plugin/plugin.h"
+	"${PROJECT_SOURCE_DIR}/plugin/p.h"
 	"${PROJECT_SOURCE_DIR}/plugin/strings.h"
 	"${PROJECT_SOURCE_DIR}/plugin/utils.h"
 	"${PROJECT_BINARY_DIR}/version.h"
@@ -311,6 +312,10 @@ SET(facemask-plugin_LIBRARIES
 	Shlwapi.lib
 )
 
+SET(facemask-gen_LIBRARIES
+	facemask-gen.lib
+)
+
 INCLUDE_DIRECTORIES(
 	"${PROJECT_BINARY_DIR}"
 	"${PROJECT_SOURCE_DIR}"
@@ -346,17 +351,26 @@ endif()
 ################################################################################
 # Building
 ################################################################################
-ADD_LIBRARY(facemask-plugin MODULE
+ADD_LIBRARY(facemask-gen MODULE
 	${facemask-plugin_HEADERS}
 	${facemask-plugin_SOURCES}
 	${facemask-plugin_DATA}
 )
 
 
+ADD_LIBRARY(facemask-plugin MODULE
+	"${PROJECT_SOURCE_DIR}/plugin/p.h"
+	"${PROJECT_SOURCE_DIR}/plugin/p.cpp"
+)
+
 if(FACEMASK_EXTERNAL)
-	TARGET_LINK_LIBRARIES(facemask-plugin
+	TARGET_LINK_LIBRARIES(facemask-gen
 		${LIBOBS_LIBRARIES}
 		${facemask-plugin_LIBRARIES}
+	)
+	
+	TARGET_LINK_LIBRARIES(facemask-plugin ${LIBOBS_LIBRARIES}
+		${facemask-gen_LIBRARIES}
 	)
 	
 	if(BUILD_UNIT_TESTS)
