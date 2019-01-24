@@ -141,9 +141,11 @@ include_directories(${PATH_FREETYPE}/include)
 
 if(EXISTS c:/projects/source/build/libobs-debug-22.0.3-sl.219-win32-x64-wdeps)
     SET(APPVEYOR_BUILD TRUE)
+    SET(libobs_SOURCE_DIR "c:/projects/source/build/libobs-debug-22.0.3-sl.219-win32-x64-wdeps")
 else()
     SET(APPVEYOR_BUILD FALSE)
 endif()
+
 
 # OBS Studio
 if(FACEMASK_EXTERNAL)
