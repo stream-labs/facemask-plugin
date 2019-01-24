@@ -21,12 +21,12 @@ clone_folder: c:\projects\source
 
 install:
   - git submodule update --init --recursive
-  - ps: Read-S3Object -AccessKey $env:AWSId -SecretKey $env:AWSSecretKey -BucketName faces-internal.streamlabs.com -KeyPrefix appveyor-test-utils/ -Folder c:\projects\appveyor-test-utils -Region us-west-2
   - mkdir build
   - cd build
   - ps: Read-S3Object -AccessKey $env:AWSId -SecretKey $env:AWSSecretKey -BucketName faces-internal.streamlabs.com -KeyPrefix libobs-debug-22.0.3-sl.219-win32-x64-wdeps.7z -Folder c:\projects\source\build\ -Region us-west-2
   - dir
   - 7z x c:/projects/source/build/libobs-debug-22.0.3-sl.219-win32-x64-wdeps.7z c:/projects/source/build/
+  - dir
   - ps: $env:DataArtifact = "facemask-plugin-data-$(git describe --tags --abbrev=0)"
   - ps: $env:SignedArtifact = "facemask-plugin-$(git describe --tags --abbrev=0)"
   - ps: $env:UnsignedArtifact = "facemask-plugin-$env:APPVEYOR_BUILD_NUMBER"
