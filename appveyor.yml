@@ -46,7 +46,6 @@ before_deploy:
 - ps: c:\projects\source\ci\win-signed-build.ps1
 - tar cvaf "%SignedArtifact%.tar.gz" "distribute"
 - ps: Push-AppveyorArtifact "$env:SignedArtifact.tar.gz"
-- ps: Push-AppveyorArtifact "$env:DataArtifact.tar.gz"
 - dir
 
 deploy:
