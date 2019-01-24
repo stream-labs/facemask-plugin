@@ -74,12 +74,9 @@ namespace smll {
 #else
 		deserialize(filename) >> m_predictor68;
 #endif
-		if (!filenameAllocated) {
-			bfree(filename);
-		}
-		else {
-			delete filename;
-		}
+
+		bfree(filename);
+
 	}
 
 	void FaceDetector::MakeVtxBitmaskLookup() {
