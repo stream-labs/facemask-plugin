@@ -29,7 +29,6 @@ install:
   - dir
   - cd libobs-debug-22.0.3-sl.219-win32-x64-wdeps
   - dir
-  - ps: $env:DataArtifact = "facemask-plugin-data-$(git describe --tags --abbrev=0)"
   - ps: $env:SignedArtifact = "facemask-plugin-$(git describe --tags --abbrev=0)"
   - ps: $env:UnsignedArtifact = "facemask-plugin-$env:APPVEYOR_BUILD_NUMBER"
 
@@ -45,11 +44,7 @@ before_deploy:
 - dir
 - nuget install secure-file -ExcludeVersion
 - ps: c:\projects\source\ci\win-signed-build.ps1
-- cd distribute/slobs/RelWithDebInfo
-- tar cvaf "%DataArtifact%.tar.gz" "data
-- mkdir 64bit
-- move obs-plugins\* 64bit
-- tar cvaf "%SignedArtifact%.tar.gz" "64bit"
+- tar cvaf "%SignedArtifact%.tar.gz" "distribute"
 - ps: Push-AppveyorArtifact "$env:SignedArtifact.tar.gz"
 - ps: Push-AppveyorArtifact "$env:DataArtifact.tar.gz"
 - dir
@@ -64,7 +59,7 @@ deploy:
     folder: facemask-plugin-deployment
     region: us-west-2
     set_public: true
-    artifact: $(SignedArtifact).tar.gz, $(DataArtifact).tar.gz
+    artifact: $(SignedArtifact).tar.gz
 
 artifacts:
   - path: $(UnsignedArtifact).tar.gz
