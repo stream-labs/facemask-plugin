@@ -143,6 +143,7 @@ if(EXISTS c:/projects/source/build/libobs-debug-22.0.3-sl.219-win32-x64-wdeps)
     SET(APPVEYOR_BUILD TRUE)
 else()
     SET(APPVEYOR_BUILD FALSE)
+endif()
 
 # OBS Studio
 if(FACEMASK_EXTERNAL)
