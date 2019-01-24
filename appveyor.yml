@@ -45,8 +45,9 @@ before_deploy:
 - dir
 - nuget install secure-file -ExcludeVersion
 - ps: c:\projects\source\ci\win-signed-build.ps1
-- tar cvaf "%SignedArtifact%.tar.gz" "distribute/slobs/RelWithDebInfo/obs-plugins/"
-- tar cvaf "%DataArtifact%.tar.gz" "distribute/slobs/RelWithDebInfo/data"
+- cd distribute/slobs/RelWithDebInfo
+- tar cvaf "%SignedArtifact%.tar.gz" "obs-plugins/"
+- tar cvaf "%DataArtifact%.tar.gz" "data"
 - ps: Push-AppveyorArtifact "$env:SignedArtifact.tar.gz"
 - ps: Push-AppveyorArtifact "$env:DataArtifact.tar.gz"
 - dir
