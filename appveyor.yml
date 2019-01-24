@@ -25,7 +25,7 @@ install:
   - cd build
   - ps: Read-S3Object -AccessKey $env:AWSId -SecretKey $env:AWSSecretKey -BucketName faces-internal.streamlabs.com -KeyPrefix libobs-debug-22.0.3-sl.219-win32-x64-wdeps.7z -Folder c:\projects\source\build\ -Region us-west-2
   - dir
-  - 7z x c:/projects/source/build/libobs-debug-22.0.3-sl.219-win32-x64-wdeps.7z c:/projects/source/build/
+  - 7z x c:\projects\source\build\libobs-debug-22.0.3-sl.219-win32-x64-wdeps.7z c:\projects\source\build\
   - dir
   - ps: $env:DataArtifact = "facemask-plugin-data-$(git describe --tags --abbrev=0)"
   - ps: $env:SignedArtifact = "facemask-plugin-$(git describe --tags --abbrev=0)"
