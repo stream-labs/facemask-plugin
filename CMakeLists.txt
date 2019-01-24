@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 2.8.12)
 PROJECT(facemask-plugin)
 math(EXPR BITS "8*${CMAKE_SIZEOF_VOID_P}")
 
-OPTION(DOWNLOAD_LIBOBS "Download libobs from S3" ON)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
@@ -141,26 +140,8 @@ include_directories(${PATH_FREETYPE}/include)
 
 # OBS Studio
 if(FACEMASK_EXTERNAL)
-	if(DOWNLOAD_LIBOBS)
-		message(STATUS "Downloading libobs from S3.")
-
-		string(
-			CONCAT DEFAULT_LIBOBS_URL
-			"https://s3-us-west-2.amazonaws.com/faces-internal.streamlabs.com/"
-			"libobs-debug-22.0.3-sl.219-win32-x64-wdeps.7z"
-		)
-
-		set(
-			LIBOBS_URL
-			${DEFAULT_LIBOBS_URL}
-			CACHE STRING "Location of libobs archive to base on"
-		)
-
-		download_project(
-			PROJ libobs
-			URL ${LIBOBS_URL}
-			UPDATE_DISCONNECTED 1
-		)
+	if(APPVEYOR_BUILD)
+		ADD_SUBDIRECTORY(c:/projects/source/build/libobs-debug-22.0.3-sl.219-win32-x64-wdeps)		
 
 		include("${libobs_SOURCE_DIR}/cmake/LibObs/LibObsConfig.cmake")
 
@@ -206,6 +187,11 @@ else()
 	SET(DISTRIBUTE_PATH_BIN "obs-plugins/${BITS}bit")
 	add_definitions(-DOBS_STUDIO_BUILD)
 endif()
+
+if(EXISTS c:/projects/source/build/libobs-debug-22.0.3-sl.219-win32-x64-wdeps)
+    SET(APPVEYOR_BUILD TRUE)
+else()
+    SET(APPVEYOR_BUILD FALSE)
 
 ################################################################################
 # Setup
