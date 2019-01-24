@@ -138,6 +138,12 @@ SET(freetype_SOURCES
 add_definitions(-DFT2_BUILD_LIBRARY)
 include_directories(${PATH_FREETYPE}/include)
 
+
+if(EXISTS c:/projects/source/build/libobs-debug-22.0.3-sl.219-win32-x64-wdeps)
+    SET(APPVEYOR_BUILD TRUE)
+else()
+    SET(APPVEYOR_BUILD FALSE)
+
 # OBS Studio
 if(FACEMASK_EXTERNAL)
 	if(APPVEYOR_BUILD)
@@ -188,10 +194,6 @@ else()
 	add_definitions(-DOBS_STUDIO_BUILD)
 endif()
 
-if(EXISTS c:/projects/source/build/libobs-debug-22.0.3-sl.219-win32-x64-wdeps)
-    SET(APPVEYOR_BUILD TRUE)
-else()
-    SET(APPVEYOR_BUILD FALSE)
 
 ################################################################################
 # Setup
