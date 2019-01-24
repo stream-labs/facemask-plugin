@@ -5,15 +5,13 @@ math(EXPR BITS "8*${CMAKE_SIZEOF_VOID_P}")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
-include(DownloadProject)
-
 
 SET(PATH_DLIB "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dlib")
 set(USE_AVX_INSTRUCTIONS ON CACHE BOOL "Use AVX instructions" FORCE)
 set(USE_SSE4_INSTRUCTIONS ON CACHE BOOL "Use SSE4 instructions" FORCE)
 set(DLIB_NO_GUI_SUPPORT OFF CACHE STRING "DLib GUI support" FORCE)
 set(DLIB_GIF_SUPPORT OFF CACHE STRING "DLib GIF support" FORCE)
-set(DLIB_JPEG_SUPPORT ON CACHE STRING "DLib JPEG support"  FORCE)
+set(DLIB_JPEG_SUPPORT OFF CACHE STRING "DLib JPEG support"  FORCE)
 set(DLIB_PNG_SUPPORT OFF CACHE STRING "DLib PNG support"  FORCE)
 set(DLIB_USE_BLAS OFF CACHE STRING "DLib BLAS support"  FORCE)
 set(DLIB_USE_LAPACK OFF CACHE STRING "DLib LAPACK support"  FORCE)
@@ -385,7 +383,6 @@ add_library(facemask-plugin-objlib OBJECT
 
 set_property(TARGET facemask-plugin-objlib PROPERTY POSITION_INDEPENDENT_CODE 1)
 add_library(facemask-plugin MODULE $<TARGET_OBJECTS:facemask-plugin-objlib>)
-add_library(facemask-plugin-static STATIC $<TARGET_OBJECTS:facemask-plugin-objlib>)
 
 if(FACEMASK_EXTERNAL)
 	TARGET_LINK_LIBRARIES(facemask-plugin
@@ -438,6 +435,5 @@ else()
 endif()
 
 
-TARGET_LINK_LIBRARIES(facemask-plugin-static ${facemask-plugin_LIBRARIES} ${LIBOBS_LIBRARIES})
 
 
