@@ -54,7 +54,6 @@ namespace smll {
 		count = 0;
 
 		char *filename = obs_module_file(kFileShapePredictor68);
-		bool filenameAllocated = false;
 
 #ifdef _WIN32
 		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
