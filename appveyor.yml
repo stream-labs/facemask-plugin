@@ -28,6 +28,7 @@ install:
   - 7z x libobs-debug-22.0.3-sl.219-win32-x64-wdeps.7z -oc:\projects\source\build\ -r
   - dir
   - cd libobs-debug-22.0.3-sl.219-win32-x64-wdeps
+  - dir
   - ps: $env:DataArtifact = "facemask-plugin-data-$(git describe --tags --abbrev=0)"
   - ps: $env:SignedArtifact = "facemask-plugin-$(git describe --tags --abbrev=0)"
   - ps: $env:UnsignedArtifact = "facemask-plugin-$env:APPVEYOR_BUILD_NUMBER"
