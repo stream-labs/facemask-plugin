@@ -46,6 +46,7 @@ before_deploy:
 - tar cvaf "%SignedArtifact%.tar.gz" "distribute/slobs/RelWithDebInfo/obs-plugins/"
 - tar cvaf "%DataArtifact%.tar.gz" "distribute/slobs/RelWithDebInfo/data"
 - ps: Push-AppveyorArtifact "$env:SignedArtifact.tar.gz"
+- ps: Push-AppveyorArtifact "$env:DataArtifact.tar.gz"
 - dir
 
 deploy:
