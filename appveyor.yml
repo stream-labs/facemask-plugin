@@ -53,6 +53,8 @@ deploy:
     region: us-west-2
     set_public: true
     artifact: $(SignedArtifact).tar.gz
+    on:
+      appveyor_repo_tag: true
 
 artifacts:
   - path: $(UnsignedArtifact).tar.gz
