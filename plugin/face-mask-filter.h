@@ -107,7 +107,7 @@ namespace Plugin {
 			static bool generate_videos(obs_properties_t *pr, obs_property_t *p, void *data);
 			bool generate_videos(obs_properties_t *pr, obs_property_t *p);
 			cv::Mat convert_frame_to_gray_mat(obs_source_frame* frame);
-
+			
 		protected:
 			// face detection thread
 			static int32_t StaticThreadMain(Instance*);
@@ -141,7 +141,7 @@ namespace Plugin {
 			bool			isVisible;
 			bool			videoTicked;
 			HANDLE			taskHandle;
-
+			ofstream		logOutput;
 			// Face detector
 			smll::FaceDetector*		smllFaceDetector;
 			smll::OBSRenderer*      smllRenderer;
@@ -239,6 +239,13 @@ namespace Plugin {
 			smll::DetectionResults		faces;
 			smll::TriangulationResult	triangulation;
 			TimeStamp					timestamp;
+			bool						timestampInited;
+			bool						lastTimestampInited;
+			TimeStamp					lastActualTimestamp;
+			TimeStamp					renderTimestamp;
+			smll::ProcessedResults		processedFrameResults;
+			int lastResultIndex;
+			bool sameFrameResults;
 
 			// flags
 			bool				drawMask;
@@ -250,7 +257,8 @@ namespace Plugin {
 			bool				filterPreviewMode;
 			bool				autoBGRemoval;
 			bool				cartoonMode;
-
+			bool				logMode;
+			bool				lastLogMode;
 			// for testing/thumbs/writing textures to files
 			gs_stagesurf_t*		testingStage;
 

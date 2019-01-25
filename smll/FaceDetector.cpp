@@ -222,6 +222,7 @@ namespace smll {
 		// Wait for CONFIG_INT_FACE_DETECT_FREQUENCY after all faces are lost before trying to detect them again
 		if (m_timeout > 0) {
 			m_timeout--;
+			results.processedResults.FrameSkipped();
 			return;
 		}
 
@@ -252,6 +253,10 @@ namespace smll {
 				m_detectionTimeout =
 					Config::singleton().get_int(CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY);
 				StartObjectTracking();
+				results.processedResults.DetectionMade();
+			}
+			else {
+				results.processedResults.DetectionFailed();
 			}
 		}
 		else if (m_trackingTimeout == 0) {
@@ -273,8 +278,10 @@ namespace smll {
 				// force detection on the next frame, do not wait for 5 frames
 				m_timeout = 0;
 				trackingFailed = true;
+				results.processedResults.TrackingFailed();
 			}
 
+			results.processedResults.TrackingMade();
 			// copy faces to results
 			for (int i = 0; i < m_faces.length; i++) {
 				results[i] = m_faces[i];
@@ -285,6 +292,7 @@ namespace smll {
 		{
 			m_detectionTimeout--;
 			m_trackingTimeout--;
+			results.processedResults.FrameSkipped();
 		}
 
 		// copy faces to results
