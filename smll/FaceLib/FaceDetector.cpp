@@ -29,6 +29,8 @@ namespace FaceLib {
 
 	FaceDetector::FaceDetector(std::string filename) {
 		dlib::deserialize(filename) >> _detector;
+		dlib::test_box_overlap overlap(0.15, 0.75);
+		_detector.set_overlap_tester(overlap);
 	}
 
 	FaceDetector::~FaceDetector()
