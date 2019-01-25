@@ -43,15 +43,13 @@ after_build:
 - cmd: tar cvaf "%UnsignedArtifact%.tar.gz" "distribute/slobs/RelWithDebInfo" 
 
 before_test:
-- cd c:\projects
-- mkdir appveyor-test-utils
 - ps: Read-S3Object -AccessKey $env:AWSId -SecretKey $env:AWSSecretKey -BucketName faces-internal.streamlabs.com -Key libobs-debug-22.0.3-sl.219-win32-x64-wdeps.7z -File c:\projects\source\build\libobs-debug-22.0.3-sl.219-win32-x64-wdeps.7z -Region us-west-2
 - 7z x appveyor-test-utils/*zip appveyor-test-utils/unzipped-utils
 - cd appveyor-test-utils
 - dir
 - cd c:\projects\source
-- ps: Copy-Item -Path c:\projects\source\appveyor-test-utils\unzipped-utils\shape_predictor\* -Destination c:projects\source\shape_predictor_68_face_landmarks.dat 
-- ps: Copy-Item -Path c:\projects\source\appveyor-test-utils\unzipped-utils\dlls-for-test\* -Destination c:projects\source\build\
+- ps: Copy-Item -Path c:\projects\source\appveyor-test-utils\unzipped-utils\shape_predictor\* -Destination c:projects\source\build\RelWithDebInfo\shape_predictor_68_face_landmarks.dat 
+- ps: Copy-Item -Path c:\projects\source\appveyor-test-utils\unzipped-utils\dlls-for-test\* -Destination c:projects\source\build\RelWithDebInfo\
 - ps: Copy-Item -Path c:\projects\source\appveyor-test-utils\unzipped-utils\DanielQA\* -Destination c:projects\source\build\test1\
 
 test_script:
