@@ -76,23 +76,25 @@ void pick_best_window_size(
 
 int main(int argc, char** argv)
 {
-	// Parameters to train frontal faces
-	unsigned long _detection_window_size_width = 80;
-	unsigned long _detection_window_size_height = 80;
-	double _padding = 0;
-	double _nuclear_norm_regularization_strength = 9.0;
-	int _num_threads = 4;
-	double _C = 700;
-	double _epsilon = 0.05;
-	double _loss_per_missed_target = 1;
-	double _match_eps = 0.5;
-	double _singular_value_threshold = 0.15;
-	unsigned long _cell_size = 8;
-	std::string _xml_name = "SL_FD_Frontal_v0.2_no_mirror.xml";
-	std::vector<int> _images_to_disregard = { 36, 186, 386, 424, 592, 603, 1127 }; // 151, 215, 434, 475, 659, 670, 1193
-	bool _addLRFlip = true;
-	bool _useRightOnly = false;
-	bool _modelName = "face_detector_frontal.svm";
+	//// Parameters to train frontal faces
+	//unsigned long _detection_window_size_width = 80;
+	//unsigned long _detection_window_size_height = 80;
+	//double _padding = 0;
+	//double _nuclear_norm_regularization_strength = 9.0;
+	//int _num_threads = 4;
+	//double _C = 700;
+	//double _epsilon = 0.05;
+	//double _loss_per_missed_target = 1;
+	//double _match_eps = 0.5;
+	//double _singular_value_threshold = 0.15;
+	//unsigned long _cell_size = 8;
+	//std::string _xml_name = "SL_FD_Frontal_v0.2_no_mirror.xml";
+	//std::vector<int> _images_to_disregard = { 36, 186, 386, 424, 592, 603, 1127 }; // 151, 215, 434, 475, 659, 670, 1193
+	//bool _addLRFlip = true;
+	//bool _addRotations = false;
+	//bool _rotateRight = false;
+	//bool _useRightOnly = false;
+	//bool _modelName = "face_detector_frontal.svm";
 
 	//// Parameters to train left faces
 	//unsigned long _detection_window_size_width = 80;
@@ -109,6 +111,8 @@ int main(int argc, char** argv)
 	//std::string _xml_name = "left_faces.xml";
 	//std::vector<int> _images_to_disregard = { 467 };
 	//bool _addLRFlip = false;
+	//bool _addRotations = false;
+	//bool _rotateRight = false;
 	//bool _useRightOnly = false;
 	//bool _modelName = "face_detector_left.svm";
 
@@ -127,26 +131,32 @@ int main(int argc, char** argv)
 	//std::string _xml_name = "left_faces.xml";
 	//std::vector<int> _images_to_disregard = { 467 };
 	//bool _addLRFlip = true;
+	//bool _addRotations = false;
+	//bool _rotateRight = false;
 	//bool _useRightOnly = true;
 	//bool _modelName = "face_detector_right.svm";
 
-	//// Parameters to train frontal - left faces
-	//unsigned long _detection_window_size_width = 80;
-	//unsigned long _detection_window_size_height = 80;
-	//double _padding = 0;
-	//unsigned long _cell_size = 8;
-	//double _nuclear_norm_regularization_strength = 9.0;
-	//int _num_threads = 4;
-	//double _C = 700;
-	//double _epsilon = 0.05;
-	//double _loss_per_missed_target = 2;
-	//double _match_eps = 0.5;
-	//double _singular_value_threshold = 0.15;
-	//std::string _xml_name = "left_faces.xml";
-	//std::vector<int> _images_to_disregard = { 467 };
-	//bool _addLRFlip = true;
-	//bool _useRightOnly = true;
-	//bool _modelName = "face_detector_frontal_left.svm";
+	// Parameters to train frontal - left faces
+	unsigned long _detection_window_size_width = 80;
+	unsigned long _detection_window_size_height = 80;
+	double _padding = 0;
+	unsigned long _cell_size = 8;
+	double _nuclear_norm_regularization_strength = 9.0;
+	int _num_threads = 4;
+	double _C = 700;
+	double _epsilon = 0.05;
+	double _loss_per_missed_target = 2;
+	double _match_eps = 0.5;
+	double _singular_value_threshold = 0.15;
+	std::string _xml_name = "SL_FD_Frontal_v0.2_no_mirror.xml";
+	std::vector<int> _images_to_disregard = { 36, 186, 386, 424, 592, 603, 1127 };
+	bool _addLRFlip = true;
+	bool _addRotations = true;
+	bool _rotateRight = false;
+	bool _useRightOnly = false;
+	bool _modelName = "face_detector_frontal_left.svm";
+	// Note: Rotations should be given in counter clockwise euler angles
+	// 
 
     try
     {
@@ -248,6 +258,7 @@ int main(int argc, char** argv)
 			cout << "DONE" << endl;
 		}
 		if (_useRightOnly) {
+			cout << "Use Right Only...";
 			images.clear();
 			face_boxes.clear();
 			for (int i = temp_size; i < images_train.size(); i++) {
@@ -261,6 +272,13 @@ int main(int argc, char** argv)
 				images_train.push_back(images[i]);
 				face_boxes_train.push_back(face_boxes[i]);
 			}
+			cout << "DONE" << endl;
+		}
+		if (_addRotations) {
+			cout << "Rotate Images Left...";
+			int temp_size = images_train.size();
+			dlib::add_image_rotations(dlib::linspace(27, 27, 1)*dlib::pi / 180.0, images_train, face_boxes_train);
+			cout << "DONE" << endl;
 		}
 		
         cout << "Num training images: " << images_train.size() << " / " << images.size()*2 << endl;
