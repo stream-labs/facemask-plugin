@@ -137,7 +137,7 @@ add_definitions(-DFT2_BUILD_LIBRARY)
 include_directories(${PATH_FREETYPE}/include)
 
 
-if(EXISTS c:/projects/source/build/libobs-debug-22.0.3-sl.219-win32-x64-wdeps)
+if(DEFINED ENV{FM_PLUGIN_APPVEYOR_BUILD})
     SET(APPVEYOR_BUILD TRUE)
     SET(libobs_SOURCE_DIR "c:/projects/source/build/libobs-debug-22.0.3-sl.219-win32-x64-wdeps")
 else()
@@ -429,6 +429,21 @@ if(FACEMASK_EXTERNAL)
 		COMMAND ${CMAKE_COMMAND} -E copy
 		"$<TARGET_FILE_DIR:facemask-plugin>/facemask-plugin.pdb"
 		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/facemask-plugin.pdb"
+	)
+	add_custom_command(TARGET facemask-plugin POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_directory
+		"${PROJECT_SOURCE_DIR}/data"
+		"C:/Users/brank/streamlabs-obs/node_modules/obs-studio-node/data/obs-plugins/facemask-plugin"
+	)
+	add_custom_command(TARGET facemask-plugin POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy
+		"$<TARGET_FILE:facemask-plugin>"
+		"C:/Users/brank/streamlabs-obs/node_modules/obs-studio-node/obs-plugins/64bit/$<TARGET_FILE_NAME:facemask-plugin>"
+	)
+	add_custom_command(TARGET facemask-plugin POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy
+		"$<TARGET_FILE_DIR:facemask-plugin>/facemask-plugin.pdb"
+		"C:/Users/brank/streamlabs-obs/node_modules/obs-studio-node/obs-plugins/64bit/facemask-plugin.pdb"
 	)
 else()
 	install_obs_plugin_with_data(facemask-plugin data)

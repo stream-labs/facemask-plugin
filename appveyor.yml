@@ -29,8 +29,9 @@ install:
   - ps: $env:UnsignedArtifact = "facemask-plugin-$env:APPVEYOR_BUILD_NUMBER"
 
 build_script:
-- cmd: cmake c:\projects\source -G "Visual Studio 15 Win64"
-- cmd: cmake --build . --config RelWithDebInfo
+  - ps: $env:MY_VARIABLE="FM_PLUGIN_APPVEYOR_BUILD"
+  - cmd: cmake c:\projects\source -G "Visual Studio 15 Win64"
+  - cmd: cmake --build . --config RelWithDebInfo
 
 after_build:
 - cmd: tar cvaf "%UnsignedArtifact%.tar.gz" "distribute/slobs/RelWithDebInfo" 
