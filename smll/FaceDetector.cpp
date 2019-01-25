@@ -55,6 +55,7 @@ namespace smll {
 		count = 0;
 
 		char *filename = obs_module_file(kFileShapePredictor68);
+
 #ifdef _WIN32
 		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
 		std::wstring wide_filename(converter.from_bytes(filename));
@@ -73,7 +74,9 @@ namespace smll {
 #else
 		deserialize(filename) >> m_predictor68;
 #endif
+
 		bfree(filename);
+
 	}
 
 	void FaceDetector::MakeVtxBitmaskLookup() {
@@ -221,7 +224,7 @@ namespace smll {
 
 	void FaceDetector::DetectFaces(cv::Mat &inputImage, int width, int height, DetectionResults& results) {
 		// Wait for CONFIG_INT_FACE_DETECT_FREQUENCY after all faces are lost before trying to detect them again
-		if (m_timeout > 0) {
+		if (m_timeout > 0) {    
 			m_timeout--;
 			results.processedResults.FrameSkipped();
 			return;
