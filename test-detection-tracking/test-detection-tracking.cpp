@@ -126,17 +126,16 @@ float GetAccurateFacesPercentage(std::vector<std::vector<dlib::rectangle>> simul
 int main(int argc, char *argv[]) {
 	std::vector<std::vector<dlib::rectangle> > ignore, groundTruth;
 	dlib::array<dlib::array2d<unsigned char> > images;
-	std::vector<uint64_t> timestamps;
 	std::vector<uint64_t> trace;
 
 	if (argc < 2) {
 		return 1;
 	}
 
-	std::string traceFile = argv[1];
-	std::string imageFolder = argv[2];
+	std::string imageFolder = argv[1];
+	std::string traceFile = strcat(argv[1], "\\trace.txt");
 
-	//trace = readTraceFromFile(traceFile.c_str());
+	trace = readTraceFromFile(traceFile.c_str());
 
 	groundTruth = loadImagesAndGroundTruth(imageFolder, trace, images, ignore);
 	std::vector<std::vector<dlib::rectangle>> simulationResult = SimulateDetectionAndTracking(images);
