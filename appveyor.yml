@@ -20,28 +20,54 @@ environment:
 clone_folder: c:\projects\source
 
 install:
+  - cd c:\projects
+  - mkdir appveyor-test-utils
+  - ps: Read-S3Object -AccessKey $env:AWSId -SecretKey $env:AWSSecretKey -BucketName faces-internal.streamlabs.com -KeyPrefix appveyor-test-utils/ -Folder c:\projects\appveyor-test-utils -Region us-west-2
+  - 7z x appveyor-test-utils/*zip c:\projects\source\shape_predictor\
+  - 7z x appveyor-test-utils/*7z appveyor-test-utils/unzipped-utils
+  - cd c:\projects\source
   - git submodule update --init --recursive
+  - mkdir build
+  - cd build
+  - ps: Read-S3Object -AccessKey $env:AWSId -SecretKey $env:AWSSecretKey -BucketName faces-internal.streamlabs.com -Key libobs-debug-22.0.3-sl.219-win32-x64-wdeps.7z -File c:\projects\source\build\libobs-debug-22.0.3-sl.219-win32-x64-wdeps.7z -Region us-west-2
+  - 7z x libobs-debug-22.0.3-sl.219-win32-x64-wdeps.7z -oc:\projects\source\build\ -r
   - ps: $env:SignedArtifact = "facemask-plugin-$(git describe --tags --abbrev=0)"
   - ps: $env:UnsignedArtifact = "facemask-plugin-$env:APPVEYOR_BUILD_NUMBER"
 
 build_script:
-- dir
-- cmd: mkdir build
-- cmd: cd build
-- cmd: cmake c:\projects\source -G "Visual Studio 15 Win64"
-- cmd: cmake --build . --config RelWithDebInfo
+  - ps: $env:FM_PLUGIN_APPVEYOR_BUILD=1
+  - cmd: cmake c:\projects\source -G "Visual Studio 15 Win64"
+  - cmd: cmake --build . --config RelWithDebInfo
 
 after_build:
-- cmd: tar cvaf "%UnsignedArtifact%.tar.gz" "distribute" 
+- cmd: tar cvaf "%UnsignedArtifact%.tar.gz" "distribute/slobs/RelWithDebInfo" 
+
+before_test:
+- cd c:\projects
+- mkdir appveyor-test-utils
+- ps: Read-S3Object -AccessKey $env:AWSId -SecretKey $env:AWSSecretKey -BucketName faces-internal.streamlabs.com -Key libobs-debug-22.0.3-sl.219-win32-x64-wdeps.7z -File c:\projects\source\build\libobs-debug-22.0.3-sl.219-win32-x64-wdeps.7z -Region us-west-2
+- 7z x appveyor-test-utils/*zip appveyor-test-utils/unzipped-utils
+- cd appveyor-test-utils
+- dir
+- cd c:\projects\source
+- ps: Copy-Item -Path c:\projects\source\appveyor-test-utils\unzipped-utils\shape_predictor\* -Destination c:projects\source\shape_predictor_68_face_landmarks.dat 
+- ps: Copy-Item -Path c:\projects\source\appveyor-test-utils\unzipped-utils\dlls-for-test\* -Destination c:projects\source\build\
+- ps: Copy-Item -Path c:\projects\source\appveyor-test-utils\unzipped-utils\DanielQA\* -Destination c:projects\source\build\test1\
+
+test_script:
+- ctest -R FaceDetectionTrackingTester -T Test -V -O test-stdout.txt
+- ps: |
+    $test1_out=[IO.File]::ReadAllText(test-stdout.txt)
+    $test_output_folder = Get-Content Testing/TAG -First 1
+    $test_ouput_file = Get-Content ("Testing/" + $test_output_folder + "Test.xml")
+    Add-AppveyorTest -Name "FaceDetectionTrackingTester" -Framework "CTest" -FileName "c:\projects\source\build\test-detection-tracking\test-detection-tracking.exe" -Outcome Passed -StdOut $test1_out
 
 before_deploy:
 - echo %CD%
-- dir
 - nuget install secure-file -ExcludeVersion
 - ps: c:\projects\source\ci\win-signed-build.ps1
 - tar cvaf "%SignedArtifact%.tar.gz" "distribute"
 - ps: Push-AppveyorArtifact "$env:SignedArtifact.tar.gz"
-- dir
 
 deploy:
   - provider: S3
@@ -54,7 +80,11 @@ deploy:
     region: us-west-2
     set_public: true
     artifact: $(SignedArtifact).tar.gz
+    on:
+      appveyor_repo_tag: true
 
 artifacts:
   - path: $(UnsignedArtifact).tar.gz
     name: Unsigned Artifact
+
+
