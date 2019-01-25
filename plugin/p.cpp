@@ -57,51 +57,148 @@ extern __declspec(dllimport) const char *obs_module_text2(const char *val);
 extern __declspec(dllimport) bool obs_module_get_string2(const char *val, const char **out);
 extern __declspec(dllimport) void obs_module_set_locale2(const char *locale);
 extern __declspec(dllimport) void obs_module_free_locale2(void);
+extern __declspec(dllimport) bool obs_module_load1(void);
+extern __declspec(dllimport) void obs_module_unload1(void);
+extern __declspec(dllimport) const char* obs_module_name1();
+extern __declspec(dllimport) const char* obs_module_description1();
+extern __declspec(dllimport) void obs_module_set_pointer1(obs_module_t *module);
+extern __declspec(dllimport) uint32_t obs_module_ver1(void);
+extern __declspec(dllimport) obs_module_t *obs_current_module1(void);
+extern __declspec(dllimport) const char *obs_module_text1(const char *val);
+extern __declspec(dllimport) bool obs_module_get_string1(const char *val, const char **out);
+extern __declspec(dllimport) void obs_module_set_locale1(const char *locale);
+extern __declspec(dllimport) void obs_module_free_locale1(void);
 #endif 
 
 
 
 
+#pragma warning( push )
+#pragma warning( disable: 4127 )
+#pragma warning( disable: 4201 )
+#pragma warning( disable: 4456 )
+#pragma warning( disable: 4458 )
+#pragma warning( disable: 4459 )
+#pragma warning( disable: 4505 )
+#pragma warning( disable: 4267 )
+#pragma warning( disable: 4100 )
+#include <dlib/image_processing.h>
+#pragma warning( pop )
+
+using namespace dlib;
+
+bool inited = false;
+bool avx = false;
 
 
+bool is_avx() {
+	if (!inited) {
+		blog(LOG_DEBUG, "[FaceMask] INITED");
+		avx= cpu_has_avx_instructions();
+		inited = true;
+		if (avx) {
+			blog(LOG_DEBUG, "[FaceMask] AVX");
+		}
+		else {
+			blog(LOG_DEBUG, "[FaceMask] NO AVX");
+		}
+	}
+	return avx;
+}
 MODULE_EXPORT void obs_module_set_pointer(obs_module_t *module) {
-	obs_module_set_pointer2(module);
+
+	if(is_avx()) {
+			obs_module_set_pointer1(module);
+	} else {
+			obs_module_set_pointer2(module);
+	}
+
 }
 MODULE_EXPORT uint32_t obs_module_ver(void) {
-	return obs_module_ver2();
+	if(is_avx()) {
+			return obs_module_ver1();
+	} else {
+			return obs_module_ver2();
+	}
+
 }
 MODULE_EXPORT obs_module_t *obs_current_module(void) {
-	return obs_current_module2();
+	if(is_avx()) {
+			return obs_current_module1();
+	} else {
+			return obs_current_module2();
+	}
+
 }
 MODULE_EXPORT const char *obs_module_text(const char *val) {
-	return obs_module_text2(val);
+	if(is_avx()) {
+			return obs_module_text1(val);
+	} else {
+			return obs_module_text2(val);
+	}
+
 }
 MODULE_EXPORT bool obs_module_get_string(const char *val, const char **out) {
-	return obs_module_get_string2(val, out);
+	if(is_avx()) {
+			return obs_module_get_string1(val, out);
+	} else {
+			return obs_module_get_string2(val, out);
+	}
+
 }
 MODULE_EXPORT void obs_module_set_locale(const char *locale) {
-	obs_module_set_locale2(locale);
+	if(is_avx()) {
+			obs_module_set_locale1(locale);
+	} else {
+			obs_module_set_locale2(locale);
+	}
+
 }
 MODULE_EXPORT void obs_module_free_locale(void) {
-	obs_module_free_locale2();
+	if(is_avx()) {
+			obs_module_free_locale1();
+	} else {
+			obs_module_free_locale2();
+	}
+
 }
 
 
 
 MODULE_EXPORT bool obs_module_load(void) {
-	return  obs_module_load2();
+	if(is_avx()) {
+			return  obs_module_load1();
+	} else {
+			return  obs_module_load2();
+	}
+
 }
 
  MODULE_EXPORT  void obs_module_unload(void) {
-	 obs_module_unload2();
+	 if(is_avx()) {
+			 obs_module_unload1();
+	} else {
+			 obs_module_unload2();
+	}
+
 }
 
 MODULE_EXPORT  const char* obs_module_name() {
-	return obs_module_name2();
+	if(is_avx()) {
+			return obs_module_name1();
+	} else {
+			return obs_module_name2();
+	}
+
 }
 
 MODULE_EXPORT  const char* obs_module_description() {
-	return obs_module_description2();
+	if(is_avx()) {
+		return obs_module_description1();
+	} else {
+		return obs_module_description2();
+	}
+	
 }
 
 #ifdef _WIN32

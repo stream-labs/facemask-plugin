@@ -3,8 +3,8 @@ PROJECT(facemask-plugin)
 math(EXPR BITS "8*${CMAKE_SIZEOF_VOID_P}")
 
 SET(PATH_DLIB "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dlib")
-set(USE_AVX_INSTRUCTIONS ON CACHE BOOL "Use AVX instructions" FORCE)
-set(USE_SSE4_INSTRUCTIONS ON CACHE BOOL "Use SSE4 instructions" FORCE)
+set(USE_AVX_INSTRUCTIONS OFF CACHE BOOL "Use AVX instructions" FORCE)
+set(USE_SSE4_INSTRUCTIONS OFF CACHE BOOL "Use SSE4 instructions" FORCE)
 set(DLIB_NO_GUI_SUPPORT OFF CACHE STRING "DLib GUI support" FORCE)
 set(DLIB_GIF_SUPPORT OFF CACHE STRING "DLib GIF support" FORCE)
 set(DLIB_JPEG_SUPPORT OFF CACHE STRING "DLib JPEG support"  FORCE)
@@ -227,7 +227,7 @@ SET(facemask-plugin_HEADERS
 	"${PROJECT_SOURCE_DIR}/plugin/exceptions.h"
 	"${PROJECT_SOURCE_DIR}/plugin/face-mask-filter.h"
 	"${PROJECT_SOURCE_DIR}/plugin/plugin.h"
-	"${PROJECT_SOURCE_DIR}/plugin/p.h"
+
 	"${PROJECT_SOURCE_DIR}/plugin/strings.h"
 	"${PROJECT_SOURCE_DIR}/plugin/utils.h"
 	"${PROJECT_BINARY_DIR}/version.h"
@@ -275,7 +275,7 @@ SET(facemask-plugin_SOURCES
 	"${PROJECT_SOURCE_DIR}/plugin/base64.cpp"
 	"${PROJECT_SOURCE_DIR}/plugin/exceptions.cpp"
 	"${PROJECT_SOURCE_DIR}/plugin/face-mask-filter.cpp"
-	"${PROJECT_SOURCE_DIR}/plugin/plugin.cpp"
+
 	"${PROJECT_SOURCE_DIR}/plugin/utils.cpp"
 	"${TINYOBJDir}/tiny_obj_loader.cc"
 	"${gs_SOURCES}"
@@ -313,7 +313,9 @@ SET(facemask-plugin_LIBRARIES
 )
 
 SET(facemask-gen_LIBRARIES
+	dlib::dlib
 	facemask-gen.lib
+	facemask-lim.lib
 )
 
 INCLUDE_DIRECTORIES(
@@ -353,18 +355,33 @@ endif()
 ################################################################################
 ADD_LIBRARY(facemask-gen MODULE
 	${facemask-plugin_HEADERS}
+	"${PROJECT_SOURCE_DIR}/plugin/p1.h"
 	${facemask-plugin_SOURCES}
+	"${PROJECT_SOURCE_DIR}/plugin/plugin1.cpp"
+	${facemask-plugin_DATA}
+)
+
+ADD_LIBRARY(facemask-lim MODULE
+	${facemask-plugin_HEADERS}
+	"${PROJECT_SOURCE_DIR}/plugin/p2.h"
+	${facemask-plugin_SOURCES}
+	"${PROJECT_SOURCE_DIR}/plugin/plugin2.cpp"
 	${facemask-plugin_DATA}
 )
 
 
 ADD_LIBRARY(facemask-plugin MODULE
-	"${PROJECT_SOURCE_DIR}/plugin/p.h"
 	"${PROJECT_SOURCE_DIR}/plugin/p.cpp"
 )
 
 if(FACEMASK_EXTERNAL)
 	TARGET_LINK_LIBRARIES(facemask-gen
+		${LIBOBS_LIBRARIES}
+		${facemask-plugin_LIBRARIES}
+	)
+	
+	
+	TARGET_LINK_LIBRARIES(facemask-lim
 		${LIBOBS_LIBRARIES}
 		${facemask-plugin_LIBRARIES}
 	)
