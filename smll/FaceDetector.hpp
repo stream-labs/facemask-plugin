@@ -83,6 +83,8 @@ private:
 	FaceLib::FaceLandmarks _faceLandmarks;
 	std::vector<int> _modelIndices;
 
+	bool landmarks_detected;
+
 	// Saved Faces
 	Faces			m_faces;
 

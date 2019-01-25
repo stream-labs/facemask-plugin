@@ -47,6 +47,7 @@ namespace smll {
 		, m_camera_w(0)
 		, m_camera_h(0)
 		, isPrevInit(false)
+		, landmarks_detected(false)
 		, cropInfo(0,0,0,0) {
 
 		count = 0;
@@ -165,6 +166,7 @@ namespace smll {
 		results.motionRect.set_bottom(maxY*scale);
 
 	}
+
 	void FaceDetector::addFaceRectangles(DetectionResults& results) {
 
 		float paddingPercentage = Config::singleton().get_double(CONFIG_MOTION_RECTANGLE_PADDING);
@@ -211,6 +213,7 @@ namespace smll {
 		// Wait for CONFIG_INT_FACE_DETECT_FREQUENCY after all faces are lost before trying to detect them again
 		if (m_timeout > 0) {
 			m_timeout--;
+			results.processedResults.FrameSkipped();
 			return;
 		}
 
@@ -232,13 +235,20 @@ namespace smll {
 		currentOrigImage = currentImage.clone();
 
 		bool trackingFailed = false;
+		bool wasFaceDetected = (m_faces.length > 0);
 		// if number of frames before the last detection is bigger than the threshold or if there are no faces to track
-		if (m_detectionTimeout == 0 || m_faces.length == 0) {
+		if (m_detectionTimeout == 0 || !wasFaceDetected) {
 			computeCurrentImage(results);
 			DoFaceDetection();
-			m_detectionTimeout =
-				Config::singleton().get_int(CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY);
-			StartObjectTracking();
+			if (m_faces.length > 0) {
+				m_detectionTimeout =
+					Config::singleton().get_int(CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY);
+				StartObjectTracking();
+				results.processedResults.DetectionMade();
+			}
+			else {
+				results.processedResults.DetectionFailed();
+			}
 		}
 		else if (m_trackingTimeout == 0) {
 			m_detectionTimeout--;
@@ -259,8 +269,10 @@ namespace smll {
 				// force detection on the next frame, do not wait for 5 frames
 				m_timeout = 0;
 				trackingFailed = true;
+				results.processedResults.TrackingFailed();
 			}
 
+			results.processedResults.TrackingMade();
 			// copy faces to results
 			for (int i = 0; i < m_faces.length; i++) {
 				results[i] = m_faces[i];
@@ -271,6 +283,7 @@ namespace smll {
 		{
 			m_detectionTimeout--;
 			m_trackingTimeout--;
+			results.processedResults.FrameSkipped();
 		}
 
 		// copy faces to results
@@ -283,7 +296,7 @@ namespace smll {
 
 		}
 		// If faces are not found
-		if (m_faces.length == 0 && !trackingFailed) {
+		if (m_faces.length == 0 && !trackingFailed && !wasFaceDetected) {
             // Wait for 5 frames and do face detection
             m_timeout = Config::singleton().get_int(CONFIG_INT_FACE_DETECT_FREQUENCY);
 		}
@@ -999,22 +1012,20 @@ namespace smll {
 		if (faces.size() > 0) {
 			prevImage = currentOrigImage.clone();
 		}
-        if ((m_faces.length == 0) || (faces.size() > 0)) {
-            // clamp to max faces
-			m_faces.length = (int)faces.size() > MAX_FACES ? MAX_FACES : (int)faces.size();
-            // copy rects into our faces, start tracking
-            for (int i = 0; i < m_faces.length; i++) {
-                // scale rectangle up to video frame size
-				m_faces[i].m_bounds.set_left((long)((float)(faces[i].left()*scale +
-					cropInfo.offsetX )));
-                m_faces[i].m_bounds.set_right((long)((float)(faces[i].right()*scale +
-					cropInfo.offsetX)));
-                m_faces[i].m_bounds.set_top((long)((float)(faces[i].top()*scale +
-					cropInfo.offsetY)));
-                m_faces[i].m_bounds.set_bottom((long)((float)(faces[i].bottom()*scale +
-					cropInfo.offsetY)));
-            }
 
+		m_faces.length = (int)faces.size() > MAX_FACES ? MAX_FACES : (int)faces.size();
+
+        // copy rects into our faces, start tracking
+        for (int i = 0; i < m_faces.length; i++) {
+            // scale rectangle up to video frame size
+			m_faces[i].m_bounds.set_left((long)((float)(faces[i].left()*scale +
+				cropInfo.offsetX)));
+			m_faces[i].m_bounds.set_right((long)((float)(faces[i].right()*scale +
+				cropInfo.offsetX)));
+			m_faces[i].m_bounds.set_top((long)((float)(faces[i].top()*scale +
+				cropInfo.offsetY)));
+			m_faces[i].m_bounds.set_bottom((long)((float)(faces[i].bottom()*scale +
+				cropInfo.offsetY)));
         }
     }
     
@@ -1051,8 +1062,12 @@ namespace smll {
 		// detect landmarks
 		for (int f = 0; f < m_faces.length; f++) {
 			// Detect features on full-size frame
-			std::vector<dlib::point> landmarks;
-			_faceLandmarks.DetectLandmarks(grayImage, m_faces[f].m_bounds, landmarks);
+      std::vector<dlib::point> landmarks;
+
+			if (!results.processedResults.isSkipped() || !landmarks_detected) {
+				_faceLandmarks.DetectLandmarks(grayImage, m_faces[f].m_bounds, landmarks);
+				landmarks_detected = true;
+			}
 
 			for (int j = 0; j < NUM_FACIAL_LANDMARKS; j++) {
 				results[f].landmarks68[j] = landmarks[j];
