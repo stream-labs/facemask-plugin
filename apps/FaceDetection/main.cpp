@@ -31,7 +31,7 @@ int main()
 	cv::VideoCapture camera(0);
 
 	// Initialize DLIB Face detector
-	FaceLib::FaceDetector faceDetector;
+	FaceLib::FaceDetector faceDetector("C:/Users/srira/streamLabs/facemask-plugin/apps/FaceDetection/model/face_detector_frontal.svm");
 
 
 	while (true) {
