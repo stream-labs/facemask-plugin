@@ -29,7 +29,7 @@ install:
   - ps: $env:UnsignedArtifact = "facemask-plugin-$env:APPVEYOR_BUILD_NUMBER"
 
 build_script:
-  - ps: $env:MY_VARIABLE="FM_PLUGIN_APPVEYOR_BUILD"
+  - ps: $env:FM_PLUGIN_APPVEYOR_BUILD=1
   - cmd: cmake c:\projects\source -G "Visual Studio 15 Win64"
   - cmd: cmake --build . --config RelWithDebInfo
 
