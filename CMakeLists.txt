@@ -2,11 +2,8 @@ cmake_minimum_required(VERSION 2.8.12)
 PROJECT(facemask-plugin)
 math(EXPR BITS "8*${CMAKE_SIZEOF_VOID_P}")
 
-OPTION(DOWNLOAD_LIBOBS "Download libobs from S3" ON)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
-
-include(DownloadProject)
 
 
 SET(PATH_DLIB "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dlib")
@@ -14,7 +11,7 @@ set(USE_AVX_INSTRUCTIONS ON CACHE BOOL "Use AVX instructions" FORCE)
 set(USE_SSE4_INSTRUCTIONS ON CACHE BOOL "Use SSE4 instructions" FORCE)
 set(DLIB_NO_GUI_SUPPORT OFF CACHE STRING "DLib GUI support" FORCE)
 set(DLIB_GIF_SUPPORT OFF CACHE STRING "DLib GIF support" FORCE)
-set(DLIB_JPEG_SUPPORT ON CACHE STRING "DLib JPEG support"  FORCE)
+set(DLIB_JPEG_SUPPORT OFF CACHE STRING "DLib JPEG support"  FORCE)
 set(DLIB_PNG_SUPPORT OFF CACHE STRING "DLib PNG support"  FORCE)
 set(DLIB_USE_BLAS OFF CACHE STRING "DLib BLAS support"  FORCE)
 set(DLIB_USE_LAPACK OFF CACHE STRING "DLib LAPACK support"  FORCE)
@@ -139,28 +136,18 @@ SET(freetype_SOURCES
 add_definitions(-DFT2_BUILD_LIBRARY)
 include_directories(${PATH_FREETYPE}/include)
 
+
+if(DEFINED ENV{FM_PLUGIN_APPVEYOR_BUILD})
+    SET(APPVEYOR_BUILD TRUE)
+    SET(libobs_SOURCE_DIR "c:/projects/source/build/libobs-debug-22.0.3-sl.219-win32-x64-wdeps")
+else()
+    SET(APPVEYOR_BUILD FALSE)
+endif()
+
+
 # OBS Studio
 if(FACEMASK_EXTERNAL)
-	if(DOWNLOAD_LIBOBS)
-		message(STATUS "Downloading libobs from S3.")
-
-		string(
-			CONCAT DEFAULT_LIBOBS_URL
-			"https://s3-us-west-2.amazonaws.com/faces-internal.streamlabs.com/"
-			"libobs-debug-22.0.3-sl.219-win32-x64-wdeps.7z"
-		)
-
-		set(
-			LIBOBS_URL
-			${DEFAULT_LIBOBS_URL}
-			CACHE STRING "Location of libobs archive to base on"
-		)
-
-		download_project(
-			PROJ libobs
-			URL ${LIBOBS_URL}
-			UPDATE_DISCONNECTED 1
-		)
+	if(APPVEYOR_BUILD)	
 
 		include("${libobs_SOURCE_DIR}/cmake/LibObs/LibObsConfig.cmake")
 
@@ -206,6 +193,7 @@ else()
 	SET(DISTRIBUTE_PATH_BIN "obs-plugins/${BITS}bit")
 	add_definitions(-DOBS_STUDIO_BUILD)
 endif()
+
 
 ################################################################################
 # Setup
@@ -395,7 +383,6 @@ add_library(facemask-plugin-objlib OBJECT
 
 set_property(TARGET facemask-plugin-objlib PROPERTY POSITION_INDEPENDENT_CODE 1)
 add_library(facemask-plugin MODULE $<TARGET_OBJECTS:facemask-plugin-objlib>)
-add_library(facemask-plugin-static STATIC $<TARGET_OBJECTS:facemask-plugin-objlib>)
 
 if(FACEMASK_EXTERNAL)
 	TARGET_LINK_LIBRARIES(facemask-plugin
@@ -442,6 +429,21 @@ if(FACEMASK_EXTERNAL)
 		COMMAND ${CMAKE_COMMAND} -E copy
 		"$<TARGET_FILE_DIR:facemask-plugin>/facemask-plugin.pdb"
 		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/facemask-plugin.pdb"
+	)
+	add_custom_command(TARGET facemask-plugin POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_directory
+		"${PROJECT_SOURCE_DIR}/data"
+		"C:/Users/brank/streamlabs-obs/node_modules/obs-studio-node/data/obs-plugins/facemask-plugin"
+	)
+	add_custom_command(TARGET facemask-plugin POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy
+		"$<TARGET_FILE:facemask-plugin>"
+		"C:/Users/brank/streamlabs-obs/node_modules/obs-studio-node/obs-plugins/64bit/$<TARGET_FILE_NAME:facemask-plugin>"
+	)
+	add_custom_command(TARGET facemask-plugin POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy
+		"$<TARGET_FILE_DIR:facemask-plugin>/facemask-plugin.pdb"
+		"C:/Users/brank/streamlabs-obs/node_modules/obs-studio-node/obs-plugins/64bit/facemask-plugin.pdb"
 	)
 else()
 	install_obs_plugin_with_data(facemask-plugin data)
