@@ -5,6 +5,8 @@ math(EXPR BITS "8*${CMAKE_SIZEOF_VOID_P}")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
+enable_testing()
+
 
 SET(PATH_DLIB "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dlib")
 set(USE_AVX_INSTRUCTIONS ON CACHE BOOL "Use AVX instructions" FORCE)
@@ -453,3 +455,17 @@ endif()
 TARGET_LINK_LIBRARIES(facemask-plugin-static ${facemask-plugin_LIBRARIES} ${LIBOBS_LIBRARIES})
 
 
+ADD_LIBRARY(facemask-plugin-static STATIC
+	${facemask-plugin_HEADERS}
+	${facemask-plugin_SOURCES}
+	${facemask-plugin_DATA}
+)
+TARGET_LINK_LIBRARIES(facemask-plugin-static
+		${facemask-plugin_LIBRARIES})
+
+
+add_executable(testing-detection-tracking test-detection-tracking/test-detection-tracking.cpp test-detection-tracking/test-detection-tracking.hpp)
+add_test(FaceDetectionTrackingTester testing-detection-tracking.exe "${PROJECT_SOURCE_DIR}/test1")
+
+
+TARGET_LINK_LIBRARIES(testing-detection-tracking facemask-plugin-static ${LIBOBS_LIB})
