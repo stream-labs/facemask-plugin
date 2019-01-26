@@ -13,7 +13,7 @@ set(USE_AVX_INSTRUCTIONS ON CACHE BOOL "Use AVX instructions" FORCE)
 set(USE_SSE4_INSTRUCTIONS ON CACHE BOOL "Use SSE4 instructions" FORCE)
 set(DLIB_NO_GUI_SUPPORT OFF CACHE STRING "DLib GUI support" FORCE)
 set(DLIB_GIF_SUPPORT OFF CACHE STRING "DLib GIF support" FORCE)
-set(DLIB_JPEG_SUPPORT OFF CACHE STRING "DLib JPEG support"  FORCE)
+set(DLIB_JPEG_SUPPORT ON CACHE STRING "DLib JPEG support"  FORCE)
 set(DLIB_PNG_SUPPORT OFF CACHE STRING "DLib PNG support"  FORCE)
 set(DLIB_USE_BLAS OFF CACHE STRING "DLib BLAS support"  FORCE)
 set(DLIB_USE_LAPACK OFF CACHE STRING "DLib LAPACK support"  FORCE)
@@ -452,16 +452,13 @@ else()
 endif()
 
 
-TARGET_LINK_LIBRARIES(facemask-plugin-static ${facemask-plugin_LIBRARIES} ${LIBOBS_LIBRARIES})
-
-
 ADD_LIBRARY(facemask-plugin-static STATIC
 	${facemask-plugin_HEADERS}
 	${facemask-plugin_SOURCES}
 	${facemask-plugin_DATA}
 )
 TARGET_LINK_LIBRARIES(facemask-plugin-static
-		${facemask-plugin_LIBRARIES})
+		${facemask-plugin_LIBRARIES} ${LIBOBS_LIBRARIES})
 
 
 add_executable(testing-detection-tracking test-detection-tracking/test-detection-tracking.cpp test-detection-tracking/test-detection-tracking.hpp)
