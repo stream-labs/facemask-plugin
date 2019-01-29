@@ -3,8 +3,6 @@ PROJECT(facemask-plugin)
 math(EXPR BITS "8*${CMAKE_SIZEOF_VOID_P}")
 
 SET(PATH_DLIB "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dlib")
-set(USE_AVX_INSTRUCTIONS OFF CACHE BOOL "Use AVX instructions" FORCE)
-set(USE_SSE4_INSTRUCTIONS OFF CACHE BOOL "Use SSE4 instructions" FORCE)
 set(DLIB_NO_GUI_SUPPORT OFF CACHE STRING "DLib GUI support" FORCE)
 set(DLIB_GIF_SUPPORT OFF CACHE STRING "DLib GIF support" FORCE)
 set(DLIB_JPEG_SUPPORT OFF CACHE STRING "DLib JPEG support"  FORCE)
@@ -314,8 +312,6 @@ SET(facemask-plugin_LIBRARIES
 
 SET(facemask-gen_LIBRARIES
 	dlib::dlib
-	facemask-gen.lib
-	facemask-lim.lib
 )
 
 INCLUDE_DIRECTORIES(
@@ -353,7 +349,7 @@ endif()
 ################################################################################
 # Building
 ################################################################################
-ADD_LIBRARY(facemask-gen MODULE
+ADD_LIBRARY(facemask-gen MODULE 
 	${facemask-plugin_HEADERS}
 	"${PROJECT_SOURCE_DIR}/plugin/p1.h"
 	${facemask-plugin_SOURCES}
@@ -361,7 +357,7 @@ ADD_LIBRARY(facemask-gen MODULE
 	${facemask-plugin_DATA}
 )
 
-ADD_LIBRARY(facemask-lim MODULE
+ADD_LIBRARY(facemask-lim MODULE 
 	${facemask-plugin_HEADERS}
 	"${PROJECT_SOURCE_DIR}/plugin/p2.h"
 	${facemask-plugin_SOURCES}

@@ -28,43 +28,43 @@ OBS_MODULE_AUTHOR("Streamlabs");
 OBS_MODULE_USE_DEFAULT_LOCALE("obs-facemask-plugin", "en-US");
 
 
-void obs_module_set_pointer2(obs_module_t *module) {
+__declspec(dllexport)  void obs_module_set_pointer2(obs_module_t *module) {
 	obs_module_set_pointer(module);
 }
-uint32_t obs_module_ver2(void) {
+__declspec(dllexport)  uint32_t obs_module_ver2(void) {
 	return obs_module_ver();
 }
-obs_module_t *obs_current_module2(void) {
+__declspec(dllexport) obs_module_t *obs_current_module2(void) {
 	return obs_current_module();
 }
-const char *obs_module_text2(const char *val) {
+__declspec(dllexport) const char *obs_module_text2(const char *val) {
 	return obs_module_text(val);
 }
-bool obs_module_get_string2(const char *val, const char **out) {
+__declspec(dllexport) bool obs_module_get_string2(const char *val, const char **out) {
 	return obs_module_get_string(val, out);
 }
-void obs_module_set_locale2(const char *locale) {
+__declspec(dllexport) void obs_module_set_locale2(const char *locale) {
 	obs_module_set_locale(locale);
 }
-void obs_module_free_locale2(void) {
+__declspec(dllexport) void obs_module_free_locale2(void) {
 	obs_module_free_locale();
 }
 
-bool obs_module_load2(void) {
+__declspec(dllexport) bool obs_module_load2(void) {
 	g_faceMaskFilter = new Plugin::FaceMaskFilter();
 	return true;
 }
 
- void obs_module_unload2(void) {
+__declspec(dllexport)  void obs_module_unload2(void) {
 	delete g_faceMaskFilter;
 }
 
- const char* obs_module_name2() {
+__declspec(dllexport)  const char* obs_module_name2() {
 	static const char pluginName[] = "Face Mask";
 	return pluginName;
 }
 
- const char* obs_module_description2() {
+__declspec(dllexport)  const char* obs_module_description2() {
 	static const char pluginDescription[] = 
 		"This plugin adds a Face Mask Filter, which overlays shapes onto a source.";
 	return pluginDescription;

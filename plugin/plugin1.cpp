@@ -18,7 +18,6 @@
  */
 
 #include "plugin.h"
-#include "p1.h"
 #include "face-mask-filter.h"
 
 static Plugin::FaceMaskFilter* g_faceMaskFilter;
@@ -28,7 +27,7 @@ OBS_MODULE_AUTHOR("Streamlabs");
 OBS_MODULE_USE_DEFAULT_LOCALE("obs-facemask-plugin", "en-US");
 
 
-void obs_module_set_pointer1(obs_module_t *module) {
+MODULE_EXPORT void obs_module_set_pointer1(obs_module_t *module) {
 	obs_module_set_pointer(module);
 }
 uint32_t obs_module_ver1(void) {
@@ -40,31 +39,31 @@ obs_module_t *obs_current_module1(void) {
 const char *obs_module_text1(const char *val) {
 	return obs_module_text(val);
 }
-bool obs_module_get_string1(const char *val, const char **out) {
+ bool obs_module_get_string1(const char *val, const char **out) {
 	return obs_module_get_string(val, out);
 }
-void obs_module_set_locale1(const char *locale) {
+ void obs_module_set_locale1(const char *locale) {
 	obs_module_set_locale(locale);
 }
-void obs_module_free_locale1(void) {
+ void obs_module_free_locale1(void) {
 	obs_module_free_locale();
 }
 
-bool obs_module_load1(void) {
+ bool obs_module_load1(void) {
 	g_faceMaskFilter = new Plugin::FaceMaskFilter();
 	return true;
 }
 
- void obs_module_unload1(void) {
+  void obs_module_unload1(void) {
 	delete g_faceMaskFilter;
 }
 
- const char* obs_module_name1() {
+  const char* obs_module_name1() {
 	static const char pluginName[] = "Face Mask";
 	return pluginName;
 }
 
- const char* obs_module_description1() {
+  const char* obs_module_description1() {
 	static const char pluginDescription[] = 
 		"This plugin adds a Face Mask Filter, which overlays shapes onto a source.";
 	return pluginDescription;
