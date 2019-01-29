@@ -273,7 +273,7 @@ SET(facemask-plugin_SOURCES
 	"${PROJECT_SOURCE_DIR}/plugin/base64.cpp"
 	"${PROJECT_SOURCE_DIR}/plugin/exceptions.cpp"
 	"${PROJECT_SOURCE_DIR}/plugin/face-mask-filter.cpp"
-
+	"${PROJECT_SOURCE_DIR}/plugin/plugin.cpp"
 	"${PROJECT_SOURCE_DIR}/plugin/utils.cpp"
 	"${TINYOBJDir}/tiny_obj_loader.cc"
 	"${gs_SOURCES}"
@@ -353,7 +353,6 @@ ADD_LIBRARY(facemask-gen MODULE
 	${facemask-plugin_HEADERS}
 	"${PROJECT_SOURCE_DIR}/plugin/p1.h"
 	${facemask-plugin_SOURCES}
-	"${PROJECT_SOURCE_DIR}/plugin/plugin1.cpp"
 	${facemask-plugin_DATA}
 )
 
@@ -361,7 +360,6 @@ ADD_LIBRARY(facemask-lim MODULE
 	${facemask-plugin_HEADERS}
 	"${PROJECT_SOURCE_DIR}/plugin/p2.h"
 	${facemask-plugin_SOURCES}
-	"${PROJECT_SOURCE_DIR}/plugin/plugin2.cpp"
 	${facemask-plugin_DATA}
 )
 

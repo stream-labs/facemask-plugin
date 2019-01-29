@@ -44,36 +44,6 @@
 
 #include <windows.h>
 
-#ifndef __DLL_TEST_H
-#define __DLL_TEST_H
-
-typedef bool(*obs_module_load2)(void);
-typedef void(*obs_module_unload2)(void);
-typedef const char* (*obs_module_name2)();
-typedef const char* (*obs_module_description2)();
-typedef void(*obs_module_set_pointer2)(obs_module_t *module);
-typedef uint32_t(*obs_module_ver2)(void);
-typedef obs_module_t *  (*obs_current_module2)(void);
-typedef const char *  (*obs_module_text2)(const char *val);
-typedef bool(*obs_module_get_string2)(const char *val, const char **out);
-typedef void(*obs_module_set_locale2)(const char *locale);
-typedef void(*obs_module_free_locale2)(void);
-typedef bool(  *obs_module_load1)(void);
-typedef void(  *obs_module_unload1)(void);
-typedef const char* (  *obs_module_name1)();
-typedef const char* (  *obs_module_description1)();
-typedef void(  *obs_module_set_pointer1)(obs_module_t *module);
-typedef uint32_t(  *obs_module_ver1)(void);
-typedef obs_module_t *(  *obs_current_module1)(void);
-typedef const char *(  *obs_module_text1)(const char *val);
-typedef bool(  *obs_module_get_string1)(const char *val, const char **out);
-typedef void(  *obs_module_set_locale1)(const char *locale);
-typedef void(  *obs_module_free_locale1)(void);
-#endif 
-
-
-
-
 #pragma warning( push )
 #pragma warning( disable: 4127 )
 #pragma warning( disable: 4201 )
@@ -88,13 +58,25 @@ typedef void(  *obs_module_free_locale1)(void);
 
 using namespace dlib;
 
-bool inited = false;
-bool avx = false;
 
-HINSTANCE hGetProcIDDLL = NULL;
+typedef bool(*obs_module_load_fun)(void);
+typedef void(*obs_module_unload_fun)(void);
+typedef const char* (*obs_module_name_fun)();
+typedef const char* (*obs_module_description_fun)();
+typedef void(*obs_module_set_pointer_fun)(obs_module_t *module);
+typedef uint32_t(*obs_module_ver_fun)(void);
+typedef obs_module_t *(*obs_current_module_fun)(void);
+typedef const char *(*obs_module_text_fun)(const char *val);
+typedef bool(*obs_module_get_string_fun)(const char *val, const char **out);
+typedef void(*obs_module_set_locale_fun)(const char *locale);
+typedef void(*obs_module_free_locale_fun)(void);
+
+
+static bool inited = false;
+static bool avx = false;
+static HINSTANCE hGetProcIDDLL = NULL;
+
 bool is_avx() {
-
-
 	if (hGetProcIDDLL) {
 		return TRUE;
 	}
@@ -117,12 +99,11 @@ bool is_avx() {
 	}
 	return avx;
 }
+
 MODULE_EXPORT void obs_module_set_pointer(obs_module_t *module) {
 	is_avx();
-	obs_module_set_pointer1 funci = (obs_module_set_pointer1)GetProcAddress(hGetProcIDDLL, "obs_module_set_pointer1");
-	int err = GetLastError();
-	std::cout << err + "a" << std::endl;
-	
+	obs_module_set_pointer_fun funci = (obs_module_set_pointer_fun)GetProcAddress(hGetProcIDDLL, "obs_module_set_pointer");
+
 	if (!funci) {
 		std::cout << "could not locate the function" << std::endl;
 	}
@@ -132,7 +113,7 @@ MODULE_EXPORT void obs_module_set_pointer(obs_module_t *module) {
 }
 MODULE_EXPORT uint32_t obs_module_ver(void) {
 	is_avx();
-	obs_module_ver1 funci = (obs_module_ver1)GetProcAddress(hGetProcIDDLL, "obs_module_ver1");
+	obs_module_ver_fun funci = (obs_module_ver_fun)GetProcAddress(hGetProcIDDLL, "obs_module_ver");
 	if (!funci) {
 		std::cout << "could not locate the function" << std::endl;
 	}
@@ -141,7 +122,7 @@ MODULE_EXPORT uint32_t obs_module_ver(void) {
 }
 MODULE_EXPORT obs_module_t *obs_current_module(void) {
 	is_avx();
-	obs_current_module1 funci = (obs_current_module1)GetProcAddress(hGetProcIDDLL, "obs_current_module1");
+	obs_current_module_fun funci = (obs_current_module_fun)GetProcAddress(hGetProcIDDLL, "obs_current_module");
 	if (!funci) {
 		std::cout << "could not locate the function" << std::endl;
 	}
@@ -151,7 +132,7 @@ MODULE_EXPORT obs_module_t *obs_current_module(void) {
 }
 MODULE_EXPORT const char *obs_module_text(const char *val) {
 	is_avx();
-	obs_module_text1 funci = (obs_module_text1)GetProcAddress(hGetProcIDDLL, "obs_module_text1");
+	obs_module_text_fun funci = (obs_module_text_fun)GetProcAddress(hGetProcIDDLL, "obs_module_text");
 	if (!funci) {
 		std::cout << "could not locate the function" << std::endl;
 	}
@@ -161,7 +142,7 @@ MODULE_EXPORT const char *obs_module_text(const char *val) {
 }
 MODULE_EXPORT bool obs_module_get_string(const char *val, const char **out) {
 	is_avx();
-	obs_module_get_string1 funci = (obs_module_get_string1)GetProcAddress(hGetProcIDDLL, "obs_module_get_string1");
+	obs_module_get_string_fun funci = (obs_module_get_string_fun)GetProcAddress(hGetProcIDDLL, "obs_module_get_string");
 	if (!funci) {
 		std::cout << "could not locate the function" << std::endl;
 	}
@@ -171,7 +152,7 @@ MODULE_EXPORT bool obs_module_get_string(const char *val, const char **out) {
 }
 MODULE_EXPORT void obs_module_set_locale(const char *locale) {
 	is_avx();
-	obs_module_set_locale1 funci = (obs_module_set_locale1)GetProcAddress(hGetProcIDDLL, "obs_module_set_locale1");
+	obs_module_set_locale_fun funci = (obs_module_set_locale_fun)GetProcAddress(hGetProcIDDLL, "obs_module_set_locale");
 	if (!funci) {
 		std::cout << "could not locate the function" << std::endl;
 	}
@@ -181,7 +162,7 @@ MODULE_EXPORT void obs_module_set_locale(const char *locale) {
 }
 MODULE_EXPORT void obs_module_free_locale(void) {
 	is_avx();
-	obs_module_free_locale1 funci = (obs_module_free_locale1)GetProcAddress(hGetProcIDDLL, "obs_module_free_locale1");
+	obs_module_free_locale_fun funci = (obs_module_free_locale_fun)GetProcAddress(hGetProcIDDLL, "obs_module_free_locale");
 	if (!funci) {
 		std::cout << "could not locate the function" << std::endl;
 	}
@@ -194,7 +175,7 @@ MODULE_EXPORT void obs_module_free_locale(void) {
 
 MODULE_EXPORT bool obs_module_load(void) {
 	is_avx();
-	obs_module_load1 funci = (obs_module_load1)GetProcAddress(hGetProcIDDLL, "obs_module_unload1");
+	obs_module_load_fun funci = (obs_module_load_fun)GetProcAddress(hGetProcIDDLL, "obs_module_load");
 	if (!funci) {
 		std::cout << "could not locate the function" << std::endl;
 	}
@@ -203,20 +184,20 @@ MODULE_EXPORT bool obs_module_load(void) {
 
 }
 
- MODULE_EXPORT  void obs_module_unload(void) {
-	 is_avx();
-	 obs_module_unload1 funci = (obs_module_unload1)GetProcAddress(hGetProcIDDLL, "obs_module_unload1");
-	 if (!funci) {
-		 std::cout << "could not locate the function" << std::endl;
-	 }
+MODULE_EXPORT  void obs_module_unload(void) {
+	is_avx();
+	obs_module_unload_fun funci = (obs_module_unload_fun)GetProcAddress(hGetProcIDDLL, "obs_module_unload");
+	if (!funci) {
+		std::cout << "could not locate the function" << std::endl;
+	}
 
-	 funci();
+	funci();
 
 }
 
 MODULE_EXPORT  const char* obs_module_name() {
 	is_avx();
-	obs_module_name1 funci = (obs_module_name1)GetProcAddress(hGetProcIDDLL, "obs_module_name1");
+	obs_module_name_fun funci = (obs_module_name_fun)GetProcAddress(hGetProcIDDLL, "obs_module_name");
 	if (!funci) {
 		std::cout << "could not locate the function" << std::endl;
 	}
@@ -227,7 +208,7 @@ MODULE_EXPORT  const char* obs_module_name() {
 
 MODULE_EXPORT  const char* obs_module_description() {
 	is_avx();
-	obs_module_description1 funci = (obs_module_description1)GetProcAddress(hGetProcIDDLL, "obs_module_description1");
+	obs_module_description_fun funci = (obs_module_description_fun)GetProcAddress(hGetProcIDDLL, "obs_module_description");
 	if (!funci) {
 		std::cout << "could not locate the function" << std::endl;
 	}
