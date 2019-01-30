@@ -24,8 +24,8 @@ install:
   - git submodule update --init --recursive
   - mkdir build
   - cd build
-  - ps: Read-S3Object -AccessKey $env:AWSId -SecretKey $env:AWSSecretKey -BucketName faces-internal.streamlabs.com -Key $LibobsFile -File $env:LibobsFile -Region us-west-2
-  - 7z x $env:LibobsFolder -oc:\projects\source\build\ -r
+  - ps: Read-S3Object -AccessKey $env:AWSId -SecretKey $env:AWSSecretKey -BucketName faces-internal.streamlabs.com -Key $env:LibobsFile -File $env:LibobsFile -Region us-west-2
+  - 7z x $env:LibobsFile -oc:\projects\source\build\ -r
   - ps: $env:SignedArtifact = "facemask-plugin-$(git describe --tags --abbrev=0)"
   - ps: $env:UnsignedArtifact = "facemask-plugin-$env:APPVEYOR_BUILD_NUMBER"
 
