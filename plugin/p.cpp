@@ -77,17 +77,7 @@ static bool avx = false;
 static HINSTANCE hGetProcIDDLL = NULL;
 
 bool is_avx() {
-	if (hGetProcIDDLL) {
-		return TRUE;
-	}
-
-	int err = GetLastError();
-	std::cout << err + "a" << std::endl;
-	hGetProcIDDLL = LoadLibrary(L"C:/Users/glaba/Documents/dev/facemask-plugin/build/RelWithDebInfo/gen/facemask-gen.dll");
-	err = GetLastError();
-	std::cout << err + "a" << std::endl;
 	if (!inited) {
-		blog(LOG_DEBUG, "[FaceMask] INITED");
 		avx= cpu_has_avx_instructions();
 		inited = true;
 		if (avx) {
@@ -100,117 +90,147 @@ bool is_avx() {
 	return avx;
 }
 
+
+void load_dll() {
+	if (hGetProcIDDLL) {
+		return;
+	}
+
+	blog(LOG_DEBUG, "[FaceMask]  INITED");
+	hGetProcIDDLL = LoadLibrary(L"facemask-gen.dll");
+
+	if (!hGetProcIDDLL) {
+		int err = GetLastError();
+		blog(LOG_DEBUG, "[FaceMask] DLL can not loaded. error code: %d", err);
+	}
+
+}
+
+void check_dll() {
+	if (hGetProcIDDLL) {
+		return;
+	}
+
+	// load if not laoded already
+	load_dll();
+}
+
 MODULE_EXPORT void obs_module_set_pointer(obs_module_t *module) {
-	is_avx();
+	check_dll();
 	obs_module_set_pointer_fun funci = (obs_module_set_pointer_fun)GetProcAddress(hGetProcIDDLL, "obs_module_set_pointer");
 
 	if (!funci) {
-		std::cout << "could not locate the function" << std::endl;
+		return;
 	}
 
 	funci(module);
-
 }
+
 MODULE_EXPORT uint32_t obs_module_ver(void) {
-	is_avx();
+	check_dll();
 	obs_module_ver_fun funci = (obs_module_ver_fun)GetProcAddress(hGetProcIDDLL, "obs_module_ver");
+
 	if (!funci) {
-		std::cout << "could not locate the function" << std::endl;
+		return 0;
 	}
 
 	return funci();
 }
+
 MODULE_EXPORT obs_module_t *obs_current_module(void) {
-	is_avx();
+	check_dll();
 	obs_current_module_fun funci = (obs_current_module_fun)GetProcAddress(hGetProcIDDLL, "obs_current_module");
+
 	if (!funci) {
-		std::cout << "could not locate the function" << std::endl;
+		return NULL;
 	}
 
 	return funci();
-
 }
+
 MODULE_EXPORT const char *obs_module_text(const char *val) {
-	is_avx();
+	check_dll();
 	obs_module_text_fun funci = (obs_module_text_fun)GetProcAddress(hGetProcIDDLL, "obs_module_text");
+
 	if (!funci) {
-		std::cout << "could not locate the function" << std::endl;
+		return NULL;
 	}
 
 	return funci(val);
-
 }
+
 MODULE_EXPORT bool obs_module_get_string(const char *val, const char **out) {
-	is_avx();
+	check_dll();
 	obs_module_get_string_fun funci = (obs_module_get_string_fun)GetProcAddress(hGetProcIDDLL, "obs_module_get_string");
+
 	if (!funci) {
-		std::cout << "could not locate the function" << std::endl;
+		return FALSE;
 	}
 
 	return funci(val, out);
-
 }
 MODULE_EXPORT void obs_module_set_locale(const char *locale) {
-	is_avx();
+	check_dll();
 	obs_module_set_locale_fun funci = (obs_module_set_locale_fun)GetProcAddress(hGetProcIDDLL, "obs_module_set_locale");
+
 	if (!funci) {
-		std::cout << "could not locate the function" << std::endl;
+		return;
 	}
 
 	funci(locale);
-
 }
 MODULE_EXPORT void obs_module_free_locale(void) {
-	is_avx();
+	check_dll();
 	obs_module_free_locale_fun funci = (obs_module_free_locale_fun)GetProcAddress(hGetProcIDDLL, "obs_module_free_locale");
+
 	if (!funci) {
-		std::cout << "could not locate the function" << std::endl;
+		return;
 	}
 
 	funci();
-
 }
 
 
 
 MODULE_EXPORT bool obs_module_load(void) {
-	is_avx();
+	check_dll();
 	obs_module_load_fun funci = (obs_module_load_fun)GetProcAddress(hGetProcIDDLL, "obs_module_load");
+
 	if (!funci) {
-		std::cout << "could not locate the function" << std::endl;
+		return FALSE;
 	}
 
 	return funci();
-
 }
 
 MODULE_EXPORT  void obs_module_unload(void) {
-	is_avx();
+	check_dll();
 	obs_module_unload_fun funci = (obs_module_unload_fun)GetProcAddress(hGetProcIDDLL, "obs_module_unload");
+
 	if (!funci) {
-		std::cout << "could not locate the function" << std::endl;
+		return;
 	}
 
 	funci();
-
 }
 
 MODULE_EXPORT  const char* obs_module_name() {
-	is_avx();
+	check_dll();
 	obs_module_name_fun funci = (obs_module_name_fun)GetProcAddress(hGetProcIDDLL, "obs_module_name");
+
 	if (!funci) {
-		std::cout << "could not locate the function" << std::endl;
+		return NULL;
 	}
 
 	return funci();
-
 }
 
 MODULE_EXPORT  const char* obs_module_description() {
-	is_avx();
+	check_dll();
 	obs_module_description_fun funci = (obs_module_description_fun)GetProcAddress(hGetProcIDDLL, "obs_module_description");
+
 	if (!funci) {
-		std::cout << "could not locate the function" << std::endl;
+		return NULL;
 	}
 
 	return funci();
@@ -220,8 +240,7 @@ MODULE_EXPORT  const char* obs_module_description() {
 #include "windows.h"
 
 BOOL WINAPI DllMain(HINSTANCE, DWORD, LPVOID) {
-	is_avx();
-
+	check_dll();
 	return TRUE;
 }
 #endif
