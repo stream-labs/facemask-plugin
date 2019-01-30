@@ -16,7 +16,7 @@ environment:
     secure: mCkabszlS+XuJkjmIFM4t6Hom4jvUfNqbxlmQXKPJNE=
   AWSSecretKey:
     secure: dGl7YDpzqXV+ucEwwo6QEiTjQBSThcakfE70aKWrgjUeLy3jFJsjgbnnGPeUIU+k
-  LibobsFile: libobs-release-22.0.3-sl.300-win32-x64.7z
+  LibobsFile: libobs-debug-22.0.3-sl.301-win32-x64.7z
 
 clone_folder: c:\projects\source
 
@@ -24,7 +24,7 @@ install:
   - git submodule update --init --recursive
   - mkdir build
   - cd build
-  - ps: Read-S3Object -AccessKey $env:AWSId -SecretKey $env:AWSSecretKey -BucketName obsstudios3.streamlabs.com -Key $env:LibobsFile -File $env:LibobsFile -Region us-west-2
+  - ps: Read-S3Object -AccessKey $env:AWSId -SecretKey $env:AWSSecretKey -BucketName faces-internal.streamlabs.com -Key $env:LibobsFile -File $env:LibobsFile -Region us-west-2
   - 7z x "%LibobsFile%" -oc:\projects\source\build\ -r
   - ps: $env:SignedArtifact = "facemask-plugin-$(git describe --tags --abbrev=0)"
   - ps: $env:UnsignedArtifact = "facemask-plugin-$env:APPVEYOR_BUILD_NUMBER"
