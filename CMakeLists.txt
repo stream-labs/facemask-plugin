@@ -139,7 +139,7 @@ include_directories(${PATH_FREETYPE}/include)
 
 if(DEFINED ENV{FM_PLUGIN_APPVEYOR_BUILD})
     SET(APPVEYOR_BUILD TRUE)
-    SET(libobs_SOURCE_DIR "c:/projects/source/build/libobs-release-22.0.3-sl.300-win32-x64")
+    SET(libobs_SOURCE_DIR "c:/projects/source/build")
 else()
     SET(APPVEYOR_BUILD FALSE)
 endif()
