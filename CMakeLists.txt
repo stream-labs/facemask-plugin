@@ -304,7 +304,6 @@ SET(facemask-plugin_DATA
 	"${PROJECT_SOURCE_DIR}/data/locale/en-US.ini"
 )
 SET(facemask-plugin_LIBRARIES
-	dlib::dlib
 	${OpenCV_LIBS}
 	avrt.lib
 	Shlwapi.lib
@@ -355,7 +354,6 @@ ADD_LIBRARY(facemask-gen MODULE
 	${facemask-plugin_SOURCES}
 	${facemask-plugin_DATA}
 )
-
 ADD_LIBRARY(facemask-lim MODULE 
 	${facemask-plugin_HEADERS}
 	"${PROJECT_SOURCE_DIR}/plugin/p2.h"
@@ -372,16 +370,19 @@ if(FACEMASK_EXTERNAL)
 	TARGET_LINK_LIBRARIES(facemask-gen
 		${LIBOBS_LIBRARIES}
 		${facemask-plugin_LIBRARIES}
+		dlib::dlib
 	)
 	
 	
 	TARGET_LINK_LIBRARIES(facemask-lim
 		${LIBOBS_LIBRARIES}
 		${facemask-plugin_LIBRARIES}
+		dlib::dlib_NO_AVX
 	)
 	
 	TARGET_LINK_LIBRARIES(facemask-plugin ${LIBOBS_LIBRARIES}
 		${facemask-gen_LIBRARIES}
+		dlib::dlib_NO_AVX
 	)
 	
 	if(BUILD_UNIT_TESTS)
