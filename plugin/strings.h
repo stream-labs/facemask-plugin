@@ -46,6 +46,7 @@
 #define P_DEMOMODEON			"demoMode"
 #define P_DEMOFOLDER			"demoFolder"
 #define P_TEST_MODE				"Enable Testing Mode"
+#define P_LOG_MODE				"Log Frame Processing Results"
 #define P_BGREMOVAL				"greenscreen"
 #define P_GENTHUMBS				"genpreviews"
 #define P_RECORD				"Demo record"

@@ -39,6 +39,8 @@
  (((uint32_t)(r) << 0)  & 0x000000FF))
 
 
+#define B2S(b) ((b) ? "true" : "false")
+
 namespace Utils {
 
 	extern const char* GetTempPath();

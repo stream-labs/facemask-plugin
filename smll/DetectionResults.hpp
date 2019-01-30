@@ -38,6 +38,7 @@
 
 #include "landmarks.hpp"
 #include "Face.hpp"
+#include "../Plugin/utils.h"
 #include <opencv2/opencv.hpp>
 
 namespace smll {
@@ -59,6 +60,26 @@ namespace smll {
 		double		rotation[4];
 
 	};
+
+	class ProcessedResults {
+	public:
+		ProcessedResults();
+		void FrameSkipped();
+		void DetectionMade();
+		void TrackingMade();
+		void TrackingFailed();
+		void DetectionFailed();
+		bool isSkipped();
+		std::string to_string();
+		std::string titles_to_string();
+	private:
+		bool skipped;
+		bool detection;
+		bool tracking;
+		bool tracking_failed;
+		bool detection_failed;
+	};
+
 
 	typedef sarray<ThreeDPose, MAX_FACES> ThreeDPoses;
 
@@ -126,6 +147,7 @@ namespace smll {
 		DetectionResults();
 		void CorrelateAndUpdateFrom(DetectionResults& other);
 		int findClosest(const smll::DetectionResult& result);
+		ProcessedResults processedResults;
 		dlib::rectangle motionRect;
 	};
 
