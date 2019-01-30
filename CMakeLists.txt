@@ -309,10 +309,6 @@ SET(facemask-plugin_LIBRARIES
 	Shlwapi.lib
 )
 
-SET(facemask-gen_LIBRARIES
-	dlib::dlib
-)
-
 INCLUDE_DIRECTORIES(
 	"${PROJECT_BINARY_DIR}"
 	"${PROJECT_SOURCE_DIR}"
@@ -348,42 +344,60 @@ endif()
 ################################################################################
 # Building
 ################################################################################
-ADD_LIBRARY(facemask-gen MODULE 
-	${facemask-plugin_HEADERS}
-	"${PROJECT_SOURCE_DIR}/plugin/p1.h"
-	${facemask-plugin_SOURCES}
-	${facemask-plugin_DATA}
-)
-ADD_LIBRARY(facemask-lim MODULE 
-	${facemask-plugin_HEADERS}
-	"${PROJECT_SOURCE_DIR}/plugin/p2.h"
-	${facemask-plugin_SOURCES}
-	${facemask-plugin_DATA}
-)
 
+if (BUILD_FOR_PUBLIC)
+	ADD_LIBRARY(facemask_AVX MODULE 
+		${facemask-plugin_HEADERS}
+		${facemask-plugin_SOURCES}
+		${facemask-plugin_DATA}
+	)
+	
+	ADD_LIBRARY(facemask_NO_AVX MODULE 
+		${facemask-plugin_HEADERS}
+		${facemask-plugin_SOURCES}
+		${facemask-plugin_DATA}
+	)
+	
+	ADD_LIBRARY(facemask-plugin MODULE
+		"${PROJECT_SOURCE_DIR}/plugin/plugin_wrapper.cpp"
+	)
 
-ADD_LIBRARY(facemask-plugin MODULE
-	"${PROJECT_SOURCE_DIR}/plugin/p.cpp"
-)
+else()
+
+	ADD_LIBRARY(facemask-plugin MODULE 
+		${facemask-plugin_HEADERS}
+		${facemask-plugin_SOURCES}
+		${facemask-plugin_DATA}
+	)
+
+endif()
 
 if(FACEMASK_EXTERNAL)
-	TARGET_LINK_LIBRARIES(facemask-gen
-		${LIBOBS_LIBRARIES}
-		${facemask-plugin_LIBRARIES}
-		dlib::dlib
-	)
+	if (BUILD_FOR_PUBLIC)
+		TARGET_LINK_LIBRARIES(facemask_AVX
+			${LIBOBS_LIBRARIES}
+			${facemask-plugin_LIBRARIES}
+			dlib::dlib
+		)
+		
+		TARGET_LINK_LIBRARIES(facemask_NO_AVX
+			${LIBOBS_LIBRARIES}
+			${facemask-plugin_LIBRARIES}
+			dlib::dlib_NO_AVX
+		)
+		
+		TARGET_LINK_LIBRARIES(facemask-plugin ${LIBOBS_LIBRARIES}
+			dlib::dlib_NO_AVX
+		)
+	else()
 	
-	
-	TARGET_LINK_LIBRARIES(facemask-lim
-		${LIBOBS_LIBRARIES}
-		${facemask-plugin_LIBRARIES}
-		dlib::dlib_NO_AVX
-	)
-	
-	TARGET_LINK_LIBRARIES(facemask-plugin ${LIBOBS_LIBRARIES}
-		${facemask-gen_LIBRARIES}
-		dlib::dlib_NO_AVX
-	)
+		TARGET_LINK_LIBRARIES(facemask-plugin
+			${LIBOBS_LIBRARIES}
+			${facemask-plugin_LIBRARIES}
+			dlib::dlib
+		)
+		
+	endif()
 	
 	if(BUILD_UNIT_TESTS)
 		add_executable(facemask-plugin-test
