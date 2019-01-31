@@ -109,17 +109,8 @@ void load_dll() {
 
 }
 
-void check_dll() {
-	if (hGetProcIDDLL) {
-		return;
-	}
-
-	// load if not laoded already
-	load_dll();
-}
-
 MODULE_EXPORT void obs_module_set_pointer(obs_module_t *module) {
-	check_dll();
+	load_dll();
 	obs_module_set_pointer_fun funci = (obs_module_set_pointer_fun)GetProcAddress(hGetProcIDDLL, "obs_module_set_pointer");
 
 	if (!funci) {
@@ -130,7 +121,7 @@ MODULE_EXPORT void obs_module_set_pointer(obs_module_t *module) {
 }
 
 MODULE_EXPORT uint32_t obs_module_ver(void) {
-	check_dll();
+	load_dll();
 	obs_module_ver_fun funci = (obs_module_ver_fun)GetProcAddress(hGetProcIDDLL, "obs_module_ver");
 
 	if (!funci) {
@@ -141,7 +132,7 @@ MODULE_EXPORT uint32_t obs_module_ver(void) {
 }
 
 MODULE_EXPORT obs_module_t *obs_current_module(void) {
-	check_dll();
+	load_dll();
 	obs_current_module_fun funci = (obs_current_module_fun)GetProcAddress(hGetProcIDDLL, "obs_current_module");
 
 	if (!funci) {
@@ -152,7 +143,7 @@ MODULE_EXPORT obs_module_t *obs_current_module(void) {
 }
 
 MODULE_EXPORT const char *obs_module_text(const char *val) {
-	check_dll();
+	load_dll();
 	obs_module_text_fun funci = (obs_module_text_fun)GetProcAddress(hGetProcIDDLL, "obs_module_text");
 
 	if (!funci) {
@@ -163,7 +154,7 @@ MODULE_EXPORT const char *obs_module_text(const char *val) {
 }
 
 MODULE_EXPORT bool obs_module_get_string(const char *val, const char **out) {
-	check_dll();
+	load_dll();
 	obs_module_get_string_fun funci = (obs_module_get_string_fun)GetProcAddress(hGetProcIDDLL, "obs_module_get_string");
 
 	if (!funci) {
@@ -173,7 +164,7 @@ MODULE_EXPORT bool obs_module_get_string(const char *val, const char **out) {
 	return funci(val, out);
 }
 MODULE_EXPORT void obs_module_set_locale(const char *locale) {
-	check_dll();
+	load_dll();
 	obs_module_set_locale_fun funci = (obs_module_set_locale_fun)GetProcAddress(hGetProcIDDLL, "obs_module_set_locale");
 
 	if (!funci) {
@@ -183,7 +174,7 @@ MODULE_EXPORT void obs_module_set_locale(const char *locale) {
 	funci(locale);
 }
 MODULE_EXPORT void obs_module_free_locale(void) {
-	check_dll();
+	load_dll();
 	obs_module_free_locale_fun funci = (obs_module_free_locale_fun)GetProcAddress(hGetProcIDDLL, "obs_module_free_locale");
 
 	if (!funci) {
@@ -196,7 +187,7 @@ MODULE_EXPORT void obs_module_free_locale(void) {
 
 
 MODULE_EXPORT bool obs_module_load(void) {
-	check_dll();
+	load_dll();
 	obs_module_load_fun funci = (obs_module_load_fun)GetProcAddress(hGetProcIDDLL, "obs_module_load_inner");
 
 	if (!funci) {
@@ -207,7 +198,7 @@ MODULE_EXPORT bool obs_module_load(void) {
 }
 
 MODULE_EXPORT  void obs_module_unload(void) {
-	check_dll();
+	load_dll();
 	obs_module_unload_fun funci = (obs_module_unload_fun)GetProcAddress(hGetProcIDDLL, "obs_module_unload");
 
 	if (!funci) {
@@ -218,7 +209,7 @@ MODULE_EXPORT  void obs_module_unload(void) {
 }
 
 MODULE_EXPORT  const char* obs_module_name() {
-	check_dll();
+	load_dll();
 	obs_module_name_fun funci = (obs_module_name_fun)GetProcAddress(hGetProcIDDLL, "obs_module_name");
 
 	if (!funci) {
@@ -229,7 +220,7 @@ MODULE_EXPORT  const char* obs_module_name() {
 }
 
 MODULE_EXPORT  const char* obs_module_description() {
-	check_dll();
+	load_dll();
 	obs_module_description_fun funci = (obs_module_description_fun)GetProcAddress(hGetProcIDDLL, "obs_module_description");
 
 	if (!funci) {
@@ -243,7 +234,7 @@ MODULE_EXPORT  const char* obs_module_description() {
 #include "windows.h"
 
 BOOL WINAPI DllMain(HINSTANCE, DWORD, LPVOID) {
-	check_dll();
+	load_dll();
 	return TRUE;
 }
 #endif
