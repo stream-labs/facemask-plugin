@@ -1474,13 +1474,15 @@ void ImportAnimations(Args& args, const aiScene* scene, json& rez,
 						if (current_time <= timestamp && next_time > timestamp) {
 							double delta_time = next_time - current_time;
 
-							// For now do linear interpolation
-							// In general case, we'll probably need bezier/spline curve evaluation
-							double x = (nv.x - cv.x) / delta_time * (timestamp - current_time) + cv.x;
-							double y = (nv.y - cv.y) / delta_time * (timestamp - current_time) + cv.y;
-							double z = (nv.z - cv.z) / delta_time * (timestamp - current_time) + cv.z;
-							double w = (nv.w - cv.w) / delta_time * (timestamp - current_time) + cv.w;
 
+							aiQuaternion slerp_val;
+							aiQuaternion::Interpolate(slerp_val, cv, nv, (timestamp - current_time) / delta_time);
+							// Do Slerp for quaternion
+							double x = slerp_val.x;
+							double y = slerp_val.y;
+							double z = slerp_val.z;
+							double w = slerp_val.w;
+							
 							xkeys[frame] = (float)x;
 							ykeys[frame] = (float)-y; // flip y
 							zkeys[frame] = (float)z;
