@@ -382,9 +382,15 @@ add_library(facemask-plugin-objlib OBJECT
 set_property(TARGET facemask-plugin-objlib PROPERTY POSITION_INDEPENDENT_CODE 1)
 
 if (BUILD_FOR_PUBLIC)
-	ADD_LIBRARY(facemask_AVX MODULE $<TARGET_OBJECTS:facemask-plugin-objlib>)
-	
-	ADD_LIBRARY(facemask_NO_AVX MODULE $<TARGET_OBJECTS:facemask-plugin-objlib>)
+	ADD_LIBRARY(facemask_AVX MODULE 
+		${facemask-plugin_HEADERS}
+		${facemask-plugin_SOURCES}
+		${facemask-plugin_DATA})
+		
+	ADD_LIBRARY(facemask_NO_AVX MODULE
+		${facemask-plugin_HEADERS}
+		${facemask-plugin_SOURCES}
+		${facemask-plugin_DATA})
 	
 	ADD_LIBRARY(facemask-plugin MODULE
 		"${PROJECT_SOURCE_DIR}/plugin/plugin_wrapper.cpp"
