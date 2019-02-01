@@ -1,7 +1,5 @@
 // 
-// Phong Shader (with skinning)
-//
-// Largely taken from https://www.3dgep.com/texturing-lighting-directx-11/, converted to OBS
+// PBR Shader
 //
 
 // TRANSFORMS
@@ -41,9 +39,9 @@ uniform int reflectMap = 0;
 uniform texture2d reflectTex;
 
 uniform int iblSpecMap = 0;
-uniform texture2d iblSpecTex;
+uniform texture_cube iblSpecTex;
 uniform int iblDiffMap = 0;
-uniform texture2d iblDiffTex;
+uniform texture_cube iblDiffTex;
 uniform int iblBRDFMap = 0;
 uniform texture2d iblBRDFTex;
 
@@ -109,6 +107,20 @@ uniform float  light3Angle = 45.0;
 // PBR VARS
 uniform float metalness = 0.0;
 uniform float roughness = 0.5;
+uniform int   spec_mip_levels = 8;
+uniform float exposure = 0.0;
+uniform float contrast = 1.0;
+uniform float saturation = 1;
+uniform float3 color_balance = {1.0,1.0,1.0};
+
+// PBR IBL
+uniform float ibl_intensity = 1.0;
+
+// PBR Glass
+uniform float glass_spec_ratio = 1.0;
+
+// Emissive
+uniform float emissive_intensity = 10.0;
 
 // OTHER VARS
 uniform float shininess = 8.0;
@@ -117,7 +129,7 @@ uniform float alpha = 1.0;
 
 // TEXTURE SAMPLERS
 sampler_state tex_sampler {
-	Filter    = Linear;
+	Filter    = MIN_MAG_MIP_LINEAR;
 	AddressU  = Wrap;
 	AddressV  = Wrap;
 };
@@ -161,19 +173,51 @@ struct VertDataOut {
 	float3 bitangent: TEXCOORD2;
 };
 
-float get_fresnel_contrib() {
-	
-	float3 view_dir = normalize(-vpos);
-	float VdH = clamp(dot(view_dir,halfway_dir), 0.0, 1.0);
+float4 srgb_to_linear(float4 srgb_color) {
+	float3 linear_color = pow(srgb_color.rgb,2.2);
+	return float4(linear_color, srgb_color.a);
+}
+
+float3 linear_to_srgb(float3 linear_color) {
+	return pow(linear_color.rgb,1.0/2.2);
+}
+
+/*----------------------------------------- ToneMapFilmic_Hejl2015 ---
+ |  Function ToneMapFilmic_Hejl2015
+ |
+ |  Purpose: This function applies a "film-like" tonemap to supplied
+ |           HDR pixel. This curve does not approximate gamma2.2,
+ |           so an explicit sRGB transform should be performed
+ |          before display.
+ |
+ |  Parameters:
+ |      float3 hdr (IN)    -- HDR pixel in linear space
+ |      float  whitePt (IN) -- Scene white point. Must be > 0.0
+ |
+ |  Returns:  Tonemapped pixel, white point corrected, in gamma 1.0 space
+ |
+ |   08-18-15   v1   Jim Hejl
+ *-------------------------------------------------------------------*/
+float3 ToneMapFilmic_Hejl2015(float3 hdr, float whitePt)
+{
+   float4 vh = float4(hdr,whitePt);    // pack: [r,g,b,w]
+   float4 va = (1.425 * vh) + 0.05f;   // eval filmic curve
+   float4 vf = ((vh * va + 0.004f) / ((vh * (va + 0.55f) + 0.0491f))) - 0.0821f;
+   return vf.rgb / vf.www;          // white point correction
+}
+
+float3 get_fresnel_contrib(float3 view_dir, float3 light_dir, float3 albedo, float metalness, float F0) {
 	
 	float3 halfway_dir = normalize(view_dir + light_dir);
+	float VdH = clamp(dot(view_dir,halfway_dir), 0.0, 1.0);
+	
 	float3 F0_vec = {F0,F0,F0};
-	float3 specular_color = lerp(F0, albedo.rgb, metalness);
+	float3 specular_color = lerp(F0_vec, albedo, metalness);
 	float reflectance = max(specular_color.r,max(specular_color.g,specular_color.b));
 	float reflectance90 = clamp(reflectance*25.0, 0.0 ,1.0);
 	float3 spec_env_R0 = specular_color.rgb;
 	float3 spec_env_R90 = float3(1.0, 1.0, 1.0)* reflectance90;
-	float fresnel_spec_color = spec_env_R0 + (spec_env_R90 - spec_env_R0) * pow(saturate(1.0-VdH), 5.0);
+	return spec_env_R0 + (spec_env_R90 - spec_env_R0) * pow(saturate(1.0-VdH), 5.0);
 }
 
 
@@ -239,28 +283,13 @@ float  lightAngle) {
 			attenuation = saturate(attenuation);
 		}
 		float3 view_dir = normalize(-vpos);
-		float light_intensity = saturate(dot(light_dir, normal));
-		
-		float3 F0_vec = {F0,F0,F0};
-		float3 diffuse_color = albedo.rgb * (1.0-F0);
-		diffuse_color *= 1.0 - metalness;
-		float3 specular_color = lerp(F0, albedo.rgb, metalness);
-		float reflectance = max(specular_color.r,max(specular_color.g,specular_color.b));
-		float reflectance90 = clamp(reflectance*25.0, 0.0 ,1.0);
-		float3 spec_env_R0 = specular_color.rgb;
-		float3 spec_env_R90 = float3(1.0, 1.0, 1.0)* reflectance90;
-		float3 reflection = -normalize(reflect(view_dir, normal));
-
 		float3 halfway_dir = normalize(view_dir + light_dir);
-	
+
 		float NdL = clamp(dot(normal,light_dir), 0.001, 1.0);
 		float NdV = clamp(dot(normal,view_dir), 0.001, 1.0);
 		float NdH = clamp(dot(normal,halfway_dir), 0.0, 1.0);
-		float LdH = clamp(dot(light_dir,halfway_dir), 0.0, 1.0);
-		float VdH = clamp(dot(view_dir,halfway_dir), 0.0, 1.0);
 
-		float fresnel_spec_color = spec_env_R0 + (spec_env_R90 - spec_env_R0) * pow(saturate(1.0-VdH), 5.0);
-
+		float3 fresnel_spec_color = get_fresnel_contrib(view_dir, light_dir, albedo.rgb, metalness, F0);
 
 		float alpha = roughness * roughness;
 		float alpha_2 = alpha * alpha;
@@ -271,13 +300,30 @@ float  lightAngle) {
 		float attenuationV = 2.0 * NdV / (NdV + sqrt(alpha_2 + (1.0-alpha_2)*(NdV*NdV)));
 		float geometry = attenuationL * attenuationV;
 
-		float3 diffuse_contrib = (1.0 - fresnel_spec_color) * albedo.rgb / PI;
-		float3 spec_contrib = fresnel_spec_color * geometry * distribution / (4.0 * NdL * NdV);
+		float3 kr = fresnel_spec_color;
+		float3 kd = (1.0 - kr) * albedo.a;
+		float3 kt = (1.0 - kr) * (1.0 - albedo.a);
+
+		float3 diffuse_contrib = kd * albedo.rgb / PI;
+		float3 spec_contrib = kr * geometry * distribution / (4.0 * NdL * NdV);
+
+		float max_ibl_spec = max(lightSpecular.r, max(lightSpecular.g, lightSpecular.b));
+		float max_ibl_spec_reflectivity = max(spec_contrib.r, max(spec_contrib.g, spec_contrib.b));
+		float opacity = albedo.a+(glass_spec_ratio*max_ibl_spec_reflectivity)*max_ibl_spec;
+		opacity = saturate(opacity);
+
+		// This is a hack for refraction
+		// see IBL part below for explanation
+		if(opacity > 0.0)
+			spec_contrib = spec_contrib/opacity;
+
 		float3 final_spec_color = NdL*lightSpecular*spec_contrib;
 		float3 final_diff_color = NdL*lightDiffuse*diffuse_contrib;
-		float3 color_rgb = final_diff_color*albedo.a + final_spec_color;
-		float4 color = float4(color_rgb, max(albedo.a, spec_contrib.g));
-		// color *= 0.0001;
+
+		if(glass_spec_ratio > 0.0 && opacity > 0.0 && opacity < 1.0)
+			kr = kr/opacity;
+
+		float4 color = float4(final_diff_color + final_spec_color, opacity);
 
 		result += color;
 	}
@@ -494,69 +540,73 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 		// G: Roughness
 		// B: Metalness
 		// occlusion = metalnessTex.Sample(tex_sampler, v_in.uv).r;
-		_roughness = max(0.04, metallicRoughnessTex.Sample(tex_sampler, v_in.uv).g);
-		_metalness = metallicRoughnessTex.Sample(tex_sampler, v_in.uv).b;
+		float4 metallic_roughness = metallicRoughnessTex.Sample(tex_sampler, v_in.uv);
+		_roughness = max(0.04, metallic_roughness.g);
+		_metalness = metallic_roughness.b;
 	}
 #endif
 
+	// convert srgb to linear
+	albedoColor = srgb_to_linear(albedoColor);
+	emmColor = srgb_to_linear(emmColor);
+
 	// Start with full transparent color
-	float4 base_color = {0,0,0,0};
-	// base_color -= emmColor.xyz;
-	
-	
-	float3 view_dir = normalize(-vpos);
-	float NdV = clamp(dot(normal,view_dir), 0.001, 1.0);
-	float3 diffuse_color = albedoColor.rgb * (1.0-F0);
-	diffuse_color *= 1.0 - _metalness;
-	float3 specular_color = lerp(F0, albedoColor.rgb, _metalness);
+	float4 base_color = {0,0,0,0};	
 
 #ifdef IBL_SPEC_TEX
 	if (iblSpecMap != 0 && iblBRDFMap != 0 && iblDiffMap != 0) {
 		float3 r = -normalize(reflect(-vpos, normal));
-		float m = 2.0 * sqrt( pow( r.x, 2.0 ) + pow( r.y, 2.0 ) + pow( r.z + 1.0, 2.0 ) );
-		float2 vN = r.xy / m + 0.5;
 
-		// float3 refr = normalize(refract(-vpos, normal, 1.125));
-		// float m_rfr = 2.0 * sqrt( pow( refr.x, 2.0 ) + pow( refr.y, 2.0 ) + pow( refr.z + 1.0, 2.0 ) );
-		// float2 vN_rfr = refr.xy / m_rfr + 0.5;
-		// vN_rfr.y = 1.0 - vN_rfr.y;
-		// this is incorrect but it is to avoid the edges of the ball
-		// float4 ibl_refr_light = iblSpecTex.Sample(tex_sampler, vN_rfr);
-		
-		float4 ibl_spec_light = iblSpecTex.Sample(tex_sampler, vN);
-		// ibl_diff_light = iblDiffTex.Sample(tex_sampler, normal);
-		// ibl_diff_light *= 0.0001;
-		float mdf = 2.0 * sqrt( pow( normal.x, 2.0 ) + pow( normal.y, 2.0 ) + pow( normal.z + 1.0, 2.0 ) );
-		float2 vNdf = normal.xy / mdf + 0.5;
-		float4 ibl_diff_light = iblDiffTex.Sample(tex_sampler, vNdf);
-		float3 diff_ibl = ibl_diff_light.rgb*diffuse_color.rgb;
+		float3 view_dir = normalize(-vpos);
+		float NdV = clamp(dot(normal,view_dir), 0.001, 1.0);
 
-		// float3 spec_ibl = ibl_spec_light.rgb*();
+		float3 specular_color = lerp(F0, albedoColor.rgb, _metalness);
+
+		// HDR Spec and Diff are linear, and no need to cancel srgb gamma
+		float lod = _roughness * spec_mip_levels;
+		float4 ibl_spec_light = iblSpecTex.SampleLevel(tex_sampler, float3(-r.x, -r.y, r.z), lod);
+		float4 ibl_diff_light = iblDiffTex.Sample(tex_sampler, float3(-normal.x, -normal.y, normal.z));
+
 #ifdef IBL_BRDF_TEX
-		float3 brdf = iblBRDFTex.Sample(tex_sampler,float2(NdV, 1.0 - roughness)).rgb;
+		float3 brdf = iblBRDFTex.Sample(tex_sampler,float2(NdV, 1.0 - _roughness)).rgb;
 		float3 reflectivity = specular_color*brdf.x+brdf.y;
 #else
 		// not accurate at all, just a fallback to avoid the shader fail fully
-		float3 reflectivity = specular_color*saturate((1.0-roughness)*NdV+1.0*(1.0-roughness));
+		float3 reflectivity = specular_color*saturate((1.0-_roughness)*NdV+1.0*(1.0-_roughness));
 #endif
 
-		float3 spec_ibl = ibl_spec_light.rgb*reflectivity;
-		float ibl_luminance = 0.2126*reflectivity.r+0.7152*reflectivity.g+0.722*reflectivity.b;
-		// ibl_luminance = (ibl_luminance*brdf.x+brdf.y);
-		// base_color += float4(diff_ibl*albedoColor.a, albedoColor.a) + float4(spec_ibl, ibl_luminance);
-		base_color += float4(diff_ibl*albedoColor.a + spec_ibl, max(albedoColor.a,saturate(albedoColor.a+ibl_luminance)));
-		// base_color *= 0.0001;
+		float3 kr = reflectivity;
+		float3 kd = (1.0 - kr) * albedoColor.a * albedoColor.rgb * (1.0 - _metalness);
+		float3 kt = (1.0 - kr) * (1.0-albedoColor.a);
+
+		float max_ibl_spec = max(ibl_spec_light.r, max(ibl_spec_light.g, ibl_spec_light.b));
+		float max_ibl_spec_reflectivity = max(kr.r, max(kr.g, kr.b));
+		float opacity = albedoColor.a+(glass_spec_ratio*max_ibl_spec_reflectivity)*max_ibl_spec;
+		opacity = saturate(opacity);
+
+		// this is a hack for refraction
+		// we encode transparency ratio (kt) into
+		// remaining amount of alpha
+		// we compensate reflection ration (kr) by
+		// dividing by opacity value.
+		// we do this to preserve ibl spec color,
+		// when alpha is multiplied later.
+		if(glass_spec_ratio > 0.0 && opacity > 0.0 && opacity < 1.0)
+			kr = kr/opacity;
+
+		base_color += float4(ibl_intensity*(ibl_diff_light.rgb*kd + ibl_spec_light.rgb*kr), opacity);
 	}
 	#endif
 	
 	// NO LIGHTS
 	if (numLights == 0) {
 		base_color += albedoColor;
+		// base_color.a = max(base_color.a, light_contrib.a)
 	}
 	
 	// LIGHT 0
 	if (numLights > 0) {
-		base_color += DoLighting(
+		float4 light_contrib = DoLighting(
 			vpos,
 			normal,
 			ambColor,
@@ -574,11 +624,13 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 			light0Diffuse,
 			light0Specular,
 			light0Angle);
+		base_color += light_contrib;
+		//base_color.a = max(base_color.a, light_contrib.a);
 	}
 	
 	// LIGHT 1
 	if (numLights > 1) {
-		base_color += DoLighting(
+		float4 light_contrib = DoLighting(
 			vpos,
 			normal,
 			ambColor,
@@ -596,11 +648,13 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 			light1Diffuse,
 			light1Specular,
 			light1Angle);
+		base_color += light_contrib;
+		//base_color.a = max(base_color.a, light_contrib.a);
 	}
 	
 	// LIGHT 2
 	if (numLights > 2) {
-		base_color += DoLighting(
+		float4 light_contrib = DoLighting(
 			vpos,
 			normal,
 			ambColor,
@@ -618,11 +672,13 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 			light2Diffuse,
 			light2Specular,
 			light2Angle);
+		base_color += light_contrib;
+		//base_color.a = max(base_color.a, light_contrib.a);
 	}
 	
 	// LIGHT 3
 	if (numLights > 3) {
-		base_color += DoLighting(
+		float4 light_contrib = DoLighting(
 			vpos,
 			normal,
 			ambColor,
@@ -640,14 +696,50 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 			light3Diffuse,
 			light3Specular,
 			light3Angle);
+		base_color += light_contrib;
+		//base_color.a = max(base_color.a, light_contrib.a);
 	}
 
 	// NOTE here we don't let emissive material change opacity
-	float4 final_color = base_color;
-	final_color.rgb += emmColor.rgb;
-	final_color.a = saturate(final_color.a);
+	//      if we need to, we can make emissive luminance add to opacity
+	float4 final_color = base_color + float4(emmColor.rgb * emissive_intensity, 0);
+
+	float3 linear_color = final_color.rgb;
+
+	// Tonemapping and Color Grading
+	// Largely taken from Jim Hejl
+	// https://twitter.com/jimhejl/status/633777619998130176
+
+	float3 linear_color_balance = pow( color_balance.rgb, 2.2 );
+	float3 linear_exposure = pow( 2, exposure );
+   
+
+	// Exposure
+	linear_color *= linear_exposure;
+
+	// Contrast
+	float linear_ref = 0.18;
+	linear_color = linear_ref + contrast * (linear_color - linear_ref);
+
+	// Color Balance
+	linear_color = linear_color * linear_color_balance;
+
+	// Desaturation
+	float3 grey_color = dot( linear_color, float3( .30, .59, .11 ) );
+   	linear_color = grey_color + saturation * ( linear_color - grey_color );
+
+	linear_color = max(0,linear_color);
+
+	// Tonemap
+	float W = 11.2;
+	linear_color = ToneMapFilmic_Hejl2015(linear_color, W);
 	
-	return final_color;
+	// Convert to SRGB color space
+	float4 srgb_final_color; 
+	srgb_final_color.rgb = linear_to_srgb(linear_color);
+	srgb_final_color.a = final_color.a;
+
+	return srgb_final_color;
 }
 
 
