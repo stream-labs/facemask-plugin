@@ -44,7 +44,7 @@ before_test:
 - 7z x appveyor-test-utils/*zip c:\projects\source\shape_predictor\
 - 7z x appveyor-test-utils/*7z appveyor-test-utils/unzipped-utils
 - cd c:\projects\source
-- ps: Copy-Item -Path c:\projects\appveyor-test-utils\unzipped-utils\shape_predictor\* -Destination c:projects\source\build\RelWithDebInfo\shape_predictor_68_face_landmarks.dat 
+- ps: Copy-Item -Path c:\projects\source\shape_predictor\* -Destination c:projects\source\build\RelWithDebInfo\shape_predictor_68_face_landmarks.dat 
 - ps: Copy-Item -Path c:\projects\appveyor-test-utils\unzipped-utils\dlls-for-test\* -Destination c:projects\source\build\RelWithDebInfo\
 - ps: Copy-Item -Path c:\projects\appveyor-test-utils\unzipped-utils\DanielQA\* -Destination c:projects\source\test1\
 
