@@ -144,6 +144,15 @@ std::shared_ptr<Mask::Resource::IBase> Mask::Resource::IBase::LoadDefault(Mask::
 		{ "PBR", "effects/pbr.effect" },
 	};
 
+
+	static obs_data_t *g_templates;
+	// load once
+	if (g_templates == nullptr) {
+		// load templates file
+		char* f = obs_module_file("resources/templates.json");
+		g_templates = obs_data_create_from_json_file(f);
+	}
+
 	// yield
 	::Sleep(0);
 
@@ -168,6 +177,13 @@ std::shared_ptr<Mask::Resource::IBase> Mask::Resource::IBase::LoadDefault(Mask::
 			(parent, name, std::string(f));
 		bfree(f); 
 	}
+	// template?
+	if (obs_data_has_user_value(g_templates, name.c_str())) {
+		obs_data_t* template_data = obs_data_get_obj(g_templates, name.c_str());
+		p = Load(parent, name, template_data);
+		obs_data_release(template_data);
+	}
+
 	return p;
 }
 
