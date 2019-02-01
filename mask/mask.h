@@ -111,7 +111,7 @@ namespace Mask {
 
 		// resources
 		void AddResource(const std::string& name, std::shared_ptr<Resource::IBase> resource);
-		std::shared_ptr<Resource::IBase> GetResource(const std::string& name);
+		std::shared_ptr<Resource::IBase> GetResource(const std::string& name, bool force_reload = false);
 		std::shared_ptr<Resource::IBase> GetResource(Resource::Type type);
 		size_t GetNumResources(Resource::Type type);
 		std::shared_ptr<Resource::IBase> GetResource(Resource::Type type, int which);
