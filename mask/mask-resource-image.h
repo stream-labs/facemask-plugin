@@ -58,14 +58,18 @@ namespace Mask {
 			const char* const S_HEIGHT = "height";
 			const char* const S_MIP_LEVELS = "mip-levels";
 			const char* const S_MIP_DATA = "mip-data-%d";
+			const char* const S_SIDE_MIP_DATA = "side-%d-mip-data-%d";
 			const char* const S_BPP = "bpp";
+			const char* const S_CHANNEL_FORMAT = "channel-format";
 			
 
 		protected:
 			std::shared_ptr<GS::Texture> m_Texture;
+			bool m_is_cubemap;
 
 			// delayed gs creation
 			int				m_width, m_height;
+			int				m_mipLevels;
 			gs_color_format m_fmt;
 			std::string		m_tempFile;
 			std::vector<std::vector<uint8_t>> m_decoded_mips;
