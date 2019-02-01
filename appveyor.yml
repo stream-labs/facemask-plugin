@@ -20,12 +20,7 @@ environment:
 clone_folder: c:\projects\source
 
 install:
-  - cd c:\projects
-  - mkdir appveyor-test-utils
-  - ps: Read-S3Object -AccessKey $env:AWSId -SecretKey $env:AWSSecretKey -BucketName faces-internal.streamlabs.com -KeyPrefix appveyor-test-utils/ -Folder c:\projects\appveyor-test-utils -Region us-west-2
-  - 7z x appveyor-test-utils/*zip c:\projects\source\shape_predictor\
-  - 7z x appveyor-test-utils/*7z appveyor-test-utils/unzipped-utils
-  - cd c:\projects\source
+
   - git submodule update --init --recursive
   - mkdir build
   - cd build
@@ -43,10 +38,11 @@ after_build:
 - cmd: tar cvaf "%UnsignedArtifact%.tar.gz" "distribute/slobs/RelWithDebInfo" 
 
 before_test:
-- ps: Read-S3Object -AccessKey $env:AWSId -SecretKey $env:AWSSecretKey -BucketName faces-internal.streamlabs.com -Key libobs-debug-22.0.3-sl.219-win32-x64-wdeps.7z -File c:\projects\source\build\libobs-debug-22.0.3-sl.219-win32-x64-wdeps.7z -Region us-west-2
-- 7z x appveyor-test-utils/*zip appveyor-test-utils/unzipped-utils
-- cd appveyor-test-utils
-- dir
+- cd c:\projects
+- mkdir appveyor-test-utils
+- ps: Read-S3Object -AccessKey $env:AWSId -SecretKey $env:AWSSecretKey -BucketName faces-internal.streamlabs.com -KeyPrefix appveyor-test-utils/ -Folder c:\projects\appveyor-test-utils -Region us-west-2
+- 7z x appveyor-test-utils/*zip c:\projects\source\shape_predictor\
+- 7z x appveyor-test-utils/*7z appveyor-test-utils/unzipped-utils
 - cd c:\projects\source
 - ps: Copy-Item -Path c:\projects\source\appveyor-test-utils\unzipped-utils\shape_predictor\* -Destination c:projects\source\build\RelWithDebInfo\shape_predictor_68_face_landmarks.dat 
 - ps: Copy-Item -Path c:\projects\source\appveyor-test-utils\unzipped-utils\dlls-for-test\* -Destination c:projects\source\build\RelWithDebInfo\
