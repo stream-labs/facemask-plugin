@@ -65,6 +65,7 @@ public:
 	string uniqueResourceName(string name, string resType);
 	string getFullResourcePath(string resFile);
 	json createResourceFromFile(string resFile, string resType = string(""));
+	json createCubemapResourceFromFiles(string resFileTemplate, int mipLevels = 1);
 	json createImageResourceFromFile(string resFile, bool wantMips = true);
 	json createMaterial(json params, string effect);
 

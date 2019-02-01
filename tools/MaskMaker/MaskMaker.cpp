@@ -60,6 +60,8 @@ int main(int argc, char** argv) {
 		command_depends(args);
 	else if (args.command == "buildtexture")
 		args.writeJson(args.createImageResourceFromFile(args.value("file"), true));
+	else if (args.command == "buildcubemap")
+		args.writeJson(args.createCubemapResourceFromFiles(args.value("template"), std::stoi(args.value("mips"))));
 
 	
 	//getchar();

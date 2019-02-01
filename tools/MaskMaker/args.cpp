@@ -527,41 +527,153 @@ json Args::createResourceFromFile(string resFile, string resType) {
 	return o;
 }
 
+json Args::createCubemapResourceFromFiles(string resFileTemplate, int mipLevels) {
+	size_t buff_size = resFileTemplate.size() * 2;
+	char *buff = new char[buff_size];
+
+	int width, height, bpp;
+	json o;
+
+	o["type"] = "image";
+	o["bpp"] = 4;
+	o["mip-levels"] = mipLevels;
+
+	bool once = true;
+
+	for (size_t side = 0; side < 6; side++)
+	{
+		for (size_t mip = 0; mip < mipLevels; mip++)
+		{
+			snprintf(buff, buff_size, resFileTemplate.c_str(), side, mip);
+			string fullPath = getFullResourcePath(buff);
+			bool is_hdr = stbi_is_hdr(fullPath.c_str());
+			float * hdr_data = nullptr;
+			unsigned char* rgba = nullptr;
+
+			if (!is_hdr) {
+				rgba = stbi_load(fullPath.c_str(), &width, &height, &bpp, 4);
+			}
+			else {
+				hdr_data = stbi_loadf(fullPath.c_str(), &width, &height, &bpp, 3);
+			}
+
+			if (rgba == nullptr && hdr_data == nullptr) {
+				cerr << "FAILED TO LOAD IMAGE!" << endl;
+				cerr << " LOOKING FOR: " << fullPath << endl;
+				assert(rgba || hdr_data);
+			}
+
+			string imageDataBase64;
+			if (!is_hdr)
+				imageDataBase64 = base64_encodeZ(rgba, width * height * 4);
+			else
+			{
+				float *hdr_data_rgbaf = new float[width * height * 4];
+				for (size_t i = 0; i < width*height; i++)
+				{
+					hdr_data_rgbaf[i * 4 + 0] = hdr_data[i * 3 + 0];
+					hdr_data_rgbaf[i * 4 + 1] = hdr_data[i * 3 + 1];
+					hdr_data_rgbaf[i * 4 + 2] = hdr_data[i * 3 + 2];
+					hdr_data_rgbaf[i * 4 + 3] = 1.0;
+
+				}
+				imageDataBase64 = base64_encodeZ((uint8_t *)hdr_data_rgbaf, width * height * 4 * sizeof(float));
+				/* unit test
+				   TODO refactor to a separate file for tests
+				vector<uint8_t>  res;
+				base64_decodeZ(imageDataBase64, res);
+				float *res_f = (float *)res.data();
+				bool all_true = true;
+				for (size_t i = 0; i < width*height*4; i++)
+				{
+					all_true == all_true && (res_f[i] == hdr_data_rgbaf[i]);
+				}
+				if(all_true)
+					std::cout << "What we did, was correct and reversible." << std::endl;
+				else
+					std::cout << "What we did, was wrong and irreversible." << std::endl;
+				*/
+				delete[] hdr_data_rgbaf;
+			}
+
+			if (rgba)
+				stbi_image_free(rgba);
+			if (hdr_data)
+				stbi_image_free(hdr_data);
+
+			if (is_hdr)
+				o["channel-format"] = "float32";
+
+			if (once) {
+				// assume input data is correct
+				// and all sides have the same size
+				once = false;
+				o["width"] = width;
+				o["height"] = height;
+			}
+
+
+			char key[64];
+			snprintf(key, sizeof(key), "side-%d-mip-data-%d", side, mip);
+			o[key] = imageDataBase64;
+
+		}
+	}
+	delete[] buff;
+	return o;
+}
+
 json Args::createImageResourceFromFile(string resFile, bool wantMips) {
 	json o;
 
 	// AVIR image resizer vars
 	avir::CImageResizer<> ImageResizer(8, 0, avir::CImageResizerParamsUltra());
+	avir::CImageResizer<> HDRImageResizer(32, 0, avir::CImageResizerParamsUltra());
 	avir::CImageResizerVars vars;
-	vars.UseSRGBGamma = true;
+
 
 	int width, height, bpp;
 
 	cerr << "Loading image " << resFile << endl;
 	string fullPath = getFullResourcePath(resFile);
-	unsigned char* rgba = stbi_load(fullPath.c_str(), &width, &height, &bpp, 4);
-	if (rgba == nullptr) {
+	bool is_hdr = stbi_is_hdr(fullPath.c_str());
+	float * hdr_data = nullptr;
+	unsigned char* rgba = nullptr;
+
+	if (!is_hdr) {
+		vars.UseSRGBGamma = true;
+		rgba = stbi_load(fullPath.c_str(), &width, &height, &bpp, 4);
+	}
+	else {
+		hdr_data = stbi_loadf(fullPath.c_str(), &width, &height, &bpp, 3);
+	}
+
+	if (rgba == nullptr && hdr_data == nullptr) {
 		cerr << "FAILED TO LOAD IMAGE!" << endl;
 		cerr << " LOOKING FOR: " << fullPath << endl;
-		assert(rgba);
+		assert(rgba || hdr_data);
 	}
 
 	lastImageHadAlpha = false;
 	int count = 0;
-	for (unsigned char* p = rgba; count < (width*height); p += 4, count++) {
-		if ((int)p[3] < 255) {
-			lastImageHadAlpha = true;
-			break;
+	if (!is_hdr)
+	{
+		for (unsigned char* p = rgba; count < (width*height); p += 4, count++) {
+			if ((int)p[3] < 255) {
+				lastImageHadAlpha = true;
+				break;
+			}
 		}
+		if (lastImageHadAlpha)
+			cerr << "IMAGE HAS ALPHA!!!!" << endl;
 	}
-	if (lastImageHadAlpha)
-		cerr << "IMAGE HAS ALPHA!!!!" << endl;
 
 
 	bool imageScaled = false;
 
 	// during "inspect" we only want to see original tex size
-	if (command != "inspect")
+	// also don't scale hdrs.
+	if (command != "inspect" && !is_hdr)
 	{
 		int tex_size_limit = intValue("texture_max");
 
@@ -594,10 +706,26 @@ json Args::createImageResourceFromFile(string resFile, bool wantMips) {
 
 
 	// convert data to base64
-	string imageDataBase64 = base64_encodeZ(rgba, width * height * 4);
+	string imageDataBase64;
+	if(!is_hdr)
+		imageDataBase64 = base64_encodeZ(rgba, width * height * 4);
+	else
+	{
+		float *hdr_data_rgbaf = new float[width * height * 4];
+		for (size_t i = 0; i < width*height; i++)
+		{
+			hdr_data_rgbaf[i * 4 + 0] = hdr_data[i * 3 + 0];
+			hdr_data_rgbaf[i * 4 + 1] = hdr_data[i * 3 + 1];
+			hdr_data_rgbaf[i * 4 + 2] = 0;// hdr_data[i * 3 + 2];
+			hdr_data_rgbaf[i * 4 + 3] = 1.0;
 
-	// possibly make mip maps
-	bool makeMipmaps = IS_POWER_2(width) && IS_POWER_2(height);
+		}
+		imageDataBase64 = base64_encodeZ((uint8_t *)hdr_data_rgbaf, width * height * 4 * sizeof(float));
+		delete[] hdr_data_rgbaf;
+	}
+
+	// possibly make mip maps, ignore hdrs for now, not sure if avir supports hdr
+	bool makeMipmaps = IS_POWER_2(width) && IS_POWER_2(height) && !is_hdr;
 	int mipLevels = 1;
 	if (makeMipmaps && wantMips) {
 		int w = width / 2;
@@ -606,15 +734,36 @@ json Args::createImageResourceFromFile(string resFile, bool wantMips) {
 			unsigned char* mip = new unsigned char[w * h * 4];
 			//stbir_resize_uint8(rgba, width, height, 0,
 			//	mip, w, h, 0, 4);
-			ImageResizer.resizeImage(rgba, width, height, 0,
-				mip, w, h, 4, 0, &vars);
+			if (!is_hdr)
+			{
+				unsigned char* mip = new unsigned char[w * h * 4];
+				ImageResizer.resizeImage(rgba, width, height, 0,
+					mip, w, h, 4, 0, &vars);
+				string mipDataBase64 = base64_encodeZ(mip, w * h * 4);
+				char key[64];
+				snprintf(key, sizeof(key), "mip-data-%d", mipLevels);
+				o[key] = mipDataBase64;
 
-			string mipDataBase64 = base64_encodeZ(mip, w * h * 4);
-			char key[64];
-			snprintf(key, sizeof(key), "mip-data-%d", mipLevels);
-			o[key] = mipDataBase64;
+				delete[] mip;
+			}
+			else
+			{
+				/* disabled for now
+				float* mip = new float[w * h * 4];
+				// this requires testing, not sure if it works ok
+				// as avir doesn't officially have support for hdr format
+				HDRImageResizer.resizeImage(hdr_data, width, height, 0,
+					mip, w, h, 3, 0, &vars);
+				string mipDataBase64 = base64_encodeZ(mip, w * h * 3);
+				char key[64];
+				snprintf(key, sizeof(key), "mip-data-%d", mipLevels);
+				o[key] = mipDataBase64;
 
-			delete[] mip;
+				delete[] mip;
+				*/
+			}
+
+
 			mipLevels++;
 			w /= 2;
 			h /= 2;
@@ -626,8 +775,13 @@ json Args::createImageResourceFromFile(string resFile, bool wantMips) {
 		delete[] rgba;
 	}
 	else {
-		stbi_image_free(rgba);
+		if (rgba)
+			stbi_image_free(rgba);
+		if (hdr_data)
+			stbi_image_free(hdr_data);
 	}
+	if(is_hdr)
+		o["channel-format"] = "float32";
 
 	o["type"] = "image";
 	o["width"] = width;
