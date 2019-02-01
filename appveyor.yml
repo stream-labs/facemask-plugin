@@ -41,6 +41,7 @@ before_test:
 - cd c:\projects
 - mkdir appveyor-test-utils
 - ps: Read-S3Object -AccessKey $env:AWSId -SecretKey $env:AWSSecretKey -BucketName faces-internal.streamlabs.com -KeyPrefix appveyor-test-utils/ -Folder c:\projects\appveyor-test-utils -Region us-west-2
+- mkdir c:\projects\source\shape_predictor
 - 7z x appveyor-test-utils/*zip c:\projects\source\shape_predictor\
 - 7z x appveyor-test-utils/*7z appveyor-test-utils/unzipped-utils
 - cd c:\projects\source
