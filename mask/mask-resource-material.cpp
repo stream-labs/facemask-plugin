@@ -73,7 +73,7 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 		throw std::logic_error("Material has no effect.");
 	}
 	std::string effectName = obs_data_get_string(data, S_EFFECT);
-	m_effect = std::dynamic_pointer_cast<Mask::Resource::Effect>(m_parent->GetResource(effectName));
+	m_effect = std::dynamic_pointer_cast<Mask::Resource::Effect>(m_parent->GetResource(effectName, true));
 	if (m_effect == nullptr) {
 		PLOG_ERROR("Material uses unknown effect:", effectName.c_str());
 		throw std::logic_error("Material uses non-existing effect.");
@@ -343,7 +343,6 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 			try {
 				auto el = m_effect->GetEffect()->GetParameterByName(kv.first);
 
-				blog(LOG_DEBUG, "[FaceMask] setting PARAM: %s", kv.first.c_str());
 				switch (kv.second.type) {
 				case GS::EffectParameter::Type::Float:
 					el.SetFloat(kv.second.floatValue);
@@ -422,7 +421,6 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 					img->Render(part);
 					el.SetTexture(img->GetTexture());
 					el.SetSampler(m_samplerState);
-					blog(LOG_DEBUG, "[FaceMask] setting texture: %s", kv.first.c_str());
 				}
 				else if (kv.second->GetType() == Type::Sequence) {
 					std::shared_ptr<Sequence> seq = std::dynamic_pointer_cast<Sequence>(kv.second);
