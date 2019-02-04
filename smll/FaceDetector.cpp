@@ -309,9 +309,6 @@ namespace smll {
 		}
 		results.length = m_faces.length;
 
-		if (trackingFailed || m_faces.length == 0) {
-
-		}
 		// If faces are not found
 		if (m_faces.length == 0 && !trackingFailed && !wasFaceDetected) {
             // Wait for 5 frames and do face detection
