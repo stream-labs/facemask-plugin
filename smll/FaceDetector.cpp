@@ -239,10 +239,11 @@ namespace smll {
 			// forget whatever we thought were faces
 			m_faces.length = 0;
 			isPrevInit = false;
-		}
 
-		resizeWidth = width;
-		resizeHeight = height;
+			// Reset the resizeWidth and resizeHeight
+			resizeWidth = width;
+			resizeHeight = height;
+		}
 
 		grayImage = inputImage;
 
