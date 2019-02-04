@@ -74,6 +74,9 @@ namespace smll {
 #else
 		deserialize(filename) >> m_predictor68;
 #endif
+		// Set detector box overlap
+		dlib::test_box_overlap overlap(0.15, 0.75);
+		m_detector.set_overlap_tester(overlap);
 
 		bfree(filename);
 
