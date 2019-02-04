@@ -135,7 +135,6 @@ namespace smll {
 		}
 	}
 	void FaceDetector::computeDifference(DetectionResults& results) {
-		CropInfo cropInfo = GetCropInfo();
 		float scale = (float) grayImage.rows / resizeHeight ;
 		if (!isPrevInit ) {
 			isPrevInit = true;
@@ -216,8 +215,6 @@ namespace smll {
 		}
 		SetCropInfo(results);
 		// Do image cropping and cv::Mat initialization in single shot
-		CropInfo cropInfo = GetCropInfo();
-		
 		cv::Mat cropped = grayImage(cv::Rect(cropInfo.offsetX, cropInfo.offsetY, cropInfo.width, cropInfo.height));
 		currentImage = cropped.clone();
 	}
@@ -976,10 +973,6 @@ namespace smll {
 		}
 	}
 
-	FaceDetector::CropInfo FaceDetector::GetCropInfo() {
-		return cropInfo;
-	}
-
 	void FaceDetector::SetCropInfo(DetectionResults& results) {
 		int ww = results.motionRect.right() - results.motionRect.left();
 		int hh = results.motionRect.bottom() - results.motionRect.top();
@@ -996,9 +989,7 @@ namespace smll {
 
    void FaceDetector::DoFaceDetection() {
 
-		// get cropping info from config and detect image dimensions
-		CropInfo cropInfo = GetCropInfo();
-		// need to scale back
+		// Need to scale back - Use cropInfo
 		float scale = (float)grayImage.rows / resizeHeight;
 		cv::Mat detectionImg;
 		if (currentImage.cols*currentImage.rows <= resizeWidth*resizeHeight || scale == 0) {
