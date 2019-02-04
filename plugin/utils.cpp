@@ -263,7 +263,3 @@ namespace Utils {
 	}
 
 }
-
-int test() {
-	return 5;
-}

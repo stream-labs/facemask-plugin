@@ -263,7 +263,7 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 
 	obs_data_set_default_bool(data, P_DEACTIVATE, false);
 
-	char* defMaskFolder = ""; 
+	char* defMaskFolder = (char*)obs_module_config_path(NULL);
 	obs_data_set_default_string(data, P_MASKFOLDER, defMaskFolder);
 
 	obs_data_set_default_string(data, P_MASK, kDefaultMask);
@@ -271,7 +271,7 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	obs_data_set_default_string(data, P_ALERT_INTRO, kDefaultIntro);
 	obs_data_set_default_string(data, P_ALERT_OUTRO, kDefaultOutro);
 
-	//bfree(defMaskFolder);
+	bfree(defMaskFolder);
 	
 	obs_data_set_default_int(data, P_ANTI_ALIASING, NO_ANTI_ALIASING);
 
