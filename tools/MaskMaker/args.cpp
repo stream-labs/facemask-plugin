@@ -48,7 +48,9 @@ Args::Args(int argc, char** argv)
 
 	command = argv[1];
 
-	if (command != "inspect")
+	bool command_saves_to_file = command != "inspect" && command != "printtexture";
+
+	if (command_saves_to_file)
 		filename = argv[argc - 1];
 
 	if (command == "merge") {
@@ -67,7 +69,7 @@ Args::Args(int argc, char** argv)
 		}
 	}
 	else {
-		int arg_count = (command == "inspect") ? argc : argc - 1;
+		int arg_count = command_saves_to_file ? argc - 1 : argc;
 		for (int i = 2; i < arg_count; i++) {
 			vector<string> pair = Utils::split(argv[i], '=');
 			if (pair.size() > 1)
@@ -677,30 +679,33 @@ json Args::createImageResourceFromFile(string resFile, bool wantMips) {
 	{
 		int tex_size_limit = intValue("texture_max");
 
-		// limit texture sizes
-		int nWidth = width;
-		int nHeight = height;
-		if (width > height) {
-			if (width > tex_size_limit) {
-				nHeight = (int)((float)tex_size_limit * (float)height / (float)width);
-				nWidth = tex_size_limit;
+		if (tex_size_limit > 0)
+		{
+			// limit texture sizes
+			int nWidth = width;
+			int nHeight = height;
+			if (width > height) {
+				if (width > tex_size_limit) {
+					nHeight = (int)((float)tex_size_limit * (float)height / (float)width);
+					nWidth = tex_size_limit;
+				}
 			}
-		}
-		else {
-			if (height > tex_size_limit) {
-				nWidth = (int)((float)tex_size_limit * (float)width / (float)height);
-				nHeight = tex_size_limit;
+			else {
+				if (height > tex_size_limit) {
+					nWidth = (int)((float)tex_size_limit * (float)width / (float)height);
+					nHeight = tex_size_limit;
+				}
 			}
-		}
-		if (nWidth != width || nHeight != height) {
-			imageScaled = true;
-			unsigned char* mip = new unsigned char[nWidth * nHeight * 4];
-			ImageResizer.resizeImage(rgba, width, height, 0,
-				mip, nWidth, nHeight, 4, 0, &vars);
-			stbi_image_free(rgba);
-			rgba = mip;
-			width = nWidth;
-			height = nHeight;
+			if (nWidth != width || nHeight != height) {
+				imageScaled = true;
+				unsigned char* mip = new unsigned char[nWidth * nHeight * 4];
+				ImageResizer.resizeImage(rgba, width, height, 0,
+					mip, nWidth, nHeight, 4, 0, &vars);
+				stbi_image_free(rgba);
+				rgba = mip;
+				width = nWidth;
+				height = nHeight;
+			}
 		}
 	}
 
