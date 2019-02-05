@@ -26,7 +26,6 @@
 // how many frames before we consider a face "lost"
 #define NUM_FRAMES_TO_LOSE_FACE			(30)
 
-
 namespace smll {
 
 	ThreeDPose::ThreeDPose() {
@@ -112,8 +111,59 @@ namespace smll {
 	}
 
 
+	ProcessedResults::ProcessedResults() 
+	: skipped(false), detection(false), tracking(false), tracking_failed(false), detection_failed(false) {
 
+	}
 
+	void ProcessedResults::FrameSkipped() {
+		skipped = true;
+	}
+
+	void ProcessedResults::DetectionMade() {
+		detection = true;
+	}
+
+	void ProcessedResults::TrackingMade() {
+		tracking = true;
+	}
+
+	void ProcessedResults::TrackingFailed() {
+		tracking_failed = true;
+	}
+
+	void ProcessedResults::DetectionFailed() {
+		detection_failed = true;
+	}
+
+	bool ProcessedResults::isSkipped() {
+		return skipped;
+	}
+
+	std::string ProcessedResults::to_string() {
+		std::string str;
+		str += B2S(skipped);
+		str += "\t";
+		str += B2S(detection);
+		str += "\t";
+		str += B2S(tracking);
+		str += "\t";
+		str += B2S(tracking_failed);
+		str += "\t";
+		str += B2S(detection_failed);
+		str += "\t";
+		return str;
+	}
+
+	std::string ProcessedResults::titles_to_string() {
+		std::string str;
+		str += "Frame Skipped\t";
+		str += "Detection Made\t";
+		str += "Tracking Made\t";
+		str += "Tracking Failed\t";
+		str += "Detection Failed\t";
+		return str;
+	}
 	DetectionResults::DetectionResults() 
 		: sarray<DetectionResult, MAX_FACES>() {
 

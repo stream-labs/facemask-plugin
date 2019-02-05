@@ -227,7 +227,7 @@ float  lightAngle) {
 			
 		// point and spot lights have attenuation
 		if (lightType == 2 || lightType == 3) {
-			float d = length(lightV) / 100.0;
+			float d = length(lightPosition - vpos) / 100.0;
 			float attenuation = 1.0 / 
 				(lightAttenuation.x + 
 				 (lightAttenuation.y * d) +
@@ -240,7 +240,7 @@ float  lightAngle) {
 				float cosAngle = dot( lightDir, -lightV );
 				attenuation *= smoothstep( minCos, maxCos, cosAngle ); 
 			}
-			lightColor *= attenuation;
+			lightColor *= saturate(attenuation);
 		}
 		
 		outColor += lightColor;
