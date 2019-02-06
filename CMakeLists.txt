@@ -21,12 +21,6 @@ set(DLIB_USE_MKL_WITH_TBB OFF CACHE STRING "DLib MKL with TBB support"  FORCE)
 
 SET(PATH_FREETYPE "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/freetype2")
 
-if(TARGET libobs)
-	set(FACEMASK_EXTERNAL FALSE)
-else()
-	set(FACEMASK_EXTERNAL TRUE)
-endif()
-
 
 ################################################################################
 # Configuration
@@ -146,33 +140,29 @@ endif()
 
 
 # OBS Studio
-if(FACEMASK_EXTERNAL)
-	if(APPVEYOR_BUILD)	
+if(APPVEYOR_BUILD)	
 
-		include("${libobs_SOURCE_DIR}/cmake/LibObs/LibObsConfig.cmake")
+	include("${libobs_SOURCE_DIR}/cmake/LibObs/LibObsConfig.cmake")
 
-		file(MAKE_DIRECTORY "libobs")
-		file(MAKE_DIRECTORY "deps")
-		file(COPY "${LIBOBS_INCLUDE_DIRS}/" DESTINATION "libobs" FILES_MATCHING PATTERN "*")
-		file(COPY "${libobs_SOURCE_DIR}/deps/" DESTINATION "deps" FILES_MATCHING PATTERN "*")
-		INCLUDE_DIRECTORIES("${LIBOBS_INCLUDE_DIRS}/")
-	else()
-		SET(PATH_OBS_STUDIO "" CACHE PATH "OBS Studio Source Code Directory")
-		if(PATH_OBS_STUDIO STREQUAL "")
-			message(FATAL_ERROR "PATH_OBS_STUDIO not set!")
-			return()
-		endif()
-		if(NOT EXISTS "${PATH_OBS_STUDIO}/libobs/obs-module.h")
-			message(FATAL_ERROR "PATH_OBS_STUDIO is invalid!")
-			return()
-		endif()
-
-		SET(obsPath "${PATH_OBS_STUDIO}")
-		INCLUDE("${PATH_OBS_STUDIO}/cmake/external/Findlibobs.cmake")
-		INCLUDE_DIRECTORIES("${PATH_OBS_STUDIO}/")
-	endif()
+	file(MAKE_DIRECTORY "libobs")
+	file(MAKE_DIRECTORY "deps")
+	file(COPY "${LIBOBS_INCLUDE_DIRS}/" DESTINATION "libobs" FILES_MATCHING PATTERN "*")
+	file(COPY "${libobs_SOURCE_DIR}/deps/" DESTINATION "deps" FILES_MATCHING PATTERN "*")
+	INCLUDE_DIRECTORIES("${LIBOBS_INCLUDE_DIRS}/")
 else()
-	SET(PATH_OBS_STUDIO ${CMAKE_SOURCE_DIR})
+	SET(PATH_OBS_STUDIO "" CACHE PATH "OBS Studio Source Code Directory")
+	if(PATH_OBS_STUDIO STREQUAL "")
+		message(FATAL_ERROR "PATH_OBS_STUDIO not set!")
+		return()
+	endif()
+	if(NOT EXISTS "${PATH_OBS_STUDIO}/libobs/obs-module.h")
+		message(FATAL_ERROR "PATH_OBS_STUDIO is invalid!")
+		return()
+	endif()
+
+	SET(obsPath "${PATH_OBS_STUDIO}")
+	INCLUDE("${PATH_OBS_STUDIO}/cmake/external/Findlibobs.cmake")
+	INCLUDE_DIRECTORIES("${PATH_OBS_STUDIO}/")
 endif()
 
 
@@ -184,15 +174,10 @@ endif()
 
 
 # Distribute format
-if(FACEMASK_EXTERNAL)
-	SET(DISTRIBUTE_PATH "${PROJECT_BINARY_DIR}/distribute/slobs")
-	SET(DISTRIBUTE_PATH_BIN "obs-plugins")
-	add_definitions(-DSLOBS_BUILD)
-else()
-	SET(DISTRIBUTE_PATH "${PROJECT_BINARY_DIR}/distribute/obs")
-	SET(DISTRIBUTE_PATH_BIN "obs-plugins/${BITS}bit")
-	add_definitions(-DOBS_STUDIO_BUILD)
-endif()
+SET(DISTRIBUTE_PATH "${PROJECT_BINARY_DIR}/distribute/slobs")
+SET(DISTRIBUTE_PATH_BIN "obs-plugins")
+add_definitions(-DSLOBS_BUILD)
+
 
 
 ################################################################################
@@ -384,25 +369,21 @@ add_library(facemask-plugin-objlib OBJECT
 set_property(TARGET facemask-plugin-objlib PROPERTY POSITION_INDEPENDENT_CODE 1)
 add_library(facemask-plugin MODULE $<TARGET_OBJECTS:facemask-plugin-objlib>)
 
-if(FACEMASK_EXTERNAL)
-	TARGET_LINK_LIBRARIES(facemask-plugin
-		${LIBOBS_LIBRARIES}
-		${facemask-plugin_LIBRARIES}
+
+TARGET_LINK_LIBRARIES(facemask-plugin
+	${LIBOBS_LIBRARIES}
+	${facemask-plugin_LIBRARIES}
+)
+
+if(BUILD_UNIT_TESTS)
+	add_executable(facemask-plugin-test
+		${facemask-plugin_TEST_SOURCES}
 	)
-	
-	if(BUILD_UNIT_TESTS)
-		add_executable(facemask-plugin-test
-			${facemask-plugin_TEST_SOURCES}
-		)
-		TARGET_LINK_LIBRARIES(facemask-plugin-test
-			${facemask-plugin_LIBRARIES} CppUTest
-		)
-	endif()	
-else()
-	TARGET_LINK_LIBRARIES(facemask-plugin
-		${facemask-plugin_LIBRARIES}
+	TARGET_LINK_LIBRARIES(facemask-plugin-test
+		${facemask-plugin_LIBRARIES} CppUTest
 	)
-endif()
+endif()	
+
 
 if(MSVC)
 	target_compile_definitions(facemask-plugin
@@ -414,25 +395,21 @@ endif()
 # Installation / Distribution
 ################################################################################
 
-if(FACEMASK_EXTERNAL)
-	add_custom_command(TARGET facemask-plugin POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_directory
-		"${PROJECT_SOURCE_DIR}/data"
-		"${DISTRIBUTE_PATH}/$<CONFIG>/data/obs-plugins/facemask-plugin"
-	)
-	add_custom_command(TARGET facemask-plugin POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy
-		"$<TARGET_FILE:facemask-plugin>"
-		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/$<TARGET_FILE_NAME:facemask-plugin>"
-	)
-	add_custom_command(TARGET facemask-plugin POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy
-		"$<TARGET_FILE_DIR:facemask-plugin>/facemask-plugin.pdb"
-		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/facemask-plugin.pdb"
-	)
-else()
-	install_obs_plugin_with_data(facemask-plugin data)
-endif()
+add_custom_command(TARGET facemask-plugin POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_directory
+	"${PROJECT_SOURCE_DIR}/data"
+	"${DISTRIBUTE_PATH}/$<CONFIG>/data/obs-plugins/facemask-plugin"
+)
+add_custom_command(TARGET facemask-plugin POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy
+	"$<TARGET_FILE:facemask-plugin>"
+	"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/$<TARGET_FILE_NAME:facemask-plugin>"
+)
+add_custom_command(TARGET facemask-plugin POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy
+	"$<TARGET_FILE_DIR:facemask-plugin>/facemask-plugin.pdb"
+	"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/facemask-plugin.pdb"
+)
 
 
 
