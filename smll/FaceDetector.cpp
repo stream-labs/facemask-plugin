@@ -92,6 +92,15 @@ namespace smll {
 		bfree(filename);
 		bfree(filenameFD);
 
+		// Build a set of model points to use for solving 3D pose
+		model_indices.push_back(LEFT_OUTER_EYE_CORNER);
+		model_indices.push_back(RIGHT_OUTER_EYE_CORNER);
+		model_indices.push_back(NOSE_1);
+		model_indices.push_back(NOSE_2);
+		model_indices.push_back(NOSE_3);
+		model_indices.push_back(NOSE_4);
+		model_indices.push_back(NOSE_7);
+		model_points = GetLandmarkPoints(model_indices);
 	}
 
 	void FaceDetector::MakeVtxBitmaskLookup() {
@@ -1118,17 +1127,6 @@ namespace smll {
 
 	void FaceDetector::DoPoseEstimation(DetectionResults& results)
 	{
-		// Build a set of model points to use for solving 3D pose
-		std::vector<int> model_indices;
-		model_indices.push_back(LEFT_OUTER_EYE_CORNER);
-		model_indices.push_back(RIGHT_OUTER_EYE_CORNER);
-		model_indices.push_back(NOSE_1);
-		model_indices.push_back(NOSE_2);
-		model_indices.push_back(NOSE_3);
-		model_indices.push_back(NOSE_4);
-		model_indices.push_back(NOSE_7);
-		std::vector<cv::Point3f> model_points = GetLandmarkPoints(model_indices);
-
 		if (m_poses.length != results.length) {
 			m_poses.length = results.length;
 			for (int i = 0; i < m_poses.length; i++) {
