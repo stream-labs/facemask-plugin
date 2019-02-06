@@ -176,8 +176,9 @@ namespace smll {
 	std::vector<cv::Point3f> GetLandmarkPoints(const std::vector<int>& indices)	{
 		GetLandmarkPoints();
 		std::vector<cv::Point3f> points;
+		points.reserve(indices.size());
 		for (int i = 0; i < indices.size(); i++) {
-			points.push_back(g_landmark_points[indices[i]]);
+			points.emplace_back(g_landmark_points[indices[i]]);
 		}
 		return points;
 	}
