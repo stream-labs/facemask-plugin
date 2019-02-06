@@ -84,7 +84,8 @@ namespace smll {
 		deserialize(filename) >> m_predictor68;
 		deserialize(filenameFD) >> m_detector;
 #endif
-		// Set detector
+
+		// Set detector box overlap
 		dlib::test_box_overlap overlap(0.15, 0.75);
 		m_detector.set_overlap_tester(overlap);
 
@@ -250,10 +251,11 @@ namespace smll {
 			// forget whatever we thought were faces
 			m_faces.length = 0;
 			isPrevInit = false;
-		}
 
-		resizeWidth = width;
-		resizeHeight = height;
+			// Reset the resizeWidth and resizeHeight
+			resizeWidth = width;
+			resizeHeight = height;
+		}
 
 		grayImage = inputImage;
 
@@ -319,9 +321,6 @@ namespace smll {
 		}
 		results.length = m_faces.length;
 
-		if (trackingFailed || m_faces.length == 0) {
-
-		}
 		// If faces are not found
 		if (m_faces.length == 0 && !trackingFailed && !wasFaceDetected) {
             // Wait for 5 frames and do face detection
