@@ -146,8 +146,6 @@ private:
 	bool isPrevInit;
 
 	// For 3d pose
-	std::vector<int> model_indices;
-	std::vector<cv::Point3f> model_points;
 	float	ReprojectionError(const std::vector<cv::Point3f>& model_points,
 		const std::vector<cv::Point2f>& image_points,
 		const cv::Mat& rotation, const cv::Mat& translation);
