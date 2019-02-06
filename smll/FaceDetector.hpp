@@ -131,7 +131,6 @@ private:
 		}
 	};
 	CropInfo    cropInfo;
-	CropInfo	GetCropInfo();
 	void		SetCropInfo(DetectionResults& results);
 	// Current Image
 	cv::Mat grayImage;
