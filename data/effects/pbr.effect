@@ -115,6 +115,7 @@ uniform float3 color_balance = {1.0,1.0,1.0};
 
 // PBR IBL
 uniform float ibl_intensity = 1.0;
+uniform float3 ibl_rotate_offset = {0.0, 0.0, 0.0};
 
 // PBR Glass
 uniform float glass_spec_ratio = 1.0;
@@ -172,6 +173,40 @@ struct VertDataOut {
 	float4 vpos : TEXCOORD1;
 	float3 bitangent: TEXCOORD2;
 };
+
+float3 rotate_env_map(float3 vec, float3 rotate_angles) {
+	
+	float3 rot_v = vec;
+	float3 theta = {rotate_angles.x,rotate_angles.y,rotate_angles.z};
+	theta *= PI/180;
+
+	// NOTE rotate the vec away by angle values
+	// instead of rotating the actual env map
+	// thus use -theta instead of theta for rotation
+	theta *= -1;
+
+	float  xp,yp,zp;
+
+	// rotate Y
+	zp = rot_v.z * cos(theta.y) + rot_v.x * sin(theta.y);
+	xp = -rot_v.z * sin(theta.y) + rot_v.x * cos(theta.y);
+	rot_v.x = xp;
+	rot_v.z = zp;
+
+	// rotate Z
+	xp = rot_v.x * cos(theta.z) - rot_v.y * sin(theta.z);
+	yp = rot_v.x * sin(theta.z) + rot_v.y * cos(theta.z);
+	rot_v.x = xp;
+	rot_v.y = yp;
+
+	// rotate X
+	yp = rot_v.y * cos(theta.x) - rot_v.z * sin(theta.x);
+	zp = rot_v.y * sin(theta.x) + rot_v.z * cos(theta.x);
+	rot_v.z = zp;
+	rot_v.y = yp;
+
+	return rot_v;
+}
 
 float4 srgb_to_linear(float4 srgb_color) {
 	float3 linear_color = pow(srgb_color.rgb,2.2);
@@ -564,8 +599,8 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 
 		// HDR Spec and Diff are linear, and no need to cancel srgb gamma
 		float lod = _roughness * spec_mip_levels;
-		float4 ibl_spec_light = iblSpecTex.SampleLevel(tex_sampler, float3(-r.x, -r.y, r.z), lod);
-		float4 ibl_diff_light = iblDiffTex.Sample(tex_sampler, float3(-normal.x, -normal.y, normal.z));
+		float4 ibl_spec_light = iblSpecTex.SampleLevel(tex_sampler, rotate_env_map(float3(-r.x, -r.y, r.z), ibl_rotate_offset), lod);
+		float4 ibl_diff_light = iblDiffTex.Sample(tex_sampler, rotate_env_map(float3(-normal.x, -normal.y, normal.z), ibl_rotate_offset));
 
 #ifdef IBL_BRDF_TEX
 		float3 brdf = iblBRDFTex.Sample(tex_sampler,float2(NdV, 1.0 - _roughness)).rgb;
