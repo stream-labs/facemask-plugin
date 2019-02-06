@@ -30,7 +30,8 @@
 #define NUM_HULL_POINTS			(28 * 2 * 2 * 2)
 #define NUM_HULL_POINT_DIVS		(3)
 
-static const char* const kFileShapePredictor68 = "sp_v1.2_custom.dat";
+static const char* const kFileShapePredictor68 = "SL_SP_v1.2.dat";
+static const char* const kFileFaceDetector = "SL_FD_v1.2.dat";
 
 
 using namespace dlib;
@@ -50,11 +51,10 @@ namespace smll {
 		, landmarks_detected(false)
 		, cropInfo(0,0,0,0) {
 		// Load face detection and pose estimation models.
-		m_detector = get_frontal_face_detector();
-
 		count = 0;
 
 		char *filename = obs_module_file(kFileShapePredictor68);
+		char *filenameFD = obs_module_file(kFileFaceDetector);
 
 #ifdef _WIN32
 		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
@@ -71,14 +71,26 @@ namespace smll {
 		}
 
 		deserialize(m_predictor68, predictor68_file);
+
+		// Now load face detector
+		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converterFD;
+		std::wstring wide_filenameFD(converterFD.from_bytes(filenameFD));
+		std::ifstream detector_file(wide_filenameFD.c_str(), std::ios::binary);
+		if (!detector_file) {
+			throw std::runtime_error("Failed to open face detector file");
+		}
+		deserialize(m_detector, detector_file);
 #else
 		deserialize(filename) >> m_predictor68;
+		deserialize(filenameFD) >> m_detector;
 #endif
+
 		// Set detector box overlap
 		dlib::test_box_overlap overlap(0.15, 0.75);
 		m_detector.set_overlap_tester(overlap);
 
 		bfree(filename);
+		bfree(filenameFD);
 
 	}
 
