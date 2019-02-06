@@ -93,13 +93,14 @@ namespace smll {
 		bfree(filenameFD);
 
 		// Build a set of model points to use for solving 3D pose
-		model_indices.push_back(LEFT_OUTER_EYE_CORNER);
-		model_indices.push_back(RIGHT_OUTER_EYE_CORNER);
-		model_indices.push_back(NOSE_1);
-		model_indices.push_back(NOSE_2);
-		model_indices.push_back(NOSE_3);
-		model_indices.push_back(NOSE_4);
-		model_indices.push_back(NOSE_7);
+		model_indices.reserve(7);
+		model_indices.emplace_back(LEFT_OUTER_EYE_CORNER);
+		model_indices.emplace_back(RIGHT_OUTER_EYE_CORNER);
+		model_indices.emplace_back(NOSE_1);
+		model_indices.emplace_back(NOSE_2);
+		model_indices.emplace_back(NOSE_3);
+		model_indices.emplace_back(NOSE_4);
+		model_indices.emplace_back(NOSE_7);
 		model_points = GetLandmarkPoints(model_indices);
 
 	}
