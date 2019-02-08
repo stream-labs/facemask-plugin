@@ -22,7 +22,7 @@ install:
   - mkdir build
   - cd build
   - echo %LibobsFileURL%
-  - ps: Start-FileDownload %LibobsFileURL% -FileName %LibobsFile% 
+  - ps: Start-FileDownload $env:LibobsFileURL -FileName $env:LibobsFile
   - 7z x %LibobsFile% -oc:\projects\source\build\ -r
   - ps: $env:SignedArtifact = "facemask-plugin-$(git describe --tags --abbrev=0)"
   - ps: $env:UnsignedArtifact = "facemask-plugin-$env:APPVEYOR_BUILD_NUMBER"
