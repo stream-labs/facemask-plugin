@@ -77,7 +77,6 @@ public:
 
 private:
 	dlib::full_object_detection d68;
-	bool landmarks_detected;
 	// Saved Faces
 	Faces			m_faces;
 

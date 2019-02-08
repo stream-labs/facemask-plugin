@@ -12,11 +12,8 @@ environment:
     secure: iZlMSWnmH5FQDpa+/0SgXIyvCobkElj2y5lu94Uo8VnTWHTeTC1/bpVkzsLreENocomvDB5ywsa3+QdathRp8A==
   StreamlabsSecret:
     secure: hr+VpykbGiCI5I0ltiqH667wh/YQx2Fi5SBLfkOWHSg=
-  AWSId:
-    secure: mCkabszlS+XuJkjmIFM4t6Hom4jvUfNqbxlmQXKPJNE=
-  AWSSecretKey:
-    secure: dGl7YDpzqXV+ucEwwo6QEiTjQBSThcakfE70aKWrgjUeLy3jFJsjgbnnGPeUIU+k
-  LibobsFile: libobs-debug-22.0.3-sl.302-win32-x64.7z
+  LibobsFileURL: 'https://s3-us-west-2.amazonaws.com/obsstudios3.streamlabs.com/libobs-release-22.0.3-sl.320-win32-x64.7z'
+  LibobsFile: "LibOBS-Release"
 
 clone_folder: c:\projects\source
 
@@ -24,8 +21,9 @@ install:
   - git submodule update --init --recursive
   - mkdir build
   - cd build
-  - ps: Read-S3Object -AccessKey $env:AWSId -SecretKey $env:AWSSecretKey -BucketName obsstudios3.streamlabs.com -Key $env:LibobsFile -File $env:LibobsFile -Region us-west-2
-  - 7z x "%LibobsFile%" -oc:\projects\source\build\ -r
+  - echo %LibobsFileURL%
+  - ps: Start-FileDownload $env:LibobsFileURL -FileName $env:LibobsFile
+  - 7z x %LibobsFile% -oc:\projects\source\build\ -r
   - ps: $env:SignedArtifact = "facemask-plugin-$(git describe --tags --abbrev=0)"
   - ps: $env:UnsignedArtifact = "facemask-plugin-$env:APPVEYOR_BUILD_NUMBER"
 
@@ -47,9 +45,9 @@ before_deploy:
 deploy:
   - provider: S3
     access_key_id:
-      secure: mCkabszlS+XuJkjmIFM4t6Hom4jvUfNqbxlmQXKPJNE=
+      secure: DkIi00e8MRVWju/XQg+Fmq0NJ/8cYVd1oacrWtd9tMA=
     secret_access_key:
-      secure: dGl7YDpzqXV+ucEwwo6QEiTjQBSThcakfE70aKWrgjUeLy3jFJsjgbnnGPeUIU+k
+      secure: 1i22R8r4wlVkxV/5KDQ+mbbyUFFPZvVdElTti/VN4bdKTHtvjV62kxVMQeBPFNl0
     bucket: faces-internal.streamlabs.com
     folder: facemask-plugin-deployment
     region: us-west-2

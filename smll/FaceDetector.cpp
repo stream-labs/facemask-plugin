@@ -47,7 +47,6 @@ namespace smll {
 		, m_camera_w(0)
 		, m_camera_h(0)
 		, isPrevInit(false)
-		, landmarks_detected(false)
 		, cropInfo(0,0,0,0) {
 		// Load face detection and pose estimation models.
 		m_detector = get_frontal_face_detector();
@@ -1079,10 +1078,8 @@ namespace smll {
 
 			dlib::cv_image<unsigned char> img(grayImage);
 
-			if (!results.processedResults.isSkipped() || !landmarks_detected) {
-				d68 = m_predictor68(img, m_faces[f].m_bounds);
-				landmarks_detected = true;
-			}
+			d68 = m_predictor68(img, m_faces[f].m_bounds);
+
 			// Sanity check
 			if (d68.num_parts() != NUM_FACIAL_LANDMARKS)
 				throw std::invalid_argument(
