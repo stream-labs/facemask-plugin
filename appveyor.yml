@@ -45,9 +45,9 @@ before_deploy:
 deploy:
   - provider: S3
     access_key_id:
-      secure: mCkabszlS+XuJkjmIFM4t6Hom4jvUfNqbxlmQXKPJNE=
+      secure: DkIi00e8MRVWju/XQg+Fmq0NJ/8cYVd1oacrWtd9tMA=
     secret_access_key:
-      secure: dGl7YDpzqXV+ucEwwo6QEiTjQBSThcakfE70aKWrgjUeLy3jFJsjgbnnGPeUIU+k
+      secure: 1i22R8r4wlVkxV/5KDQ+mbbyUFFPZvVdElTti/VN4bdKTHtvjV62kxVMQeBPFNl0
     bucket: faces-internal.streamlabs.com
     folder: facemask-plugin-deployment
     region: us-west-2
