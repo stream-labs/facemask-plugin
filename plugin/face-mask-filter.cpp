@@ -837,6 +837,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(void *ptr,
 	reinterpret_cast<Instance*>(ptr)->video_render(effect);
 }
 
+
 void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// Skip rendering if inactive or invisible.
@@ -894,26 +895,14 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	}
 
 	gs_texture_t *vidTex = nullptr;
-	if (mask_data && (mask_data->GetMorph() || recordTriggered || (demoModeGenPreviews && demoMaskDatas.size() > 0))) {
-		gs_texrender_reset(sourceRenderTarget);
-		if (gs_texrender_begin(sourceRenderTarget, parent->async_width, parent->async_height)) {
 
-			gs_blend_state_push();
-			gs_projection_push();
+	gs_effect_t* defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
 
-			gs_ortho(0, (float)baseWidth, 0, (float)baseHeight, -1, 1);
-
-			obs_source_video_render(parent);
-			gs_texrender_end(sourceRenderTarget);
-
-			gs_projection_pop();
-			gs_blend_state_pop();
-
-		}
-		vidTex = gs_texrender_get_texture(sourceRenderTarget);
-	}
-	if (mask_data && !mask_data->GetMorph()) {
-		obs_source_video_render(parent);
+	vidTex = RenderSourceTexture(effect ? effect : defaultEffect);
+	if (vidTex == NULL) {
+		// *** SKIP ***
+		obs_source_skip_video_filter(source);
+		return;
 	}
 
 	if ((parent == NULL) || (target == NULL)) {
@@ -975,6 +964,15 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// flags
 	bool genThumbs = mask_data && demoModeGenPreviews && demoModeSavingFrames;
+
+	// Draw the source video	
+	gs_enable_depth_test(false);
+	gs_set_cull_mode(GS_NEITHER);
+	while (gs_effect_loop(defaultEffect, "Draw")) {
+		gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+			"image"), vidTex);
+		gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
+	}
 
 	// Get current method to use for anti-aliasing
 	if (antialiasing_method == NO_ANTI_ALIASING ||
@@ -1149,15 +1147,21 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	gs_blend_function(gs_blend_type::GS_BLEND_SRCALPHA,
 		gs_blend_type::GS_BLEND_INVSRCALPHA);
 
-
-    if (mask_data && (!mask_data->DrawVideoWithMask() &&
-			!genThumbs) && mask_data->GetMorph()) {
-
-		// Draw the source video 
+	// Draw the source video 
+	if (!mask_data || (!mask_data->DrawVideoWithMask() &&
+		!genThumbs)) {
 		if (mask_data) {
 			triangulation.autoBGRemoval = autoBGRemoval;
 			triangulation.cartoonMode = cartoonMode;
 			mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
+		}
+		else {
+			// Draw the source video	
+			while (gs_effect_loop(defaultEffect, "Draw")) {
+				gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+					"image"), vidTex);
+				gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
+			}
 		}
 	}
 
