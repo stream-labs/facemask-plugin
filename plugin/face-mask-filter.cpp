@@ -139,8 +139,11 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	obs_enter_graphics();
 	sourceRenderTarget = gs_texrender_create(GS_RGBA, GS_ZS_NONE);
 	drawTexRender = gs_texrender_create(GS_RGBA, GS_Z32F); // has depth buffer
+	vidLightTexRender = gs_texrender_create(GS_RGBA, GS_ZS_NONE);
 	alertTexRender = gs_texrender_create(GS_RGBA, GS_Z32F); // has depth buffer
 	obs_leave_graphics();
+
+	vidLightTex = NULL;
 
 	// Make the smll stuff
 	smllFaceDetector = new smll::FaceDetector();
@@ -894,6 +897,25 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		return;
 	}
 
+
+	gs_texture_t *fst_vidTex = nullptr;
+	gs_texrender_reset(drawTexRender);
+	if (gs_texrender_begin(drawTexRender, parent->async_width, parent->async_height)) {
+
+		gs_blend_state_push();
+		gs_projection_push();
+
+		gs_ortho(0, (float)baseWidth, 0, (float)baseHeight, -1, 1);
+
+		obs_source_video_render(parent);
+		gs_texrender_end(drawTexRender);
+
+		gs_projection_pop();
+		gs_blend_state_pop();
+
+	}
+	fst_vidTex = gs_texrender_get_texture(drawTexRender);
+
 	gs_texture_t *vidTex = nullptr;
 
 	gs_effect_t* defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
@@ -962,6 +984,26 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		triangulation.DestroyBuffers();
 	}
 
+
+	// render mask to texture
+	gs_texrender_reset(vidLightTexRender);
+	if (gs_texrender_begin(vidLightTexRender, 10, 10)) {
+
+		gs_blend_state_push();
+		gs_projection_push();
+
+		gs_ortho(0, (float)baseWidth, 0, (float)baseHeight, -1, 1);
+
+		obs_source_video_render(parent);
+		gs_texrender_end(vidLightTexRender);
+
+		gs_projection_pop();
+		gs_blend_state_pop();
+
+	}
+	vidLightTex = gs_texrender_get_texture(vidLightTexRender);
+
+
 	// flags
 	bool genThumbs = mask_data && demoModeGenPreviews && demoModeSavingFrames;
 
@@ -1007,6 +1049,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					// Check here for no morph
 					if (!mask_data->GetMorph()) {
 						triangulation.DestroyBuffers();
+					}
+
+					if (true) {
+						mask_data->SetVideoTexture(vidLightTex);
 					}
 
 					// Draw depth-only stuff
@@ -1182,6 +1228,12 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// Draw the rendered Mask
 	if (mask_tex && custom_effect) {
 		gs_effect_set_int(gs_effect_get_param_by_name(custom_effect, "antialiasing_method"), antialiasing_method);
+
+		while (gs_effect_loop(custom_effect, "Draw")) {
+			gs_effect_set_texture(gs_effect_get_param_by_name(custom_effect,
+				"image"), vidTex);
+			gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
+		}
 
 		while (gs_effect_loop(custom_effect, "Draw")) {
 			gs_effect_set_texture(gs_effect_get_param_by_name(custom_effect,

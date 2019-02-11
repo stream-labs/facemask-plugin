@@ -155,6 +155,10 @@ namespace Plugin {
 			gs_texrender_t*		drawTexRender;
 			gs_texrender_t*		alertTexRender;
 
+			// Texture/Target to store lighting info from input stream
+			gs_texrender_t*		vidLightTexRender;
+			gs_texture_t*		vidLightTex;
+
 			// mask filenames
 			std::string			maskFolder;
 			std::string			currentMaskFolder;

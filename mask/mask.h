@@ -160,6 +160,10 @@ namespace Mask {
 		float	GetIntroFadeTime() { return m_introFadeTime; }
 		float	GetIntroDuration() { return m_introDuration; }
 
+		// access video texture
+		gs_texture_t *	GetVideoTexture() { return m_vidTex; }
+		void			SetVideoTexture(gs_texture_t *vidTex) { m_vidTex = vidTex; }
+
 		// rendering flags
 		bool	DrawVideoWithMask() { return m_drawVideoWithMask; }
 
@@ -185,6 +189,9 @@ namespace Mask {
 		std::shared_ptr<Mask::Part> m_partWorld;
 		SortedDrawObject**	m_drawBuckets;
 		Resource::Morph*	m_morph;
+
+		// video texture
+		gs_texture_t *m_vidTex;
 
 		// for certain masks that need to blend with video
 		bool				m_drawVideoWithMask;

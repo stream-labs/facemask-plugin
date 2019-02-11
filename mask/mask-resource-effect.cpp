@@ -81,6 +81,7 @@ void Mask::Resource::Effect::Render(Mask::Part* part) {
 			{"roughnessTex", "ROUGHNESS_TEX"},
 			{"metalnessTex", "METALNESS_TEX"},
 			{"metallicRoughnessTex", "METALLICROUGHNESS_TEX"},
+			{"vidTex", "VIDEO_TEX"}
 		};
 
 		char *file_string;

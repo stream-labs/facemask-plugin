@@ -85,6 +85,7 @@ namespace Mask {
 			bool m_rotationDisable;
 			bool m_opaque;
 			bool m_alphaWrite;
+			bool m_upload_video_texture;
 
 			gs_address_mode StringToAddressMode(std::string s);
 			void SetLightingParameters(Mask::Part* part);

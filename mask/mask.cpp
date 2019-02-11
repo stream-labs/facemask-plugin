@@ -100,7 +100,7 @@ static const int NUM_DRAW_BUCKETS = 1024;
 static const float BUCKETS_MAX_Z = 10.0f;
 static const float BUCKETS_MIN_Z = -100.0f;
 
-Mask::MaskData::MaskData() : m_data(nullptr), m_morph(nullptr), m_elapsedTime(0.0f) {
+Mask::MaskData::MaskData() : m_data(nullptr), m_morph(nullptr), m_vidTex(nullptr), m_elapsedTime(0.0f) {
 	m_drawBuckets = new Mask::SortedDrawObject*[NUM_DRAW_BUCKETS];
 	ClearSortedDrawObjects();
 }
