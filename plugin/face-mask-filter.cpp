@@ -1152,7 +1152,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
 		}
 	}
-	
 
 	// TEST DRAW EFFECT
 	if (custom_effect == nullptr) {
