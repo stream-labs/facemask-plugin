@@ -30,7 +30,7 @@
 #define NUM_HULL_POINTS			(28 * 2 * 2 * 2)
 #define NUM_HULL_POINT_DIVS		(3)
 
-static const char* const kFileShapePredictor68 = "sp_v1.2_custom.dat";
+static const char* const kFileShapePredictor68 = "shape_predictor_68_face_landmarks.dat";
 
 
 using namespace dlib;
@@ -1024,21 +1024,22 @@ namespace smll {
 		if (faces.size() > 0) {
 			prevImage = currentOrigImage.clone();
 		}
+		if ((m_faces.length == 0) || (faces.size() > 0)) {
+			m_faces.length = (int)faces.size() > MAX_FACES ? MAX_FACES : (int)faces.size();
 
-		m_faces.length = (int)faces.size() > MAX_FACES ? MAX_FACES : (int)faces.size();
-
-        // copy rects into our faces, start tracking
-        for (int i = 0; i < m_faces.length; i++) {
-            // scale rectangle up to video frame size
-			m_faces[i].m_bounds.set_left((long)((float)(faces[i].left()*scale +
-				cropInfo.offsetX)));
-			m_faces[i].m_bounds.set_right((long)((float)(faces[i].right()*scale +
-				cropInfo.offsetX)));
-			m_faces[i].m_bounds.set_top((long)((float)(faces[i].top()*scale +
-				cropInfo.offsetY)));
-			m_faces[i].m_bounds.set_bottom((long)((float)(faces[i].bottom()*scale +
-				cropInfo.offsetY)));
-        }
+			// copy rects into our faces, start tracking
+			for (int i = 0; i < m_faces.length; i++) {
+				// scale rectangle up to video frame size
+				m_faces[i].m_bounds.set_left((long)((float)(faces[i].left()*scale +
+					cropInfo.offsetX)));
+				m_faces[i].m_bounds.set_right((long)((float)(faces[i].right()*scale +
+					cropInfo.offsetX)));
+				m_faces[i].m_bounds.set_top((long)((float)(faces[i].top()*scale +
+					cropInfo.offsetY)));
+				m_faces[i].m_bounds.set_bottom((long)((float)(faces[i].bottom()*scale +
+					cropInfo.offsetY)));
+			}
+		}
     }
     
         
