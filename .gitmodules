@@ -6,4 +6,4 @@
 	url = https://github.com/stream-labs/freetype2.git
 [submodule "thirdparty/assimp"]
 	path = thirdparty/assimp
-	url = git@github.com:kamyarinfinity/assimp.git
+	url = https://github.com/kamyarinfinity/assimp.git
