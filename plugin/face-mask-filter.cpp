@@ -1048,7 +1048,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// flags
 	bool genThumbs = mask_data && demoModeGenPreviews && demoModeSavingFrames;
 
-
 	// Get current method to use for anti-aliasing
 	if (antialiasing_method == NO_ANTI_ALIASING ||
 		antialiasing_method == FXAA_ANTI_ALIASING)
