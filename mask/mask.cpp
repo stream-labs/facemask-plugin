@@ -100,14 +100,26 @@ static const int NUM_DRAW_BUCKETS = 1024;
 static const float BUCKETS_MAX_Z = 10.0f;
 static const float BUCKETS_MIN_Z = -100.0f;
 
-Mask::MaskData::MaskData() : m_data(nullptr), m_morph(nullptr), m_vidTex(nullptr), m_elapsedTime(0.0f) {
+Mask::MaskData::MaskData() : m_data(nullptr), m_morph(nullptr), m_elapsedTime(0.0f) {
 	m_drawBuckets = new Mask::SortedDrawObject*[NUM_DRAW_BUCKETS];
 	ClearSortedDrawObjects();
+	m_vidLightTex = nullptr;
 }
 
 Mask::MaskData::~MaskData() {
 	delete[] m_drawBuckets;
 	Clear();
+}
+
+bool Mask::MaskData::NeedsPBRLighting() {
+	for (auto &kv : m_resources) {
+		if (kv.second->GetType() == Resource::Type::Material)
+		{
+			std::shared_ptr<Resource::Material> mat = std::dynamic_pointer_cast<Resource::Material>(kv.second);
+			if (mat->IsPBR()) return true;
+		}
+	}
+	return false;
 }
 
 void Mask::MaskData::Clear() {

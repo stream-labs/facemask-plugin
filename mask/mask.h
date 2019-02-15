@@ -98,6 +98,7 @@ namespace Mask {
 
 	namespace Resource {
 		class Animation;
+		class Material;
 	}
 
 	class MaskData : public Resource::IAnimationControls {
@@ -161,8 +162,9 @@ namespace Mask {
 		float	GetIntroDuration() { return m_introDuration; }
 
 		// access video texture
-		gs_texture_t *	GetVideoTexture() { return m_vidTex; }
-		void			SetVideoTexture(gs_texture_t *vidTex) { m_vidTex = vidTex; }
+		gs_texture_t*	GetVideoLightingTexture() { return m_vidLightTex; }
+		void			SetVideoLightingTexture(gs_texture_t* vidLightTex) { m_vidLightTex = vidLightTex; }
+		bool			NeedsPBRLighting();
 
 		// rendering flags
 		bool	DrawVideoWithMask() { return m_drawVideoWithMask; }
@@ -190,8 +192,8 @@ namespace Mask {
 		SortedDrawObject**	m_drawBuckets;
 		Resource::Morph*	m_morph;
 
-		// video texture
-		gs_texture_t *m_vidTex;
+		// video light data
+		gs_texture_t* m_vidLightTex;
 
 		// for certain masks that need to blend with video
 		bool				m_drawVideoWithMask;

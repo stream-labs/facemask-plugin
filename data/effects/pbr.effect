@@ -53,6 +53,9 @@ uniform int metalnessRoughnessMap = 0;
 uniform texture2d metallicRoughnessTex;
 uniform int metallicRoughnessMap = 0;
 
+// Video lighting texture
+uniform texture2d vidLightingTex;
+
 // MATERIAL COLORS
 uniform float4 ambientColor = {0.2, 0.2, 0.2, 1.0};
 uniform float4 diffuseColor = {1.0, 1.0, 1.0, 1.0};
@@ -215,6 +218,18 @@ float4 srgb_to_linear(float4 srgb_color) {
 
 float3 linear_to_srgb(float3 linear_color) {
 	return pow(linear_color.rgb,1.0/2.2);
+}
+
+float brightness_to_exposure(float brightness, float bias) {
+	float t=brightness;
+	if(t<0.3)
+		return 0.1+bias;
+	else if(t>= 0.3 && t<0.7)
+		return (53-190*t)*(190*t-213)/6400+bias;
+	else if(t>=0.7 && t<1)
+		return 5*(t-0.7)*(t-0.7)+1+bias;
+	else
+		return 1.5+bias;
 }
 
 /*----------------------------------------- ToneMapFilmic_Hejl2015 ---
@@ -549,7 +564,7 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 		albedoColor = diffuseTex.Sample(tex_sampler, v_in.uv);
 #endif
 
-#ifdef SPECULAR_TEX
+#ifdef DISABLED_SPECULAR_TEX
 	if (specularMap != 0)
 		spcColor = specularTex.Sample(tex_sampler, v_in.uv);
 #endif
@@ -739,36 +754,62 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 	//      if we need to, we can make emissive luminance add to opacity
 	float4 final_color = base_color + float4(emmColor.rgb * emissive_intensity, 0);
 
+	float final_exposure = exposure;
+	float final_contrast = contrast;
+	float final_saturation = saturation;
+	float3 final_color_balance = color_balance;
+
+	float3 brightness_factor = {.30, .59, .11};
+
+#ifdef USE_VIDEO_LIGHTING
+	// alpha from vidLightingTex contains brightness
+	// rgb is dominant bright color
+	float4 video_bright_color = vidLightingTex.Sample(tex_sampler, float2((normal.x+1)/2, (normal.y+1)/2));
+	float video_brightness = video_bright_color.a;
+	if(video_brightness > 0.0)
+	{
+		video_bright_color /= max(video_bright_color.r, max(video_bright_color.g, video_bright_color.b));
+		// heavily adjust color balance
+		final_color_balance += 5 * video_bright_color.rgb;
+		final_color_balance /= 6;
+	}
+#endif
+
 	float3 linear_color = final_color.rgb;
 
 	// Tonemapping and Color Grading
 	// Largely taken from Jim Hejl
 	// https://twitter.com/jimhejl/status/633777619998130176
 
-	float3 linear_color_balance = pow( color_balance.rgb, 2.2 );
-	float3 linear_exposure = pow( 2, exposure );
-   
+	float3 linear_color_balance = pow( final_color_balance, 2.2 );
+	float3 linear_exposure = pow( 2, final_exposure );
+
+#ifdef USE_VIDEO_LIGHTING
+	if(video_brightness > 0.0)
+		linear_exposure *= brightness_to_exposure(video_brightness, 0.2);
+#endif
+
+	float linear_ref = 0.18;
 
 	// Exposure
 	linear_color *= linear_exposure;
 
 	// Contrast
-	float linear_ref = 0.18;
-	linear_color = linear_ref + contrast * (linear_color - linear_ref);
+	linear_color = linear_ref + final_contrast * (linear_color - linear_ref);
 
 	// Color Balance
 	linear_color = linear_color * linear_color_balance;
 
 	// Desaturation
-	float3 grey_color = dot( linear_color, float3( .30, .59, .11 ) );
-   	linear_color = grey_color + saturation * ( linear_color - grey_color );
+	float3 grey_color = dot( linear_color, brightness_factor );
+   	linear_color = grey_color + final_saturation * ( linear_color - grey_color );
 
 	linear_color = max(0,linear_color);
 
 	// Tonemap
 	float W = 11.2;
 	linear_color = ToneMapFilmic_Hejl2015(linear_color, W);
-	
+
 	// Convert to SRGB color space
 	float4 srgb_final_color; 
 	srgb_final_color.rgb = linear_to_srgb(linear_color);

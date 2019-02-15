@@ -49,7 +49,7 @@ static const char* const S_FILTER = "filter";
 static const char* const S_ALPHAWRITE = "alpha-write";
 
 static const char* const S_PBR_EFFECT = "PBR";
-static const char* const S_VIDEO_TEXTURE = "vidTex";
+static const char* const PARAM_VIDEO_LIGHTING_TEX = "vidLightingTex";
 
 static const char* const PARAM_WORLD = "World";
 static const char* const PARAM_TEXMAT = "TexMat";
@@ -320,12 +320,12 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 		active_textures.push_back(e.first);
 	}
 
-	if (effectName == S_PBR_EFFECT) {
-		active_textures.push_back(S_VIDEO_TEXTURE);
-		m_upload_video_texture = true;
+	if (m_effect->GetName() == S_PBR_EFFECT) {
+		active_textures.push_back(PARAM_VIDEO_LIGHTING_TEX);
+		m_use_video_lighting = true;
 	}
 	else
-		m_upload_video_texture = false;
+		m_use_video_lighting = false;
 
 	m_effect->SetActiveTextures(active_textures);
 }
@@ -333,6 +333,10 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 Mask::Resource::Material::~Material() {
 	if (m_samplerState)
 		gs_samplerstate_destroy(m_samplerState);
+}
+
+bool Mask::Resource::Material::IsPBR() {
+	return m_effect->GetName() == S_PBR_EFFECT;
 }
 
 Mask::Resource::Type Mask::Resource::Material::GetType() {
@@ -468,12 +472,12 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 			catch (...) {
 			}
 		}
-		gs_texture_t *vidTex = m_parent->GetVideoTexture();
-		if (m_upload_video_texture && vidTex != nullptr) {
-			gs_eparam_t* param = gs_effect_get_param_by_name(m_effect->GetEffect()->GetObject(), S_VIDEO_TEXTURE);
-			if (param)
+		if (m_use_video_lighting) {
+			gs_eparam_t* param = gs_effect_get_param_by_name(m_effect->GetEffect()->GetObject(), PARAM_VIDEO_LIGHTING_TEX);
+			gs_texture_t *tex = m_parent->GetVideoLightingTexture();
+			if (param && tex)
 			{
-				gs_effect_set_texture(param, vidTex);
+				gs_effect_set_texture(param, tex);
 				gs_effect_set_next_sampler(param, m_samplerState);
 			}
 		}
