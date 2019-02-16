@@ -33,7 +33,7 @@ build_script:
   - cmd: cmake --build . --config RelWithDebInfo
 
 after_build:
-- cmd: tar cvaf "%UnsignedArtifact%.tar.gz" "distribute/slobs/RelWithDebInfo" "../package.json"
+- cmd: tar cvaf "%UnsignedArtifact%.tar.gz" "distribute/slobs/RelWithDebInfo" 
 
 before_deploy:
 - echo %CD%
