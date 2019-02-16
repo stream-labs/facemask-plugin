@@ -402,6 +402,11 @@ add_custom_command(TARGET facemask-plugin POST_BUILD
 )
 add_custom_command(TARGET facemask-plugin POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy
+	"${PROJECT_SOURCE_DIR}/data"
+	"${DISTRIBUTE_PATH}/$<CONFIG>/data/obs-plugins/facemask-plugin"
+)
+add_custom_command(TARGET facemask-plugin POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy
 	"$<TARGET_FILE:facemask-plugin>"
 	"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/$<TARGET_FILE_NAME:facemask-plugin>"
 )
@@ -409,6 +414,11 @@ add_custom_command(TARGET facemask-plugin POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy
 	"$<TARGET_FILE_DIR:facemask-plugin>/facemask-plugin.pdb"
 	"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/facemask-plugin.pdb"
+)
+add_custom_command(TARGET facemask-plugin POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy
+	"${PROJECT_SOURCE_DIR}/package.json"
+	"${PROJECT_BINARY_DIR}/distribute/package.json"
 )
 
 
