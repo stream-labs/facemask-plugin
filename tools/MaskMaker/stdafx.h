@@ -38,6 +38,7 @@
 #include <sstream>
 #include <chrono>
 #include <ctime>
+#include <xmmintrin.h>
 
 #include "json.hpp"
 #include "base64.h"

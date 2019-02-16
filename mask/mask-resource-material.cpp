@@ -48,6 +48,8 @@ static const char* const S_OPAQUE = "opaque";
 static const char* const S_FILTER = "filter";
 static const char* const S_ALPHAWRITE = "alpha-write";
 
+static const char* const S_PBR_EFFECT = "PBR";
+static const char* const PARAM_VIDEO_LIGHTING_TEX = "vidLightingTex";
 
 static const char* const PARAM_WORLD = "World";
 static const char* const PARAM_TEXMAT = "TexMat";
@@ -60,7 +62,7 @@ static const char* const PARAM_NUMLIGHTS = "numLights";
 Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs_data_t* data)
 	: IBase(parent, name), m_effect(nullptr), m_looping(false), m_currentTechnique(nullptr),
 	m_samplerState(nullptr), m_depthOnly(false), m_static(false), m_opaque(true), m_alphaWrite(true), m_rotationDisable(false) {
-	
+
 	std::hash<std::string> hasher;
 	char temp[64];
 	for (int i = 0; i < 8; i++) {
@@ -73,15 +75,16 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 		throw std::logic_error("Material has no effect.");
 	}
 	std::string effectName = obs_data_get_string(data, S_EFFECT);
-	m_effect = std::dynamic_pointer_cast<Mask::Resource::Effect>(m_parent->GetResource(effectName));
+	m_effect = std::dynamic_pointer_cast<Mask::Resource::Effect>(m_parent->GetResource(effectName, true));
 	if (m_effect == nullptr) {
 		PLOG_ERROR("Material uses unknown effect:", effectName.c_str());
 		throw std::logic_error("Material uses non-existing effect.");
-	} 
+	}
 
 	if (obs_data_has_user_value(data, S_TECHNIQUE)) {
 		m_technique = obs_data_get_string(data, S_TECHNIQUE);
-	} else {
+	}
+	else {
 		m_technique = "Draw"; // Default to using draw.
 	}
 
@@ -175,7 +178,7 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 		if (!prmd)
 			return;
 		// iterate parameters
-		for (obs_data_item_t* el = obs_data_first(prmd); el;  obs_data_item_next(&el)) {
+		for (obs_data_item_t* el = obs_data_first(prmd); el; obs_data_item_next(&el)) {
 			std::string parameterName = obs_data_item_get_name(el);
 			if (parameterName.length() == 0) {
 				PLOG_WARNING("<Material '%s'> Parameter with no name found.",
@@ -186,7 +189,7 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 			obs_data_t* eld = obs_data_item_get_obj(el);
 			if (!eld)
 				continue;
-			if (!obs_data_has_user_value(eld, "type")|| !obs_data_has_user_value(eld, "value")) {
+			if (!obs_data_has_user_value(eld, "type") || !obs_data_has_user_value(eld, "value")) {
 				obs_data_release(eld);
 				continue;
 			}
@@ -197,16 +200,19 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 				auto resource = m_parent->GetResource(value);
 				if (resource != nullptr) {
 					m_imageParameters.emplace(parameterName, resource);
-				} else {
+				}
+				else {
 					PLOG_WARNING("<Material '%s'> Parameter '%s' uses non-existing Image '%s'.",
 						m_name.c_str(), parameterName.c_str(), value.c_str());
 				}
-			} else if (type == "integer") {
+			}
+			else if (type == "integer") {
 				Parameter param;
 				param.type = GS::EffectParameter::Type::Integer;
 				param.intValue = (int32_t)obs_data_get_int(eld, "value");
 				m_parameters.emplace(parameterName, param);
-			} else if (type == "integer2") {
+			}
+			else if (type == "integer2") {
 				Parameter param;
 				param.type = GS::EffectParameter::Type::Integer2;
 				obs_data_t* vector = obs_data_get_obj(eld, "value");
@@ -216,7 +222,8 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 					obs_data_release(vector);
 				}
 				m_parameters.emplace(parameterName, param);
-			} else if (type == "integer3") {
+			}
+			else if (type == "integer3") {
 				Parameter param;
 				param.type = GS::EffectParameter::Type::Integer3;
 				obs_data_t* vector = obs_data_get_obj(eld, "value");
@@ -227,7 +234,8 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 					obs_data_release(vector);
 				}
 				m_parameters.emplace(parameterName, param);
-			} else if (type == "integer4") {
+			}
+			else if (type == "integer4") {
 				Parameter param;
 				param.type = GS::EffectParameter::Type::Integer4;
 				obs_data_t* vector = obs_data_get_obj(eld, "value");
@@ -239,14 +247,17 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 					obs_data_release(vector);
 				}
 				m_parameters.emplace(parameterName, param);
-			} else if (type == "integer[]") {
+			}
+			else if (type == "integer[]") {
 				// ToDo
-			} else if (type == "float") {
+			}
+			else if (type == "float") {
 				Parameter param;
 				param.type = GS::EffectParameter::Type::Float;
 				param.floatValue = (float_t)obs_data_get_double(eld, "value");
 				m_parameters.emplace(parameterName, param);
-			} else if (type == "float2") {
+			}
+			else if (type == "float2") {
 				Parameter param;
 				param.type = GS::EffectParameter::Type::Float2;
 				obs_data_t* vector = obs_data_get_obj(eld, "value");
@@ -256,7 +267,8 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 					obs_data_release(vector);
 				}
 				m_parameters.emplace(parameterName, param);
-			} else if (type == "float3") {
+			}
+			else if (type == "float3") {
 				Parameter param;
 				param.type = GS::EffectParameter::Type::Float3;
 				obs_data_t* vector = obs_data_get_obj(eld, "value");
@@ -267,7 +279,8 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 					obs_data_release(vector);
 				}
 				m_parameters.emplace(parameterName, param);
-			} else if (type == "float4") {
+			}
+			else if (type == "float4") {
 				Parameter param;
 				param.type = GS::EffectParameter::Type::Float4;
 				obs_data_t* vector = obs_data_get_obj(eld, "value");
@@ -279,9 +292,11 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 					obs_data_release(vector);
 				}
 				m_parameters.emplace(parameterName, param);
-			} else if (type == "float[]") {
+			}
+			else if (type == "float[]") {
 				// ToDo
-			} else if (type == "matrix") {
+			}
+			else if (type == "matrix") {
 				Parameter param;
 				param.type = GS::EffectParameter::Type::Matrix;
 				obs_data_t* vector = obs_data_get_obj(eld, "value");
@@ -296,14 +311,32 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 			}
 			obs_data_release(eld);
 		}
-		if(prmd)
+		if (prmd)
 			obs_data_release(prmd);
 	}
+
+	std::vector<std::string> active_textures;
+	for (const auto &e : m_imageParameters) {
+		active_textures.push_back(e.first);
+	}
+
+	if (m_effect->GetName() == S_PBR_EFFECT) {
+		active_textures.push_back(PARAM_VIDEO_LIGHTING_TEX);
+		m_use_video_lighting = true;
+	}
+	else
+		m_use_video_lighting = false;
+
+	m_effect->SetActiveTextures(active_textures);
 }
 
 Mask::Resource::Material::~Material() {
 	if (m_samplerState)
 		gs_samplerstate_destroy(m_samplerState);
+}
+
+bool Mask::Resource::Material::IsPBR() {
+	return m_effect->GetName() == S_PBR_EFFECT;
 }
 
 Mask::Resource::Type Mask::Resource::Material::GetType() {
@@ -335,6 +368,7 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 		for (auto kv : m_parameters) {
 			try {
 				auto el = m_effect->GetEffect()->GetParameterByName(kv.first);
+
 				switch (kv.second.type) {
 				case GS::EffectParameter::Type::Float:
 					el.SetFloat(kv.second.floatValue);
@@ -436,6 +470,15 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 				}
 			}
 			catch (...) {
+			}
+		}
+		if (m_use_video_lighting) {
+			gs_eparam_t* param = gs_effect_get_param_by_name(m_effect->GetEffect()->GetObject(), PARAM_VIDEO_LIGHTING_TEX);
+			gs_texture_t *tex = m_parent->GetVideoLightingTexture();
+			if (param && tex)
+			{
+				gs_effect_set_texture(param, tex);
+				gs_effect_set_next_sampler(param, m_samplerState);
 			}
 		}
 

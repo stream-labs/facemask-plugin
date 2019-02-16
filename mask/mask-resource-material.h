@@ -46,6 +46,7 @@ namespace Mask {
 			bool IsRotationDisabled() override { return m_rotationDisable; }
 			bool IsOpaque() { return m_opaque; }
 			bool WriteAlpha() { return m_alphaWrite; }
+			bool IsPBR();
 
 		private:
 			struct Parameter {
@@ -85,6 +86,7 @@ namespace Mask {
 			bool m_rotationDisable;
 			bool m_opaque;
 			bool m_alphaWrite;
+			bool m_use_video_lighting;
 
 			gs_address_mode StringToAddressMode(std::string s);
 			void SetLightingParameters(Mask::Part* part);

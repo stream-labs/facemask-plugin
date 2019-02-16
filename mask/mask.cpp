@@ -103,11 +103,23 @@ static const float BUCKETS_MIN_Z = -100.0f;
 Mask::MaskData::MaskData() : m_data(nullptr), m_morph(nullptr), m_elapsedTime(0.0f) {
 	m_drawBuckets = new Mask::SortedDrawObject*[NUM_DRAW_BUCKETS];
 	ClearSortedDrawObjects();
+	m_vidLightTex = nullptr;
 }
 
 Mask::MaskData::~MaskData() {
 	delete[] m_drawBuckets;
 	Clear();
+}
+
+bool Mask::MaskData::NeedsPBRLighting() {
+	for (auto &kv : m_resources) {
+		if (kv.second->GetType() == Resource::Type::Material)
+		{
+			std::shared_ptr<Resource::Material> mat = std::dynamic_pointer_cast<Resource::Material>(kv.second);
+			if (mat->IsPBR()) return true;
+		}
+	}
+	return false;
 }
 
 void Mask::MaskData::Clear() {
@@ -249,18 +261,34 @@ void Mask::MaskData::AddResource(const std::string& name, std::shared_ptr<Mask::
 	m_resources.emplace(name, resource);
 }
 
-std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::GetResource(const std::string& name) {
-	if (name.length() == 0)
-		throw std::invalid_argument("name must be at least one character long");
+std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::GetResource(const std::string& name, bool force_reload) {
+	std::string res_name = name;
+	if (res_name.length() == 0)
+		throw std::invalid_argument("res_name must be at least one character long");
 
-	auto kv = m_resources.find(name);
-	if (kv != m_resources.end())
-		return kv->second;
+	auto kv = m_resources.find(res_name);
+	if (!force_reload)
+	{
+		if (kv != m_resources.end())
+			return kv->second;
+	}
+	else
+	{
+		// if force reload, create unique res_name
+		if (kv != m_resources.end())
+		{
+			int i = 0;
+			std::string new_string = res_name + "-";
+			while (m_resources.find(new_string + std::to_string(i)) != m_resources.end())
+				i++;
+			res_name = new_string + std::to_string(i);
+		}
+	}
 
 	// Default Resources
 	std::shared_ptr<Mask::Resource::IBase> p = Resource::IBase::LoadDefault(this, name);
 	if (p) {
-		this->AddResource(name, p);
+		this->AddResource(res_name, p);
 		return p;
 	}
 
@@ -279,7 +307,7 @@ std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::GetResource(const std::st
 		obs_data_item_release(&resources);
 		return nullptr;
 	}
-	obs_data_item_t* element = obs_data_item_byname(resd, name.c_str());
+	obs_data_item_t* element = obs_data_item_byname(resd, res_name.c_str());
 	if (!element) {
 		obs_data_item_release(&resources);
 		obs_data_release(resd);
@@ -294,9 +322,9 @@ std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::GetResource(const std::st
 		return nullptr;
 	}
 	try {
-		auto res = Resource::IBase::Load(this, name, elmd);
+		auto res = Resource::IBase::Load(this, res_name, elmd);
 		if (res) {
-			this->AddResource(name, res);
+			this->AddResource(res_name, res);
 			obs_data_item_release(&element);
 			obs_data_item_release(&resources);
 			obs_data_release(resd);
@@ -304,7 +332,7 @@ std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::GetResource(const std::st
 			return res;
 		}
 	} catch (...) {
-		PLOG_DEBUG("Resource %s has THROWN AN EXCEPTION. MASK DID NOT LOAD CORRECTLY.", name.c_str());
+		PLOG_DEBUG("Resource %s has THROWN AN EXCEPTION. MASK DID NOT LOAD CORRECTLY.", res_name.c_str());
 		obs_data_item_release(&element);
 		obs_data_item_release(&resources);
 		obs_data_release(resd);

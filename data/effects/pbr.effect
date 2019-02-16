@@ -1,0 +1,832 @@
+// 
+// PBR Shader
+//
+
+// TRANSFORMS
+// NOTE: There is no gs_effect_set_matrix3. 
+uniform float4x4 ViewProj;
+uniform float4x4 World;
+uniform float4x4 TexMat = { 
+1.0, 0.0, 0.0, 0.0,
+0.0, 1.0, 0.0, 0.0,
+0.0, 0.0, 1.0, 0.0,
+0.0, 0.0, 0.0, 1.0 };
+
+// BONES
+// if numBones == 0 then render non-skinned
+uniform int      numBones = 0;
+uniform float4x4 bone0 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uniform float4x4 bone1 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uniform float4x4 bone2 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uniform float4x4 bone3 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uniform float4x4 bone4 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uniform float4x4 bone5 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uniform float4x4 bone6 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uniform float4x4 bone7 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+// TEXTURES
+uniform int ambientMap = 0;
+uniform texture2d ambientTex;
+uniform int diffuseMap = 0;
+uniform texture2d diffuseTex;
+uniform int specularMap = 0;
+uniform texture2d specularTex;
+uniform int emissiveMap = 0;
+uniform texture2d emissiveTex;
+uniform int normalMap = 0;
+uniform texture2d normalTex;
+uniform int reflectMap = 0;
+uniform texture2d reflectTex;
+
+uniform int iblSpecMap = 0;
+uniform texture_cube iblSpecTex;
+uniform int iblDiffMap = 0;
+uniform texture_cube iblDiffTex;
+uniform int iblBRDFMap = 0;
+uniform texture2d iblBRDFTex;
+
+uniform int roughnessMap = 0;
+uniform texture2d roughnessTex;
+uniform int metalnessMap = 0;
+uniform texture2d metalnessTex;
+uniform int metalnessRoughnessMap = 0;
+uniform texture2d metallicRoughnessTex;
+uniform int metallicRoughnessMap = 0;
+
+// Video lighting texture
+uniform texture2d vidLightingTex;
+
+// MATERIAL COLORS
+uniform float4 ambientColor = {0.2, 0.2, 0.2, 1.0};
+uniform float4 diffuseColor = {1.0, 1.0, 1.0, 1.0};
+uniform float4 specularColor = {1.0, 1.0, 1.0, 1.0};
+uniform float4 emissiveColor = {0.0, 0.0, 0.0, 0.0};
+
+#define PI 3.14159265358979323846264338327950288419
+
+// LIGHTS
+uniform int    numLights = 1;
+
+// LIGHT 0
+uniform int    light0Type = 1; // 0 = amb, 1 = dir, 2 = point, 3 = spot
+uniform float3 light0Position = {20.0, -20.0, -30.0};
+uniform float3 light0Direction = {-0.5, 0.5, 1.0};
+uniform float3 light0Attenuation = {1.0, 0.5, 0.0}; // constant, linear, quadratic
+uniform float3 light0Ambient = {0.2, 0.2, 0.2};
+uniform float3 light0Diffuse = {0.8, 0.8, 0.8};
+uniform float3 light0Specular = {1.0, 1.0, 1.0};
+uniform float  light0Angle = 45.0;
+
+// LIGHT 1
+uniform int    light1Type = 1; // 0 = amb, 1 = dir, 2 = point, 3 = spot
+uniform float3 light1Position = {-200.0, 200.0, -300.0};
+uniform float3 light1Direction = {1.0, -1.0, 1.0};
+uniform float3 light1Attenuation = {1.0, 0.5, 0.0}; // constant, linear, quadratic
+uniform float3 light1Ambient = {0.2, 0.2, 0.2};
+uniform float3 light1Diffuse = {0.8, 0.8, 0.8};
+uniform float3 light1Specular = {1.0, 1.0, 1.0};
+uniform float  light1Angle = 45.0;
+
+// LIGHT 2
+uniform int    light2Type = 1; // 0 = amb, 1 = dir, 2 = point, 3 = spot
+uniform float3 light2Position = {-200.0, 200.0, -300.0};
+uniform float3 light2Direction = {1.0, -1.0, 1.0};
+uniform float3 light2Attenuation = {1.0, 0.5, 0.0}; // constant, linear, quadratic
+uniform float3 light2Ambient = {0.2, 0.2, 0.2};
+uniform float3 light2Diffuse = {0.8, 0.8, 0.8};
+uniform float3 light2Specular = {1.0, 1.0, 1.0};
+uniform float  light2Angle = 45.0;
+
+// LIGHT 3
+uniform int    light3Type = 1; // 0 = amb, 1 = dir, 2 = point, 3 = spot
+uniform float3 light3Position = {-200.0, 200.0, -300.0};
+uniform float3 light3Direction = {1.0, -1.0, 1.0};
+uniform float3 light3Attenuation = {1.0, 0.5, 0.0}; // constant, linear, quadratic
+uniform float3 light3Ambient = {0.2, 0.2, 0.2};
+uniform float3 light3Diffuse = {0.8, 0.8, 0.8};
+uniform float3 light3Specular = {1.0, 1.0, 1.0};
+uniform float  light3Angle = 45.0;
+
+// PBR VARS
+uniform float metalness = 0.0;
+uniform float roughness = 0.5;
+uniform int   spec_mip_levels = 8;
+uniform float exposure = 0.0;
+uniform float contrast = 1.0;
+uniform float saturation = 1;
+uniform float3 color_balance = {1.0,1.0,1.0};
+
+// PBR IBL
+uniform float ibl_intensity = 1.0;
+uniform float3 ibl_rotate_offset = {0.0, 0.0, 0.0};
+
+// PBR Glass
+uniform float glass_spec_ratio = 1.0;
+
+// Emissive
+uniform float emissive_intensity = 10.0;
+
+// OTHER VARS
+uniform float shininess = 8.0;
+uniform int transformNormals = 1;
+uniform float alpha = 1.0;
+
+// TEXTURE SAMPLERS
+sampler_state tex_sampler {
+	Filter    = MIN_MAG_MIP_LINEAR;
+	AddressU  = Wrap;
+	AddressV  = Wrap;
+};
+
+
+
+// VERTEX IN (to vertex shader)
+//
+// Note: we use extra tex coords for bone indices and weights
+// ie) bones1.x == number of bones
+//     bones1.y == 0
+//     bones1.z == bone weight 0
+//     bones1.w == bone weight 0
+//     bones2.x == bone index 1
+//     bones2.y == bone weight 1
+//     bones2.z == bone weight 2
+//     bones2.w == bone weight 2
+// ... and so on ...
+//
+struct VertDataIn {
+	float4 pos : POSITION;
+	float4 norm : NORMAL;
+	float4 tangent : TANGENT;
+	float2 uv  : TEXCOORD0;
+	float4 boneinfo1  : TEXCOORD1;
+	float4 boneinfo2  : TEXCOORD2;
+	float4 boneinfo3  : TEXCOORD3;
+	float4 boneinfo4  : TEXCOORD4;
+	float4 boneinfo5  : TEXCOORD5;
+	float4 boneinfo6  : TEXCOORD6;
+	float4 boneinfo7  : TEXCOORD7;
+};
+
+// VERTEX OUT (from vertex shader)
+struct VertDataOut {
+	float4 pos : POSITION;
+	float3 norm : NORMAL;
+	float3 tangent : TANGENT;
+	float2 uv  : TEXCOORD0;
+	float4 vpos : TEXCOORD1;
+	float3 bitangent: TEXCOORD2;
+};
+
+float3 rotate_env_map(float3 vec, float3 rotate_angles) {
+	
+	float3 rot_v = vec;
+	float3 theta = {rotate_angles.x,rotate_angles.y,rotate_angles.z};
+	theta *= PI/180;
+
+	// NOTE rotate the vec away by angle values
+	// instead of rotating the actual env map
+	// thus use -theta instead of theta for rotation
+	theta *= -1;
+
+	float  xp,yp,zp;
+
+	// rotate Y
+	zp = rot_v.z * cos(theta.y) + rot_v.x * sin(theta.y);
+	xp = -rot_v.z * sin(theta.y) + rot_v.x * cos(theta.y);
+	rot_v.x = xp;
+	rot_v.z = zp;
+
+	// rotate Z
+	xp = rot_v.x * cos(theta.z) - rot_v.y * sin(theta.z);
+	yp = rot_v.x * sin(theta.z) + rot_v.y * cos(theta.z);
+	rot_v.x = xp;
+	rot_v.y = yp;
+
+	// rotate X
+	yp = rot_v.y * cos(theta.x) - rot_v.z * sin(theta.x);
+	zp = rot_v.y * sin(theta.x) + rot_v.z * cos(theta.x);
+	rot_v.z = zp;
+	rot_v.y = yp;
+
+	return rot_v;
+}
+
+float4 srgb_to_linear(float4 srgb_color) {
+	float3 linear_color = pow(srgb_color.rgb,2.2);
+	return float4(linear_color, srgb_color.a);
+}
+
+float3 linear_to_srgb(float3 linear_color) {
+	return pow(linear_color.rgb,1.0/2.2);
+}
+
+float brightness_to_exposure(float brightness, float bias) {
+	float t=brightness;
+	if(t<0.3)
+		return 0.1+bias;
+	else if(t>= 0.3 && t<0.7)
+		return (53-190*t)*(190*t-213)/6400+bias;
+	else if(t>=0.7 && t<1)
+		return 5*(t-0.7)*(t-0.7)+1+bias;
+	else
+		return 1.5+bias;
+}
+
+/*----------------------------------------- ToneMapFilmic_Hejl2015 ---
+ |  Function ToneMapFilmic_Hejl2015
+ |
+ |  Purpose: This function applies a "film-like" tonemap to supplied
+ |           HDR pixel. This curve does not approximate gamma2.2,
+ |           so an explicit sRGB transform should be performed
+ |          before display.
+ |
+ |  Parameters:
+ |      float3 hdr (IN)    -- HDR pixel in linear space
+ |      float  whitePt (IN) -- Scene white point. Must be > 0.0
+ |
+ |  Returns:  Tonemapped pixel, white point corrected, in gamma 1.0 space
+ |
+ |   08-18-15   v1   Jim Hejl
+ *-------------------------------------------------------------------*/
+float3 ToneMapFilmic_Hejl2015(float3 hdr, float whitePt)
+{
+   float4 vh = float4(hdr,whitePt);    // pack: [r,g,b,w]
+   float4 va = (1.425 * vh) + 0.05f;   // eval filmic curve
+   float4 vf = ((vh * va + 0.004f) / ((vh * (va + 0.55f) + 0.0491f))) - 0.0821f;
+   return vf.rgb / vf.www;          // white point correction
+}
+
+float3 get_fresnel_contrib(float3 view_dir, float3 light_dir, float3 albedo, float metalness, float F0) {
+	
+	float3 halfway_dir = normalize(view_dir + light_dir);
+	float VdH = clamp(dot(view_dir,halfway_dir), 0.0, 1.0);
+	
+	float3 F0_vec = {F0,F0,F0};
+	float3 specular_color = lerp(F0_vec, albedo, metalness);
+	float reflectance = max(specular_color.r,max(specular_color.g,specular_color.b));
+	float reflectance90 = clamp(reflectance*25.0, 0.0 ,1.0);
+	float3 spec_env_R0 = specular_color.rgb;
+	float3 spec_env_R90 = float3(1.0, 1.0, 1.0)* reflectance90;
+	return spec_env_R0 + (spec_env_R90 - spec_env_R0) * pow(saturate(1.0-VdH), 5.0);
+}
+
+
+float4 DoLighting(
+float3 vpos,
+float3 normal,
+float4 ambColor,
+float4 albedo,
+float4 spcColor,
+float4 emmColor,
+float  metalness,
+float  roughness,
+float  F0, // Fresnel Reflectance at 0 Degrees
+int    lightType,
+float3 lightPosition,
+float3 lightDirection,
+float3 lightAttenuation,
+float3 lightAmbient,
+float3 lightDiffuse,
+float3 lightSpecular,
+float  lightAngle) {
+
+	// ambient
+	float4 result = float4(0,0,0,0);
+	
+	// non-ambient lights
+	if (lightType != 0) {
+
+		// get light direction
+		float3 light_dir,lightV;
+		if (lightType == 2) {
+			// point lights
+			light_dir = normalize(lightPosition - vpos);
+			lightV = -light_dir;
+		} else {
+			// dir/spot lights (1/3)
+			light_dir = normalize(lightDirection);
+			if (lightType == 3) {
+				lightV = normalize(vpos - lightPosition);
+			}
+			else
+				lightV = -light_dir;
+		}
+
+		float attenuation = 1.0;
+		// point and spot lights have attenuation
+		if (lightType == 2 || lightType == 3) {
+			float d = length(lightPosition - vpos) / 100.0;
+			float decay_denom = lightAttenuation.x + 
+				 (lightAttenuation.y * d) +
+				 (lightAttenuation.z * d * d);
+
+			if(decay_denom > 0.0)
+				attenuation = 1.0 / decay_denom;
+			
+			// spot lights have angle 
+			if (lightType == 3) {
+				float minCos = cos( lightAngle );
+				float maxCos = ( minCos + 1.0f ) / 2.0f;
+				float cosAngle = dot( light_dir, -lightV );
+				attenuation *= smoothstep( minCos, maxCos, cosAngle ); 
+			}
+			attenuation = saturate(attenuation);
+		}
+		float3 view_dir = normalize(-vpos);
+		float3 halfway_dir = normalize(view_dir + light_dir);
+
+		float NdL = clamp(dot(normal,light_dir), 0.001, 1.0);
+		float NdV = clamp(dot(normal,view_dir), 0.001, 1.0);
+		float NdH = clamp(dot(normal,halfway_dir), 0.0, 1.0);
+
+		float3 fresnel_spec_color = get_fresnel_contrib(view_dir, light_dir, albedo.rgb, metalness, F0);
+
+		float alpha = roughness * roughness;
+		float alpha_2 = alpha * alpha;
+		float denom = NdH * NdH *(alpha_2-1.0) + 1.0;
+		float distribution = alpha_2 / (PI * denom * denom);
+
+		float attenuationL = 2.0 * NdL / (NdL + sqrt(alpha_2 + (1.0-alpha_2)*(NdL*NdL)));
+		float attenuationV = 2.0 * NdV / (NdV + sqrt(alpha_2 + (1.0-alpha_2)*(NdV*NdV)));
+		float geometry = attenuationL * attenuationV;
+
+		float3 kr = fresnel_spec_color;
+		float3 kd = (1.0 - kr) * albedo.a;
+		float3 kt = (1.0 - kr) * (1.0 - albedo.a);
+
+		float3 diffuse_contrib = kd * albedo.rgb / PI;
+		float3 spec_contrib = kr * geometry * distribution / (4.0 * NdL * NdV);
+
+		float max_ibl_spec = max(lightSpecular.r, max(lightSpecular.g, lightSpecular.b));
+		float max_ibl_spec_reflectivity = max(spec_contrib.r, max(spec_contrib.g, spec_contrib.b));
+		float opacity = albedo.a+(glass_spec_ratio*max_ibl_spec_reflectivity)*max_ibl_spec;
+		opacity = saturate(opacity);
+
+		// This is a hack for refraction
+		// see IBL part below for explanation
+		if(opacity > 0.0)
+			spec_contrib = spec_contrib/opacity;
+
+		float3 final_spec_color = NdL*lightSpecular*spec_contrib;
+		float3 final_diff_color = NdL*lightDiffuse*diffuse_contrib;
+
+		if(glass_spec_ratio > 0.0 && opacity > 0.0 && opacity < 1.0)
+			kr = kr/opacity;
+
+		float4 color = float4(final_diff_color + final_spec_color, opacity);
+
+		result += color;
+	}
+	result += float4(ambColor.xyz * lightAmbient,0);
+
+	return result;
+}
+
+
+// VSPhong : Vertex Shader
+//
+VertDataOut VSPhong(VertDataIn v_in)
+{
+	VertDataOut vert_out;
+	
+	int i, bi, nvb;
+	float w;
+	float3 respos = float3(0.0, 0.0, 0.0);
+	float3 resnorm = float3(0.0, 0.0, 0.0);
+	float3 restangent = float3(0.0, 0.0, 0.0);
+	float4 vinpos = float4(v_in.pos.xyz, 1.0);
+	float4 vinnorm = float4(v_in.norm.xyz, 0.0);
+	float4 vintangent = float4(v_in.tangent.xyz, 0.0);
+	
+	if (numBones > 0) {
+		nvb = int(v_in.boneinfo1.x);
+		for(i = 0; i < nvb; i++) {
+			switch(i) {
+				case 0:
+					bi = int(v_in.boneinfo1.z);
+					w = v_in.boneinfo1.w;
+					break;
+				case 1:
+					bi = int(v_in.boneinfo2.x);
+					w = v_in.boneinfo2.y;
+					break;
+				case 2:
+					bi = int(v_in.boneinfo2.z);
+					w = v_in.boneinfo2.w;
+					break;
+				case 3:
+					bi = int(v_in.boneinfo3.x);
+					w = v_in.boneinfo3.y;
+					break;
+				case 4:
+					bi = int(v_in.boneinfo3.z);
+					w = v_in.boneinfo3.w;
+					break;
+				case 5:
+					bi = int(v_in.boneinfo4.x);
+					w = v_in.boneinfo4.y;
+					break;
+				case 6:
+					bi = int(v_in.boneinfo4.z);
+					w = v_in.boneinfo4.w;
+					break;
+				case 7:
+					bi = int(v_in.boneinfo5.x);
+					w = v_in.boneinfo5.y;
+					break;
+				case 8:
+					bi = int(v_in.boneinfo5.z);
+					w = v_in.boneinfo5.w;
+					break;
+				case 9:
+					bi = int(v_in.boneinfo6.x);
+					w = v_in.boneinfo6.y;
+					break;
+				case 10:
+					bi = int(v_in.boneinfo6.z);
+					w = v_in.boneinfo6.w;
+					break;
+				case 11:
+					bi = int(v_in.boneinfo7.x);
+					w = v_in.boneinfo7.y;
+					break;
+				case 12:
+					bi = int(v_in.boneinfo7.z);
+					w = v_in.boneinfo7.w;
+					break;
+			}
+			switch(bi) {
+				case 0:
+					respos += mul(vinpos, bone0).xyz * w;
+					resnorm += mul(vinnorm, bone0).xyz * w;
+					restangent += mul(vintangent, bone0).xyz * w;
+					break;
+				case 1:
+					respos += mul(vinpos, bone1).xyz * w;
+					resnorm += mul(vinnorm, bone1).xyz * w;
+					restangent += mul(vintangent, bone1).xyz * w;
+					break;
+				case 2:
+					respos += mul(vinpos, bone2).xyz * w;
+					resnorm += mul(vinnorm, bone2).xyz * w;
+					restangent += mul(vintangent, bone2).xyz * w;
+					break;
+				case 3:
+					respos += mul(vinpos, bone3).xyz * w;
+					resnorm += mul(vinnorm, bone3).xyz * w;
+					restangent += mul(vintangent, bone3).xyz * w;
+					break;
+				case 4:
+					respos += mul(vinpos, bone4).xyz * w;
+					resnorm += mul(vinnorm, bone4).xyz * w;
+					restangent += mul(vintangent, bone4).xyz * w;
+					break;
+				case 5:
+					respos += mul(vinpos, bone5).xyz * w;
+					resnorm += mul(vinnorm, bone5).xyz * w;
+					restangent += mul(vintangent, bone5).xyz * w;
+					break;
+				case 6:
+					respos += mul(vinpos, bone6).xyz * w;
+					resnorm += mul(vinnorm, bone6).xyz * w;
+					restangent += mul(vintangent, bone6).xyz * w;
+					break;
+				case 7:
+					respos += mul(vinpos, bone7).xyz * w;
+					resnorm += mul(vinnorm, bone7).xyz * w;
+					restangent += mul(vintangent, bone7).xyz * w;
+					break;
+			}
+		}
+		vinpos = float4(respos, 1.0);
+		vinnorm = float4(normalize(resnorm), 0.0);
+		vintangent = float4(normalize(restangent), 0.0);
+	}
+	
+	vert_out.pos = mul(vinpos, ViewProj);
+	vert_out.vpos = mul(vinpos, World);	
+	
+	if (transformNormals == 1) {
+		vert_out.norm = mul(vinnorm, World).xyz;
+		vert_out.tangent = mul(vintangent, World).xyz;
+	}
+	else {
+		vert_out.norm = vinnorm.xyz;
+		vert_out.tangent = vintangent.xyz;
+	}
+	vert_out.bitangent = cross(vert_out.tangent, vert_out.norm);
+	vert_out.uv = mul(float4(v_in.uv, 0.0, 1.0), TexMat).xy;
+	
+	return vert_out;
+}
+
+
+// PSPhong : Pixel Shader
+//
+float4 PSPhong(VertDataOut v_in) : TARGET
+{
+	// world space vertex position
+	float3 vpos = v_in.vpos.xyz;
+
+
+	// normal
+	float3 normal = normalize(v_in.norm);
+
+#ifdef NORMAL_TEX	
+	if (normalMap != 0) {
+		float3 tangent = normalize(v_in.tangent);
+		float3 bitangent = normalize(v_in.bitangent);
+		float3x3 TBN = float3x3( tangent, bitangent, normal );
+
+		normal = normalTex.Sample(tex_sampler, v_in.uv).xyz * 2.0 - 1.0;
+		normal = normalize(mul(normal, TBN));
+	}
+#endif
+
+	// material colors
+	float4 ambColor = ambientColor;
+	float4 albedoColor = diffuseColor;
+	float4 spcColor = specularColor;
+	float4 emmColor = emissiveColor;
+
+	float F0 = 0.04;
+	float _roughness = max(roughness , 0.04);
+	float _metalness = metalness;
+
+	// texture maps
+#ifdef AMBIENT_TEX
+	if (ambientMap != 0)
+		ambColor = ambientTex.Sample(tex_sampler, v_in.uv);
+#endif
+
+#ifdef DIFFUSE_TEX
+	if (diffuseMap != 0)
+		albedoColor = diffuseTex.Sample(tex_sampler, v_in.uv);
+#endif
+
+#ifdef DISABLED_SPECULAR_TEX
+	if (specularMap != 0)
+		spcColor = specularTex.Sample(tex_sampler, v_in.uv);
+#endif
+
+#ifdef EMISSIVE_TEX
+	if (emissiveMap != 0)
+		emmColor = emissiveTex.Sample(tex_sampler, v_in.uv);
+#endif
+
+#ifdef ROUGHNESS_TEX
+	if (roughnessMap != 0)
+		_roughness = max(0.04, roughnessTex.Sample(tex_sampler, v_in.uv).r);
+#endif
+
+#ifdef METALNESS_TEX
+	if (metalnessMap != 0)
+		_metalness = metalnessTex.Sample(tex_sampler, v_in.uv).r;
+#endif
+
+#ifdef METALLICROUGHNESS_TEX
+	if (metallicRoughnessMap != 0) {
+		// R: Occlusion
+		// G: Roughness
+		// B: Metalness
+		// occlusion = metalnessTex.Sample(tex_sampler, v_in.uv).r;
+		float4 metallic_roughness = metallicRoughnessTex.Sample(tex_sampler, v_in.uv);
+		_roughness = max(0.04, metallic_roughness.g);
+		_metalness = metallic_roughness.b;
+	}
+#endif
+
+	// convert srgb to linear
+	albedoColor = srgb_to_linear(albedoColor);
+	emmColor = srgb_to_linear(emmColor);
+
+	// Start with full transparent color
+	float4 base_color = {0,0,0,0};	
+
+#ifdef IBL_SPEC_TEX
+	if (iblSpecMap != 0 && iblBRDFMap != 0 && iblDiffMap != 0) {
+		float3 r = -normalize(reflect(-vpos, normal));
+
+		float3 view_dir = normalize(-vpos);
+		float NdV = clamp(dot(normal,view_dir), 0.001, 1.0);
+
+		float3 specular_color = lerp(F0, albedoColor.rgb, _metalness);
+
+		// HDR Spec and Diff are linear, and no need to cancel srgb gamma
+		float lod = _roughness * spec_mip_levels;
+		float4 ibl_spec_light = iblSpecTex.SampleLevel(tex_sampler, rotate_env_map(float3(-r.x, -r.y, r.z), ibl_rotate_offset), lod);
+		float4 ibl_diff_light = iblDiffTex.Sample(tex_sampler, rotate_env_map(float3(-normal.x, -normal.y, normal.z), ibl_rotate_offset));
+
+#ifdef IBL_BRDF_TEX
+		float3 brdf = iblBRDFTex.Sample(tex_sampler,float2(NdV, 1.0 - _roughness)).rgb;
+		float3 reflectivity = specular_color*brdf.x+brdf.y;
+#else
+		// not accurate at all, just a fallback to avoid the shader fail fully
+		float3 reflectivity = specular_color*saturate((1.0-_roughness)*NdV+1.0*(1.0-_roughness));
+#endif
+
+		float3 kr = reflectivity;
+		float3 kd = (1.0 - kr) * albedoColor.a * albedoColor.rgb * (1.0 - _metalness);
+		float3 kt = (1.0 - kr) * (1.0-albedoColor.a);
+
+		float max_ibl_spec = max(ibl_spec_light.r, max(ibl_spec_light.g, ibl_spec_light.b));
+		float max_ibl_spec_reflectivity = max(kr.r, max(kr.g, kr.b));
+		float opacity = albedoColor.a+(glass_spec_ratio*max_ibl_spec_reflectivity)*max_ibl_spec;
+		opacity = saturate(opacity);
+
+		// this is a hack for refraction
+		// we encode transparency ratio (kt) into
+		// remaining amount of alpha
+		// we compensate reflection ration (kr) by
+		// dividing by opacity value.
+		// we do this to preserve ibl spec color,
+		// when alpha is multiplied later.
+		if(glass_spec_ratio > 0.0 && opacity > 0.0 && opacity < 1.0)
+			kr = kr/opacity;
+
+		base_color += float4(ibl_intensity*(ibl_diff_light.rgb*kd + ibl_spec_light.rgb*kr), opacity);
+	}
+	#endif
+	
+	// NO LIGHTS
+	if (numLights == 0) {
+		base_color += albedoColor;
+		// base_color.a = max(base_color.a, light_contrib.a)
+	}
+	
+	// LIGHT 0
+	if (numLights > 0) {
+		float4 light_contrib = DoLighting(
+			vpos,
+			normal,
+			ambColor,
+			albedoColor,
+			spcColor,
+			emmColor,
+			_metalness,
+			_roughness,
+			F0,
+			light0Type, 
+			light0Position, 
+			light0Direction, 
+			light0Attenuation,
+			light0Ambient,
+			light0Diffuse,
+			light0Specular,
+			light0Angle);
+		base_color += light_contrib;
+		//base_color.a = max(base_color.a, light_contrib.a);
+	}
+	
+	// LIGHT 1
+	if (numLights > 1) {
+		float4 light_contrib = DoLighting(
+			vpos,
+			normal,
+			ambColor,
+			albedoColor,
+			spcColor,
+			emmColor,
+			_metalness,
+			_roughness,
+			F0,
+			light1Type, 
+			light1Position, 
+			light1Direction, 
+			light1Attenuation,
+			light1Ambient,
+			light1Diffuse,
+			light1Specular,
+			light1Angle);
+		base_color += light_contrib;
+		//base_color.a = max(base_color.a, light_contrib.a);
+	}
+	
+	// LIGHT 2
+	if (numLights > 2) {
+		float4 light_contrib = DoLighting(
+			vpos,
+			normal,
+			ambColor,
+			albedoColor,
+			spcColor,
+			emmColor,
+			_metalness,
+			_roughness,
+			F0,
+			light2Type, 
+			light2Position, 
+			light2Direction, 
+			light2Attenuation,
+			light2Ambient,
+			light2Diffuse,
+			light2Specular,
+			light2Angle);
+		base_color += light_contrib;
+		//base_color.a = max(base_color.a, light_contrib.a);
+	}
+	
+	// LIGHT 3
+	if (numLights > 3) {
+		float4 light_contrib = DoLighting(
+			vpos,
+			normal,
+			ambColor,
+			albedoColor,
+			spcColor,
+			emmColor,
+			_metalness,
+			_roughness,
+			F0,
+			light3Type, 
+			light3Position, 
+			light3Direction, 
+			light3Attenuation,
+			light3Ambient,
+			light3Diffuse,
+			light3Specular,
+			light3Angle);
+		base_color += light_contrib;
+		//base_color.a = max(base_color.a, light_contrib.a);
+	}
+
+	// NOTE here we don't let emissive material change opacity
+	//      if we need to, we can make emissive luminance add to opacity
+	float4 final_color = base_color + float4(emmColor.rgb * emissive_intensity, 0);
+
+	float final_exposure = exposure;
+	float final_contrast = contrast;
+	float final_saturation = saturation;
+	float3 final_color_balance = color_balance;
+
+	float3 brightness_factor = {.30, .59, .11};
+
+#ifdef USE_VIDEO_LIGHTING
+	// alpha from vidLightingTex contains brightness
+	// rgb is dominant bright color
+	float4 video_bright_color = vidLightingTex.Sample(tex_sampler, float2((normal.x+1)/2, (normal.y+1)/2));
+	float video_brightness = video_bright_color.a;
+	if(video_brightness > 0.0)
+	{
+		video_bright_color /= max(video_bright_color.r, max(video_bright_color.g, video_bright_color.b));
+		// heavily adjust color balance
+		final_color_balance += 5 * video_bright_color.rgb;
+		final_color_balance /= 6;
+	}
+#endif
+
+	float3 linear_color = final_color.rgb;
+
+	// Tonemapping and Color Grading
+	// Largely taken from Jim Hejl
+	// https://twitter.com/jimhejl/status/633777619998130176
+
+	float3 linear_color_balance = pow( final_color_balance, 2.2 );
+	float3 linear_exposure = pow( 2, final_exposure );
+
+#ifdef USE_VIDEO_LIGHTING
+	if(video_brightness > 0.0)
+		linear_exposure *= brightness_to_exposure(video_brightness, 0.2);
+#endif
+
+	float linear_ref = 0.18;
+
+	// Exposure
+	linear_color *= linear_exposure;
+
+	// Contrast
+	linear_color = linear_ref + final_contrast * (linear_color - linear_ref);
+
+	// Color Balance
+	linear_color = linear_color * linear_color_balance;
+
+	// Desaturation
+	float3 grey_color = dot( linear_color, brightness_factor );
+   	linear_color = grey_color + final_saturation * ( linear_color - grey_color );
+
+	linear_color = max(0,linear_color);
+
+	// Tonemap
+	float W = 11.2;
+	linear_color = ToneMapFilmic_Hejl2015(linear_color, W);
+
+	// Convert to SRGB color space
+	float4 srgb_final_color; 
+	srgb_final_color.rgb = linear_to_srgb(linear_color);
+	srgb_final_color.a = final_color.a;
+
+	return srgb_final_color;
+}
+
+
+// Draw : Main technique
+//
+technique Draw
+{
+	pass
+	{
+		vertex_shader = VSPhong(v_in);
+		pixel_shader  = PSPhong(v_in);
+	}
+}
+

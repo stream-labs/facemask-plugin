@@ -146,7 +146,7 @@ namespace Plugin {
 			smll::FaceDetector*		smllFaceDetector;
 			smll::OBSRenderer*      smllRenderer;
 
-			gs_effect_t*		custom_effect = nullptr;
+			gs_effect_t*		antialiasing_effect = nullptr;
 			int					m_scale_rate = 1;
 			int					antialiasing_method = NO_ANTI_ALIASING;
 
@@ -154,6 +154,12 @@ namespace Plugin {
 			gs_texrender_t*		sourceRenderTarget;
 			gs_texrender_t*		drawTexRender;
 			gs_texrender_t*		alertTexRender;
+
+			// Texture/Target to store lighting info from input stream
+			gs_effect_t*		color_grading_filter_effect = nullptr;
+			gs_texrender_t*		vidLightTexRender;
+			gs_texrender_t*		vidLightTexRenderBack;
+			gs_texture_t*		vidLightTex;
 
 			// mask filenames
 			std::string			maskFolder;
