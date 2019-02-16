@@ -226,7 +226,7 @@ namespace Plugin {
 			// For writing thumbnails
 			struct PreviewFrame {
 				gs_texture_t*	vidtex;
-
+				PreviewFrame();
 				PreviewFrame(gs_texture_t* v, int w, int h);
 				PreviewFrame(const PreviewFrame& other);
 				PreviewFrame& operator=(const PreviewFrame& other);
@@ -239,6 +239,7 @@ namespace Plugin {
 			smll::DetectionResults		faces;
 			smll::TriangulationResult	triangulation;
 			TimeStamp					timestamp;
+			
 			bool						timestampInited;
 			bool						lastTimestampInited;
 			TimeStamp					lastActualTimestamp;
@@ -280,6 +281,7 @@ namespace Plugin {
 					int					resizeHeight;
 					bool				active;
 					cv::Mat             grayImage;
+					PreviewFrame		vidTexInt;
 				};
 				Frame frame;
 
@@ -289,12 +291,13 @@ namespace Plugin {
 					smll::TriangulationResult	triangulationResults;
 					std::mutex					mutex;
 					TimeStamp					timestamp;
+					PreviewFrame				vidTexInt;
 				};
 				int facesIndex;
 				std::array<struct CachedResult, BUFFER_SIZE> faces;
 
 			} detection;
-
+			PreviewFrame			vidTexGlob;
 		};
 	};
 }

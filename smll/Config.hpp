@@ -91,7 +91,8 @@ namespace smll {
 		"faceDetectCropX";
 	static const char* const CONFIG_DOUBLE_FACE_DETECT_CROP_Y = 
 		"faceDetectCropY";
-
+	static const char* const CONFIG_INT_FRAME_DELAY =
+		"FrameDelay";
 	// Execution Frequencies
 	static const char* const CONFIG_INT_FACE_DETECT_FREQUENCY = 
 		"faceDetectFrequency";

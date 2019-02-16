@@ -58,7 +58,7 @@
 
 // Big enough
 #define BIG_FLOAT					    (100000.0f)
-
+#include <queue>          // std::queue
 static float FOVA(float aspect) {
 	// field of view angle matched to focal length for solvePNP
 	return 56.0f / aspect;
@@ -175,7 +175,6 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	//std::string cvBuildInfo = cv::getBuildInformation();
 	//blog(LOG_DEBUG, "OpenCV Build Info\n-----------------\n%s", cvBuildInfo.c_str());
 	//
-
 	PLOG_DEBUG("<%" PRIXPTR "> Initialized.", this);
 }
 
@@ -699,6 +698,13 @@ struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct 
 			detection.frame.resizeWidth = smll::Config::singleton().get_int(smll::CONFIG_INT_FACE_DETECT_WIDTH);
 			detection.frame.resizeHeight = (int)((float)detection.frame.resizeWidth * (float)baseHeight / (float)baseWidth);
 
+			gs_effect_t* defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
+			gs_blend_state_push();
+			setupRenderingState();
+			gs_texture*  vidTexGS = NULL;// RenderSourceTexture(defaultEffect);
+
+			gs_blend_state_pop();
+			detection.frame.vidTexInt = PreviewFrame(vidTexGS, baseWidth, baseHeight);
 			// get the right mask data
 			Mask::MaskData* mdat = maskData.get();
 			if (demoModeGenPreviews && !demoModeInDelay) {
@@ -836,14 +842,13 @@ void Plugin::FaceMaskFilter::Instance::video_render(void *ptr,
 		return;
 	reinterpret_cast<Instance*>(ptr)->video_render(effect);
 }
-
+std::queue<gs_texture_t*> myqueue;
 
 void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// Skip rendering if inactive or invisible.
-	if (!isActive || !isVisible ||
-		// or if the alert is done
-		(!drawMask && alertElapsedTime > alertDuration)) {
+	if (!isActive || !isVisible ) {
+		// or if the alert is done {
 		// reset the buffer
 		std::unique_lock<std::mutex> lock(detection.mutex);
 		detection.facesIndex = -1;
@@ -898,7 +903,28 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	gs_effect_t* defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
 
-	vidTex = RenderSourceTexture(effect ? effect : defaultEffect);
+	vidTex = RenderSourceTexture(defaultEffect);
+	if (vidTex != NULL) {
+		PreviewFrame fr(vidTex, baseWidth, baseHeight);
+		myqueue.push(fr.vidtex);
+		int delayFr = smll::Config::singleton().get_int(
+			smll::CONFIG_INT_FRAME_DELAY);
+		while (myqueue.size() >  delayFr) {
+			gs_texture_t * t = myqueue.front();
+			myqueue.pop();
+			if (t) {
+				gs_texture_destroy(t);
+			}
+		}
+
+		if (myqueue.size() == delayFr) {
+			vidTex = myqueue.front();
+			myqueue.pop();
+		}
+		else {
+			vidTex = NULL;
+		}
+	}
 	if (vidTex == NULL) {
 		// *** SKIP ***
 		obs_source_skip_video_filter(source);
@@ -1215,6 +1241,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		}
 
 	}
+	gs_texture_destroy(vidTex);
 	// since we are on the gpu right now anyway, here is 
 	// a good spot to unload mask data if we need to.
 	checkForMaskUnloading();
@@ -1419,6 +1446,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 
 	// run until we're shut down
 	TimeStamp lastTimestamp;
+	PreviewFrame				lastVidTex;
 	while (true) {
 
 		auto frameStart = std::chrono::system_clock::now();
@@ -1455,6 +1483,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 				smllFaceDetector->DoPoseEstimation(detect_results);
 
 				lastTimestamp = detection.frame.timestamp;
+				lastVidTex.vidtex = detection.frame.vidTexInt.vidtex;
 			}
 		}
 
@@ -1477,9 +1506,10 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			std::unique_lock<std::mutex> facelock(detection.faces[face_idx].mutex);
 
 			// pass on timestamp to results
-			detection.faces[face_idx].timestamp = lastTimestamp;
-			std::unique_lock<std::mutex> framelock(detection.frame.mutex);
 
+			std::unique_lock<std::mutex> framelock(detection.frame.mutex);
+			detection.faces[face_idx].timestamp = lastTimestamp;
+			detection.faces[face_idx].vidTexInt.vidtex = lastVidTex.vidtex;
 			// Make the triangulation
 			detection.faces[face_idx].triangulationResults.buildLines = drawMorphTris;
 			smllFaceDetector->MakeTriangulation(detection.frame.morphData,
@@ -1763,6 +1793,10 @@ void Plugin::FaceMaskFilter::Instance::updateFaces() {
 				triangulation.DestroyLineBuffer();
 			}
 			timestamp = detection.faces[fidx].timestamp;
+			if (vidTexGlob.vidtex != NULL && detection.faces[fidx].vidTexInt.vidtex != NULL && vidTexGlob.vidtex != detection.faces[fidx].vidTexInt.vidtex) {
+				//gs_texture_destroy(vidTexGlob.vidtex);
+			}
+			vidTexGlob.vidtex = detection.faces[fidx].vidTexInt.vidtex;
 			timestampInited = true;
 			processedFrameResults = detection.faces[fidx].detectionResults.processedResults;
 			// update our results
@@ -1906,6 +1940,9 @@ void Plugin::FaceMaskFilter::Instance::WritePreviewFrames() {
 	bfree(bat);
 }
 
+Plugin::FaceMaskFilter::Instance::PreviewFrame::PreviewFrame() {
+	vidtex = NULL;
+}
 Plugin::FaceMaskFilter::Instance::PreviewFrame::PreviewFrame(gs_texture_t* v, 
 	int w, int h) {
 	obs_enter_graphics();
