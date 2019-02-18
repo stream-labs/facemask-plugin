@@ -63,8 +63,9 @@ float4 PSGrading(VertData v_in) : TARGET
 			brightness /= bright_color_weight;
 		}
 		else {
-			brightness = 0.0;
-			bright_color_avg = 0.0;
+			// use a neutral color and brightness
+			brightness = 0.5;
+			bright_color_avg = 1.0;
 		}
 		return float4(bright_color_avg, brightness);
 	}
@@ -85,8 +86,9 @@ float4 PSGrading(VertData v_in) : TARGET
 			brightness /= bright_color_weight;
 		}
 		else {
-			brightness = 0.0;
-			bright_color_avg = 0.0;
+			// use a neutral color and brightness
+			brightness = 0.5;
+			bright_color_avg = 1.0;
 		}
 		return float4(bright_color_avg, brightness);
 	}
