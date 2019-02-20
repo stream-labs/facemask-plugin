@@ -731,6 +731,9 @@ void Plugin::FaceMaskFilter::Instance::video_render(void *ptr,
 	reinterpret_cast<Instance*>(ptr)->video_render(effect);
 }
 
+
+cv::Mat landmark_tracking(cv::Mat &raw);
+
 void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// Skip rendering if inactive or invisible.
@@ -857,6 +860,23 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// Draw always current frame to be up to date, even it's processing is delayd
 	gs_texture_t* vidTex = sourceTexture;
 
+
+	if (!testingStage) {
+		testingStage = gs_stagesurface_create(baseWidth, baseHeight, GS_RGBA);
+	}
+
+	// get vid tex
+	gs_stage_texture(testingStage, vidTex);
+	uint8_t *data; uint32_t linesize;
+	cv::Mat cvm;
+	cv::Mat cvm_bgr;
+	if (gs_stagesurface_map(testingStage, &data, &linesize)) {
+		cvm = cv::Mat(baseHeight, baseWidth, CV_8UC4, data, linesize);
+		cv::cvtColor(cvm, cvm_bgr, cv::COLOR_RGBA2BGR);
+		landmark_tracking(cvm_bgr);
+		gs_stagesurface_unmap(testingStage);
+	}
+
 	// some reasons triangulation should be destroyed
 	if (!mask_data || faces.length == 0) {
 		triangulation.DestroyBuffers();
@@ -884,160 +904,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// render mask to texture
 	gs_texture* mask_tex = nullptr;
-	if (faces.length > 0) {
-		// only render once per video tick
-		if (videoTicked) {
-
-			//init start pose for static masks
-			for (int i = 0; i < faces.length; i++) {
-				faces[i].InitStartPose();
-			}
-
-			// draw mask to texture
-			gs_texrender_reset(drawTexRender);
-			if (gs_texrender_begin(drawTexRender, baseWidth*m_scale_rate, baseHeight*m_scale_rate)) {
-
-				// clear
-				vec4 black, thumbbg;
-				vec4_zero(&black);
-				float vv = (float)0x9a / 255.0f;
-				vec4_set(&thumbbg, vv, vv, vv, 1.0f);
-				gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
-
-				if (mask_data) {
-
-					// Check here for no morph
-					if (!mask_data->GetMorph()) {
-						triangulation.DestroyBuffers();
-					}
-
-					// Draw depth-only stuff
-					for (int i = 0; i < faces.length; i++) {
-						gs_matrix_push();
-						setFaceTransform(faces[i].pose);
-						drawMaskData(mask_data, true, false, false);
-						drawMaskData(mask_data, true, true, false);
-						setFaceTransform(faces[i].pose, true);
-						drawMaskData(mask_data, true, false, true);
-						drawMaskData(mask_data, true, true, true);
-						gs_matrix_pop();
-					}
-
-					// if we are generating thumbs
-					if (genThumbs) {
-						// clear the color buffer (leaving depth info there)
-						gs_clear(GS_CLEAR_COLOR, &thumbbg, 1.0f, 0);
-					}
-					else {
-						// clear the color buffer (leaving depth info there)
-						gs_clear(GS_CLEAR_COLOR, &black, 1.0f, 0);
-					}
-
-					// draw video to the mask texture?
-					if (recordTriggered || genThumbs || mask_data->DrawVideoWithMask()) {
-						// setup transform state
-						gs_viewport_push();
-						gs_projection_push();
-						gs_matrix_push();
-						gs_set_viewport(0, 0, baseWidth, baseHeight);
-						gs_ortho(0, (float)baseWidth, 0, (float)baseHeight, -1, 1);
-						gs_matrix_identity();
-
-						// Draw the source video
-						if (mask_data && (autoBGRemoval || cartoonMode || demoModeGenPreviews || recordTriggered)) {
-							triangulation.autoBGRemoval = autoBGRemoval;
-							triangulation.cartoonMode = cartoonMode;
-							mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
-						}
-
-						// restore transform state
-						gs_matrix_pop();
-						gs_viewport_pop();
-						gs_projection_pop();
-					}
-
-					// Draw regular stuff
-					for (int i = 0; i < faces.length; i++) {
-						if (maskAlpha > 0.0f) {
-							gs_matrix_push();
-							setFaceTransform(faces[i].startPose);
-							drawMaskData(mask_data, false, true, false);
-							setFaceTransform(faces[i].startPose, true);
-							drawMaskData(mask_data, false, true, true);
-							setFaceTransform(faces[i].pose);
-							drawMaskData(mask_data, false, false, false);
-							setFaceTransform(faces[i].pose, true);
-							drawMaskData(mask_data, false, false, true);
-							gs_matrix_pop();
-						}
-					}
-
-					if (introActive || outroActive)
-						gs_clear(GS_CLEAR_DEPTH, &black, 1.0f, 0);
-
-					for (int i = 0; i < faces.length; i++) {
-						if (introActive) {
-							gs_matrix_push();
-							setFaceTransform(faces[i].pose, true);
-							drawMaskData(introData.get(), false, false, true);
-							gs_matrix_pop();
-						}
-						if (outroActive) {
-							gs_matrix_push();
-							setFaceTransform(faces[i].pose, true);
-							drawMaskData(outroData.get(), false, false, true);
-							gs_matrix_pop();
-						}
-					}
-				}
-
-				// draw face detection data
-				if (drawFaces)
-					smllRenderer->DrawFaces(faces);
-
-				gs_texrender_end(drawTexRender);
-			}
-		}
-
-		mask_tex = gs_texrender_get_texture(drawTexRender);
-
-	}
-
-	if (testMode) {
-		if (faces.length > 0) {
-
-			dlib::point pos = faces[0].GetPosition();
-			smll::ThreeDPose pose = faces[0].pose;
-
-			if (!testingStage) {
-				testingStage = gs_stagesurface_create(baseWidth, baseHeight, GS_RGBA);
-			}
-			gs_stage_texture(testingStage, mask_tex);
-			uint8_t *data; uint32_t linesize;
-			if (gs_stagesurface_map(testingStage, &data, &linesize)) {
-
-				uint8_t* pixel = data + (pos.y() * linesize) + (pos.x() * 4);
-				uint8_t red = *pixel++;
-				uint8_t green = *pixel++;
-				uint8_t blue = *pixel++;
-				uint8_t alpha = *pixel++;
-
-				char buf[128];
-				snprintf(buf, sizeof(buf), "detected pixel %d,%d,%d,%d",
-					(int)red, (int)green, (int)blue, (int)alpha);
-				smll::TestingPipe::singleton().SendString(buf);
-
-				snprintf(buf, sizeof(buf), "Pose Translations %d,%d,%d",
-					(int)pose.translation[0], (int)pose.translation[1], (int)pose.translation[2]);
-				smll::TestingPipe::singleton().SendString(buf);
-
-				snprintf(buf, sizeof(buf), "Mask %s", maskFilename.c_str());
-				smll::TestingPipe::singleton().SendString(buf);
-
-				gs_stagesurface_unmap(testingStage);
-			}
-		}
-	}
+	
 
 	// SPRITE DRAWING - draw rendered stuff as sprites
 
@@ -1458,23 +1325,6 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			if (lastTimestamp == detection.frame.timestamp) {
 				// same frame, skip
 				skipped = true;
-			}
-			else {
-				// new frame - do the face detection
-				smllFaceDetector->DetectFaces(detection.frame.detect, detection.frame.capture, detect_results);
-				// detect landmarks
-				obs_enter_graphics();
-				smllFaceDetector->StageCaptureTexture();
-				cv::Mat rgbaImage(smllFaceDetector->m_stageWork.h, smllFaceDetector->m_stageWork.w, CV_8UC4, smllFaceDetector->m_stageWork.data, smllFaceDetector->m_stageWork.getStride());
-				cv::Mat gray; cv::cvtColor(rgbaImage, gray, cv::COLOR_RGBA2GRAY);
-
-				landmark_tracking(gray, detect_results);
-				smllFaceDetector->UnstageCaptureTexture();
-				obs_leave_graphics();
-
-				smllFaceDetector->DoPoseEstimation(detect_results);
-
-				lastTimestamp = detection.frame.timestamp;
 			}
 		}
 
