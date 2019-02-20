@@ -144,4 +144,4 @@ namespace smll {
 
 }
 
-void landmark_tracking(cv::Mat &tmp, smll::DetectionResults& results);
+cv::Mat landmark_tracking(cv::Mat &raw);
