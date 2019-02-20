@@ -67,17 +67,12 @@ VideoCapture cap;
 		
 		
 // Shows the results that combined with Optical Flow, Kalman Filter and Dlib based on the speed of face movement
-void landmark_tracking() {
+cv::Mat landmark_tracking(cv::Mat &raw) {
 
 		static bool inited = false;
 		
 		if(!inited) {
-			cap = VideoCapture(0);
-			sleep(5000);
-			if (!cap.isOpened()) {
-				std::cerr << "Unable to connect to camera" << std::endl;
-				return;
-		   }
+			
 	   
 			inited = true;
 			detector = get_frontal_face_detector();
@@ -133,10 +128,7 @@ void landmark_tracking() {
 				prevTrackPts.push_back(cv::Point2f(0, 0));
 			}
 		}
-		// Grab a frame
-		cv::Mat raw;
-		cap >> raw;
-		
+
 		// Resize
 		cv::Mat tmp;
 		cv::resize(raw, tmp, cv::Size(), scaling, scaling);
@@ -151,7 +143,7 @@ void landmark_tracking() {
 		// to reallocate the memory which stores the image as that will make cimg
 		// contain dangling pointers.  This basically means you shouldn't modify temp
 		// while using cimg.
-		cv_image<bgr_pixel> cimg(temp);
+		dlib::cv_image<bgr_pixel> cimg(temp);
 
 		std::vector<dlib::rectangle> faces = detector(cimg);
 
@@ -160,14 +152,13 @@ void landmark_tracking() {
 		for (unsigned long i = 0; i < faces.size(); ++i) {
 			shapes.push_back(pose_model(cimg, faces[i]));
 		}
-		sleep(200);
 		// We cannot modify temp so we clone a new one
 
 		cv::Mat frame = temp.clone();
 		cv::Mat face_5 = temp.clone();
 
 		// This function is to combine the optical flow + kalman filter + dlib to deteck and track the facial landmark
-		if (flag == -1) {
+		if (flag == -1 && shapes.size() > 0) {
 			cvtColor(frame, prevgray, COLOR_BGR2GRAY);
 			const full_object_detection& d = shapes[0];
 			for (int i = 0; i < d.num_parts(); i++) {
@@ -253,19 +244,31 @@ void landmark_tracking() {
 		// Update the Measurement Matrix
 		measurement += KF.measurementMatrix * state;
 		KF.correct(measurement);
+		return face_5;
 
-		cv::imshow("KF+OF+DLIB", face_5);
 }
 
-
+/*
 int main(int argc, char** argv) {
+
+	cap = VideoCapture(0);
+	if (!cap.isOpened()) {
+		std::cerr << "Unable to connect to caera" << std::endl;
+		return 0;
+	}
 	
 	while(true) {
-		landmark_tracking();
+
+		cv::Mat r;
+		cap >> r;
+		r = landmark_tracking(r);
 		char key = cv::waitKey(1);
 		if (key == 'q') {
 			break;
 		}
+
+		cv::imshow("KF+OF+DLIB", r);
 	}
 	return 0;
 }
+*/
