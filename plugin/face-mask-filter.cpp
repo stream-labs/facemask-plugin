@@ -172,7 +172,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	}
 	
 	// start mask data loading thread
-	maskDataThread = std::thread(StaticMaskDataThreadMain, this);
+	//maskDataThread = std::thread(StaticMaskDataThreadMain, this);
 
 	this->update(data);
 
@@ -209,7 +209,7 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 	}
 	// wait for them to die
 	detection.thread.join();
-	maskDataThread.join();
+	//maskDataThread.join();
 	if (T) {
 		T->SendString("threads stopped");
 	}
@@ -637,7 +637,7 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 	}
 
 	// ----- GET FACES FROM OTHER THREAD -----
-	updateFaces();
+	//updateFaces();
 
 	// Lock mask datas mutex
 	std::unique_lock<std::mutex> masklock(maskDataMutex, std::try_to_lock);
@@ -873,7 +873,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	if (gs_stagesurface_map(testingStage, &data, &linesize)) {
 		cvm = cv::Mat(baseHeight, baseWidth, CV_8UC4, data, linesize);
 		cv::cvtColor(cvm, cvm_bgr, cv::COLOR_RGBA2BGR);
-		landmark_tracking(cvm_bgr);
+		landmark_tracking(cvm_bgr, faces);
 		gs_stagesurface_unmap(testingStage);
 	}
 
@@ -904,6 +904,124 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// render mask to texture
 	gs_texture* mask_tex = nullptr;
+	if (faces.length > 0) {
+		// only render once per video tick
+		if (videoTicked) {
+			//init start pose for static masks
+			for (int i = 0; i < faces.length; i++) {
+				faces[i].InitStartPose();
+			}
+
+			// draw mask to texture
+			gs_texrender_reset(drawTexRender);
+			if (gs_texrender_begin(drawTexRender, baseWidth*m_scale_rate, baseHeight*m_scale_rate)) {
+
+				// clear
+				vec4 black, thumbbg;
+				vec4_zero(&black);
+				float vv = (float)0x9a / 255.0f;
+				vec4_set(&thumbbg, vv, vv, vv, 1.0f);
+				gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
+
+				if (mask_data) {
+
+					// Check here for no morph
+					if (!mask_data->GetMorph()) {
+						triangulation.DestroyBuffers();
+					}
+
+
+					// Draw depth-only stuff
+					for (int i = 0; i < faces.length; i++) {
+						gs_matrix_push();
+						setFaceTransform(faces[i].pose);
+						drawMaskData(mask_data, true, false, false);
+						drawMaskData(mask_data, true, true, false);
+						setFaceTransform(faces[i].pose, true);
+						drawMaskData(mask_data, true, false, true);
+						drawMaskData(mask_data, true, true, true);
+						gs_matrix_pop();
+					}
+
+					// if we are generating thumbs
+					if (genThumbs) {
+						// clear the color buffer (leaving depth info there)
+						gs_clear(GS_CLEAR_COLOR, &thumbbg, 1.0f, 0);
+					}
+					else {
+						// clear the color buffer (leaving depth info there)
+						gs_clear(GS_CLEAR_COLOR, &black, 1.0f, 0);
+					}
+
+					// draw video to the mask texture?
+					if (recordTriggered || genThumbs || mask_data->DrawVideoWithMask()) {
+						// setup transform state
+						gs_viewport_push();
+						gs_projection_push();
+						gs_matrix_push();
+						gs_set_viewport(0, 0, baseWidth, baseHeight);
+						gs_ortho(0, (float)baseWidth, 0, (float)baseHeight, -1, 1);
+						gs_matrix_identity();
+
+						// Draw the source video
+						if (mask_data && (autoBGRemoval || cartoonMode || demoModeGenPreviews || recordTriggered)) {
+							triangulation.autoBGRemoval = autoBGRemoval;
+							triangulation.cartoonMode = cartoonMode;
+							mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
+						}
+
+						// restore transform state
+						gs_matrix_pop();
+						gs_viewport_pop();
+						gs_projection_pop();
+					}
+
+					// Draw regular stuff
+					for (int i = 0; i < faces.length; i++) {
+						if (maskAlpha > 0.0f) {
+							gs_matrix_push();
+							setFaceTransform(faces[i].startPose);
+							drawMaskData(mask_data, false, true, false);
+							setFaceTransform(faces[i].startPose, true);
+							drawMaskData(mask_data, false, true, true);
+							setFaceTransform(faces[i].pose);
+							drawMaskData(mask_data, false, false, false);
+							setFaceTransform(faces[i].pose, true);
+							drawMaskData(mask_data, false, false, true);
+							gs_matrix_pop();
+						}
+					}
+
+					if (introActive || outroActive)
+						gs_clear(GS_CLEAR_DEPTH, &black, 1.0f, 0);
+
+					for (int i = 0; i < faces.length; i++) {
+						if (introActive) {
+							gs_matrix_push();
+							setFaceTransform(faces[i].pose, true);
+							drawMaskData(introData.get(), false, false, true);
+							gs_matrix_pop();
+						}
+						if (outroActive) {
+							gs_matrix_push();
+							setFaceTransform(faces[i].pose, true);
+							drawMaskData(outroData.get(), false, false, true);
+							gs_matrix_pop();
+						}
+					}
+				}
+
+				// draw face detection data
+				if (drawFaces)
+					smllRenderer->DrawFaces(faces);
+
+				gs_texrender_end(drawTexRender);
+			}
+		}
+
+		mask_tex = gs_texrender_get_texture(drawTexRender);
+
+	}
 	
 
 	// SPRITE DRAWING - draw rendered stuff as sprites
@@ -1285,7 +1403,7 @@ void Plugin::FaceMaskFilter::Instance::drawMaskData(Mask::MaskData*	_maskData,
 
 
 int32_t Plugin::FaceMaskFilter::Instance::StaticThreadMain(Instance *ptr) {
-	return ptr->LocalThreadMain();
+	return 0; // ptr->LocalThreadMain();
 }
 
 int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {

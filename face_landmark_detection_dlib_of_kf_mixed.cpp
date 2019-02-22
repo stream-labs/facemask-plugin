@@ -178,12 +178,12 @@ cv::Mat landmark_tracking(cv::Mat &raw) {
 		}
 
 		// Kalman Prediction
-		Mat prediction = KF.predict();
+		/*Mat prediction = KF.predict();
 		// std::vector<cv::Point2f> predict_points;
 		for (int i = 0; i < 68; i++) {
 			predict_points[i].x = prediction.at<float>(i * 2);
 			predict_points[i].y = prediction.at<float>(i * 2 + 1);
-		}
+		}*/
 
 		// Optical Flow + Kalman Filter + Dlib based on the speed of face movement
 		if (shapes.size() == 1) {
@@ -205,13 +205,13 @@ cv::Mat landmark_tracking(cv::Mat &raw) {
 						nextTrackPts[i].x = d.part(i).x();
 						nextTrackPts[i].y = d.part(i).y();
 					}
-				} else if (diff <= 1.0 && diff > 0.005){
+				} else { //if (diff <= 1.0 && diff > 0.005){
 					// In this case, use Optical Flow
 					std::cout<< "Optical Flow" << std::endl;
 					for (int i = 0; i < nextTrackPts.size(); i++) {
 						cv::circle(face_5, nextTrackPts[i], 2, cv::Scalar(255, 0, 0), -1);
 					}
-				} else {
+				} /*else {
 					// In this case, use Kalman Filter
 					std::cout<< "Kalman Filter" << std::endl;
 					for (int i = 0; i < predict_points.size(); i++) {
@@ -220,7 +220,7 @@ cv::Mat landmark_tracking(cv::Mat &raw) {
 						nextTrackPts[i].y = predict_points[i].y;
 					}
 					redetected = false;
-				}
+				}*/
 			} else {
 				redetected = true;
 			}
@@ -233,17 +233,17 @@ cv::Mat landmark_tracking(cv::Mat &raw) {
 		}
 
 		// Update Measurement
-		for (int i = 0; i < 136; i++) {
+		/*for (int i = 0; i < 136; i++) {
 			if (i % 2 == 0) {
 				measurement.at<float>(i) = (float)kalman_points[i / 2].x;
 			} else {
 				measurement.at<float>(i) = (float)kalman_points[(i - 1) / 2].y;
 			}
-		}
+		}*/
 
 		// Update the Measurement Matrix
-		measurement += KF.measurementMatrix * state;
-		KF.correct(measurement);
+		//measurement += KF.measurementMatrix * state;
+		//KF.correct(measurement);
 		return face_5;
 
 }
