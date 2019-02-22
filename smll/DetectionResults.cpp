@@ -24,7 +24,7 @@
 
 
 // how many frames before we consider a face "lost"
-#define NUM_FRAMES_TO_LOSE_FACE			(30)
+#define NUM_FRAMES_TO_LOSE_FACE			(2)
 
 namespace smll {
 
@@ -328,10 +328,7 @@ namespace smll {
 
 	void DetectionResult::UpdateResultsFrom(const DetectionResult& r) {
 
-		if (!kalmanFilterInitialized) {
-			*this = r;
-			InitKalmanFilter();
-		}
+
 
 		double ntx[3] = { r.pose.translation[0], r.pose.translation[1], r.pose.translation[2] };
 		double nrot[4] = { r.pose.rotation[0], r.pose.rotation[1], r.pose.rotation[2], r.pose.rotation[3] };
@@ -339,7 +336,10 @@ namespace smll {
 
 		// kalman filtering enabled?
 		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE)) {
-			
+			if (!kalmanFilterInitialized) {
+				*this = r;
+				InitKalmanFilter();
+			}
 			// Get the measured translation
 			cv::Mat translationMeasured = r.pose.GetCVTranslation();
 			// Get the measured rotation
@@ -366,15 +366,15 @@ namespace smll {
 			cv::Mat translationDiff; cv::absdiff(translationEstimated, smoothTranslation, translationDiff);
 			double translationUpdateValue = cv::sum(translationDiff)[0] / 3.0;
 
-			double eulerUpdateThreshold = 0.05; // < 3 degrees is considered as noise
-			double translationUpdateThreshold = 0.09; // Reduces noise to an extent (not fully)
+			double eulerUpdateThreshold = 0.06; // < 3 degrees is considered as noise
+			double translationUpdateThreshold = 0.12; // Reduces noise to an extent (not fully)
 
 			if (eulerUpdateValue > eulerUpdateThreshold) {
-				smoothEulers += 0.8 * dt * (eulersEstimated - smoothEulers);
+				smoothEulers += 0.95 * dt * (eulersEstimated - smoothEulers);
 			}
 
 			if (translationUpdateValue > translationUpdateThreshold) {
-				smoothTranslation += 5 * 0.8 * dt * (translationEstimated - smoothTranslation);
+				smoothTranslation += 5 * 0.95 * dt * (translationEstimated - smoothTranslation);
 			}
 
 			// Update Pose 
@@ -388,6 +388,7 @@ namespace smll {
 			pose.rotation[1] = nrot[1];
 			pose.rotation[2] = nrot[2];
 			pose.rotation[3] = nrot[3];
+			kalmanFilterInitialized = false;
 		}
 
 		// copy values

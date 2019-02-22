@@ -656,7 +656,7 @@ struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(void *p
 }
 
 struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct obs_source_frame * frame) {
-
+	return frame;
 	// No need to do detection if mask will not be drawn
 	if (!isActive || !isVisible ||
 		// or if the alert is done
@@ -914,6 +914,31 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	if ((parent == NULL) || (target == NULL)) {
 		return;
 	}
+	if (!testingStage) {
+		testingStage = gs_stagesurface_create(baseWidth, baseHeight, GS_RGBA);
+	}
+
+	// get vid tex
+	gs_stage_texture(testingStage, vidTex);
+	uint8_t *data; uint32_t linesize;
+	cv::Mat cvm;
+	cv::Mat cvm_bgr;
+	if (gs_stagesurface_map(testingStage, &data, &linesize)) {
+		cvm = cv::Mat(baseHeight, baseWidth, CV_8UC4, data, linesize);
+		cv::cvtColor(cvm, cvm_bgr, cv::COLOR_RGBA2GRAY);
+		smll::DetectionResults newFaces;
+		smllFaceDetector->DetectFaces(cvm_bgr, baseWidth/2, baseHeight/2, newFaces);
+
+		smllFaceDetector->DetectLandmarks(newFaces);
+		smllFaceDetector->DoPoseEstimation(newFaces);
+		faces.CorrelateAndUpdateFrom(newFaces);
+
+		gs_stagesurface_unmap(testingStage);
+	}
+
+
+
+
 
 	// smll needs a "viewport" to draw
 	smllRenderer->SetViewport(baseWidth, baseHeight);
@@ -1490,7 +1515,7 @@ void Plugin::FaceMaskFilter::Instance::drawMaskData(Mask::MaskData*	_maskData,
 }
 
 int32_t Plugin::FaceMaskFilter::Instance::StaticThreadMain(Instance *ptr) {
-	return ptr->LocalThreadMain();
+	return 0; // ptr->LocalThreadMain();
 }
 
 int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
