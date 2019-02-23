@@ -82,6 +82,9 @@ public:
 	// Staging the capture texture
 	void 	StageCaptureTexture();
 	void 	UnstageCaptureTexture();
+	// Image Buffers
+	OBSTexture		m_capture;
+	ImageWrapper	m_detect;
 private:
 
 	// Saved Faces
@@ -90,9 +93,7 @@ private:
 	// Saved Poses
 	ThreeDPoses		m_poses;
 
-	// Image Buffers
-	OBSTexture		m_capture;
-	ImageWrapper	m_detect;
+
 
 	// For staging the capture texture
 	gs_stagesurf_t* m_captureStage;

@@ -12,7 +12,10 @@ landmarks in images read from a webcam and points that drew by the program.
 #include <dlib/gui_widgets.h>
 #include <stdio.h>
 #include <opencv2/video/tracking.hpp>
-
+#include <smll/Face.hpp>
+#include <smll/Config.hpp>
+#include <smll/TestingPipe.hpp>
+#include <smll/DetectionResults.hpp>
 using namespace cv;
 using namespace dlib;
 
@@ -67,7 +70,7 @@ VideoCapture cap;
 		
 		
 // Shows the results that combined with Optical Flow, Kalman Filter and Dlib based on the speed of face movement
-cv::Mat landmark_tracking(cv::Mat &raw) {
+cv::Mat landmark_tracking(cv::Mat &raw, smll::DetectionResults &res) {
 
 		static bool inited = false;
 		
@@ -135,7 +138,7 @@ cv::Mat landmark_tracking(cv::Mat &raw) {
 
 		//Flip
 		cv::Mat temp;
-		cv::flip(tmp, temp, 1);
+		temp = tmp;
 
 		// Turn OpenCV's Mat into something dlib can deal with.  Note that this just
 		// wraps the Mat object, it doesn't copy anything.  So cimg is only valid as
@@ -201,16 +204,20 @@ cv::Mat landmark_tracking(cv::Mat &raw) {
 					const full_object_detection& d = shapes[0];
 					std::cout<< "DLIB" << std::endl;
 					for (int i = 0; i < d.num_parts(); i++) {
-						cv::circle(face_5, cv::Point2f(d.part(i).x(), d.part(i).y()), 2, cv::Scalar(0, 0, 255), -1);
+					//	cv::circle(face_5, cv::Point2f(d.part(i).x(), d.part(i).y()), 2, cv::Scalar(0, 0, 255), -1);
+						res[0].landmarks68[i] = point(2 * d.part(i).x(), 2 * d.part(i).y());
 						nextTrackPts[i].x = d.part(i).x();
 						nextTrackPts[i].y = d.part(i).y();
 					}
+					res.length = 1;
 				} else { //if (diff <= 1.0 && diff > 0.005){
 					// In this case, use Optical Flow
 					std::cout<< "Optical Flow" << std::endl;
 					for (int i = 0; i < nextTrackPts.size(); i++) {
-						cv::circle(face_5, nextTrackPts[i], 2, cv::Scalar(255, 0, 0), -1);
+					//	cv::circle(face_5, nextTrackPts[i], 2, cv::Scalar(255, 0, 0), -1);
+						res[0].landmarks68[i] = point(2*nextTrackPts[i].x, 2 * nextTrackPts[i].y);
 					}
+					res.length = 1;
 				} /*else {
 					// In this case, use Kalman Filter
 					std::cout<< "Kalman Filter" << std::endl;
@@ -247,8 +254,8 @@ cv::Mat landmark_tracking(cv::Mat &raw) {
 		return face_5;
 
 }
-
 /*
+
 int main(int argc, char** argv) {
 
 	cap = VideoCapture(0);

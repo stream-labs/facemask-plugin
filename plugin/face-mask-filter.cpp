@@ -172,7 +172,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	}
 	
 	// start mask data loading thread
-	//maskDataThread = std::thread(StaticMaskDataThreadMain, this);
+	maskDataThread = std::thread(StaticMaskDataThreadMain, this);
 
 	this->update(data);
 
@@ -209,7 +209,7 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 	}
 	// wait for them to die
 	detection.thread.join();
-	//maskDataThread.join();
+	maskDataThread.join();
 	if (T) {
 		T->SendString("threads stopped");
 	}
@@ -732,7 +732,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(void *ptr,
 }
 
 
-cv::Mat landmark_tracking(cv::Mat &raw);
+cv::Mat landmark_tracking(cv::Mat &raw, smll::DetectionResults &res);
 
 void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
@@ -874,6 +874,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		cvm = cv::Mat(baseHeight, baseWidth, CV_8UC4, data, linesize);
 		cv::cvtColor(cvm, cvm_bgr, cv::COLOR_RGBA2BGR);
 		landmark_tracking(cvm_bgr, faces);
+		smllFaceDetector->DoPoseEstimation(faces);
 		gs_stagesurface_unmap(testingStage);
 	}
 
@@ -1294,8 +1295,13 @@ bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sou
 				// Make sure current is invalid
 				detection.frame.morphData.Invalidate();
 			}
+
+
+			smllFaceDetector->m_capture = capture;
+			smllFaceDetector->m_detect = detect;
 		}
 	}
+
 
 	// Advance frame index if we copied a frame
 	if (frameSent) {

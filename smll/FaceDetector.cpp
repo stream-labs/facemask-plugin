@@ -1074,6 +1074,8 @@ namespace smll {
 
 	void FaceDetector::DoPoseEstimation(DetectionResults& results)
 	{
+		StageCaptureTexture();
+		UnstageCaptureTexture();
 		// Build a set of model points to use for solving 3D pose
 		// NOTE: The keypoints sould be selected w.r.t stability
 		// TODO: Reduce Keypoints, change pose solver,
