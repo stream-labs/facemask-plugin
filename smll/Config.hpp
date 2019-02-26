@@ -64,7 +64,8 @@ namespace smll {
 	// Smoothing factor
 	static const char* const CONFIG_FLOAT_SMOOTHING_FACTOR =
 		"smoothingFactor";
-
+	static const char* const CONFIG_DLIB = "DLIB";
+	static const char* const CONFIG_OF = "OF";
 	// Face Detection Vars ----------
 
 	// Scale Width

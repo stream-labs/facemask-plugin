@@ -732,7 +732,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(void *ptr,
 }
 
 
-cv::Mat landmark_tracking(cv::Mat &raw, smll::DetectionResults &res);
+cv::Mat landmark_tracking(cv::Mat &raw, smll::DetectionResults &res, bool& updateKF, double dlib_tres, double of_tres);
 
 void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
@@ -870,11 +870,23 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	uint8_t *data; uint32_t linesize;
 	cv::Mat cvm;
 	cv::Mat cvm_bgr;
+	bool updateKF = false;
+	smll::DetectionResults resulFaces;
 	if (gs_stagesurface_map(testingStage, &data, &linesize)) {
 		cvm = cv::Mat(baseHeight, baseWidth, CV_8UC4, data, linesize);
 		cv::cvtColor(cvm, cvm_bgr, cv::COLOR_RGBA2BGR);
-		landmark_tracking(cvm_bgr, faces);
-		smllFaceDetector->DoPoseEstimation(faces);
+		double dlib_tres = smll::Config::singleton().get_double(smll::CONFIG_DLIB);
+		double of_tres = smll::Config::singleton().get_double(smll::CONFIG_OF);
+		landmark_tracking(cvm_bgr, resulFaces, updateKF, dlib_tres, of_tres);
+		smllFaceDetector->DoPoseEstimation(resulFaces);
+		if (updateKF) {
+			faces.CorrelateAndUpdateFrom(resulFaces);
+
+		}
+		else {
+			faces = resulFaces;
+
+		}
 		gs_stagesurface_unmap(testingStage);
 	}
 

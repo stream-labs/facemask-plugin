@@ -70,75 +70,22 @@ VideoCapture cap;
 
 
 		
-std::vector<int> model_indices;
 		
 // Shows the results that combined with Optical Flow, Kalman Filter and Dlib based on the speed of face movement
-cv::Mat landmark_tracking(cv::Mat &raw, smll::DetectionResults &res) {
+cv::Mat landmark_tracking(cv::Mat &raw, smll::DetectionResults &res, bool& updateKF, double dlib_tres, double of_tres) {
 
 		static bool inited = false;
 		
 		if(!inited) {
-
-			model_indices.push_back(smll::LEFT_OUTER_EYE_CORNER);
-			model_indices.push_back(smll::RIGHT_OUTER_EYE_CORNER);
-			model_indices.push_back(smll::NOSE_1);
-			model_indices.push_back(smll::NOSE_2);
-			model_indices.push_back(smll::NOSE_3);
-			model_indices.push_back(smll::NOSE_4);
-			model_indices.push_back(smll:: NOSE_7);
 
 	   
 			inited = true;
 			detector = get_frontal_face_detector();
 			deserialize("C:/Users/glaba/Documents/dev/facemask-plugin/data/shape_predictor_68_face_landmarks.dat") >> pose_model;
 
-			for (int i = 0; i < model_indices.size(); i++) {
-				kalman_points.push_back(cv::Point2f(0.0, 0.0));
-			}
 
 
-			for (int i = 0; i < model_indices.size(); i++) {
-				predict_points.push_back(cv::Point2f(0.0, 0.0));
-			}
-
-
-
-			KF = KalmanFilter(stateNum, measureNum, 0);
-			state 			= Mat(stateNum, 1, CV_32FC1);
-			processNoise 	= Mat(stateNum, 1, CV_32F);
-			measurement 	= Mat::zeros(measureNum, 1, CV_32F);
-
-			// Generate a matrix randomly
-			randn(state, Scalar::all(0), Scalar::all(0.0));
-
-			// Generate the Measurement Matrix
-			KF.transitionMatrix = Mat::zeros(stateNum, stateNum, CV_32F);
-			for (int i = 0; i < stateNum; i++) {
-				for (int j = 0; j < stateNum; j++) {
-					if (i == j || (j - measureNum) == i) {
-						KF.transitionMatrix.at<float>(i, j) = 1.0;
-					} else {
-						KF.transitionMatrix.at<float>(i, j) = 0.0;
-					}   
-				}
-			}
-
-			//!< measurement matrix (H) Measurement Model  
-			setIdentity(KF.measurementMatrix);
-	  
-			//!< process noise covariance matrix (Q)  
-			setIdentity(KF.processNoiseCov, Scalar::all(1e-5));
-			  
-			//!< measurement noise covariance matrix (R)  
-			setIdentity(KF.measurementNoiseCov, Scalar::all(1e-1));
-
-			//!< priori error estimate covariance matrix (P'(k)): P'(k)=A*P(k-1)*At + Q)*/  A代表F: transitionMatrix  
-			setIdentity(KF.errorCovPost, Scalar::all(1));
-		
-			randn(KF.statePost, Scalar::all(0), Scalar::all(0.0));
-
-
-			for (int i = 0; i < model_indices.size(); i++) {
+			for (int i = 0; i < 68; i++) {
 				prevTrackPts.push_back(cv::Point2f(0, 0));
 			}
 		}
@@ -177,10 +124,9 @@ cv::Mat landmark_tracking(cv::Mat &raw, smll::DetectionResults &res) {
 		if (flag == -1 && shapes.size() > 0) {
 			cvtColor(frame, prevgray, COLOR_BGR2GRAY);
 			const full_object_detection& d = shapes[0];
-			for (int j = 0; j < model_indices.size(); j++) {
-				int i = model_indices[j];
-				prevTrackPts[j].x = d.part(i).x();
-				prevTrackPts[j].y = d.part(i).y();
+			for (int j = 0; j < 68; j++) {
+				prevTrackPts[j].x = d.part(j).x();
+				prevTrackPts[j].y = d.part(j).y();
 			}
 			flag = 1; 
 		}
@@ -203,6 +149,7 @@ cv::Mat landmark_tracking(cv::Mat &raw, smll::DetectionResults &res) {
 		}*/
 
 		// Optical Flow + Kalman Filter + Dlib based on the speed of face movement
+		res.length = 0;
 		if (shapes.size() == 1) {
 			
 			cvtColor(frame, gray, COLOR_BGR2GRAY);
@@ -218,23 +165,21 @@ cv::Mat landmark_tracking(cv::Mat &raw, smll::DetectionResults &res) {
 					res[0].landmarks68[i] = point(2 * d.part(i).x(), 2 * d.part(i).y());
 				}
 
-				if (diff > 1.0) { 
+				if (diff > dlib_tres) {
 					blog(LOG_DEBUG, "DLib");
-					for (int j = 0; j < model_indices.size(); j++) {
-						int i = model_indices[j];
-						nextTrackPts[j].x = d.part(i).x();
-						nextTrackPts[j].y = d.part(i).y();
+					for (int j = 0; j < 68; j++) {
+						nextTrackPts[j].x = d.part(j).x();
+						nextTrackPts[j].y = d.part(j).y();
 						//cv::circle(face_5, cv::Point2f(d.part(j).x(), d.part(j).y()), 2, cv::Scalar(0, 0, 255), -1);
 					}
 
 					res.length = 1;
-				}else if (diff <= 1.0 && diff > 0.005) {
+				}else if (diff > of_tres) {
 					// In this case, use Optical Flow
 					std::cout << "Optical Flow" << std::endl;
 					blog(LOG_DEBUG, "OF");
-					for (int j = 0; j < model_indices.size(); j++) {
-						int i = model_indices[j];
-						res[0].landmarks68[i] = point(2 * nextTrackPts[j].x, 2 * nextTrackPts[j].y);
+					for (int j = 0; j < 68; j++) {
+						res[0].landmarks68[j] = point(2 * nextTrackPts[j].x, 2 * nextTrackPts[j].y);
 						//cv::circle(face_5, nextTrackPts[j], 2, cv::Scalar(255, 0, 0), -1);
 					}
 					res.length = 1;
@@ -242,13 +187,12 @@ cv::Mat landmark_tracking(cv::Mat &raw, smll::DetectionResults &res) {
 					// In this case, use Kalman Filter
 					std::cout<< "Kalman Filter" << std::endl;
 					blog(LOG_DEBUG, "FK");
-					for (int j = 0; j < model_indices.size(); j++) {
-						//cv::circle(face_5, predict_points[j], 2, cv::Scalar(0, 255, 0), -1);
-						int i = model_indices[j];
-						nextTrackPts[j].x = prevTrackPts[j].x;
-						nextTrackPts[j].y = prevTrackPts[j].y;
+					updateKF = true;
+					for (int j = 0; j < 68; j++) {
+						//nextTrackPts[j].x = prevTrackPts[j].x;
+						//nextTrackPts[j].y = prevTrackPts[j].y;
 
-						res[0].landmarks68[i] = point(2 * nextTrackPts[j].x, 2 * nextTrackPts[j].y);
+						res[0].landmarks68[j] = point(2 * nextTrackPts[j].x, 2 * nextTrackPts[j].y);
 					}
 					/*
 					for (int j = 0; j < model_indices.size(); j++) {

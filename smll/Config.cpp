@@ -55,7 +55,8 @@ namespace smll {
 
 		AddParam(CONFIG_BOOL_KALMAN_ENABLE,true);
 		AddParam(CONFIG_FLOAT_SMOOTHING_FACTOR, 0.666, 0.0, 10.0, 0.1);
-
+		AddParam(CONFIG_DLIB, 5.0, 0.0, 20.0, 0.1);
+		AddParam(CONFIG_OF, 1.0, 0.0, 10.0, 0.1);
 		AddParam(CONFIG_INT_FACE_DETECT_WIDTH, 480, 120, 1200, 20);
 
 		AddParam(CONFIG_DOUBLE_FACE_DETECT_CROP_WIDTH, 0.6, 0.0, 1.0, 0.01);
