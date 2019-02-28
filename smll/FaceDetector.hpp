@@ -84,7 +84,6 @@ private:
 	ThreeDPoses		m_poses;
 
 	// Face detection timeouts
-	int				m_timeout;
     int             m_trackingTimeout;
     int             m_detectionTimeout;
 	int				resizeWidth;
