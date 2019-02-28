@@ -40,8 +40,7 @@ using namespace std;
 namespace smll {
 
 	FaceDetector::FaceDetector()
-		: m_timeout(0)
-        , m_trackingTimeout(0)
+		: m_trackingTimeout(0)
         , m_detectionTimeout(0)
 		, m_trackingFaceIndex(0)
 		, m_camera_w(0)
@@ -222,13 +221,6 @@ namespace smll {
 	}
 
 	void FaceDetector::DetectFaces(cv::Mat &inputImage, int width, int height, DetectionResults& results) {
-		// Wait for CONFIG_INT_FACE_DETECT_FREQUENCY after all faces are lost before trying to detect them again
-		if (m_timeout > 0) {    
-			m_timeout--;
-			results.processedResults.FrameSkipped();
-			return;
-		}
-
 		// better check if the camera res has changed on us
 		if ((resizeWidth != width) ||
 			(resizeHeight != height)) {
@@ -278,8 +270,6 @@ namespace smll {
 			}
 			else {
 				m_trackingFaceIndex = 0;
-				// force detection on the next frame, do not wait for 5 frames
-				m_timeout = 0;
 				trackingFailed = true;
 				results.processedResults.TrackingFailed();
 			}
@@ -303,15 +293,6 @@ namespace smll {
 			results[i] = m_faces[i];
 		}
 		results.length = m_faces.length;
-
-		if (trackingFailed || m_faces.length == 0) {
-
-		}
-		// If faces are not found
-		if (m_faces.length == 0 && !trackingFailed && !wasFaceDetected) {
-            // Wait for 5 frames and do face detection
-            m_timeout = Config::singleton().get_int(CONFIG_INT_FACE_DETECT_FREQUENCY);
-		}
 	}
 
 	void FaceDetector::MakeTriangulation(MorphData& morphData, 
