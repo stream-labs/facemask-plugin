@@ -26,7 +26,7 @@
 #include <smll/Config.hpp>
 #include <smll/TestingPipe.hpp>
 #include <smll/landmarks.hpp>
-
+#include <cstdlib> 
 
 #include <Shlwapi.h>
 #include <memory>
@@ -843,6 +843,13 @@ void Plugin::FaceMaskFilter::Instance::video_render(void *ptr,
 	reinterpret_cast<Instance*>(ptr)->video_render(effect);
 }
 
+static gs_texture_t *vidTex = nullptr;
+static bool sk = false;
+
+int r_old = 0;
+int l_old = 0;
+int t_old = 0;
+int b_old = 0;
 
 void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
@@ -900,13 +907,14 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		return;
 	}
 
-	gs_texture_t *vidTex = nullptr;
 
 	gs_effect_t* defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
-
-	vidTex = RenderSourceTexture(effect ? effect : defaultEffect);
+	// *** SKIP ***
+	sk = true;
+	if(sk)
+		vidTex = RenderSourceTexture(effect ? effect : defaultEffect);
+	
 	if (vidTex == NULL) {
-		// *** SKIP ***
 		obs_source_skip_video_filter(source);
 		return;
 	}
@@ -924,14 +932,41 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	cv::Mat cvm;
 	cv::Mat cvm_bgr;
 	if (gs_stagesurface_map(testingStage, &data, &linesize)) {
-		cvm = cv::Mat(baseHeight, baseWidth, CV_8UC4, data, linesize);
-		cv::cvtColor(cvm, cvm_bgr, cv::COLOR_RGBA2GRAY);
-		smll::DetectionResults newFaces;
-		smllFaceDetector->DetectFaces(cvm_bgr, baseWidth/2, baseHeight/2, newFaces);
 
-		smllFaceDetector->DetectLandmarks(newFaces);
-		smllFaceDetector->DoPoseEstimation(newFaces);
-		faces.CorrelateAndUpdateFrom(newFaces);
+		if (sk) {
+			cvm = cv::Mat(baseHeight, baseWidth, CV_8UC4, data, linesize);
+			cv::cvtColor(cvm, cvm_bgr, cv::COLOR_RGBA2GRAY);
+			smll::DetectionResults newFaces;
+			smllFaceDetector->DetectFaces(cvm_bgr, baseWidth / 2, baseHeight / 2, newFaces);
+			double sm = smll::Config::singleton().get_double(smll::CONFIG_FLOAT_SMOOTHING_FACTOR); // < 3 degrees is considered as noise
+			if (newFaces.length > 0) {
+				int r = newFaces[0].bounds.right();
+				int l = newFaces[0].bounds.left();
+				int t = newFaces[0].bounds.top();
+				int b = newFaces[0].bounds.bottom();
+				if (std::abs(r - r_old) > sm) {
+					r_old = r;
+				}
+				if (std::abs(l - l_old) > sm) {
+					l_old = l;
+				}
+				if (std::abs(t - t_old) > sm) {
+					t_old = t;
+				}
+				if (std::abs(b - b_old) > sm) {
+					b_old = b;
+				}
+				newFaces[0].bounds.set_bottom(b_old);
+				newFaces[0].bounds.set_right(r_old);
+				newFaces[0].bounds.set_left(l_old);
+				newFaces[0].bounds.set_top(t_old);
+			}
+
+			smllFaceDetector->DetectLandmarks(newFaces);
+			smllFaceDetector->DoPoseEstimation(newFaces);
+			faces.CorrelateAndUpdateFrom(newFaces);
+		}
+
 
 		gs_stagesurface_unmap(testingStage);
 	}

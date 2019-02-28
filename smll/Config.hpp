@@ -71,7 +71,8 @@ namespace smll {
 		"movementThreshold";
 	static const char* const CONFIG_DOUBLE_BLUR_FACTOR =
 		"movementBlurFactor";
-
+	static const char* const CONFIG_FLOAT_PS_TR = "Transation";
+		static const char* const 	CONFIG_FLOAT_ANGLE =  "Angle";
 	// Motion rectagle padding and min size constants
 	static const char* const CONFIG_MOTION_RECTANGLE_PADDING =
 		"motionRectanglePadding";

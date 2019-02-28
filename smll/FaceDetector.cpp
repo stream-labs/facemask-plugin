@@ -222,12 +222,6 @@ namespace smll {
 	}
 
 	void FaceDetector::DetectFaces(cv::Mat &inputImage, int width, int height, DetectionResults& results) {
-		// Wait for CONFIG_INT_FACE_DETECT_FREQUENCY after all faces are lost before trying to detect them again
-		if (m_timeout > 0) {    
-			m_timeout--;
-			results.processedResults.FrameSkipped();
-			return;
-		}
 
 		// better check if the camera res has changed on us
 		if ((resizeWidth != width) ||
@@ -251,6 +245,7 @@ namespace smll {
 		// if number of frames before the last detection is bigger than the threshold or if there are no faces to track
 		if (m_detectionTimeout == 0 || !wasFaceDetected) {
 			computeCurrentImage(results);
+			m_faces.length = 0;
 			DoFaceDetection();
 			if (m_faces.length > 0) {
 				m_detectionTimeout =
@@ -262,7 +257,7 @@ namespace smll {
 				results.processedResults.DetectionFailed();
 			}
 		}
-		else if (m_trackingTimeout == 0) {
+		else {
 			m_detectionTimeout--;
 
 			UpdateObjectTracking();
@@ -291,12 +286,6 @@ namespace smll {
 			}
 			results.length = m_faces.length;
 		}
-		else
-		{
-			m_detectionTimeout--;
-			m_trackingTimeout--;
-			results.processedResults.FrameSkipped();
-		}
 
 		// copy faces to results
 		for (int i = 0; i < m_faces.length; i++) {
@@ -304,14 +293,6 @@ namespace smll {
 		}
 		results.length = m_faces.length;
 
-		if (trackingFailed || m_faces.length == 0) {
-
-		}
-		// If faces are not found
-		if (m_faces.length == 0 && !trackingFailed && !wasFaceDetected) {
-            // Wait for 5 frames and do face detection
-            m_timeout = Config::singleton().get_int(CONFIG_INT_FACE_DETECT_FREQUENCY);
-		}
 	}
 
 	void FaceDetector::MakeTriangulation(MorphData& morphData, 
@@ -1073,13 +1054,13 @@ namespace smll {
 	void FaceDetector::DetectLandmarks(DetectionResults& results)
     {
 		// detect landmarks
-		for (int f = 0; f < m_faces.length; f++) {
+		for (int f = 0; f < results.length; f++) {
 			// Detect features on full-size frame
 
 
 			dlib::cv_image<unsigned char> img(grayImage);
 
-			d68 = m_predictor68(img, m_faces[f].m_bounds);
+			d68 = m_predictor68(img, results[f].bounds);
 
 			// Sanity check
 			if (d68.num_parts() != NUM_FACIAL_LANDMARKS)
