@@ -343,10 +343,53 @@ namespace smll {
 		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE)) {
 			
 			// update smoothing factor
-			double smoothing = Config::singleton().get_double(CONFIG_FLOAT_SMOOTHING_FACTOR);
-			for (int i = 0; i < KF_NUM_FILTERS; i++) {
-				kalmanFilters[i].SetMeasurementNoiseCovariance(smoothing);
+			double smoothing1 = Config::singleton().get_double(CONFIG_FLOAT_SMOOTHING_FACTOR1);
+			double smoothing2 = Config::singleton().get_double(CONFIG_FLOAT_SMOOTHING_FACTOR2);
+			double smoothing3 = Config::singleton().get_double(CONFIG_FLOAT_SMOOTHING_FACTOR3);
+			double smoothing4 = Config::singleton().get_double(CONFIG_FLOAT_SMOOTHING_FACTOR4);
+			double smoothing5 = Config::singleton().get_double(CONFIG_FLOAT_SMOOTHING_FACTOR5);
+			double smoothing6 = Config::singleton().get_double(CONFIG_FLOAT_SMOOTHING_FACTOR6);
+			double smoothing7 = Config::singleton().get_double(CONFIG_FLOAT_SMOOTHING_FACTOR7);
+
+			// update smoothing factor
+			double tresh1 = Config::singleton().get_double(CONFIG_FLOAT_DIFF_FACTOR1);
+			double tresh2 = Config::singleton().get_double(CONFIG_FLOAT_DIFF_FACTOR2);
+			double tresh3 = Config::singleton().get_double(CONFIG_FLOAT_DIFF_FACTOR3);
+			double tresh4 = Config::singleton().get_double(CONFIG_FLOAT_DIFF_FACTOR4);
+			double tresh5 = Config::singleton().get_double(CONFIG_FLOAT_DIFF_FACTOR5);
+			double tresh6 = Config::singleton().get_double(CONFIG_FLOAT_DIFF_FACTOR6);
+			double tresh7 = Config::singleton().get_double(CONFIG_FLOAT_DIFF_FACTOR7);
+
+
+			if (std::abs(pose.translation[0] - r.pose.translation[0]) > tresh1) {
+				smoothing1 = 0;
 			}
+			if (std::abs(pose.translation[1] - r.pose.translation[1]) > tresh2) {
+				smoothing2 = 0;
+			}
+			if (std::abs(pose.translation[2] - r.pose.translation[2]) > tresh3) {
+				smoothing3 = 0;
+			}
+			if (std::abs(pose.rotation[0] - r.pose.rotation[0]) > tresh4) {
+				smoothing4 = 0;
+			}
+			if (std::abs(pose.rotation[1] - r.pose.rotation[1]) > tresh5) {
+				smoothing5 = 0;
+			}
+			if (std::abs(pose.rotation[2] - r.pose.rotation[2]) > tresh6) {
+				smoothing6 = 0;
+			}
+			if (std::abs(pose.rotation[3] - r.pose.rotation[3]) > tresh7) {
+				smoothing7 = 0;
+			}
+
+			kalmanFilters[0].SetMeasurementNoiseCovariance(smoothing1);
+			kalmanFilters[1].SetMeasurementNoiseCovariance(smoothing2);
+			kalmanFilters[2].SetMeasurementNoiseCovariance(smoothing3);
+			kalmanFilters[3].SetMeasurementNoiseCovariance(smoothing4);
+			kalmanFilters[4].SetMeasurementNoiseCovariance(smoothing5);
+			kalmanFilters[5].SetMeasurementNoiseCovariance(smoothing6);
+			kalmanFilters[6].SetMeasurementNoiseCovariance(smoothing7);
 
 			// update the kalman filters
 			ntx[0] = kalmanFilters[KF_TRANS_X].Update(ntx[0]);

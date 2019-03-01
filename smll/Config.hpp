@@ -62,8 +62,21 @@ namespace smll {
 		"toggleFDSettings";
 
 	// Smoothing factor
-	static const char* const CONFIG_FLOAT_SMOOTHING_FACTOR =
-		"smoothingFactor";
+	static const char* const CONFIG_FLOAT_SMOOTHING_FACTOR1 = "smoothingFactor1";
+	static const char* const CONFIG_FLOAT_SMOOTHING_FACTOR2 = "smoothingFactor2";
+	static const char* const CONFIG_FLOAT_SMOOTHING_FACTOR3 = "smoothingFactor3";
+	static const char* const CONFIG_FLOAT_SMOOTHING_FACTOR4 = "smoothingFactor4";
+	static const char* const CONFIG_FLOAT_SMOOTHING_FACTOR5 = "smoothingFactor5";
+	static const char* const CONFIG_FLOAT_SMOOTHING_FACTOR6 = "smoothingFactor6";
+	static const char* const CONFIG_FLOAT_SMOOTHING_FACTOR7 = "smoothingFactor7";
+
+	static const char* const CONFIG_FLOAT_DIFF_FACTOR1 = "diffFactor1";
+	static const char* const CONFIG_FLOAT_DIFF_FACTOR2 = "diffFactor2";
+	static const char* const CONFIG_FLOAT_DIFF_FACTOR3 = "diffFactor3";
+	static const char* const CONFIG_FLOAT_DIFF_FACTOR4 = "diffFactor4";
+	static const char* const CONFIG_FLOAT_DIFF_FACTOR5 = "diffFactor5";
+	static const char* const CONFIG_FLOAT_DIFF_FACTOR6 = "diffFactor6";
+	static const char* const CONFIG_FLOAT_DIFF_FACTOR7 = "diffFactor7";
 	static const char* const CONFIG_DLIB = "DLIB";
 	static const char* const CONFIG_OF = "OF";
 	// Face Detection Vars ----------
