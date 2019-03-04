@@ -7,8 +7,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
 
 SET(PATH_DLIB "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dlib")
-set(USE_AVX_INSTRUCTIONS ON CACHE BOOL "Use AVX instructions" FORCE)
-set(USE_SSE4_INSTRUCTIONS ON CACHE BOOL "Use SSE4 instructions" FORCE)
 set(DLIB_NO_GUI_SUPPORT OFF CACHE STRING "DLib GUI support" FORCE)
 set(DLIB_GIF_SUPPORT OFF CACHE STRING "DLib GIF support" FORCE)
 set(DLIB_JPEG_SUPPORT OFF CACHE STRING "DLib JPEG support"  FORCE)
@@ -238,6 +236,7 @@ SET(facemask-plugin_HEADERS
 	"${PROJECT_SOURCE_DIR}/plugin/exceptions.h"
 	"${PROJECT_SOURCE_DIR}/plugin/face-mask-filter.h"
 	"${PROJECT_SOURCE_DIR}/plugin/plugin.h"
+
 	"${PROJECT_SOURCE_DIR}/plugin/strings.h"
 	"${PROJECT_SOURCE_DIR}/plugin/utils.h"
 	"${PROJECT_BINARY_DIR}/version.h"
@@ -316,7 +315,6 @@ SET(facemask-plugin_DATA
 	"${PROJECT_SOURCE_DIR}/data/locale/en-US.ini"
 )
 SET(facemask-plugin_LIBRARIES
-	dlib::dlib
 	${OpenCV_LIBS}
 	avrt.lib
 	Shlwapi.lib
@@ -367,13 +365,52 @@ add_library(facemask-plugin-objlib OBJECT
 )
 
 set_property(TARGET facemask-plugin-objlib PROPERTY POSITION_INDEPENDENT_CODE 1)
-add_library(facemask-plugin MODULE $<TARGET_OBJECTS:facemask-plugin-objlib>)
 
+if (BUILD_FOR_PUBLIC)
+	ADD_LIBRARY(facemask_AVX MODULE 
+		${facemask-plugin_HEADERS}
+		${facemask-plugin_SOURCES}
+		${facemask-plugin_DATA})
+		
+	ADD_LIBRARY(facemask_NO_AVX MODULE
+		${facemask-plugin_HEADERS}
+		${facemask-plugin_SOURCES}
+		${facemask-plugin_DATA})
+	
+	ADD_LIBRARY(facemask-plugin MODULE
+		"${PROJECT_SOURCE_DIR}/plugin/plugin_wrapper.cpp"
+	)
 
-TARGET_LINK_LIBRARIES(facemask-plugin
-	${LIBOBS_LIBRARIES}
-	${facemask-plugin_LIBRARIES}
-)
+else()
+	add_library(facemask-plugin MODULE $<TARGET_OBJECTS:facemask-plugin-objlib>)
+
+endif()
+
+if (BUILD_FOR_PUBLIC)
+	TARGET_LINK_LIBRARIES(facemask_AVX
+		${LIBOBS_LIBRARIES}
+		${facemask-plugin_LIBRARIES}
+		dlib::dlib
+	)
+	
+	TARGET_LINK_LIBRARIES(facemask_NO_AVX
+		${LIBOBS_LIBRARIES}
+		${facemask-plugin_LIBRARIES}
+		dlib::dlib_NO_AVX
+	)
+	
+	TARGET_LINK_LIBRARIES(facemask-plugin ${LIBOBS_LIBRARIES}
+		dlib::dlib_NO_AVX
+	)
+else()
+
+	TARGET_LINK_LIBRARIES(facemask-plugin
+		${LIBOBS_LIBRARIES}
+		${facemask-plugin_LIBRARIES}
+		dlib::dlib
+	)
+	
+endif()
 
 if(BUILD_UNIT_TESTS)
 	add_executable(facemask-plugin-test
@@ -421,6 +458,27 @@ add_custom_command(TARGET facemask-plugin POST_BUILD
 	"${PROJECT_BINARY_DIR}/distribute/package.json"
 )
 
-
+if (BUILD_FOR_PUBLIC)
+	add_custom_command(TARGET facemask_AVX POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy
+		"$<TARGET_FILE:facemask_AVX>"
+		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/$<TARGET_FILE_NAME:facemask_AVX>"
+	)
+	add_custom_command(TARGET facemask_AVX POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy
+		"$<TARGET_FILE_DIR:facemask-plugin>/facemask_AVX.pdb"
+		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/facemask_AVX.pdb"
+	)
+	add_custom_command(TARGET facemask_NO_AVX POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy
+		"$<TARGET_FILE:facemask_NO_AVX>"
+		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/$<TARGET_FILE_NAME:facemask_NO_AVX>"
+	)
+	add_custom_command(TARGET facemask_NO_AVX POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy
+		"$<TARGET_FILE_DIR:facemask-plugin>/facemask_NO_AVX.pdb"
+		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/facemask_NO_AVX.pdb"
+	)	
+endif()
 
 
