@@ -10,6 +10,7 @@ landmarks in images read from a webcam and points that drew by the program.
 #include <dlib/image_processing/render_face_detections.h>
 #include <dlib/image_processing.h>
 #include <dlib/gui_widgets.h>
+#include <dlib/cuda/cuda_dlib.h>
 #include <stdio.h>
 #include <opencv2/video/tracking.hpp>
 #include <smll/Face.hpp>
@@ -51,7 +52,7 @@ const int stateNum = 4*7;
 const int measureNum = 2*7;
 frontal_face_detector detector;
 shape_predictor pose_model;
-double scaling = 0.25;
+double scaling = 0.5;
 int flag = -1;
 int count = 0;
 bool redetected = true;
@@ -62,7 +63,7 @@ Mat state;
 Mat processNoise; 
 Mat measurement ;	
 // Initialize Optical Flow
-cv::Mat prevgray, gray;
+cv::Mat prevgray, gray, gr;
 std::vector<cv::Point2f> prevTrackPts;
 std::vector<cv::Point2f> nextTrackPts;
 
@@ -100,7 +101,6 @@ void landmark_tracking(cv::Mat &raw, smll::DetectionResults &res, bool& updateKF
 
 		// Resize
 		cv::Mat tmp;
-		dlib::cv_image<bgr_pixel> cimg_land(raw);
 		cv::resize(raw, tmp, cv::Size(), scaling, scaling);
 
 		//Flip
@@ -113,20 +113,18 @@ void landmark_tracking(cv::Mat &raw, smll::DetectionResults &res, bool& updateKF
 		// to reallocate the memory which stores the image as that will make cimg
 		// contain dangling pointers.  This basically means you shouldn't modify temp
 		// while using cimg.
-		dlib::cv_image<bgr_pixel> cimg(temp);
+		
+
+		cvtColor(temp, gr, COLOR_BGR2GRAY);
+		dlib::cv_image<unsigned char> cimg(gr);
+
 		std::vector<dlib::rectangle> faces;
 		// Find the pose of each face.
 		std::vector<full_object_detection> shapes;
 
-		if (flag == -1) {
-			faces = detector(cimg);
-			for (unsigned long i = 0; i < faces.size(); ++i) {
-				faces[i].set_left(faces[i].left()/scaling);
-				faces[i].set_right(faces[i].right() / scaling);
-				faces[i].set_top(faces[i].top() / scaling);
-				faces[i].set_bottom(faces[i].bottom() / scaling);
-				shapes.push_back(pose_model(cimg_land, faces[i]));
-			}
+		faces = detector(cimg);
+		for (unsigned long i = 0; i < faces.size(); ++i) {
+			shapes.push_back(pose_model(cimg, faces[i]));
 		}
 
 		// We cannot modify temp so we clone a new one
@@ -138,8 +136,9 @@ void landmark_tracking(cv::Mat &raw, smll::DetectionResults &res, bool& updateKF
 			cvtColor(frame, prevgray, COLOR_BGR2GRAY);
 			const full_object_detection& d = shapes[0];
 			for (int j = 0; j < model_indices.size(); j++) {
-				prevTrackPts[j].x = d.part(j).x();
-				prevTrackPts[j].y = d.part(j).y();
+				int i = model_indices[j];
+				prevTrackPts[j].x = d.part(i).x();
+				prevTrackPts[j].y = d.part(i).y();
 			}
 			flag = 1; 
 		}
@@ -163,35 +162,26 @@ void landmark_tracking(cv::Mat &raw, smll::DetectionResults &res, bool& updateKF
 
 		// Optical Flow + Kalman Filter + Dlib based on the speed of face movement
 		res.length = 0;
-		cvtColor(frame, gray, COLOR_BGR2GRAY);
-		if (prevgray.data && flag ==1) {
-			std::vector<uchar> status;
-			std::vector<float> err;
-			calcOpticalFlowPyrLK(prevgray, gray, prevTrackPts, nextTrackPts, status, err);
+		if (shapes.size() == 1 && flag == 1) {
+			cvtColor(frame, gray, COLOR_BGR2GRAY);
+			if (prevgray.data) {
+				std::vector<uchar> status;
+				std::vector<float> err;
+				calcOpticalFlowPyrLK(prevgray, gray, prevTrackPts, nextTrackPts, status, err);
 
-			double diff = cal_dist_diff(prevTrackPts, nextTrackPts);
-			blog(LOG_DEBUG, "Var %f", diff);
+				double diff = cal_dist_diff(prevTrackPts, nextTrackPts);
+				blog(LOG_DEBUG, "Var %f", diff);
+				const full_object_detection& d = shapes[0];
 
-
-			if (diff > dlib_tres) {
-				faces = detector(cimg);
-				for (unsigned long i = 0; i < faces.size(); ++i) {
-
-					faces[i].set_left(faces[i].left() / scaling);
-					faces[i].set_right(faces[i].right() / scaling);
-					faces[i].set_top(faces[i].top() / scaling);
-					faces[i].set_bottom(faces[i].bottom() / scaling);
-
-					shapes.push_back(pose_model(cimg_land, faces[i]));
-
+				for (int i = 0; i < d.num_parts(); i++) {
+					res[0].landmarks68[i] = point(d.part(i).x() / scaling, d.part(i).y() / scaling);
 				}
 
-				blog(LOG_DEBUG, "DLib");
-				if (shapes.size() == 1) {
-					const full_object_detection& d = shapes[0];
-					for (int i = 0; i < d.num_parts(); i++) {
-						res[0].landmarks68[i] = point(d.part(i).x(), d.part(i).y());
-					}
+				if (diff > dlib_tres) {
+
+
+					blog(LOG_DEBUG, "DLib");
+
 
 
 					for (int j = 0; j < model_indices.size(); j++) {
@@ -200,28 +190,33 @@ void landmark_tracking(cv::Mat &raw, smll::DetectionResults &res, bool& updateKF
 						nextTrackPts[j].y = d.part(i).y();
 						//cv::circle(face_5, cv::Point2f(d.part(j).x(), d.part(j).y()), 2, cv::Scalar(0, 0, 255), -1);
 					}
-				}
 
-
-				res.length = 1;
-			}else {
-				// In this case, use Optical Flow
-				std::cout << "Optical Flow" << std::endl;
-				blog(LOG_DEBUG, "OF");
-				for (int j = 0; j < model_indices.size(); j++) {
-					int i = model_indices[j];
-					res[0].landmarks68[i] = point( nextTrackPts[j].x,  nextTrackPts[j].y);
-					//cv::circle(face_5, nextTrackPts[j], 2, cv::Scalar(255, 0, 0), -1);
+					int n = dlib::cuda::get_num_devices();
+					blog(LOG_DEBUG, "Num dev %d", n);
+					res.length = 1;
 				}
-				res.length = 1;
+				else {
+					// In this case, use Optical Flow
+					std::cout << "Optical Flow" << std::endl;
+					blog(LOG_DEBUG, "OF");
+					for (int j = 0; j < model_indices.size(); j++) {
+						int i = model_indices[j];
+						nextTrackPts[j].x = prevTrackPts[j].x;							//nextTrackPts[j].y = prevTrackPts[j].y;
+						nextTrackPts[j].y = prevTrackPts[j].y;
+						res[0].landmarks68[i] = point(nextTrackPts[j].x / scaling, nextTrackPts[j].y / scaling);
+						//cv::circle(face_5, nextTrackPts[j], 2, cv::Scalar(255, 0, 0), -1);
+					}
+					res.length = 1;
+				}
 			}
-		} else {
-			redetected = true;
+			else {
+				redetected = true;
+			}
+			// previous points should be updated with the current points
+			std::swap(prevTrackPts, nextTrackPts);
+			std::swap(prevgray, gray);
 		}
 
-		// previous points should be updated with the current points
-		std::swap(prevTrackPts, nextTrackPts);
-		std::swap(prevgray, gray);
 	/*	// Update Measurement
 		for (int i = 0; i < 2*7; i++) {
 			if (i % 2 == 0) {
