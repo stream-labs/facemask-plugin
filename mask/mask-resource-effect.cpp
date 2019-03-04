@@ -22,6 +22,10 @@
 #include "plugin/plugin.h"
 #include "plugin/utils.h"
 
+extern "C" {
+#include <libobs/graphics/graphics.h>
+}
+
 Mask::Resource::Effect::Effect(Mask::MaskData* parent, std::string name, obs_data_t* data)
 	: IBase(parent, name) {
 	const char* const S_DATA = "data";
@@ -63,7 +67,49 @@ void Mask::Resource::Effect::Update(Mask::Part* part, float time) {
 void Mask::Resource::Effect::Render(Mask::Part* part) {
 	UNUSED_PARAMETER(part);
 	if (m_Effect == nullptr) {
-		m_Effect = std::make_shared<GS::Effect>(m_filename);
+
+		static const std::map<std::string, std::string> g_textureTypes = {
+			{"ambientTex", "AMBIENT_TEX"},
+			{"diffuseTex", "DIFFUSE_TEX"},
+			{"specularTex", "SPECULAR_TEX"},
+			{"emissiveTex", "EMISSIVE_TEX"},
+			{"normalTex", "NORMAL_TEX"},
+			{"reflectTex", "REFLECT_TEX"},
+			{"iblSpecTex", "IBL_SPEC_TEX"},
+			{"iblDiffTex", "IBL_DIFF_TEX"},
+			{"iblBRDFTex", "IBL_BRDF_TEX"},
+			{"roughnessTex", "ROUGHNESS_TEX"},
+			{"metalnessTex", "METALNESS_TEX"},
+			{"metallicRoughnessTex", "METALLICROUGHNESS_TEX"},
+			{"vidLightingTex", "USE_VIDEO_LIGHTING"}
+		};
+
+		char *file_string;
+		file_string = os_quick_read_utf8_file(m_filename.c_str());
+		if (!file_string) {
+			blog(LOG_ERROR, "Could not load effect file '%s'", m_filename.c_str());
+			return;
+		}
+
+		/*
+			These #defines can be applied cleaner.
+			However, it will require modifying libobs
+			to support getting defines parameters for
+			compiling textures as well. Currently, it just
+			sets the parameter for DX to null.
+			TODO Mod libobs, or just port to direct OpenGL
+		*/
+		std::string dynamic_shader_string;
+		for (const std::string &tex_type : m_active_textures) {
+			if (g_textureTypes.find(tex_type) != g_textureTypes.end()) {
+				dynamic_shader_string += "#define " + g_textureTypes.at(tex_type) + "\n";
+			}
+		}
+		dynamic_shader_string += file_string;
+		bfree(file_string);
+
+		m_Effect = std::make_shared<GS::Effect>(dynamic_shader_string, m_filename);
+
 		if (m_filenameIsTemp) {
 			Utils::DeleteTempFile(m_filename);
 		}

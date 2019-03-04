@@ -1,0 +1,104 @@
+uniform float4x4 ViewProj;
+uniform texture2d image;
+
+uniform float2 texel_size;
+uniform float gamma = 5;
+uniform bool   first_pass;
+
+sampler_state textureSampler {
+	Filter    = Linear;
+	AddressU  = Clamp;
+	AddressV  = Clamp;
+};
+
+struct VertData {
+	float4 pos : POSITION;
+	float2 uv  : TEXCOORD0;
+};
+
+float get_brightness(float3 color) {
+	float3 brightness_factor = {.30, .59, .11};
+	return dot(color, brightness_factor);
+}
+
+VertData VSGrading(VertData v_in)
+{
+	VertData vert_out;
+	vert_out.pos = mul(float4(v_in.pos.xyz, 1.0), ViewProj);
+	vert_out.uv  = v_in.uv;
+	return vert_out;
+}
+
+float4 PSGrading(VertData v_in) : TARGET
+{
+	float2 coords[4] = { float2(0,0),
+	                     float2(texel_size.x, 0),
+	                     float2(texel_size.x, texel_size.y),
+	                     float2(0, texel_size.y)};
+	float3 bright_color_avg = {0,0,0};
+	float bright_color_weight = 0;
+	float3 current_color;
+	float current_brightness;
+	float brightness = 0.0;
+	float4 color;
+	float current_weight;
+
+	if (first_pass)
+	{
+		for(int i = 0; i < 4; i++) {
+			color = image.Sample(textureSampler, v_in.uv+coords[i]);
+			current_color = color.rgb;
+			current_color *= color.a;
+			current_brightness = get_brightness(current_color);
+
+			current_weight = pow(current_brightness, gamma);
+
+			bright_color_avg += current_color.rgb * current_weight;
+			brightness += current_brightness * current_weight;
+			bright_color_weight += current_weight;
+
+		}
+		if(bright_color_weight>0.0) {
+			bright_color_avg /= bright_color_weight;
+			brightness /= bright_color_weight;
+		}
+		else {
+			// use a neutral color and brightness
+			brightness = 0.5;
+			bright_color_avg = 1.0;
+		}
+		return float4(bright_color_avg, brightness);
+	}
+	else {
+		for(int i = 0; i < 4; i++) {
+			color = image.Sample(textureSampler, v_in.uv+coords[i]);
+			current_brightness = color.a;
+			
+			current_weight = pow(current_brightness, gamma);
+
+			bright_color_avg += color.rgb * current_weight;
+			brightness += current_brightness * current_weight;
+			bright_color_weight += current_weight;
+
+		}
+		if(bright_color_weight>0.0) {
+			bright_color_avg /= bright_color_weight;
+			brightness /= bright_color_weight;
+		}
+		else {
+			// use a neutral color and brightness
+			brightness = 0.5;
+			bright_color_avg = 1.0;
+		}
+		return float4(bright_color_avg, brightness);
+	}
+}
+
+technique Draw
+{
+	pass
+	{
+		vertex_shader = VSGrading(v_in);
+		pixel_shader  = PSGrading(v_in);
+	}
+}

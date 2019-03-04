@@ -164,6 +164,18 @@ void command_merge(Args& args) {
 				j["parts"][k]["parent"] = n + parent;
 			}
 
+			// update local-to info
+			if (j["parts"][k].find("local-to") != j["parts"][k].end())
+			{
+				string local_to = j["parts"][k]["local-to"];
+				if (local_to.find("directionalLight") == string::npos &&
+					local_to.find("pointLight") == string::npos &&
+					local_to != "depth_head")
+				{
+					j["parts"][k]["local-to"] = n + local_to;
+				}
+			}
+
 			// old single resource
 			if (j["parts"][k].find("resource") != j["parts"][k].end()) {
 				string r = j["parts"][k]["resource"];

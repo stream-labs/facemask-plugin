@@ -23,6 +23,9 @@
 
 #define MAX_BONES_PER_SKIN		(8)
 
+#define INHERIT_TYPE_RrSs 0
+#define INHERIT_TYPE_RSrs 1
+#define INHERIT_TYPE_Rrs 2
 
 #define ALIGNED(XXX) (((size_t)(XXX) & 0xF) ? (((size_t)(XXX) + 0x10) & 0xFFFFFFFFFFFFFFF0ULL) : (size_t)(XXX))
 
@@ -36,6 +39,7 @@ struct vec3 {
 		float ptr[4];
 		__m128 m;
 	};
+	vec3() :m() {}
 };
 struct gs_tvertarray {
 	size_t width;
@@ -60,12 +64,12 @@ public:
 		points = new vec3[num];
 		normals = new vec3[num];
 		tangents = new vec3[num];
-		colors = new uint32_t[num];
+		colors = new uint32_t[num]();
 		num_tex = 8;
 		tvarray = new gs_tvertarray[num_tex];
 		for (int i = 0; i < 8; i++) {
 			tvarray[i].width = 4;
-			tvarray[i].array = new float[num * 4];
+			tvarray[i].array = new float[num * 4]();
 		}
 	}
 	~GSVertexBuffer() {
@@ -265,11 +269,13 @@ void RemovePostRotationNodes(aiNode* node) {
 	}
 }
 
-void AddNodes(const aiScene* scene, aiNode* node, json* parts) {
+string AddNodes(const aiScene* scene, aiNode* node, json* parts) {
 	if (!node)
-		return;
+		return string();
 
 	string nodeName = node->mName.C_Str();
+	bool needs_local_nodes = false;
+	string source_node_name = string();
 	if (nodeName != "root") {
 		json part;
 		if (node->mParent) {
@@ -309,6 +315,23 @@ void AddNodes(const aiScene* scene, aiNode* node, json* parts) {
 		s["z"] = scl.z;
 		part["scale"] = s;
 
+		// insert inherit type if other than the default
+		// INHERIT_TYPE_RrSs: Apply parent scaling after child scaling.
+		// INHERIT_TYPE_RSrs: What logically should happen: First parent rotation and scaling, and then child's. 
+		// INHERIT_TYPE_Rrs:  Parent scaling is ignored.
+		if (node->mMetaData) {
+			int type;
+			if (node->mMetaData->Get("InheritType", type))
+			{
+				needs_local_nodes = true;
+				source_node_name = node->mName.C_Str();
+				if (type != INHERIT_TYPE_RSrs)
+				{
+					part["inherit-type"] = type;
+				}
+			}
+		}
+
 		// add mesh resources
 		json rez;
 		for (unsigned int i = 0; i < node->mNumMeshes; i++) {
@@ -332,13 +355,23 @@ void AddNodes(const aiScene* scene, aiNode* node, json* parts) {
 		if (node->mNumMeshes > 0 || lightNum >= 0)
 			part["resources"] = rez;
 
-		// add the part
+		if (!needs_local_nodes && node->mNumChildren == 1) {
+			string local_to = AddNodes(scene, node->mChildren[0], parts);
+			if (local_to.length() > 0) {
+				part["local-to"] = local_to;
+			}
+			(*parts)[node->mName.C_Str()] = part;
+			return local_to;
+		}
+
 		(*parts)[node->mName.C_Str()] = part;
 	}
 
 	for (unsigned int i = 0; i < node->mNumChildren; i++) {
 		AddNodes(scene, node->mChildren[i], parts);
 	}
+
+	return source_node_name;
 }
 
 aiNode* FindNode(aiNode* node, const string& name) {
@@ -364,26 +397,6 @@ string getMaterialTexture(aiMaterial* mtl, aiTextureType tt) {
 		p = path.C_Str();
 	}
 	return p;
-}
-
-string getTextureName(aiTextureType tt) {
-	switch (tt) {
-	case aiTextureType_AMBIENT:
-		return "ambient";
-	case aiTextureType_DIFFUSE:
-		return "diffuse";
-	case aiTextureType_SPECULAR:
-		return "specular";
-	case aiTextureType_EMISSIVE:
-		return "emissive";
-	case aiTextureType_HEIGHT:
-	case aiTextureType_NORMALS:
-		return "normal";
-	case aiTextureType_LIGHTMAP:
-	case aiTextureType_REFLECTION:
-		return "reflect";
-	}
-	return "";
 }
 
 string lightTypeToString(aiLightSourceType t) {
@@ -474,30 +487,6 @@ vec3 GetCenter(const GSVertexBuffer& vertices) {
 }
 
 
-
-
-#define GETTEXTURE(_TEXTYPE_) {\
-imgfile = getMaterialTexture(scene->mMaterials[i], _TEXTYPE_);\
-if (imgfile.length() > 0) {\
-snprintf(temp, sizeof(temp), "%s-%d", getTextureName(_TEXTYPE_).c_str(), i);\
-textureFiles[temp] = imgfile;\
-}}
-
-#define SETTEXPARAM(_TEXTYPE_) {\
-imgfile = getMaterialTexture(scene->mMaterials[i], _TEXTYPE_);\
-if (imgfile.length() > 0) {\
-string paramName = getTextureName(_TEXTYPE_);\
-snprintf(temp, sizeof(temp), "%s-%d", paramName.c_str(), i);\
-textureFiles[temp] = imgfile;\
-json parm;\
-parm["type"] = "texture";\
-parm["value"] = temp;\
-params[paramName + "Tex"] = parm;\
-parm["type"] = "integer";\
-parm["value"] = 1;\
-params[paramName + "Map"] = parm;\
-}}
-
 void command_import(Args& args) {
 
 	// get filename
@@ -532,18 +521,13 @@ void command_import(Args& args) {
 	}
 
 	// Get a list of all the textures
-	map<string, string> textureFiles;
+	map<std::tuple<string,unsigned int>, string> textureFiles;
 	for (unsigned int i = 0; i < scene->mNumMaterials; i++) {
-		char temp[256];
-		string imgfile;
-		GETTEXTURE(aiTextureType_AMBIENT);
-		GETTEXTURE(aiTextureType_DIFFUSE);
-		GETTEXTURE(aiTextureType_SPECULAR);
-		GETTEXTURE(aiTextureType_EMISSIVE);
-		GETTEXTURE(aiTextureType_HEIGHT);
-		GETTEXTURE(aiTextureType_NORMALS);
-		GETTEXTURE(aiTextureType_LIGHTMAP);
-		GETTEXTURE(aiTextureType_REFLECTION);
+		auto tex_map = scene->mMaterials[i]->GetAllTextures();
+		for (auto &kv : tex_map)
+		{
+			textureFiles[std::make_tuple(kv.first,i)] = kv.second;
+		}
 	}
 
 	json rez;
@@ -702,6 +686,7 @@ void command_import(Args& args) {
 				// Reset Skin vars
 				numIndices = 0;
 				numVertices = 0;
+				vertices.num = mesh->mNumVertices;
 				std::vector<int> bones;
 
 				// Walk triangles
@@ -793,7 +778,7 @@ void command_import(Args& args) {
 
 				// encode 
 				size_t vbuffSize = vertices.size();
-				uint8_t* vbuff = new uint8_t[vbuffSize + 16];
+				uint8_t* vbuff = new uint8_t[vbuffSize + 16]();
 				uint8_t* aligned = (uint8_t*)ALIGNED(vbuff);
 				vertices.get_data(aligned);
 				string vertexDataBase64 =
@@ -872,15 +857,16 @@ void command_import(Args& args) {
 			}
 			// encode vertices
 			size_t vbuffSize = vertices.size();
-			uint8_t* vbuff = new uint8_t[vbuffSize + 16];
+			uint8_t* vbuff = new uint8_t[vbuffSize + 16]();
 			uint8_t* aligned = (uint8_t*)ALIGNED(vbuff);
 			vertices.get_data(aligned);
 			string vertexDataBase64 =
 				base64_encodeZ(aligned, vbuffSize);
+
 			delete[] vbuff;
 
 			// Build index list
-			unsigned int* indices = new unsigned int[mesh->mNumFaces * 3];
+			unsigned int* indices = new unsigned int[mesh->mNumFaces * 3]();
 			int indIdx = 0;
 			for (unsigned int j = 0; j < mesh->mNumFaces; j++) {
 				aiFace& face = mesh->mFaces[j];
@@ -916,13 +902,13 @@ void command_import(Args& args) {
 	// Add all the textures
 	int count = 0;
 	cout << "Importing textures..." << endl;
-	map<string, bool> textureHasAlpha;
+	map<std::tuple<string, unsigned int>, bool> textureHasAlpha;
 	for (auto it = textureFiles.begin(); it != textureFiles.end(); it++, count++) {
 		json o = args.createImageResourceFromFile(it->second);
 		textureHasAlpha[it->first] = args.lastImageHadAlpha;
 		if (args.lastImageHadAlpha)
-			cout << it->first << " " << " has alpha" << endl;
-		rez[it->first] = o;
+			cout << std::get<string>(it->first) << " " << " has alpha" << endl;
+		rez[std::get<string>(it->first)+"-"+std::to_string(std::get<unsigned int>(it->first))] = o;
 	}
 	cout << "Imported " << count << " textures." << endl;
 
@@ -951,36 +937,41 @@ void command_import(Args& args) {
 		mtl->Get(AI_MATKEY_SHININESS, shininess);
 
 		// Texture params
-		SETTEXPARAM(aiTextureType_AMBIENT);
-		SETTEXPARAM(aiTextureType_DIFFUSE);
-		SETTEXPARAM(aiTextureType_SPECULAR);
-		SETTEXPARAM(aiTextureType_EMISSIVE);
-		SETTEXPARAM(aiTextureType_HEIGHT);
-		SETTEXPARAM(aiTextureType_NORMALS);
-		SETTEXPARAM(aiTextureType_LIGHTMAP);
-		SETTEXPARAM(aiTextureType_REFLECTION);
+		for (auto &kv : textureFiles)
+		{
+			if (std::get<unsigned int>(kv.first) == i) {
+				string key = std::get<string>(kv.first) + "-" + std::to_string(std::get<unsigned int>(kv.first));
+				json parm;
+				parm["type"] = "texture";
+				parm["value"] = key;
+				params[std::get<string>(kv.first) + "Tex"] = parm;
+				parm["type"] = "integer";
+				parm["value"] = 1;
+				params[std::get<string>(kv.first) + "Map"] = parm;
+			}
+		}
 
 		// Opaque flag, set based on textures
 		bool opaque = true;
-		vector<aiTextureType> ttypes = { aiTextureType_AMBIENT, aiTextureType_DIFFUSE,
-			aiTextureType_SPECULAR, aiTextureType_EMISSIVE, aiTextureType_REFLECTION };
-		for (int tt = 0; tt < ttypes.size(); tt++) {
-			imgfile = getMaterialTexture(scene->mMaterials[i], ttypes[tt]);
-			if (imgfile.length() > 0) {
-				string paramName = getTextureName(ttypes[tt]);
-				snprintf(temp, sizeof(temp), "%s-%d", paramName.c_str(), i);
-				if (textureHasAlpha[temp]) {
+		vector<aiTextureType> ttypes = { aiTextureType_AMBIENT(), aiTextureType_DIFFUSE(),
+			aiTextureType_SPECULAR(), aiTextureType_EMISSIVE(), aiTextureType_REFLECTION() };
+
+		for (auto &kv : textureFiles)
+		{
+			if (std::get<unsigned int>(kv.first) == i) {
+				if (textureHasAlpha[kv.first]) {
 					opaque = false;
 					break;
 				}
+
 			}
 		}
 
 		// Only set colors if textures aren't set
-		int namb = mtl->GetTextureCount(aiTextureType_AMBIENT);
-		int ndff = mtl->GetTextureCount(aiTextureType_DIFFUSE);
-		int nspc = mtl->GetTextureCount(aiTextureType_SPECULAR);
-		int nemm = mtl->GetTextureCount(aiTextureType_EMISSIVE);
+		int namb = mtl->GetTextureCount(aiTextureType_AMBIENT());
+		int ndff = mtl->GetTextureCount(aiTextureType_DIFFUSE());
+		int nspc = mtl->GetTextureCount(aiTextureType_SPECULAR());
+		int nemm = mtl->GetTextureCount(aiTextureType_EMISSIVE());
 
 		// Color Params
 		aiColor4D dcolor = aiColor4D(0.8f, 0.8f, 0.8f, 1.0f);
@@ -1001,11 +992,15 @@ void command_import(Args& args) {
 		aiColor4D scolor = aiColor4D(0.0f, 0.0f, 0.0f, 1.0f);
 		if (AI_SUCCESS == aiGetMaterialColor(mtl, AI_MATKEY_COLOR_SPECULAR, &scolor) &&
 			nspc == 0) {
+			// assimp stores specularfactor in shininess_strength
+			// attenuate specularcolor using this number
+			float strength = 1;
+			aiGetMaterialFloat(mtl, AI_MATKEY_SHININESS_STRENGTH, &strength);
 			json parm;
 			json cc;
-			cc["x"] = scolor.r;
-			cc["y"] = scolor.g;
-			cc["z"] = scolor.b;
+			cc["x"] = scolor.r * strength;
+			cc["y"] = scolor.g * strength;
+			cc["z"] = scolor.b * strength;
 			cc["w"] = scolor.a;
 			parm["type"] = "float4";
 			parm["value"] = cc;
@@ -1156,26 +1151,23 @@ void command_import(Args& args) {
 			o["up"] = p;
 		}
 
-		// NOTE: for some reason light colors out of assimp are
-		//       in percentages [0,100]
-
 		// color : ambient
 		json c;
-		c["x"] = light->mColorAmbient.r / 100.0f;
-		c["y"] = light->mColorAmbient.g / 100.0f;
-		c["z"] = light->mColorAmbient.b / 100.0f;
+		c["x"] = light->mColorAmbient.r;
+		c["y"] = light->mColorAmbient.g;
+		c["z"] = light->mColorAmbient.b;
 		o["ambient"] = c;
 
 		// color : diffuse
-		c["x"] = light->mColorDiffuse.r / 100.0f;
-		c["y"] = light->mColorDiffuse.g / 100.0f;
-		c["z"] = light->mColorDiffuse.b / 100.0f;
+		c["x"] = light->mColorDiffuse.r;
+		c["y"] = light->mColorDiffuse.g;
+		c["z"] = light->mColorDiffuse.b;
 		o["diffuse"] = c;
 
 		// color : specular
-		c["x"] = light->mColorSpecular.r / 100.0f;
-		c["y"] = light->mColorSpecular.g / 100.0f;
-		c["z"] = light->mColorSpecular.b / 100.0f;
+		c["x"] = light->mColorSpecular.r;
+		c["y"] = light->mColorSpecular.g;
+		c["z"] = light->mColorSpecular.b;
 		o["specular"] = c;
 
 		// spot angles (only valid for spot lights)
@@ -1294,9 +1286,9 @@ void ImportAnimations(Args& args, const aiScene* scene, json& rez,
 			// Position
 			if (chan->mNumPositionKeys > 0) {
 				// get the key values
-				std::vector<float> xkeys;
-				std::vector<float> ykeys;
-				std::vector<float> zkeys;
+				std::vector<float> xkeys((int)std::ceil(anim->mDuration));
+				std::vector<float> ykeys((int)std::ceil(anim->mDuration));
+				std::vector<float> zkeys((int)std::ceil(anim->mDuration));
 				bool xch, ych, zch;
 				xch = ych = zch = false;
 				for (unsigned int k = 0; k < chan->mNumPositionKeys; k++) {
@@ -1308,18 +1300,88 @@ void ImportAnimations(Args& args, const aiScene* scene, json& rez,
 						ych = true;
 					if (FLT_NEQ((float)v.z, pos.z))
 						zch = true;
-					if (forMorph) {
-						int idx = GetDeltaIndex(chan->mNodeName.C_Str());
-						v = v - rest_points[idx];
-						v.y = -v.y;
-						v.z = -v.z;
+				}
+				bool found_keyframe;
+				for (size_t frame = 0; frame < anim->mDuration; frame++)
+				{
+					double timestamp = (double) frame;
+					found_keyframe = false;
+					for (size_t keyframe = 0; keyframe < chan->mNumPositionKeys-1; keyframe++)
+					{
+						const aiVectorKey& key = chan->mPositionKeys[keyframe];
+						double current_time = key.mTime;
+						const aiVector3D &cv = key.mValue;
+
+						const aiVectorKey& next_key = chan->mPositionKeys[keyframe+1];
+						double next_time = next_key.mTime;
+						const aiVector3D &nv = key.mValue;
+
+						if (current_time <= timestamp && next_time > timestamp) {
+							double delta_time = next_time - current_time;
+
+							// For now do linear interpolation
+							// In general case, we'll probably need bezier/spline curve evaluation
+							double x = (nv.x - cv.x) / delta_time * (timestamp - current_time) + cv.x;
+							double y = (nv.y - cv.y) / delta_time * (timestamp - current_time) + cv.y;
+							double z = (nv.z - cv.z) / delta_time * (timestamp - current_time) + cv.z;
+							aiVector3D v((float)x, (float)y,(float)z);
+
+							if (forMorph) {
+								int idx = GetDeltaIndex(chan->mNodeName.C_Str());
+								v = v - rest_points[idx];
+								v.y = -v.y;
+								v.z = -v.z;
+							}
+							else {
+								v.y = -v.y;
+							}
+
+							xkeys[frame] = v.x;
+							ykeys[frame] = v.y;
+							zkeys[frame] = v.z;
+							found_keyframe = true;
+							break;
+						}
+						else if (current_time > timestamp && next_time > timestamp) {
+							// the first keyframe is some time in the future
+							// use a constant repeat, until we reach to that time
+							aiVector3D v((float)cv.x, (float)cv.y, (float)cv.z);
+
+							if (forMorph) {
+								int idx = GetDeltaIndex(chan->mNodeName.C_Str());
+								v = v - rest_points[idx];
+								v.y = -v.y;
+								v.z = -v.z;
+							}
+							else {
+								v.y = -v.y;
+							}
+							xkeys[frame] = v.x;
+							ykeys[frame] = v.y;
+							zkeys[frame] = v.z;
+							found_keyframe = true;
+							break;
+						}
 					}
-					else {
-						v.y = -v.y;
+					if (!found_keyframe) {
+						// the frame is far past the last keyframe
+						// repeat the last keyframe
+						const aiVectorKey& last_key = chan->mPositionKeys[chan->mNumPositionKeys - 1];
+						aiVector3D v((float)last_key.mValue.x, (float)last_key.mValue.y, (float)last_key.mValue.z);
+
+						if (forMorph) {
+							int idx = GetDeltaIndex(chan->mNodeName.C_Str());
+							v = v - rest_points[idx];
+							v.y = -v.y;
+							v.z = -v.z;
+						}
+						else {
+							v.y = -v.y;
+						}
+						xkeys[frame] = v.x;
+						ykeys[frame] = v.y;
+						zkeys[frame] = v.z;
 					}
-					xkeys.emplace_back((float)v.x);
-					ykeys.emplace_back((float)v.y);
-					zkeys.emplace_back((float)v.z);
 				}
 				// only add non-static channels
 				if (xch) {
@@ -1377,18 +1439,14 @@ void ImportAnimations(Args& args, const aiScene* scene, json& rez,
 			// Rotation
 			if (chan->mNumRotationKeys > 0 && !forMorph) {
 				// get the key values
-				std::vector<float> xkeys;
-				std::vector<float> ykeys;
-				std::vector<float> zkeys;
-				std::vector<float> wkeys;
+				std::vector<float> xkeys((int)std::ceil(anim->mDuration));
+				std::vector<float> ykeys((int)std::ceil(anim->mDuration));
+				std::vector<float> zkeys((int)std::ceil(anim->mDuration));
+				std::vector<float> wkeys((int)std::ceil(anim->mDuration));
 				bool xch, ych, zch, wch;
 				xch = ych = zch = wch = false;
 				for (unsigned int k = 0; k < chan->mNumRotationKeys; k++) {
 					const aiQuatKey& key = chan->mRotationKeys[k];
-					xkeys.emplace_back((float)key.mValue.x);
-					ykeys.emplace_back(-(float)key.mValue.y); // flip y
-					zkeys.emplace_back((float)key.mValue.z);
-					wkeys.emplace_back(-(float)key.mValue.w); // flip rot
 					if (FLT_NEQ((float)key.mValue.x, rot.x))
 						xch = true;
 					if (FLT_NEQ((float)key.mValue.y, rot.y))
@@ -1397,6 +1455,61 @@ void ImportAnimations(Args& args, const aiScene* scene, json& rez,
 						zch = true;
 					if (FLT_NEQ((float)key.mValue.w, rot.w))
 						wch = true;
+				}
+				bool found_keyframe;
+				for (size_t frame = 0; frame < anim->mDuration; frame++)
+				{
+					double timestamp = (double)frame;
+					found_keyframe = false;
+					for (size_t keyframe = 0; keyframe < chan->mNumRotationKeys - 1; keyframe++)
+					{
+						const aiQuatKey& key = chan->mRotationKeys[keyframe];
+						double current_time = key.mTime;
+						const aiQuaternion &cv = key.mValue;
+
+						const aiQuatKey& next_key = chan->mRotationKeys[keyframe + 1];
+						double next_time = next_key.mTime;
+						const aiQuaternion &nv = next_key.mValue;
+
+						if (current_time <= timestamp && next_time > timestamp) {
+							double delta_time = next_time - current_time;
+
+
+							aiQuaternion slerp_val;
+							aiQuaternion::Interpolate(slerp_val, cv, nv, (timestamp - current_time) / delta_time);
+							// Do Slerp for quaternion
+							double x = slerp_val.x;
+							double y = slerp_val.y;
+							double z = slerp_val.z;
+							double w = slerp_val.w;
+							
+							xkeys[frame] = (float)x;
+							ykeys[frame] = (float)-y; // flip y
+							zkeys[frame] = (float)z;
+							wkeys[frame] = (float)-w; // flip rot
+							found_keyframe = true;
+							break;
+						}
+						else if (current_time > timestamp && next_time > timestamp) {
+							// the first keyframe is some time in the future
+							// use a constant repeat, until we reach to that time
+							xkeys[frame] = (float)cv.x;
+							ykeys[frame] = (float)-cv.y; // flip y
+							zkeys[frame] = (float)cv.z;
+							wkeys[frame] = (float)-cv.w; // flip rot
+							found_keyframe = true;
+							break;
+						}
+					}
+					if (!found_keyframe) {
+						// the frame is far past the last keyframe
+						// repeat the last keyframe
+						const aiQuatKey& last_key = chan->mRotationKeys[chan->mNumRotationKeys - 1];
+						xkeys[frame] = (float)last_key.mValue.x;
+						ykeys[frame] = (float)-last_key.mValue.y; // flip y
+						zkeys[frame] = (float)last_key.mValue.z;
+						wkeys[frame] = (float)-last_key.mValue.w; // flip rot
+					}
 				}
 				// only add non-static channels
 				if (xch) {
@@ -1446,23 +1559,68 @@ void ImportAnimations(Args& args, const aiScene* scene, json& rez,
 			}
 			if (chan->mNumScalingKeys > 0 && !forMorph) {
 				// get the key values
-				std::vector<float> xkeys;
-				std::vector<float> ykeys;
-				std::vector<float> zkeys;
+				std::vector<float> xkeys((int)std::ceil(anim->mDuration));
+				std::vector<float> ykeys((int)std::ceil(anim->mDuration));
+				std::vector<float> zkeys((int)std::ceil(anim->mDuration));
 				bool xch, ych, zch;
 				xch = ych = zch = false;
 				for (unsigned int k = 0; k < chan->mNumScalingKeys; k++) {
 					const aiVectorKey& key = chan->mScalingKeys[k];
-					snprintf(temp, sizeof(temp), "%d", k);
-					xkeys.emplace_back((float)key.mValue.x);
-					ykeys.emplace_back((float)key.mValue.y);
-					zkeys.emplace_back((float)key.mValue.z);
 					if (FLT_NEQ((float)key.mValue.x, scl.x))
 						xch = true;
 					if (FLT_NEQ((float)key.mValue.y, scl.y))
 						ych = true;
 					if (FLT_NEQ((float)key.mValue.z, scl.z))
 						zch = true;
+				}
+				bool found_keyframe;
+				for (size_t frame = 0; frame < anim->mDuration; frame++)
+				{
+					double timestamp = (double)frame;
+					found_keyframe = false;
+					for (size_t keyframe = 0; keyframe < chan->mNumScalingKeys - 1; keyframe++)
+					{
+						const aiVectorKey& key = chan->mScalingKeys[keyframe];
+						double current_time = key.mTime;
+						const aiVector3D &cv = key.mValue;
+
+						const aiVectorKey& next_key = chan->mScalingKeys[keyframe + 1];
+						double next_time = next_key.mTime;
+						const aiVector3D &nv = next_key.mValue;
+
+						if (current_time <= timestamp && next_time > timestamp) {
+							double delta_time = next_time - current_time;
+
+							// For now do linear interpolation
+							// In general case, we'll probably need bezier/spline curve evaluation
+							double x = (nv.x - cv.x) / delta_time * (timestamp - current_time) + cv.x;
+							double y = (nv.y - cv.y) / delta_time * (timestamp - current_time) + cv.y;
+							double z = (nv.z - cv.z) / delta_time * (timestamp - current_time) + cv.z;
+
+							xkeys[frame] = (float)x;
+							ykeys[frame] = (float)y;
+							zkeys[frame] = (float)z;
+							found_keyframe = true;
+							break;
+						}
+						else if (current_time > timestamp && next_time > timestamp) {
+							// the first keyframe is some time in the future
+							// use a constant repeat, until we reach to that time
+							xkeys[frame] = (float)cv.x;
+							ykeys[frame] = (float)cv.y;
+							zkeys[frame] = (float)cv.z;
+							found_keyframe = true;
+							break;
+						}
+					}
+					if (!found_keyframe) {
+						// the frame is far past the last keyframe
+						// repeat the last keyframe
+						const aiVectorKey& last_key = chan->mScalingKeys[chan->mNumScalingKeys - 1];
+						xkeys[frame] = (float)last_key.mValue.x;
+						ykeys[frame] = (float)last_key.mValue.y;
+						zkeys[frame] = (float)last_key.mValue.z;
+					}
 				}
 				// only add non-static channels
 				if (xch) {

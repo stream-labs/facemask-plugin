@@ -131,7 +131,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	demoCurrentMask(0),
 	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), 
 	drawMask(true),	drawAlert(false), drawFaces(false), drawMorphTris(false), drawFDRect(false), drawMotionRect(false),
-	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr), testMode(false), custom_effect(nullptr),
+	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr), testMode(false), antialiasing_effect(nullptr), color_grading_filter_effect(nullptr),
 	lastResultIndex(-1), sameFrameResults(false), logMode(false), lastLogMode(false), timestampInited(false), lastTimestampInited(false) {
 
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
@@ -139,8 +139,12 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	obs_enter_graphics();
 	sourceRenderTarget = gs_texrender_create(GS_RGBA, GS_ZS_NONE);
 	drawTexRender = gs_texrender_create(GS_RGBA, GS_Z32F); // has depth buffer
+	vidLightTexRender = gs_texrender_create(GS_RGBA, GS_Z32F);
+	vidLightTexRenderBack = gs_texrender_create(GS_RGBA, GS_Z32F);
 	alertTexRender = gs_texrender_create(GS_RGBA, GS_Z32F); // has depth buffer
 	obs_leave_graphics();
+
+	vidLightTex = NULL;
 
 	// Make the smll stuff
 	smllFaceDetector = new smll::FaceDetector();
@@ -217,6 +221,8 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 	obs_enter_graphics();
 	gs_texrender_destroy(sourceRenderTarget);
 	gs_texrender_destroy(drawTexRender);
+	gs_texrender_destroy(vidLightTexRender);
+	gs_texrender_destroy(vidLightTexRenderBack);
 	gs_texrender_destroy(alertTexRender);
 
 	if (testingStage)
@@ -837,6 +843,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(void *ptr,
 	reinterpret_cast<Instance*>(ptr)->video_render(effect);
 }
 
+
 void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// Skip rendering if inactive or invisible.
@@ -894,26 +901,14 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	}
 
 	gs_texture_t *vidTex = nullptr;
-	if (mask_data && (mask_data->GetMorph() || recordTriggered || (demoModeGenPreviews && demoMaskDatas.size() > 0))) {
-		gs_texrender_reset(sourceRenderTarget);
-		if (gs_texrender_begin(sourceRenderTarget, parent->async_width, parent->async_height)) {
 
-			gs_blend_state_push();
-			gs_projection_push();
+	gs_effect_t* defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
 
-			gs_ortho(0, (float)baseWidth, 0, (float)baseHeight, -1, 1);
-
-			obs_source_video_render(parent);
-			gs_texrender_end(sourceRenderTarget);
-
-			gs_projection_pop();
-			gs_blend_state_pop();
-
-		}
-		vidTex = gs_texrender_get_texture(sourceRenderTarget);
-	}
-	if (mask_data && !mask_data->GetMorph()) {
-		obs_source_video_render(parent);
+	vidTex = RenderSourceTexture(effect ? effect : defaultEffect);
+	if (vidTex == NULL) {
+		// *** SKIP ***
+		obs_source_skip_video_filter(source);
+		return;
 	}
 
 	if ((parent == NULL) || (target == NULL)) {
@@ -973,6 +968,83 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		triangulation.DestroyBuffers();
 	}
 
+	if (color_grading_filter_effect == nullptr) {
+		char* f = obs_module_file("effects/color_grading_filter.effect");
+		char* errorMessage = nullptr;
+		color_grading_filter_effect = gs_effect_create_from_file(f, &errorMessage);
+		if (f) {
+			bfree(f);
+		}
+	}
+
+	if (color_grading_filter_effect && mask_data && mask_data->NeedsPBRLighting()) {
+		int current_height = baseHeight;
+		int current_width = baseWidth;
+		int current_level = 0;
+		bool first_pass = true;
+		gs_texrender_t *current_texrender;
+		gs_texture_t *current_tex = vidTex;
+
+		float gamma_weight = 2.2;
+		int reduction_step = 2;
+		vec2 texel_size;
+
+		while (current_width > 4 && current_height > 4) {
+
+			current_width /= reduction_step;
+			current_height /= reduction_step;
+
+			current_texrender = current_level % 2 == 0 ? vidLightTexRender : vidLightTexRenderBack;
+
+			gs_texrender_reset(current_texrender);
+			if (gs_texrender_begin(current_texrender, current_width, current_height)) {
+
+				gs_blend_state_push();
+				gs_projection_push();
+
+				gs_ortho(0, (float)current_width, 0, (float)current_height, -1, 1);
+				gs_set_cull_mode(GS_NEITHER);
+				gs_reset_blend_state();
+				gs_blend_function(gs_blend_type::GS_BLEND_ONE, gs_blend_type::GS_BLEND_ZERO);
+				gs_enable_depth_test(false);
+				gs_enable_stencil_test(false);
+				gs_enable_stencil_write(false);
+				gs_enable_color(true, true, true, true);
+
+				vec4 empty;
+				vec4_zero(&empty);
+				gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &empty, 1.0f, 0);
+
+				while (gs_effect_loop(color_grading_filter_effect, "Draw")) {
+					gs_effect_set_texture(gs_effect_get_param_by_name(color_grading_filter_effect,
+						"image"), current_tex);
+					gs_effect_set_float(gs_effect_get_param_by_name(color_grading_filter_effect,
+						"gamma"), gamma_weight);
+					gs_effect_set_bool(gs_effect_get_param_by_name(color_grading_filter_effect,
+						"first_pass"), first_pass);
+					vec2_set(&texel_size, 1.0 / (current_width*reduction_step), 1.0 / (current_height*reduction_step));
+					gs_effect_set_vec2(gs_effect_get_param_by_name(color_grading_filter_effect,
+						"texel_size"), &texel_size);
+					gs_draw_sprite(current_tex, 0, current_width, current_height);
+				}
+
+				gs_texrender_end(current_texrender);
+
+				gs_projection_pop();
+				gs_blend_state_pop();
+
+			}
+			current_tex = gs_texrender_get_texture(current_texrender);
+			first_pass = false;
+			current_level++;
+
+		}
+		vidLightTex = current_tex;
+		// For previewing
+		//vidTex = vidLightTex;
+	}
+
+
 	// flags
 	bool genThumbs = mask_data && demoModeGenPreviews && demoModeSavingFrames;
 
@@ -1009,6 +1081,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					// Check here for no morph
 					if (!mask_data->GetMorph()) {
 						triangulation.DestroyBuffers();
+					}
+
+					if (mask_data->NeedsPBRLighting()) {
+						mask_data->SetVideoLightingTexture(vidLightTex);
 					}
 
 					// Draw depth-only stuff
@@ -1149,26 +1225,29 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	gs_blend_function(gs_blend_type::GS_BLEND_SRCALPHA,
 		gs_blend_type::GS_BLEND_INVSRCALPHA);
 
-
-    if (mask_data && (!mask_data->DrawVideoWithMask() &&
-			!genThumbs) && mask_data->GetMorph()) {
-
-		// Draw the source video 
-		if (mask_data) {
-			triangulation.autoBGRemoval = autoBGRemoval;
-			triangulation.cartoonMode = cartoonMode;
-			mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
+	// Draw the source video 
+	if (mask_data) {
+		triangulation.autoBGRemoval = autoBGRemoval;
+		triangulation.cartoonMode = cartoonMode;
+		mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
+	}
+	else {
+		// Draw the source video	
+		while (gs_effect_loop(defaultEffect, "Draw")) {
+			gs_effect_set_texture(gs_effect_get_param_by_name(defaultEffect,
+				"image"), vidTex);
+			gs_draw_sprite(vidTex, 0, baseWidth, baseHeight);
 		}
 	}
 
 	// TEST DRAW EFFECT
-	if (custom_effect == nullptr) {
+	if (antialiasing_effect == nullptr) {
 		char* f = obs_module_file("effects/aa.effect");
 		char* errorMessage = nullptr;
-		custom_effect = gs_effect_create_from_file(f, &errorMessage);
-		if (custom_effect) {
-			gs_effect_set_float(gs_effect_get_param_by_name(custom_effect, "inv_width"), 1.0f / (baseWidth*m_scale_rate));
-			gs_effect_set_float(gs_effect_get_param_by_name(custom_effect, "inv_height"), 1.0f / (baseHeight*m_scale_rate));
+		antialiasing_effect = gs_effect_create_from_file(f, &errorMessage);
+		if (antialiasing_effect) {
+			gs_effect_set_float(gs_effect_get_param_by_name(antialiasing_effect, "inv_width"), 1.0f / (baseWidth*m_scale_rate));
+			gs_effect_set_float(gs_effect_get_param_by_name(antialiasing_effect, "inv_height"), 1.0f / (baseHeight*m_scale_rate));
 		}
 		if (f) {
 			bfree(f);
@@ -1176,11 +1255,11 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	}
 
 	// Draw the rendered Mask
-	if (mask_tex && custom_effect) {
-		gs_effect_set_int(gs_effect_get_param_by_name(custom_effect, "antialiasing_method"), antialiasing_method);
+	if (mask_tex && antialiasing_effect) {
+		gs_effect_set_int(gs_effect_get_param_by_name(antialiasing_effect, "antialiasing_method"), antialiasing_method);
 
-		while (gs_effect_loop(custom_effect, "Draw")) {
-			gs_effect_set_texture(gs_effect_get_param_by_name(custom_effect,
+		while (gs_effect_loop(antialiasing_effect, "Draw")) {
+			gs_effect_set_texture(gs_effect_get_param_by_name(antialiasing_effect,
 				"image"), mask_tex);
 			gs_draw_sprite(mask_tex, 0, baseWidth, baseHeight);
 		}
