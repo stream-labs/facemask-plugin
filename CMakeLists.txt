@@ -366,7 +366,6 @@ add_library(facemask-plugin-objlib OBJECT
 
 set_property(TARGET facemask-plugin-objlib PROPERTY POSITION_INDEPENDENT_CODE 1)
 
-<<<<<<< HEAD
 if (BUILD_FOR_PUBLIC)
 	ADD_LIBRARY(facemask_AVX MODULE 
 		${facemask-plugin_HEADERS}
@@ -459,6 +458,27 @@ add_custom_command(TARGET facemask-plugin POST_BUILD
 	"${PROJECT_BINARY_DIR}/distribute/package.json"
 )
 
-
+if (BUILD_FOR_PUBLIC)
+	add_custom_command(TARGET facemask_AVX POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy
+		"$<TARGET_FILE:facemask_AVX>"
+		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/$<TARGET_FILE_NAME:facemask_AVX>"
+	)
+	add_custom_command(TARGET facemask_AVX POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy
+		"$<TARGET_FILE_DIR:facemask-plugin>/facemask_AVX.pdb"
+		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/facemask_AVX.pdb"
+	)
+	add_custom_command(TARGET facemask_NO_AVX POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy
+		"$<TARGET_FILE:facemask_NO_AVX>"
+		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/$<TARGET_FILE_NAME:facemask_NO_AVX>"
+	)
+	add_custom_command(TARGET facemask_NO_AVX POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy
+		"$<TARGET_FILE_DIR:facemask-plugin>/facemask_NO_AVX.pdb"
+		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/facemask_NO_AVX.pdb"
+	)	
+endif()
 
 
