@@ -41,12 +41,17 @@ namespace Mask {
 			virtual void Update(Mask::Part* part, float time) override;
 			virtual void Render(Mask::Part* part) override;
 
+			void SetActiveTextures(const std::vector<std::string> &textures) { m_active_textures = textures; }
+
 		protected:
 			std::shared_ptr<GS::Effect> m_Effect;
 
 			// for delayed gs creation
 			std::string		m_filename;
 			bool			m_filenameIsTemp;
+
+			// for dynamic shader creation
+			std::vector<std::string> m_active_textures;
 		};
 	}
 }

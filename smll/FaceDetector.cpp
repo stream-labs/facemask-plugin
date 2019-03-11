@@ -21,7 +21,6 @@
 
 #include "FaceDetector.hpp"
 
-
 #define HULL_POINTS_SCALE		(1.25f)
 // border points = 4 corners + subdivide
 #define NUM_BORDER_POINTS		(4 * 2 * 2 * 2) 
@@ -41,18 +40,16 @@ using namespace std;
 namespace smll {
 
 	FaceDetector::FaceDetector()
-		: m_timeout(0)
-        , m_trackingTimeout(0)
+		: m_trackingTimeout(0)
         , m_detectionTimeout(0)
 		, m_trackingFaceIndex(0)
 		, m_camera_w(0)
 		, m_camera_h(0)
 		, isPrevInit(false)
-		, landmarks_detected(false)
 		, cropInfo(0,0,0,0) {
 		// Load face detection and pose estimation models.
 		count = 0;
-
+		
 		char *filename = obs_module_file(kFileShapePredictor68);
 		char *filenameFD = obs_module_file(kFileFaceDetector);
 
@@ -214,8 +211,8 @@ namespace smll {
 		results.motionRect.set_bottom(std::min((int)results.motionRect.bottom() + delta_h, grayImage.rows - 1));
 	}
 
-
 	void FaceDetector::computeCurrentImage(DetectionResults& results) {
+
 		computeDifference(results);
 		addFaceRectangles(results);
 
@@ -237,13 +234,6 @@ namespace smll {
 	}
 
 	void FaceDetector::DetectFaces(cv::Mat &inputImage, int width, int height, DetectionResults& results) {
-		// Wait for CONFIG_INT_FACE_DETECT_FREQUENCY after all faces are lost before trying to detect them again
-		if (m_timeout > 0) {    
-			m_timeout--;
-			results.processedResults.FrameSkipped();
-			return;
-		}
-
 		// better check if the camera res has changed on us
 		if ((resizeWidth != width) ||
 			(resizeHeight != height)) {
@@ -293,8 +283,6 @@ namespace smll {
 			}
 			else {
 				m_trackingFaceIndex = 0;
-				// force detection on the next frame, do not wait for 5 frames
-				m_timeout = 0;
 				trackingFailed = true;
 				results.processedResults.TrackingFailed();
 			}
@@ -318,15 +306,6 @@ namespace smll {
 			results[i] = m_faces[i];
 		}
 		results.length = m_faces.length;
-
-		if (trackingFailed || m_faces.length == 0) {
-
-		}
-		// If faces are not found
-		if (m_faces.length == 0 && !trackingFailed && !wasFaceDetected) {
-            // Wait for 5 frames and do face detection
-            m_timeout = Config::singleton().get_int(CONFIG_INT_FACE_DETECT_FREQUENCY);
-		}
 	}
 
 	void FaceDetector::MakeTriangulation(MorphData& morphData, 
@@ -1039,21 +1018,22 @@ namespace smll {
 		if (faces.size() > 0) {
 			prevImage = currentOrigImage.clone();
 		}
+		if ((m_faces.length == 0) || (faces.size() > 0)) {
+			m_faces.length = (int)faces.size() > MAX_FACES ? MAX_FACES : (int)faces.size();
 
-		m_faces.length = (int)faces.size() > MAX_FACES ? MAX_FACES : (int)faces.size();
-
-        // copy rects into our faces, start tracking
-        for (int i = 0; i < m_faces.length; i++) {
-            // scale rectangle up to video frame size
-			m_faces[i].m_bounds.set_left((long)((float)(faces[i].left()*scale +
-				cropInfo.offsetX)));
-			m_faces[i].m_bounds.set_right((long)((float)(faces[i].right()*scale +
-				cropInfo.offsetX)));
-			m_faces[i].m_bounds.set_top((long)((float)(faces[i].top()*scale +
-				cropInfo.offsetY)));
-			m_faces[i].m_bounds.set_bottom((long)((float)(faces[i].bottom()*scale +
-				cropInfo.offsetY)));
-        }
+			// copy rects into our faces, start tracking
+			for (int i = 0; i < m_faces.length; i++) {
+				// scale rectangle up to video frame size
+				m_faces[i].m_bounds.set_left((long)((float)(faces[i].left()*scale +
+					cropInfo.offsetX)));
+				m_faces[i].m_bounds.set_right((long)((float)(faces[i].right()*scale +
+					cropInfo.offsetX)));
+				m_faces[i].m_bounds.set_top((long)((float)(faces[i].top()*scale +
+					cropInfo.offsetY)));
+				m_faces[i].m_bounds.set_bottom((long)((float)(faces[i].bottom()*scale +
+					cropInfo.offsetY)));
+			}
+		}
     }
     
         
@@ -1093,10 +1073,8 @@ namespace smll {
 
 			dlib::cv_image<unsigned char> img(grayImage);
 
-			if (!results.processedResults.isSkipped() || !landmarks_detected) {
-				d68 = m_predictor68(img, m_faces[f].m_bounds);
-				landmarks_detected = true;
-			}
+			d68 = m_predictor68(img, m_faces[f].m_bounds);
+
 			// Sanity check
 			if (d68.num_parts() != NUM_FACIAL_LANDMARKS)
 				throw std::invalid_argument(

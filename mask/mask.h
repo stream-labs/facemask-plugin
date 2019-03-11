@@ -98,6 +98,7 @@ namespace Mask {
 
 	namespace Resource {
 		class Animation;
+		class Material;
 	}
 
 	class MaskData : public Resource::IAnimationControls {
@@ -111,7 +112,7 @@ namespace Mask {
 
 		// resources
 		void AddResource(const std::string& name, std::shared_ptr<Resource::IBase> resource);
-		std::shared_ptr<Resource::IBase> GetResource(const std::string& name);
+		std::shared_ptr<Resource::IBase> GetResource(const std::string& name, bool force_reload = false);
 		std::shared_ptr<Resource::IBase> GetResource(Resource::Type type);
 		size_t GetNumResources(Resource::Type type);
 		std::shared_ptr<Resource::IBase> GetResource(Resource::Type type, int which);
@@ -160,6 +161,11 @@ namespace Mask {
 		float	GetIntroFadeTime() { return m_introFadeTime; }
 		float	GetIntroDuration() { return m_introDuration; }
 
+		// access video texture
+		gs_texture_t*	GetVideoLightingTexture() { return m_vidLightTex; }
+		void			SetVideoLightingTexture(gs_texture_t* vidLightTex) { m_vidLightTex = vidLightTex; }
+		bool			NeedsPBRLighting();
+
 		// rendering flags
 		bool	DrawVideoWithMask() { return m_drawVideoWithMask; }
 
@@ -185,6 +191,9 @@ namespace Mask {
 		std::shared_ptr<Mask::Part> m_partWorld;
 		SortedDrawObject**	m_drawBuckets;
 		Resource::Morph*	m_morph;
+
+		// video light data
+		gs_texture_t* m_vidLightTex;
 
 		// for certain masks that need to blend with video
 		bool				m_drawVideoWithMask;

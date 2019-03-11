@@ -77,7 +77,6 @@ public:
 
 private:
 	dlib::full_object_detection d68;
-	bool landmarks_detected;
 	// Saved Faces
 	Faces			m_faces;
 
@@ -85,7 +84,6 @@ private:
 	ThreeDPoses		m_poses;
 
 	// Face detection timeouts
-	int				m_timeout;
     int             m_trackingTimeout;
     int             m_detectionTimeout;
 	int				resizeWidth;
