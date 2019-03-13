@@ -25,7 +25,6 @@
 
 #define P_TRANSLATE(x)			obs_module_text(x)
 
-
 namespace smll {
 
 
