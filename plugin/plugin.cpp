@@ -27,17 +27,12 @@ OBS_MODULE_AUTHOR("Streamlabs");
 OBS_MODULE_USE_DEFAULT_LOCALE("obs-facemask-plugin", "en-US");
 
 
-#ifdef PUBLIC_RELEASE
-	MODULE_EXPORT bool obs_module_load_inner(void) {
-		g_faceMaskFilter = new Plugin::FaceMaskFilter();
-		return true;
-	}
-#else
-	MODULE_EXPORT bool obs_module_load(void) {
-		g_faceMaskFilter = new Plugin::FaceMaskFilter();
-		return true;
-	}
-#endif;
+
+MODULE_EXPORT bool obs_module_load(void) {
+	g_faceMaskFilter = new Plugin::FaceMaskFilter();
+	return true;
+}
+
 
 MODULE_EXPORT void obs_module_unload(void) {
 	delete g_faceMaskFilter;
