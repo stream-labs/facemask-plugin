@@ -49,6 +49,7 @@
 #include <vector>
 #include <codecvt>
 #include <opencv2/opencv.hpp>
+#include <windows.h>
 #pragma warning( pop )
 
 namespace smll {
@@ -110,6 +111,13 @@ private:
 	// lookup table for morph triangulation
 	std::vector<LandmarkBitmask>	m_vtxBitmaskLookup;
 	void							MakeVtxBitmaskLookup();
+
+	bool loaded;
+	bool avx;
+	HINSTANCE hGetProcIDDLL;
+
+	bool is_avx();
+	void load_dll();
 
 	// Main methods
     void    DoFaceDetection();
