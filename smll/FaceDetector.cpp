@@ -29,6 +29,13 @@
 #define NUM_HULL_POINTS			(28 * 2 * 2 * 2)
 #define NUM_HULL_POINT_DIVS		(3)
 
+
+#define FACEMASK_AVX		(L"facemask_AVX.dll")
+#define FACEMASK_NO_AVX		(L"facemask_NO_AVX.dll")
+
+typedef void(*facemask_init_face_detector)(dlib::frontal_face_detector&);
+typedef std::vector<dlib::rectangle>(*facemask_detect_faces)(dlib::frontal_face_detector&, dlib::cv_image<unsigned char>&);
+
 static const char* const kFileShapePredictor68 = "shape_predictor_68_face_landmarks.dat";
 
 
@@ -45,10 +52,20 @@ namespace smll {
 		, m_camera_w(0)
 		, m_camera_h(0)
 		, isPrevInit(false)
-		, cropInfo(0,0,0,0) {
+		, cropInfo(0,0,0,0)
+		, loaded(false)
+		, avx(false)
+		, hGetProcIDDLL(NULL) {
 		// Load face detection and pose estimation models.
+#ifdef PUBLIC_RELEASE
+		load_dll();
+		facemask_init_face_detector fcn = (facemask_init_face_detector)GetProcAddress(hGetProcIDDLL, "facemask_init_face_detector");
+		if (fcn) {
+			fcn(m_detector);
+		}
+#else
 		m_detector = get_frontal_face_detector();
-
+#endif
 		count = 0;
 		
 		char *filename = obs_module_file(kFileShapePredictor68);
@@ -988,10 +1005,17 @@ namespace smll {
 		}
 		
         // detect faces
-		std::vector<rectangle> faces;
+		std::vector<dlib::rectangle> faces;
 		dlib::cv_image<unsigned char> img(detectionImg);
-		faces = m_detector(img);
 
+#ifdef PUBLIC_RELEASE
+		facemask_detect_faces fcn = (facemask_detect_faces)GetProcAddress(hGetProcIDDLL, "facemask_detect_faces");
+		if (fcn) {
+			faces = fcn(m_detector, img);
+		}
+#else
+		faces = m_detector(img);
+#endif
 		// only consider the face detection results if:
         //
         // - tracking is disabled (so we have to) 
@@ -1166,6 +1190,38 @@ namespace smll {
 		m_detectionTimeout = 0;
 	}
 	
+
+
+
+	bool FaceDetector::is_avx() {
+
+		avx = cpu_has_avx_instructions();
+
+		if (avx) {
+			blog(LOG_DEBUG, "[FaceMask] AVX");
+		}
+		else {
+			blog(LOG_DEBUG, "[FaceMask] NO AVX");
+		}
+		return avx;
+	}
+
+
+	void FaceDetector::load_dll() {
+		if (loaded) {
+			return;
+		}
+
+		loaded = true;
+		blog(LOG_DEBUG, "[FaceMask]  INITED");
+		LPCWSTR dllName = is_avx() ? FACEMASK_AVX : FACEMASK_NO_AVX;
+		hGetProcIDDLL = LoadLibrary(dllName);
+
+		if (!hGetProcIDDLL) {
+			int err = GetLastError();
+			blog(LOG_DEBUG, "[FaceMask] DLL can not loaded. error code: %d", err);
+		}
+	}
 } // smll namespace
 
 

@@ -368,18 +368,12 @@ set_property(TARGET facemask-plugin-objlib PROPERTY POSITION_INDEPENDENT_CODE 1)
 
 if (BUILD_FOR_PUBLIC)
 	ADD_LIBRARY(facemask_AVX MODULE 
-		${facemask-plugin_HEADERS}
-		${facemask-plugin_SOURCES}
-		${facemask-plugin_DATA})
+		"${PROJECT_SOURCE_DIR}/smll/DetectionFunctions.cpp")
 		
 	ADD_LIBRARY(facemask_NO_AVX MODULE
-		${facemask-plugin_HEADERS}
-		${facemask-plugin_SOURCES}
-		${facemask-plugin_DATA})
+		"${PROJECT_SOURCE_DIR}/smll/DetectionFunctions.cpp")
 	
-	ADD_LIBRARY(facemask-plugin MODULE
-		"${PROJECT_SOURCE_DIR}/plugin/plugin_wrapper.cpp"
-	)
+	ADD_LIBRARY(facemask-plugin MODULE $<TARGET_OBJECTS:facemask-plugin-objlib>)
 
 else()
 	add_library(facemask-plugin MODULE $<TARGET_OBJECTS:facemask-plugin-objlib>)
@@ -388,18 +382,17 @@ endif()
 
 if (BUILD_FOR_PUBLIC)
 	TARGET_LINK_LIBRARIES(facemask_AVX
-		${LIBOBS_LIBRARIES}
 		${facemask-plugin_LIBRARIES}
 		dlib::dlib
 	)
 	
 	TARGET_LINK_LIBRARIES(facemask_NO_AVX
-		${LIBOBS_LIBRARIES}
 		${facemask-plugin_LIBRARIES}
 		dlib::dlib_NO_AVX
 	)
 	
 	TARGET_LINK_LIBRARIES(facemask-plugin ${LIBOBS_LIBRARIES}
+		${facemask-plugin_LIBRARIES}
 		dlib::dlib_NO_AVX
 	)
 else()
