@@ -403,8 +403,13 @@ namespace smll {
 		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE)) {
 			kalmanFilter.init(nStates, nMeasurements, nInputs, CV_64F);					// init Kalman Filter
 
-			cv::setIdentity(kalmanFilter.processNoiseCov, cv::Scalar::all(1e-5));		// set process noise
-			cv::setIdentity(kalmanFilter.measurementNoiseCov, cv::Scalar::all(1e-4));   // set measurement noise
+			cv::setIdentity(kalmanFilter.processNoiseCov, cv::Scalar::all(1e-4));		// set process noise
+			kalmanFilter.measurementNoiseCov.at<double>(0, 0) = Config::singleton().get_double(CONFIG_KF_0);					// set measurement noise
+			kalmanFilter.measurementNoiseCov.at<double>(1, 1) = Config::singleton().get_double(CONFIG_KF_1);					// set measurement noise
+			kalmanFilter.measurementNoiseCov.at<double>(2, 2) = Config::singleton().get_double(CONFIG_KF_2);					// set measurement noise
+			kalmanFilter.measurementNoiseCov.at<double>(3, 3) = Config::singleton().get_double(CONFIG_KF_3);					// set measurement noise
+			kalmanFilter.measurementNoiseCov.at<double>(4, 4) = Config::singleton().get_double(CONFIG_KF_4);					// set measurement noise
+			kalmanFilter.measurementNoiseCov.at<double>(5, 5) = Config::singleton().get_double(CONFIG_KF_5);					// set measurement noise
 			cv::setIdentity(kalmanFilter.errorCovPost, cv::Scalar::all(1));             // error covariance
 
 			/* DYNAMIC MODEL*/
