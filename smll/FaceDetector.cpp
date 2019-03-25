@@ -29,7 +29,7 @@
 #define NUM_HULL_POINTS			(28 * 2 * 2 * 2)
 #define NUM_HULL_POINT_DIVS		(3)
 
-static const char* const kFileShapePredictor68 = "shape_predictor_68_face_landmarks.dat";
+static const char* const kFileShapePredictor68 = "SL_SP_v1.2.dat";
 
 
 using namespace dlib;
