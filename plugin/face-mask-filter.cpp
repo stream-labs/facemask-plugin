@@ -129,7 +129,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	alertDoOutro(false), alertDuration(10.0f),
 	alertElapsedTime(BIG_FLOAT), alertTriggered(false), alertShown(false), alertsLoaded(false),
 	demoCurrentMask(0),
-	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), 
+	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), loading_mask(false),
 	drawMask(true),	drawAlert(false), drawFaces(false), drawMorphTris(false), drawFDRect(false), drawMotionRect(false),
 	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr), testMode(false), antialiasing_effect(nullptr), color_grading_filter_effect(nullptr),
 	lastResultIndex(-1), sameFrameResults(false), logMode(false), lastLogMode(false), timestampInited(false), lastTimestampInited(false) {
@@ -1508,101 +1508,108 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 	TimeStamp lastTimestamp;
 	while (true) {
 
-		auto frameStart = std::chrono::system_clock::now();
-
-		// get the frame index
-		bool shutdown;
-		{
-			std::unique_lock<std::mutex> lock(detection.mutex);
-			shutdown = detection.shutdown;
-		}
-		if (shutdown) break;
-		if (!detection.frame.active) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(16));
+		if (loading_mask) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(20));
 			continue;
 		}
-
-		smll::DetectionResults detect_results;
-
-
-		bool skipped = false;
 		{
-			std::unique_lock<std::mutex> lock(detection.frame.mutex);
+			std::unique_lock<std::mutex> lockMaskDetect(loadMaskDetectionMutex);
+			auto frameStart = std::chrono::system_clock::now();
 
-			// check to see if we are detecting the same frame as last time
-			if (lastTimestamp == detection.frame.timestamp) {
-				// same frame, skip
-				skipped = true;
+			// get the frame index
+			bool shutdown;
+			{
+				std::unique_lock<std::mutex> lock(detection.mutex);
+				shutdown = detection.shutdown;
 			}
-			else {
-				// new frame - do the face detection
-				smllFaceDetector->DetectFaces(detection.frame.grayImage, detection.frame.resizeWidth, detection.frame.resizeHeight, detect_results);
-
-				smllFaceDetector->DetectLandmarks(detect_results);
-				smllFaceDetector->DoPoseEstimation(detect_results);
-
-				lastTimestamp = detection.frame.timestamp;
+			if (shutdown) break;
+			if (!detection.frame.active) {
+				std::this_thread::sleep_for(std::chrono::milliseconds(16));
+				continue;
 			}
-		}
 
-		if (skipped) {
-			// sleep for 1ms and continue
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			continue;
-		}
+			smll::DetectionResults detect_results;
 
-		// get the index into the faces buffer
-		int face_idx;
-		{
-			std::unique_lock<std::mutex> lock(detection.mutex);
-			face_idx = detection.facesIndex;
-		}
-		if (face_idx < 0)
-			face_idx = 0;
 
-		{
-			std::unique_lock<std::mutex> facelock(detection.faces[face_idx].mutex);
+			bool skipped = false;
+			{
+				std::unique_lock<std::mutex> lock(detection.frame.mutex);
 
-			// pass on timestamp to results
-			detection.faces[face_idx].timestamp = lastTimestamp;
-			std::unique_lock<std::mutex> framelock(detection.frame.mutex);
+				// check to see if we are detecting the same frame as last time
+				if (lastTimestamp == detection.frame.timestamp) {
+					// same frame, skip
+					skipped = true;
+				}
+				else {
+					// new frame - do the face detection
+					smllFaceDetector->DetectFaces(detection.frame.grayImage, detection.frame.resizeWidth, detection.frame.resizeHeight, detect_results);
 
-			// Make the triangulation
-			detection.faces[face_idx].triangulationResults.buildLines = drawMorphTris;
-			smllFaceDetector->MakeTriangulation(detection.frame.morphData,
-				detect_results, detection.faces[face_idx].triangulationResults);
+					smllFaceDetector->DetectLandmarks(detect_results);
+					smllFaceDetector->DoPoseEstimation(detect_results);
 
-			detection.frame.active = false;
-	
-
-			// Copy our detection results
-			for (int i = 0; i < detect_results.length; i++) {
-				detection.faces[face_idx].detectionResults[i] = detect_results[i];
+					lastTimestamp = detection.frame.timestamp;
+				}
 			}
-			detection.faces[face_idx].detectionResults.length = detect_results.length;
-			detection.faces[face_idx].detectionResults.processedResults = detect_results.processedResults;
-			detection.faces[face_idx].detectionResults.motionRect = detect_results.motionRect;
 
+			if (skipped) {
+				// sleep for 1ms and continue
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				continue;
+			}
+
+			// get the index into the faces buffer
+			int face_idx;
+			{
+				std::unique_lock<std::mutex> lock(detection.mutex);
+				face_idx = detection.facesIndex;
+			}
+			if (face_idx < 0)
+				face_idx = 0;
+
+			{
+				std::unique_lock<std::mutex> facelock(detection.faces[face_idx].mutex);
+
+				// pass on timestamp to results
+				detection.faces[face_idx].timestamp = lastTimestamp;
+				std::unique_lock<std::mutex> framelock(detection.frame.mutex);
+
+				// Make the triangulation
+				detection.faces[face_idx].triangulationResults.buildLines = drawMorphTris;
+				smllFaceDetector->MakeTriangulation(detection.frame.morphData,
+					detect_results, detection.faces[face_idx].triangulationResults);
+
+				detection.frame.active = false;
+
+
+				// Copy our detection results
+				for (int i = 0; i < detect_results.length; i++) {
+					detection.faces[face_idx].detectionResults[i] = detect_results[i];
+				}
+				detection.faces[face_idx].detectionResults.length = detect_results.length;
+				detection.faces[face_idx].detectionResults.processedResults = detect_results.processedResults;
+				detection.faces[face_idx].detectionResults.motionRect = detect_results.motionRect;
+
+			}
+
+			{
+				std::unique_lock<std::mutex> lock(detection.mutex);
+
+				// increment face buffer index
+				detection.facesIndex = (face_idx + 1) % ThreadData::BUFFER_SIZE;
+			}
+
+			// don't go too fast and eat up all the cpu
+			auto frameEnd = std::chrono::system_clock::now();
+			auto elapsedMs =
+				std::chrono::duration_cast<std::chrono::microseconds>
+				(frameEnd - frameStart);
+			long long speedLimit = smll::Config::singleton().get_int(
+				smll::CONFIG_INT_SPEED_LIMIT) * 1000;
+			long long sleepTime = max(speedLimit - elapsedMs.count(),
+				(long long)0);
+			if (sleepTime > 0)
+				std::this_thread::sleep_for(std::chrono::microseconds(sleepTime));
 		}
-
-		{
-			std::unique_lock<std::mutex> lock(detection.mutex);
-
-			// increment face buffer index
-			detection.facesIndex = (face_idx + 1) % ThreadData::BUFFER_SIZE;
-		}
-
-		// don't go too fast and eat up all the cpu
-		auto frameEnd = std::chrono::system_clock::now();
-		auto elapsedMs =
-			std::chrono::duration_cast<std::chrono::microseconds>
-			(frameEnd - frameStart);
-		long long speedLimit = smll::Config::singleton().get_int(
-			smll::CONFIG_INT_SPEED_LIMIT) * 1000;
-		long long sleepTime = max(speedLimit - elapsedMs.count(),
-			(long long)0);
-		if (sleepTime > 0)
-			std::this_thread::sleep_for(std::chrono::microseconds(sleepTime));
 	}
 
 	if (hTask != NULL) {
@@ -1641,7 +1648,15 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 					std::string maskFn = currentMaskFolder + "\\" + currentMaskFilename;
 					// load mask
 					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);
-					maskData = std::unique_ptr<Mask::MaskData>(LoadMask(maskFn));
+					{
+						loading_mask = true;
+						{
+							std::unique_lock<std::mutex> lock(loadMaskDetectionMutex);
+							maskData = std::unique_ptr<Mask::MaskData>(LoadMask(maskFn));
+						}
+						loading_mask = false;
+
+					}
 					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_END);
 				}
 
