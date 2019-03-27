@@ -144,6 +144,30 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	alertTexRender = gs_texrender_create(GS_RGBA, GS_Z32F); // has depth buffer
 	obs_leave_graphics();
 
+	obs_enter_graphics();
+	// preload antialiasing effect
+	char* f = obs_module_file("effects/aa.effect");
+	char* errorMessage = nullptr;
+	antialiasing_effect = gs_effect_create_from_file(f, &errorMessage);
+	if (antialiasing_effect) {
+		gs_effect_set_float(gs_effect_get_param_by_name(antialiasing_effect, "inv_width"), 1.0f / (baseWidth*m_scale_rate));
+		gs_effect_set_float(gs_effect_get_param_by_name(antialiasing_effect, "inv_height"), 1.0f / (baseHeight*m_scale_rate));
+	}
+	if (f) {
+		bfree(f);
+	}
+	obs_leave_graphics();
+
+	obs_enter_graphics();
+	// preload color grading effect
+	f = obs_module_file("effects/color_grading_filter.effect");
+	errorMessage = nullptr;
+	color_grading_filter_effect = gs_effect_create_from_file(f, &errorMessage);
+	if (f) {
+		bfree(f);
+	}
+	obs_leave_graphics();
+
 	vidLightTex = NULL;
 
 	// Make the smll stuff
@@ -743,7 +767,7 @@ void Plugin::FaceMaskFilter::Instance::video_tick(void *ptr, float timeDelta) {
 void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 
 	videoTicked = true;
-	if (!isVisible || !isActive) {
+	if (!isVisible || !isActive || loading_mask) {
 		// *** SKIP TICK ***
 		return;
 	}
@@ -847,7 +871,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(void *ptr,
 void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 	// Skip rendering if inactive or invisible.
-	if (!isActive || !isVisible ||
+	if (!isActive || !isVisible || loading_mask ||
 		// or if the alert is done
 		(!drawMask && alertElapsedTime > alertDuration)) {
 		// reset the buffer
@@ -966,15 +990,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// some reasons triangulation should be destroyed
 	if (!mask_data || faces.length == 0) {
 		triangulation.DestroyBuffers();
-	}
-
-	if (color_grading_filter_effect == nullptr) {
-		char* f = obs_module_file("effects/color_grading_filter.effect");
-		char* errorMessage = nullptr;
-		color_grading_filter_effect = gs_effect_create_from_file(f, &errorMessage);
-		if (f) {
-			bfree(f);
-		}
 	}
 
 	if (color_grading_filter_effect && mask_data && mask_data->NeedsPBRLighting()) {
@@ -1240,23 +1255,11 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		}
 	}
 
-	// TEST DRAW EFFECT
-	if (antialiasing_effect == nullptr) {
-		char* f = obs_module_file("effects/aa.effect");
-		char* errorMessage = nullptr;
-		antialiasing_effect = gs_effect_create_from_file(f, &errorMessage);
-		if (antialiasing_effect) {
-			gs_effect_set_float(gs_effect_get_param_by_name(antialiasing_effect, "inv_width"), 1.0f / (baseWidth*m_scale_rate));
-			gs_effect_set_float(gs_effect_get_param_by_name(antialiasing_effect, "inv_height"), 1.0f / (baseHeight*m_scale_rate));
-		}
-		if (f) {
-			bfree(f);
-		}
-	}
-
 	// Draw the rendered Mask
 	if (mask_tex && antialiasing_effect) {
 		gs_effect_set_int(gs_effect_get_param_by_name(antialiasing_effect, "antialiasing_method"), antialiasing_method);
+		gs_effect_set_float(gs_effect_get_param_by_name(antialiasing_effect, "inv_width"), 1.0f / (baseWidth*m_scale_rate));
+		gs_effect_set_float(gs_effect_get_param_by_name(antialiasing_effect, "inv_height"), 1.0f / (baseHeight*m_scale_rate));
 
 		while (gs_effect_loop(antialiasing_effect, "Draw")) {
 			gs_effect_set_texture(gs_effect_get_param_by_name(antialiasing_effect,

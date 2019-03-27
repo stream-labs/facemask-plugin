@@ -42,6 +42,7 @@ namespace Mask {
 			virtual void Render(Mask::Part* part) override;
 
 			void SetActiveTextures(const std::vector<std::string> &textures) { m_active_textures = textures; }
+			std::vector<std::string> GetActiveTextures() { return m_active_textures; }
 
 		protected:
 			std::shared_ptr<GS::Effect> m_Effect;
