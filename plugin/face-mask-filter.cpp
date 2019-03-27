@@ -169,7 +169,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	}
 
 	f = obs_module_file("effects/pbr.effect");
-	// preload most frequent types of PBR
+	// preload most frequent types of PBR and Phong
 	// TODO precompile to avoid doing this during startup
 	Mask::Resource::Effect::compile("PBR", f, { "iblBRDFTex","iblDiffTex","iblSpecTex","vidLightingTex" });
 	Mask::Resource::Effect::compile("PBR", f, { "diffuseTex","iblBRDFTex","iblDiffTex","iblSpecTex","metalnessTex","normalTex","vidLightingTex" });
@@ -179,6 +179,21 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	if (f) {
 		bfree(f);
 	}
+
+	f = obs_module_file("effects/phong.effect");
+	Mask::Resource::Effect::compile("effectPhong", f, { "diffuseTex" });
+	if (f) {
+		bfree(f);
+	}
+
+	// preload cubemaps
+	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_museum_specular");
+	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_mossy_forest_specular");
+	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_cayley_interior_specular");
+
+	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_museum_diffuse");
+	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_mossy_forest_diffuse");
+	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_cayley_interior_diffuse");
 
 
 	vidLightTex = NULL;
@@ -268,8 +283,9 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 	maskData = nullptr;
 	obs_leave_graphics();
 
-	// also destroy effect pool
+	// also destroy effect and texture pool
 	GS::Effect::destroy_pool();
+	GS::Texture::destroy_pool();
 
 	delete smllFaceDetector;
 	delete smllRenderer;

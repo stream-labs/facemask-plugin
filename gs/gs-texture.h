@@ -20,6 +20,7 @@
 #pragma once
 #include <inttypes.h>
 #include <string>
+#include <map>
 #include "plugin/exceptions.h"
 #include <sys/stat.h>
 #include <fstream>
@@ -83,14 +84,14 @@ namespace GS {
 		 * \brief Create a new cube texture from data
 		 *
 		 *
-		 *
+		 * \param name
 		 * \param size
 		 * \param format
 		 * \param mip_levels
 		 * \param mip_data
 		 * \param flags
 		 */
-		Texture(uint32_t size, gs_color_format format, 
+		Texture(std::string name,uint32_t size, gs_color_format format, 
 			uint32_t mip_levels, const uint8_t **mip_data,
 			uint32_t flags);
 
@@ -146,10 +147,23 @@ namespace GS {
 		 */
 		gs_texture_t* GetObject();
 
+
+		static void destroy_pool();
+
+
 		protected:
 		gs_texture_t* m_texture;
 		bool m_destroy;
+		std::string m_name;
 
 		void DestroyTexture();
+
+		// caching, for now only the cubemaps 
+		static const size_t MAX_POOL_SIZE;
+		static std::map<std::string, std::pair<size_t, gs_texture_t*> > pool;
+		static void add_to_cache(std::string, gs_texture_t*);
+		static void load_from_cache(std::string, gs_texture_t**);
+		static void unload_texture(std::string, gs_texture_t *);
+
 	};
 }

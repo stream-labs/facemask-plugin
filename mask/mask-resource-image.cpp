@@ -219,7 +219,7 @@ Mask::Resource::Image::Image(Mask::MaskData* parent, std::string name, obs_data_
 					sides_mips[side * m_mipLevels + i] = m_decoded_mips[side * m_mipLevels + i].data();
 				}
 			}
-			m_Texture = std::make_shared<GS::Texture>(m_width, m_fmt, m_mipLevels, sides_mips, 0);
+			m_Texture = std::make_shared<GS::Texture>(m_name, m_width, m_fmt, m_mipLevels, sides_mips, 0);
 			m_decoded_mips.clear();
 		}
 		else {
@@ -270,7 +270,7 @@ void Mask::Resource::Image::Render(Mask::Part* part) {
 						sides_mips[side * m_mipLevels + i] = m_decoded_mips[side * m_mipLevels + i].data();
 					}
 				}
-				m_Texture = std::make_shared<GS::Texture>(m_width, m_fmt, m_mipLevels, sides_mips, 0);
+				m_Texture = std::make_shared<GS::Texture>(m_name, m_width, m_fmt, m_mipLevels, sides_mips, 0);
 				m_decoded_mips.clear();
 			}
 			else {
