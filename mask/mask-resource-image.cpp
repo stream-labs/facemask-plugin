@@ -203,6 +203,34 @@ Mask::Resource::Image::Image(Mask::MaskData* parent, std::string name, obs_data_
 		throw std::logic_error("Image has no data.");
 	}
 
+
+	// temp file?
+	if (m_tempFile.length() > 0) {
+		m_Texture = std::make_shared<GS::Texture>(m_tempFile);
+		Utils::DeleteTempFile(m_tempFile);
+		m_tempFile.clear();
+	}
+	else {
+		if (m_is_cubemap) {
+			const uint8_t* sides_mips[MAX_MIP_LEVELS * 6];
+			for (size_t side = 0; side < 6; side++)
+			{
+				for (int i = 0; i < m_mipLevels; i++) {
+					sides_mips[side * m_mipLevels + i] = m_decoded_mips[side * m_mipLevels + i].data();
+				}
+			}
+			m_Texture = std::make_shared<GS::Texture>(m_name, m_width, m_fmt, m_mipLevels, sides_mips, 0);
+			m_decoded_mips.clear();
+		}
+		else {
+			const uint8_t* mips[MAX_MIP_LEVELS];
+			for (int i = 0; i < m_mipLevels; i++) {
+				mips[i] = m_decoded_mips[i].data();
+			}
+			m_Texture = std::make_shared<GS::Texture>(m_width, m_height, m_fmt, m_mipLevels, mips, 0);
+			m_decoded_mips.clear();
+		}
+	}
 }
 
 Mask::Resource::Image::Image(Mask::MaskData* parent, std::string name, std::string filename) 
@@ -242,7 +270,7 @@ void Mask::Resource::Image::Render(Mask::Part* part) {
 						sides_mips[side * m_mipLevels + i] = m_decoded_mips[side * m_mipLevels + i].data();
 					}
 				}
-				m_Texture = std::make_shared<GS::Texture>(m_width, m_fmt, m_mipLevels, sides_mips, 0);
+				m_Texture = std::make_shared<GS::Texture>(m_name, m_width, m_fmt, m_mipLevels, sides_mips, 0);
 				m_decoded_mips.clear();
 			}
 			else {

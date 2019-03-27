@@ -106,6 +106,17 @@ Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, obs_data_t*
 		obs_data_get_vec3(data, S_CENTER, &center);
 	}
 	vec4_set(&m_center, center.x, center.y, center.z, 1.0f);
+
+	// create GS resources
+	if (m_tempFile.length() > 0) {
+		LoadObj(m_tempFile);
+		Utils::DeleteTempFile(m_tempFile);
+		m_tempFile.clear();
+	}
+	else {
+		m_VertexBuffer = std::make_shared<GS::VertexBuffer>(m_rawVertices);
+		m_IndexBuffer = std::make_shared<GS::IndexBuffer>(m_rawIndices, m_numIndices);
+	}
 } 
 
 Mask::Resource::Mesh::Mesh(Mask::MaskData* parent, std::string name, std::string file)
@@ -127,19 +138,6 @@ void Mask::Resource::Mesh::Update(Mask::Part* part, float time) {
 
 void Mask::Resource::Mesh::Render(Mask::Part* part) {
 	UNUSED_PARAMETER(part);
-
-	if (m_VertexBuffer == nullptr) {
-		// create GS resources
-		if (m_tempFile.length() > 0) {
-			LoadObj(m_tempFile);
-			Utils::DeleteTempFile(m_tempFile);
-			m_tempFile.clear();
-		}
-		else {
-			m_VertexBuffer = std::make_shared<GS::VertexBuffer>(m_rawVertices);
-			m_IndexBuffer = std::make_shared<GS::IndexBuffer>(m_rawIndices, m_numIndices);
-		}
-	}
 
 	gs_load_vertexbuffer(m_VertexBuffer->get());
 	gs_load_indexbuffer(m_IndexBuffer->get());

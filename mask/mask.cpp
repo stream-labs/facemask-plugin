@@ -288,6 +288,14 @@ std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::GetResource(const std::st
 	// Default Resources
 	std::shared_ptr<Mask::Resource::IBase> p = Resource::IBase::LoadDefault(this, name);
 	if (p) {
+		// if resource is an effect, change to name to include active #defines
+		auto effect = std::dynamic_pointer_cast<Mask::Resource::Effect>(p);
+		if (effect) {
+			// we have sorted texture vector. so for the same type of textures
+			// this will always create one unique name
+			for (const auto &t : effect->GetActiveTextures())
+				res_name += "_" + t;
+		}
 		this->AddResource(res_name, p);
 		return p;
 	}

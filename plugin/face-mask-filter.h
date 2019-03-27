@@ -190,8 +190,9 @@ namespace Plugin {
 			std::unique_ptr<Mask::MaskData>	introData;
 			std::unique_ptr<Mask::MaskData>	outroData;
 
+			bool				loading_mask;
 			std::mutex          passFrameToDetection;
-
+			std::mutex          loadMaskDetectionMutex;
 			// alert location
 			enum AlertLocation {
 				LEFT_BOTTOM,

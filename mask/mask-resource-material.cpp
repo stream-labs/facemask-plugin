@@ -75,7 +75,7 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 		throw std::logic_error("Material has no effect.");
 	}
 	std::string effectName = obs_data_get_string(data, S_EFFECT);
-	m_effect = std::dynamic_pointer_cast<Mask::Resource::Effect>(m_parent->GetResource(effectName, true));
+	m_effect = std::dynamic_pointer_cast<Mask::Resource::Effect>(m_parent->GetResource(effectName));
 	if (m_effect == nullptr) {
 		PLOG_ERROR("Material uses unknown effect:", effectName.c_str());
 		throw std::logic_error("Material uses non-existing effect.");
@@ -327,7 +327,13 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 	else
 		m_use_video_lighting = false;
 
+	// sort active textures for proper effect caching
+	std::sort(active_textures.begin(), active_textures.end());
+
 	m_effect->SetActiveTextures(active_textures);
+
+	// early optimization is root of all evil
+	m_effect->Render(nullptr);
 }
 
 Mask::Resource::Material::~Material() {
