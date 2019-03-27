@@ -144,29 +144,42 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	alertTexRender = gs_texrender_create(GS_RGBA, GS_Z32F); // has depth buffer
 	obs_leave_graphics();
 
-	obs_enter_graphics();
 	// preload antialiasing effect
 	char* f = obs_module_file("effects/aa.effect");
 	char* errorMessage = nullptr;
+	obs_enter_graphics();
 	antialiasing_effect = gs_effect_create_from_file(f, &errorMessage);
 	if (antialiasing_effect) {
 		gs_effect_set_float(gs_effect_get_param_by_name(antialiasing_effect, "inv_width"), 1.0f / (baseWidth*m_scale_rate));
 		gs_effect_set_float(gs_effect_get_param_by_name(antialiasing_effect, "inv_height"), 1.0f / (baseHeight*m_scale_rate));
 	}
+	obs_leave_graphics();
 	if (f) {
 		bfree(f);
 	}
-	obs_leave_graphics();
 
-	obs_enter_graphics();
 	// preload color grading effect
 	f = obs_module_file("effects/color_grading_filter.effect");
 	errorMessage = nullptr;
+	obs_enter_graphics();
 	color_grading_filter_effect = gs_effect_create_from_file(f, &errorMessage);
+	obs_leave_graphics();
 	if (f) {
 		bfree(f);
 	}
-	obs_leave_graphics();
+
+	f = obs_module_file("effects/pbr.effect");
+	// preload most frequent types of PBR
+	// TODO precompile to avoid doing this during startup
+	Mask::Resource::Effect::compile("PBR", f, { "iblBRDFTex","iblDiffTex","iblSpecTex","vidLightingTex" });
+	Mask::Resource::Effect::compile("PBR", f, { "diffuseTex","iblBRDFTex","iblDiffTex","iblSpecTex","metalnessTex","normalTex","vidLightingTex" });
+	Mask::Resource::Effect::compile("PBR", f, { "diffuseTex","iblBRDFTex","iblDiffTex","iblSpecTex","normalTex","roughnessTex","vidLightingTex" });
+	Mask::Resource::Effect::compile("PBR", f, { "diffuseTex","iblBRDFTex","iblDiffTex","iblSpecTex","metalnessTex", "normalTex","roughnessTex","vidLightingTex" });
+	Mask::Resource::Effect::compile("PBR", f, { "diffuseTex","iblBRDFTex","iblDiffTex","iblSpecTex","metallicRoughnessTex", "normalTex","vidLightingTex" });
+	if (f) {
+		bfree(f);
+	}
+
 
 	vidLightTex = NULL;
 
@@ -254,6 +267,9 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 
 	maskData = nullptr;
 	obs_leave_graphics();
+
+	// also destroy effect pool
+	GS::Effect::destroy_pool();
 
 	delete smllFaceDetector;
 	delete smllRenderer;
