@@ -38,12 +38,12 @@ const std::map<std::string, std::string> Mask::Resource::Effect::g_textureTypes 
 			{"iblBRDFTex", "IBL_BRDF_TEX"},
 			{"roughnessTex", "ROUGHNESS_TEX"},
 			{"metalnessTex", "METALNESS_TEX"},
-			{"metallicRoughnessTex", "METALLICROUGHNESS_TEX"},
-			{"vidLightingTex", "USE_VIDEO_LIGHTING"}
+			{"metallicRoughnessTex", "METALLICROUGHNESS_TEX"}/*,
+			{"vidLightingTex", "USE_VIDEO_LIGHTING"}*/
 };
 
 
-std::shared_ptr<GS::Effect> Mask::Resource::Effect::compile(std::string name, std::string filename, std::vector<std::string> active_textures)
+std::shared_ptr<GS::Effect> Mask::Resource::Effect::compile(std::string name, std::string filename)
 {
 	char *file_string;
 	file_string = os_quick_read_utf8_file(filename.c_str());
@@ -59,7 +59,13 @@ std::shared_ptr<GS::Effect> Mask::Resource::Effect::compile(std::string name, st
 		compiling textures as well. Currently, it just
 		sets the parameter for DX to null.
 		TODO Mod libobs, or just port to direct OpenGL
-	*/
+
+	Update:
+		Using 1x1 empty textures it seems this could be avoided.
+	    This is here in case we see performance cost,
+		and have to revert to this way.
+	////////////////////////////////////////////////////////////
+
 	std::string dynamic_shader_string;
 	std::string unique_name = name;
 
@@ -73,9 +79,11 @@ std::shared_ptr<GS::Effect> Mask::Resource::Effect::compile(std::string name, st
 			unique_name += "_" + tex_type;
 	}
 	dynamic_shader_string += file_string;
-	bfree(file_string);
 
-	return std::make_shared<GS::Effect>(dynamic_shader_string, unique_name);
+	*/
+	std::string code = file_string;
+	bfree(file_string);
+	return std::make_shared<GS::Effect>(code, name);
 }
 
 Mask::Resource::Effect::Effect(Mask::MaskData* parent, std::string name, obs_data_t* data)
@@ -120,7 +128,7 @@ void Mask::Resource::Effect::Render(Mask::Part* part) {
 	UNUSED_PARAMETER(part);
 	if (m_Effect == nullptr) {
 
-		m_Effect = Effect::compile(m_name, m_filename, m_active_textures);
+		m_Effect = Effect::compile(m_name, m_filename);
 
 		if (m_filenameIsTemp) {
 			Utils::DeleteTempFile(m_filename);

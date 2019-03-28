@@ -42,7 +42,7 @@ namespace Mask {
 			virtual void Render(Mask::Part* part) override;
 
 			static const std::map<std::string, std::string> g_textureTypes;
-			static std::shared_ptr<GS::Effect> compile(std::string name, std::string filename, std::vector<std::string> active_textures);
+			static std::shared_ptr<GS::Effect> compile(std::string name, std::string filename);
 
 			void SetActiveTextures(const std::vector<std::string> &textures) { m_active_textures = textures; }
 			std::vector<std::string> GetActiveTextures() { return m_active_textures; }

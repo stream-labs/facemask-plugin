@@ -168,20 +168,24 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 		bfree(f);
 	}
 
-	f = obs_module_file("effects/pbr.effect");
-	// preload most frequent types of PBR and Phong
+	// preload PBR and Phong
 	// TODO precompile to avoid doing this during startup
-	Mask::Resource::Effect::compile("PBR", f, { "iblBRDFTex","iblDiffTex","iblSpecTex","vidLightingTex" });
-	Mask::Resource::Effect::compile("PBR", f, { "diffuseTex","iblBRDFTex","iblDiffTex","iblSpecTex","metalnessTex","normalTex","vidLightingTex" });
-	Mask::Resource::Effect::compile("PBR", f, { "diffuseTex","iblBRDFTex","iblDiffTex","iblSpecTex","normalTex","roughnessTex","vidLightingTex" });
-	Mask::Resource::Effect::compile("PBR", f, { "diffuseTex","iblBRDFTex","iblDiffTex","iblSpecTex","metalnessTex", "normalTex","roughnessTex","vidLightingTex" });
-	Mask::Resource::Effect::compile("PBR", f, { "diffuseTex","iblBRDFTex","iblDiffTex","iblSpecTex","metallicRoughnessTex", "normalTex","vidLightingTex" });
+
+	f = obs_module_file("effects/pbr.effect");
+	Mask::Resource::Effect::compile("PBR", f);
 	if (f) {
 		bfree(f);
 	}
 
 	f = obs_module_file("effects/phong.effect");
-	Mask::Resource::Effect::compile("effectPhong", f, { "diffuseTex" });
+	Mask::Resource::Effect::compile("effectPhong", f);
+	if (f) {
+		bfree(f);
+	}
+
+	// depth head uses default effect
+	f = obs_module_file("effects/default.effect");
+	Mask::Resource::Effect::compile("effectDefault", f);
 	if (f) {
 		bfree(f);
 	}
@@ -194,6 +198,8 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_museum_diffuse");
 	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_mossy_forest_diffuse");
 	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_cayley_interior_diffuse");
+
+	GS::Texture::init_empty_texture();
 
 
 	vidLightTex = NULL;
