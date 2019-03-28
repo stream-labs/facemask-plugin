@@ -36,8 +36,7 @@
 typedef void(*facemask_init_face_detector)(dlib::frontal_face_detector&);
 typedef std::vector<dlib::rectangle>(*facemask_detect_faces)(dlib::frontal_face_detector&, dlib::cv_image<unsigned char>&);
 
-static const char* const kFileShapePredictor68 = "shape_predictor_68_face_landmarks.dat";
-
+static const char* const kFileShapePredictor68 = "SL_SP_v1.2.dat";
 
 using namespace dlib;
 using namespace std;
