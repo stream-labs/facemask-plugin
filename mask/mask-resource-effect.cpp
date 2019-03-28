@@ -63,11 +63,14 @@ std::shared_ptr<GS::Effect> Mask::Resource::Effect::compile(std::string name, st
 	std::string dynamic_shader_string;
 	std::string unique_name = name;
 
+	bool requires_unique_name = (name == "PBR");
+
 	for (const std::string &tex_type : active_textures) {
 		if (g_textureTypes.find(tex_type) != g_textureTypes.end()) {
 			dynamic_shader_string += "#define " + g_textureTypes.at(tex_type) + "\n";
 		}
-		unique_name += "_" + tex_type;
+		if (requires_unique_name)
+			unique_name += "_" + tex_type;
 	}
 	dynamic_shader_string += file_string;
 	bfree(file_string);

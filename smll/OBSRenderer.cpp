@@ -19,6 +19,7 @@
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "OBSRenderer.hpp"
+#include "gs/gs-effect.h"
 
 #pragma warning( push )
 #pragma warning( disable: 4127 )
@@ -62,7 +63,6 @@ namespace smll {
 		, m_phongEffect(nullptr)
 		, m_samplerState(nullptr) 
 		, m_colorConversion(nullptr) {
-		obs_enter_graphics();
 
 		gs_sampler_info sinfo;
 		sinfo.address_u = GS_ADDRESS_CLAMP;
@@ -72,24 +72,35 @@ namespace smll {
 		sinfo.border_color = 0;
 		sinfo.max_anisotropy = 0;
 
+		obs_enter_graphics();
 		m_samplerState = gs_samplerstate_create(&sinfo);
+		obs_leave_graphics();
 		static const char* const fn = "effects/color_conversion.effect";
 		char* filename = obs_module_file(fn);
 		char* error;
+		obs_enter_graphics();
 		m_colorConversion = gs_effect_create_from_file(filename, &error);
+		obs_leave_graphics();
 		if (!m_colorConversion) {
 			blog(LOG_ERROR, "Cannot open color_conversion.effect. %s", error);
 		}
 		bfree(filename);
 
 		// load the phong shader effect
-		char* phongFilename = obs_module_file("effects/phong.effect");
-		m_phongEffect = gs_effect_create_from_file(phongFilename, &error);
-		if (!m_phongEffect) {
-			blog(LOG_ERROR, "Cannot load phong effect %s", error);
+		GS::Effect::load_from_cache("effectPhong", &m_phongEffect);
+		if (m_phongEffect == nullptr)
+		{
+			char* phongFilename = obs_module_file("effects/phong.effect");
+			obs_enter_graphics();
+			m_phongEffect = gs_effect_create_from_file(phongFilename, &error);
+			obs_leave_graphics();
+			if (!m_phongEffect) {
+				blog(LOG_ERROR, "Cannot load phong effect %s", error);
+			}
+			bfree(phongFilename);
 		}
-		bfree(phongFilename);
 
+		obs_enter_graphics();
 		// make vertex buffers
 		// x axis
 		BeginVertexBuffer();

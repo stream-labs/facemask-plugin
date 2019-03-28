@@ -200,7 +200,9 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 
 	// Make the smll stuff
 	smllFaceDetector = new smll::FaceDetector();
-	smllRenderer = new smll::OBSRenderer(); 
+#if !defined(PUBLIC_RELEASE)
+	smllRenderer = new smll::OBSRenderer();
+#endif
 
 	// set our mm thread task
 	if (!taskHandle) {
@@ -288,7 +290,9 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 	GS::Texture::destroy_pool();
 
 	delete smllFaceDetector;
+#if !defined(PUBLIC_RELEASE)
 	delete smllRenderer;
+#endif
 
 	if (taskHandle != NULL) {
 		AvRevertMmThreadCharacteristics(taskHandle);
@@ -971,8 +975,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		return;
 	}
 
+#if !defined(PUBLIC_RELEASE)
 	// smll needs a "viewport" to draw
 	smllRenderer->SetViewport(baseWidth, baseHeight);
+#endif
 
 	// set up alphas
 	bool introActive = false;
@@ -1213,10 +1219,11 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 						}
 					}
 				}
-
+#if !defined(PUBLIC_RELEASE)
 				// draw face detection data
 				if (drawFaces)
 					smllRenderer->DrawFaces(faces);
+#endif
 
 				gs_texrender_end(drawTexRender);
 			}
@@ -1299,10 +1306,11 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 			gs_draw_sprite(mask_tex, 0, baseWidth, baseHeight);
 		}
 	}
-
+#if !defined(PUBLIC_RELEASE)
 	// draw face detection data
 	if (drawFaces)
 		smllRenderer->DrawFaces(faces);
+#endif
 
 	// draw crop rectangles
 	if (drawFDRect) {
@@ -1812,6 +1820,7 @@ Plugin::FaceMaskFilter::Instance::LoadMask(std::string filename) {
 }
 
 void Plugin::FaceMaskFilter::Instance::drawCropRects(int width, int height) {
+#if !defined(PUBLIC_RELEASE)
 	dlib::rectangle r;
 	int x = (int)((float)(width / 2) *
 		smll::Config::singleton().get_double(
@@ -1836,9 +1845,11 @@ void Plugin::FaceMaskFilter::Instance::drawCropRects(int width, int height) {
 	r.set_right(x + w);
 	smllRenderer->SetDrawColor(255, 0, 255);
 	smllRenderer->DrawRect(r);
+#endif
 }
 
 void Plugin::FaceMaskFilter::Instance::drawMotionRects(int width, int height) {
+#if !defined(PUBLIC_RELEASE)
 	if (drawMotionRect) {
 		dlib::rectangle rect;
 		int t = faces.motionRect.top();
@@ -1854,6 +1865,7 @@ void Plugin::FaceMaskFilter::Instance::drawMotionRects(int width, int height) {
 			smllRenderer->DrawRect(rect, 3);
 		}
 	}
+#endif
 }
 
 void Plugin::FaceMaskFilter::Instance::updateFaces() {

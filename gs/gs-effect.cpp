@@ -85,6 +85,7 @@ void GS::Effect::destroy_pool() {
 		gs_effect_destroy(ent.second.second);
 		obs_leave_graphics();
 	}
+	pool.clear();
 }
 
 GS::Effect::Effect(std::string file) {
