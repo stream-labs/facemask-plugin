@@ -144,8 +144,9 @@ namespace Plugin {
 			ofstream		logOutput;
 			// Face detector
 			smll::FaceDetector*		smllFaceDetector;
+#if !defined(PUBLIC_RELEASE)
 			smll::OBSRenderer*      smllRenderer;
-
+#endif
 			gs_effect_t*		antialiasing_effect = nullptr;
 			int					m_scale_rate = 1;
 			int					antialiasing_method = NO_ANTI_ALIASING;

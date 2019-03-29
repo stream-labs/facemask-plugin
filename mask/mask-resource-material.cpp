@@ -441,51 +441,66 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 		gs_enable_depth_test(m_depthTest != gs_depth_test::GS_ALWAYS);
 		gs_depth_function(m_depthTest);
 		gs_set_cull_mode(m_culling);
-		
+
 		// set up image params (image/sequence)
 		bool texmatset = false;
 		bool is_instance_visible = true;
-		for (auto kv : m_imageParameters) {
+		for (auto tex_type_ent : Mask::Resource::Effect::g_textureTypes) {
 			try {
-				auto el = m_effect->GetEffect()->GetParameterByName(kv.first);
-				if (kv.second->GetType() == Type::Image) {
-					std::shared_ptr<Image> img = std::dynamic_pointer_cast<Image>(kv.second);
-					img->Render(part);
-					el.SetTexture(img->GetTexture());
-					el.SetSampler(m_samplerState);
-				}
-				else if (kv.second->GetType() == Type::Sequence) {
-					std::shared_ptr<Sequence> seq = std::dynamic_pointer_cast<Sequence>(kv.second);
-					seq->Render(part);
-					std::shared_ptr<Image> img = seq->GetImage();
-					el.SetTexture(img->GetTexture());
-					el.SetSampler(m_samplerState);
+				auto kv = m_imageParameters.find(tex_type_ent.first);
+				if (m_imageParameters.find(tex_type_ent.first) != m_imageParameters.end())
+				{
+					auto el = m_effect->GetEffect()->GetParameterByName(kv->first);
+					if (kv->second->GetType() == Type::Image) {
+						std::shared_ptr<Image> img = std::dynamic_pointer_cast<Image>(kv->second);
+						img->Render(part);
+						el.SetTexture(img->GetTexture());
+						el.SetSampler(m_samplerState);
+					}
+					else if (kv->second->GetType() == Type::Sequence) {
+						std::shared_ptr<Sequence> seq = std::dynamic_pointer_cast<Sequence>(kv->second);
+						seq->Render(part);
+						std::shared_ptr<Image> img = seq->GetImage();
+						el.SetTexture(img->GetTexture());
+						el.SetSampler(m_samplerState);
 
-					// set up texture matrix
-					// NOTE: there is no gs_effect_set_matrix3. bummer.
-					// - might be better as translate/scale/rot (vec2/vec2/float)
-					matrix4 texmat;
-					seq->SetTextureMatrix(part, &texmat);
-					gs_eparam_t* effparm = gs_effect_get_param_by_name(eff, PARAM_TEXMAT);
-					texmatset = true;
-					if (effparm)
-						gs_effect_set_matrix4(effparm, &texmat);
+						// set up texture matrix
+						// NOTE: there is no gs_effect_set_matrix3. bummer.
+						// - might be better as translate/scale/rot (vec2/vec2/float)
+						matrix4 texmat;
+						seq->SetTextureMatrix(part, &texmat);
+						gs_eparam_t* effparm = gs_effect_get_param_by_name(eff, PARAM_TEXMAT);
+						texmatset = true;
+						if (effparm)
+							gs_effect_set_matrix4(effparm, &texmat);
 
-					// should we delay rendering?
-					is_instance_visible = seq->IsInstancePlaying();
+						// should we delay rendering?
+						is_instance_visible = seq->IsInstancePlaying();
+					}
 				}
+				else
+				{
+					gs_eparam_t* param = gs_effect_get_param_by_name(m_effect->GetEffect()->GetObject(), tex_type_ent.first.c_str());
+					gs_texture_t *tex = GS::Texture::get_empty_texture();
+					if (param && tex)
+					{
+						gs_effect_set_texture(param, tex);
+						gs_effect_set_next_sampler(param, m_samplerState);
+					}
+				}
+
 			}
 			catch (...) {
 			}
 		}
-		if (m_use_video_lighting) {
-			gs_eparam_t* param = gs_effect_get_param_by_name(m_effect->GetEffect()->GetObject(), PARAM_VIDEO_LIGHTING_TEX);
-			gs_texture_t *tex = m_parent->GetVideoLightingTexture();
-			if (param && tex)
-			{
-				gs_effect_set_texture(param, tex);
-				gs_effect_set_next_sampler(param, m_samplerState);
-			}
+
+		// attach video texture
+		gs_eparam_t* param = gs_effect_get_param_by_name(m_effect->GetEffect()->GetObject(), PARAM_VIDEO_LIGHTING_TEX);
+		gs_texture_t *tex = m_use_video_lighting ? m_parent->GetVideoLightingTexture() : GS::Texture::get_empty_texture();
+		if (param && tex)
+		{
+			gs_effect_set_texture(param, tex);
+			gs_effect_set_next_sampler(param, m_samplerState);
 		}
 
 		// set params for lighting

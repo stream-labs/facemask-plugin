@@ -147,7 +147,11 @@ namespace GS {
 		 */
 		gs_texture_t* GetObject();
 
-
+		static void init_empty_texture();
+		static gs_texture_t *get_empty_texture();
+		static void add_to_cache(std::string, gs_texture_t*);
+		static void load_from_cache(std::string, gs_texture_t**);
+		static void unload_texture(std::string, gs_texture_t *);
 		static void destroy_pool();
 
 
@@ -161,9 +165,7 @@ namespace GS {
 		// caching, for now only the cubemaps 
 		static const size_t MAX_POOL_SIZE;
 		static std::map<std::string, std::pair<size_t, gs_texture_t*> > pool;
-		static void add_to_cache(std::string, gs_texture_t*);
-		static void load_from_cache(std::string, gs_texture_t**);
-		static void unload_texture(std::string, gs_texture_t *);
+		static gs_texture_t *empty_texture;
 
 	};
 }

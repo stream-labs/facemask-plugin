@@ -22,7 +22,23 @@
 
 const size_t GS::Texture::MAX_POOL_SIZE = 10;
 std::map<std::string, std::pair<size_t, gs_texture_t*> > GS::Texture::pool;
+gs_texture_t* GS::Texture::empty_texture = nullptr;
 
+
+gs_texture_t *GS::Texture::get_empty_texture() {
+	return empty_texture;
+}
+
+void GS::Texture::init_empty_texture() {
+	const uint8_t *zero_tex[1];
+	zero_tex[0] = new uint8_t[4]();
+
+	obs_enter_graphics();
+	empty_texture = gs_texture_create(1, 1, GS_RGBA, 1, (const uint8_t **)&zero_tex, 0);
+	obs_leave_graphics();
+
+	delete zero_tex[0];
+}
 
 void GS::Texture::add_to_cache(std::string name, gs_texture_t *texture) {
 
@@ -111,6 +127,13 @@ void GS::Texture::destroy_pool() {
 		}
 	}
 	pool.clear();
+	// destroy empty texture as well
+	if (empty_texture)
+	{
+		obs_enter_graphics();
+		gs_texture_destroy(empty_texture);
+		obs_leave_graphics();
+	}
 }
 
 GS::Texture::Texture(uint32_t width, uint32_t height, gs_color_format format, uint32_t mip_levels, const uint8_t **mip_data, uint32_t flags) : m_destroy(true) {

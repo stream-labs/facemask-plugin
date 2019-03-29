@@ -29,14 +29,10 @@ uniform int ambientMap = 0;
 uniform texture2d ambientTex;
 uniform int diffuseMap = 0;
 uniform texture2d diffuseTex;
-uniform int specularMap = 0;
-uniform texture2d specularTex;
 uniform int emissiveMap = 0;
 uniform texture2d emissiveTex;
 uniform int normalMap = 0;
 uniform texture2d normalTex;
-uniform int reflectMap = 0;
-uniform texture2d reflectTex;
 
 uniform int iblSpecMap = 0;
 uniform texture_cube iblSpecTex;
@@ -532,7 +528,7 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 	// normal
 	float3 normal = normalize(v_in.norm);
 
-#ifdef NORMAL_TEX	
+//#ifdef NORMAL_TEX	
 	if (normalMap != 0) {
 		float3 tangent = normalize(v_in.tangent);
 		float3 bitangent = normalize(v_in.bitangent);
@@ -541,7 +537,7 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 		normal = normalTex.Sample(tex_sampler, v_in.uv).xyz * 2.0 - 1.0;
 		normal = normalize(mul(normal, TBN));
 	}
-#endif
+//#endif
 
 	// material colors
 	float4 ambColor = ambientColor;
@@ -554,37 +550,32 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 	float _metalness = metalness;
 
 	// texture maps
-#ifdef AMBIENT_TEX
+//#ifdef AMBIENT_TEX
 	if (ambientMap != 0)
 		ambColor = ambientTex.Sample(tex_sampler, v_in.uv);
-#endif
+//#endif
 
-#ifdef DIFFUSE_TEX
+//#ifdef DIFFUSE_TEX
 	if (diffuseMap != 0)
 		albedoColor = diffuseTex.Sample(tex_sampler, v_in.uv);
-#endif
+//#endif
 
-#ifdef DISABLED_SPECULAR_TEX
-	if (specularMap != 0)
-		spcColor = specularTex.Sample(tex_sampler, v_in.uv);
-#endif
-
-#ifdef EMISSIVE_TEX
+//#ifdef EMISSIVE_TEX
 	if (emissiveMap != 0)
 		emmColor = emissiveTex.Sample(tex_sampler, v_in.uv);
-#endif
+//#endif
 
-#ifdef ROUGHNESS_TEX
+//#ifdef ROUGHNESS_TEX
 	if (roughnessMap != 0)
 		_roughness = max(0.04, roughnessTex.Sample(tex_sampler, v_in.uv).r);
-#endif
+//#endif
 
-#ifdef METALNESS_TEX
+//#ifdef METALNESS_TEX
 	if (metalnessMap != 0)
 		_metalness = metalnessTex.Sample(tex_sampler, v_in.uv).r;
-#endif
+//#endif
 
-#ifdef METALLICROUGHNESS_TEX
+//#ifdef METALLICROUGHNESS_TEX
 	if (metallicRoughnessMap != 0) {
 		// R: Occlusion
 		// G: Roughness
@@ -594,7 +585,7 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 		_roughness = max(0.04, metallic_roughness.g);
 		_metalness = metallic_roughness.b;
 	}
-#endif
+//#endif
 
 	// convert srgb to linear
 	albedoColor = srgb_to_linear(albedoColor);
@@ -603,7 +594,7 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 	// Start with full transparent color
 	float4 base_color = {0,0,0,0};	
 
-#ifdef IBL_SPEC_TEX
+//#ifdef IBL_SPEC_TEX
 	if (iblSpecMap != 0 && iblBRDFMap != 0 && iblDiffMap != 0) {
 		float3 r = -normalize(reflect(-vpos, normal));
 
@@ -617,13 +608,13 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 		float4 ibl_spec_light = iblSpecTex.SampleLevel(tex_sampler, rotate_env_map(float3(-r.x, -r.y, r.z), ibl_rotate_offset), lod);
 		float4 ibl_diff_light = iblDiffTex.Sample(tex_sampler, rotate_env_map(float3(-normal.x, -normal.y, normal.z), ibl_rotate_offset));
 
-#ifdef IBL_BRDF_TEX
+//#ifdef IBL_BRDF_TEX
 		float3 brdf = iblBRDFTex.Sample(tex_sampler,float2(NdV, 1.0 - _roughness)).rgb;
 		float3 reflectivity = specular_color*brdf.x+brdf.y;
-#else
-		// not accurate at all, just a fallback to avoid the shader fail fully
-		float3 reflectivity = specular_color*saturate((1.0-_roughness)*NdV+1.0*(1.0-_roughness));
-#endif
+//#else
+//		// not accurate at all, just a fallback to avoid the shader fail fully
+//		float3 reflectivity = specular_color*saturate((1.0-_roughness)*NdV+1.0*(1.0-_roughness));
+//#endif
 
 		float3 kr = reflectivity;
 		float3 kd = (1.0 - kr) * albedoColor.a * albedoColor.rgb * (1.0 - _metalness);
@@ -646,7 +637,7 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 
 		base_color += float4(ibl_intensity*(ibl_diff_light.rgb*kd + ibl_spec_light.rgb*kr), opacity);
 	}
-	#endif
+	//#endif
 	
 	// NO LIGHTS
 	if (numLights == 0) {
@@ -761,7 +752,7 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 
 	float3 brightness_factor = {.30, .59, .11};
 
-#ifdef USE_VIDEO_LIGHTING
+//#ifdef USE_VIDEO_LIGHTING
 	// alpha from vidLightingTex contains brightness
 	// rgb is dominant bright color
 	float4 video_bright_color = vidLightingTex.Sample(tex_sampler, float2((normal.x+1)/2, (normal.y+1)/2));
@@ -773,7 +764,7 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 		final_color_balance += 5 * video_bright_color.rgb;
 		final_color_balance /= 6;
 	}
-#endif
+//#endif
 
 	float3 linear_color = final_color.rgb;
 
@@ -784,10 +775,10 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 	float3 linear_color_balance = pow( final_color_balance, 2.2 );
 	float3 linear_exposure = pow( 2, final_exposure );
 
-#ifdef USE_VIDEO_LIGHTING
+//#ifdef USE_VIDEO_LIGHTING
 	if(video_brightness > 0.0)
 		linear_exposure *= brightness_to_exposure(video_brightness, 0.2);
-#endif
+//#endif
 
 	float linear_ref = 0.18;
 
