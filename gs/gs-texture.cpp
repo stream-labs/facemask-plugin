@@ -30,19 +30,23 @@ gs_texture_t *GS::Texture::get_empty_texture() {
 }
 
 void GS::Texture::init_empty_texture() {
-	const uint8_t *zero_tex[1];
-	zero_tex[0] = new uint8_t[4]();
-
 	obs_enter_graphics();
-	empty_texture = gs_texture_create(1, 1, GS_RGBA, 1, (const uint8_t **)&zero_tex, 0);
-	obs_leave_graphics();
+	if (empty_texture == nullptr)
+	{
+		const uint8_t *zero_tex[1];
+		zero_tex[0] = new uint8_t[4]();
 
-	delete zero_tex[0];
+		empty_texture = gs_texture_create(1, 1, GS_RGBA, 1, (const uint8_t **)&zero_tex, 0);
+
+		delete zero_tex[0];
+	}
+	obs_leave_graphics();
 }
 
 void GS::Texture::add_to_cache(std::string name, gs_texture_t *texture) {
 
-	if (pool.find(name) != pool.end()) {
+	auto it = pool.find(name);
+	if (it != pool.end() && it->second.second != nullptr) {
 		throw "Incorrect use of add_to_cache, before calling load_from_cache";
 	}
 
@@ -85,8 +89,8 @@ void GS::Texture::unload_texture(std::string name, gs_texture_t *texture) {
 	// only destroy if the texture is not managed by the pool
 	if (pool.find(name) == pool.end()) {
 		//blog(LOG_DEBUG, "Destroying unmanaged texture");
+		obs_enter_graphics();
 		if (texture) {
-			obs_enter_graphics();
 			switch (gs_get_texture_type(texture)) {
 			case GS_TEXTURE_2D:
 				gs_texture_destroy(texture);
@@ -98,8 +102,8 @@ void GS::Texture::unload_texture(std::string name, gs_texture_t *texture) {
 				gs_cubetexture_destroy(texture);
 				break;
 			}
-			obs_leave_graphics();
 		}
+		obs_leave_graphics();
 		return;
 	}
 
@@ -108,10 +112,10 @@ void GS::Texture::unload_texture(std::string name, gs_texture_t *texture) {
 }
 
 void GS::Texture::destroy_pool() {
+	obs_enter_graphics();
 	for (auto &ent : pool) {
 		//blog(LOG_DEBUG, "POOL DESTROY: destroying managed texture: %s", ent.first.c_str());
 		if (ent.second.second) {
-			obs_enter_graphics();
 			switch (gs_get_texture_type(ent.second.second)) {
 			case GS_TEXTURE_2D:
 				gs_texture_destroy(ent.second.second);
@@ -123,17 +127,18 @@ void GS::Texture::destroy_pool() {
 				gs_cubetexture_destroy(ent.second.second);
 				break;
 			}
-			obs_leave_graphics();
 		}
+		ent.second.second = nullptr;
 	}
-	pool.clear();
+	obs_leave_graphics();
 	// destroy empty texture as well
+	obs_enter_graphics();
 	if (empty_texture)
 	{
-		obs_enter_graphics();
 		gs_texture_destroy(empty_texture);
-		obs_leave_graphics();
+		empty_texture = nullptr;
 	}
+	obs_leave_graphics();
 }
 
 GS::Texture::Texture(uint32_t width, uint32_t height, gs_color_format format, uint32_t mip_levels, const uint8_t **mip_data, uint32_t flags) : m_destroy(true) {
@@ -193,6 +198,7 @@ GS::Texture::Texture(uint32_t width, uint32_t height, uint32_t depth, gs_color_f
 
 GS::Texture::Texture(std::string name,uint32_t size, gs_color_format format, uint32_t mip_levels, const uint8_t **mip_data, uint32_t flags) : m_destroy(true) {
 	m_name = name;
+	obs_enter_graphics();
 	GS::Texture::load_from_cache(m_name, &m_texture);
 	if (m_texture == nullptr)
 	{
@@ -209,15 +215,14 @@ GS::Texture::Texture(std::string name,uint32_t size, gs_color_format format, uin
 				throw std::logic_error("mip mapping requires power of two dimensions");
 		}
 
-		obs_enter_graphics();
 		m_texture = gs_cubetexture_create(size, format, mip_levels, mip_data, (flags & Flags::Dynamic) ? GS_DYNAMIC : 0 | (flags & Flags::BuildMipMaps) ? GS_BUILD_MIPMAPS : 0);
-		obs_leave_graphics();
 
 		if (!m_texture)
 			throw std::runtime_error("Failed to create texture.");
 
 		GS::Texture::add_to_cache(m_name, m_texture);
 	}
+	obs_leave_graphics();
 }
 
 GS::Texture::Texture(std::string file) : m_destroy(true) {

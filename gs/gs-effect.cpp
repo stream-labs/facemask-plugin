@@ -24,8 +24,9 @@ std::map<std::string, std::pair<size_t, gs_effect_t*> > GS::Effect::pool;
 
 
 void GS::Effect::add_to_cache(std::string name, gs_effect_t *effect) {
-	
-	if (pool.find(name) != pool.end()) {
+
+	auto it = pool.find(name);
+	if (it != pool.end() && it->second.second != nullptr) {
 		throw "Incorrect use of add_to_cache, before calling load_from_cache";
 	}
 
@@ -69,7 +70,8 @@ void GS::Effect::unload_effect(std::string name, gs_effect_t *effect) {
 	if (pool.find(name) == pool.end()) {
 		//blog(LOG_DEBUG, "Destroying unmanaged effect: %s", name.c_str());
 		obs_enter_graphics();
-		gs_effect_destroy(effect);
+		if(effect)
+			gs_effect_destroy(effect);
 		obs_leave_graphics();
 		return;
 	}
@@ -79,21 +81,24 @@ void GS::Effect::unload_effect(std::string name, gs_effect_t *effect) {
 }
 
 void GS::Effect::destroy_pool() {
+	obs_enter_graphics();
 	for (auto &ent : pool) {
 		//blog(LOG_DEBUG, "POOL DESTROY: destroying managed effect: %s", ent.first.c_str());
-		obs_enter_graphics();
-		gs_effect_destroy(ent.second.second);
-		obs_leave_graphics();
+		if (ent.second.second)
+		{
+			gs_effect_destroy(ent.second.second);
+			ent.second.second = nullptr;
+		}
 	}
-	pool.clear();
+	obs_leave_graphics();
 }
 
 GS::Effect::Effect(std::string file) {
 	m_name = file;
+	obs_enter_graphics();
 	GS::Effect::load_from_cache(m_name, &m_effect);
 	if (m_effect == nullptr)
 	{
-		obs_enter_graphics();
 		char* errorMessage = nullptr;
 		m_effect = gs_effect_create_from_file(m_name.c_str(), &errorMessage);
 		if (!m_effect || errorMessage) {
@@ -102,18 +107,17 @@ GS::Effect::Effect(std::string file) {
 			obs_leave_graphics();
 			throw std::runtime_error(error);
 		}
-		obs_leave_graphics();
-
 		GS::Effect::add_to_cache(m_name, m_effect);
 	}
+	obs_leave_graphics();
 }
 
 GS::Effect::Effect(std::string code, std::string name) {
 	m_name = name;
+	obs_enter_graphics();
 	GS::Effect::load_from_cache(m_name, &m_effect);
 	if (m_effect == nullptr)
 	{
-		obs_enter_graphics();
 		char* errorMessage = nullptr;
 		m_effect = gs_effect_create(code.c_str(), m_name.c_str(), &errorMessage);
 		if (!m_effect || errorMessage) {
@@ -122,10 +126,10 @@ GS::Effect::Effect(std::string code, std::string name) {
 			obs_leave_graphics();
 			throw std::runtime_error(error);
 		}
-		obs_leave_graphics();
 
 		GS::Effect::add_to_cache(m_name, m_effect);
 	}
+	obs_leave_graphics();
 }
 
 GS::Effect::~Effect() {
