@@ -29,7 +29,7 @@ OBS_MODULE_USE_DEFAULT_LOCALE("obs-facemask-plugin", "en-US");
 
 
 MODULE_EXPORT bool obs_module_load(void) {
-	if (!g_faceMaskFilter) {
+	if (g_faceMaskFilter == nullptr) {
 		g_faceMaskFilter = new Plugin::FaceMaskFilter();
 	}
 	return true;
@@ -37,7 +37,7 @@ MODULE_EXPORT bool obs_module_load(void) {
 
 
 MODULE_EXPORT void obs_module_unload(void) {
-	if (g_faceMaskFilter) {
+	if (g_faceMaskFilter != nullptr) {
 		delete g_faceMaskFilter;
 		g_faceMaskFilter = nullptr;
 	}
