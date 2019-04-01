@@ -20,7 +20,7 @@
 #include "plugin.h"
 #include "face-mask-filter.h"
 
-static Plugin::FaceMaskFilter* g_faceMaskFilter;
+static Plugin::FaceMaskFilter* g_faceMaskFilter = nullptr;
 
 OBS_DECLARE_MODULE();
 OBS_MODULE_AUTHOR("Streamlabs");
@@ -29,13 +29,18 @@ OBS_MODULE_USE_DEFAULT_LOCALE("obs-facemask-plugin", "en-US");
 
 
 MODULE_EXPORT bool obs_module_load(void) {
-	g_faceMaskFilter = new Plugin::FaceMaskFilter();
+	if (!g_faceMaskFilter) {
+		g_faceMaskFilter = new Plugin::FaceMaskFilter();
+	}
 	return true;
 }
 
 
 MODULE_EXPORT void obs_module_unload(void) {
-	delete g_faceMaskFilter;
+	if (g_faceMaskFilter) {
+		delete g_faceMaskFilter;
+		g_faceMaskFilter = nullptr;
+	}
 }
 
 MODULE_EXPORT const char* obs_module_name() {
