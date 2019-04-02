@@ -534,6 +534,7 @@ void command_import(Args& args) {
 
 	// Add all the meshes
 	cout << "Importing " << scene->mNumMeshes << " meshes..." << endl;
+	// first clean up the names
 	for (unsigned int i = 0; i < scene->mNumMeshes; i++) {
 		// sometimes meshes don't have names
 		if (scene->mMeshes[i]->mName.length == 0) {
@@ -541,6 +542,22 @@ void command_import(Args& args) {
 			snprintf(temp, sizeof(temp), "mesh%d", i);
 			scene->mMeshes[i]->mName = temp;
 		}
+		// or have identical names
+		else {
+			std::string current_name = scene->mMeshes[i]->mName.C_Str();
+			size_t uidx = 0;
+			for (unsigned int j = i + 1; j < scene->mNumMeshes; j++) {
+				if (current_name == scene->mMeshes[j]->mName.C_Str())
+				{
+					scene->mMeshes[j]->mName = current_name + std::to_string(++uidx);
+				}
+			}
+			if (uidx > 0)
+				scene->mMeshes[i]->mName = current_name + "0";
+		}
+	}
+
+	for (unsigned int i = 0; i < scene->mNumMeshes; i++) {
 		aiMesh* mesh = scene->mMeshes[i];
 
 		if (!mesh->mTangents) {
