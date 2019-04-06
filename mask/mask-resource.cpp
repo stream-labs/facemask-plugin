@@ -223,6 +223,7 @@ bool Mask::Resource::Cache::add(CacheableType resource_type, std::string name, v
 				// can safely replace
 				blog(LOG_DEBUG, "Caching resource (replacing inactive older version): %s", name.c_str());
 				pool[name] = CacheItem(resource);
+				return true;
 			}
 			else
 				throw "Incorrect use of add before calling load";
@@ -230,12 +231,14 @@ bool Mask::Resource::Cache::add(CacheableType resource_type, std::string name, v
 		else {
 			blog(LOG_DEBUG, "Caching resource (re-bind): %s", name.c_str());
 			pool[name] = CacheItem(resource);
+			return true;
 		}
 	}
 	else if (pool.size() < POOL_SIZE)
 	{
 		blog(LOG_DEBUG, "Caching resource: %s", name.c_str());
 		pool[name] = CacheItem(resource);
+		return true;
 	}
 	else
 	{
@@ -289,6 +292,7 @@ bool Mask::Resource::Cache::add(CacheableType resource_type, std::string name, v
 			// sorry we cannot cache
 			// the pool is full and
 			// no one can leave it currently
+			blog(LOG_DEBUG, "Caching failed because the pool is full, and no one is willing to leave. Resource: %s", name.c_str());
 			return false;
 		}
 
@@ -308,7 +312,7 @@ void Mask::Resource::Cache::load(CacheableType resource_type, std::string name, 
 	}
 	CachePool &pool = pool_it->second;
 	if (pool.find(name) != pool.end()) {
-		//blog(LOG_DEBUG, "Re-using texture: %s", name.c_str());
+		blog(LOG_DEBUG, "Re-using texture: %s", name.c_str());
 		pool[name].active_count++;
 		pool[name].use_count++;
 		*resource_ptr = pool[name].resource;
@@ -404,6 +408,6 @@ void Mask::Resource::Cache::destroy() {
 	}
 
 	obs_leave_graphics();
-	pool_map.clear();
+
 }
 
