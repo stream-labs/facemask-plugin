@@ -19,129 +19,8 @@
 
 #include "gs-texture.h"
 
-
-const size_t GS::Texture::MAX_POOL_SIZE = 10;
-std::map<std::string, std::pair<size_t, gs_texture_t*> > GS::Texture::pool;
-gs_texture_t* GS::Texture::empty_texture = nullptr;
-
-
-gs_texture_t *GS::Texture::get_empty_texture() {
-	return empty_texture;
-}
-
-void GS::Texture::init_empty_texture() {
-	obs_enter_graphics();
-	if (empty_texture == nullptr)
-	{
-		const uint8_t *zero_tex[1];
-		zero_tex[0] = new uint8_t[4]();
-
-		empty_texture = gs_texture_create(1, 1, GS_RGBA, 1, (const uint8_t **)&zero_tex, 0);
-
-		delete zero_tex[0];
-	}
-	obs_leave_graphics();
-}
-
-void GS::Texture::add_to_cache(std::string name, gs_texture_t *texture) {
-
-	auto it = pool.find(name);
-	if (it != pool.end() && it->second.second != nullptr) {
-		throw "Incorrect use of add_to_cache, before calling load_from_cache";
-	}
-
-	if (pool.size() < MAX_POOL_SIZE)
-	{
-		//blog(LOG_DEBUG, "Caching texture: %s", name.c_str());
-		pool[name] = std::make_pair(1, texture);
-	}
-	else
-	{
-		// remove the least re-used texture
-		auto min_it = pool.begin();
-		size_t min_ref = min_it->second.first;
-		for (auto it = pool.begin(); it != pool.end(); it++)
-		{
-			if (min_ref > it->second.first)
-			{
-				min_ref = it->second.first;
-				min_it = it;
-			}
-		}
-		pool.erase(min_it);
-		//blog(LOG_DEBUG, "Pool full. Removing least used texture: %s, #ref = %d", min_it->first.c_str(), min_it->second.first);
-
-		pool[name] = std::make_pair(1, texture);
-	}
-}
-
-void GS::Texture::load_from_cache(std::string name, gs_texture_t **texture_ptr) {
-	if (pool.find(name) != pool.end()) {
-		//blog(LOG_DEBUG, "Re-using texture: %s", name.c_str());
-		pool[name].first++;
-		*texture_ptr = pool[name].second;
-	}
-	else
-		*texture_ptr = nullptr;
-}
-
-void GS::Texture::unload_texture(std::string name, gs_texture_t *texture) {
-	// only destroy if the texture is not managed by the pool
-	if (pool.find(name) == pool.end()) {
-		//blog(LOG_DEBUG, "Destroying unmanaged texture");
-		obs_enter_graphics();
-		if (texture) {
-			switch (gs_get_texture_type(texture)) {
-			case GS_TEXTURE_2D:
-				gs_texture_destroy(texture);
-				break;
-			case GS_TEXTURE_3D:
-				gs_voltexture_destroy(texture);
-				break;
-			case GS_TEXTURE_CUBE:
-				gs_cubetexture_destroy(texture);
-				break;
-			}
-		}
-		obs_leave_graphics();
-		return;
-	}
-
-	//blog(LOG_DEBUG, "Delaying destroying managed texture: %s", name.c_str());
-
-}
-
-void GS::Texture::destroy_pool() {
-	obs_enter_graphics();
-	for (auto &ent : pool) {
-		//blog(LOG_DEBUG, "POOL DESTROY: destroying managed texture: %s", ent.first.c_str());
-		if (ent.second.second) {
-			switch (gs_get_texture_type(ent.second.second)) {
-			case GS_TEXTURE_2D:
-				gs_texture_destroy(ent.second.second);
-				break;
-			case GS_TEXTURE_3D:
-				gs_voltexture_destroy(ent.second.second);
-				break;
-			case GS_TEXTURE_CUBE:
-				gs_cubetexture_destroy(ent.second.second);
-				break;
-			}
-		}
-		ent.second.second = nullptr;
-	}
-	obs_leave_graphics();
-	// destroy empty texture as well
-	obs_enter_graphics();
-	if (empty_texture)
-	{
-		gs_texture_destroy(empty_texture);
-		empty_texture = nullptr;
-	}
-	obs_leave_graphics();
-}
-
-GS::Texture::Texture(uint32_t width, uint32_t height, gs_color_format format, uint32_t mip_levels, const uint8_t **mip_data, uint32_t flags) : m_destroy(true) {
+GS::Texture::Texture(uint32_t width, uint32_t height, gs_color_format format, uint32_t mip_levels, const uint8_t **mip_data, uint32_t flags,
+	Cache *cache) : m_destroy(true), m_cache(cache) {
 	m_name = ""; // will not participate in caching
 	if (width == 0)
 		throw std::logic_error("width must be at least 1");
@@ -167,7 +46,8 @@ GS::Texture::Texture(uint32_t width, uint32_t height, gs_color_format format, ui
 		throw std::runtime_error("Failed to create texture.");
 }
 
-GS::Texture::Texture(uint32_t width, uint32_t height, uint32_t depth, gs_color_format format, uint32_t mip_levels, const uint8_t **mip_data, uint32_t flags) : m_destroy(true) {
+GS::Texture::Texture(uint32_t width, uint32_t height, uint32_t depth, gs_color_format format, uint32_t mip_levels, const uint8_t **mip_data, uint32_t flags,
+	Cache *cache) : m_destroy(true), m_cache(cache) {
 	m_name = ""; // will not participate in caching
 	if (width == 0)
 		throw std::logic_error("width must be at least 1");
@@ -196,10 +76,13 @@ GS::Texture::Texture(uint32_t width, uint32_t height, uint32_t depth, gs_color_f
 		throw std::runtime_error("Failed to create texture.");
 }
 
-GS::Texture::Texture(std::string name,uint32_t size, gs_color_format format, uint32_t mip_levels, const uint8_t **mip_data, uint32_t flags) : m_destroy(true) {
+GS::Texture::Texture(std::string name,uint32_t size, gs_color_format format, uint32_t mip_levels, const uint8_t **mip_data, uint32_t flags,
+	Cache *cache) : m_destroy(true), m_cache(cache) {
 	m_name = name;
 	obs_enter_graphics();
-	GS::Texture::load_from_cache(m_name, &m_texture);
+	m_texture = nullptr;
+	if (m_cache != nullptr)
+		m_cache->load(CacheableType::Texture, m_name, (void **)&m_texture);
 	if (m_texture == nullptr)
 	{
 		if (size == 0)
@@ -220,12 +103,14 @@ GS::Texture::Texture(std::string name,uint32_t size, gs_color_format format, uin
 		if (!m_texture)
 			throw std::runtime_error("Failed to create texture.");
 
-		GS::Texture::add_to_cache(m_name, m_texture);
+		if (!m_cache->add(CacheableType::Texture, m_name, (void *)m_texture))
+			blog(LOG_WARNING, "Caching texture failed: %s", m_name.c_str());
+
 	}
 	obs_leave_graphics();
 }
 
-GS::Texture::Texture(std::string file) : m_destroy(true) {
+GS::Texture::Texture(std::string file, Cache *cache) : m_destroy(true), m_cache(cache) {
 	struct stat st;
 	if (os_stat(file.c_str(), &st) != 0)
 		throw Plugin::file_not_found_error(file);
@@ -240,7 +125,8 @@ GS::Texture::Texture(std::string file) : m_destroy(true) {
 
 GS::Texture::~Texture() {
 	if(m_destroy)
-		GS::Texture::unload_texture(m_name, m_texture);
+		m_cache->try_destroy_resource(m_name, m_texture,
+			CacheableType::Texture);
 }
 
 void GS::Texture::Load(int unit) {

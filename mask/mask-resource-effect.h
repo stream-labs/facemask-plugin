@@ -19,6 +19,7 @@
 #pragma once
 #include "mask-resource.h"
 #include "gs/gs-effect.h"
+#include "mask/mask-resource.h"
 #include <sstream>
 extern "C" {
 	#pragma warning( push )
@@ -32,8 +33,9 @@ namespace Mask {
 	namespace Resource {
 		class Effect : public IBase {
 		public:
-			Effect(Mask::MaskData* parent, std::string name, obs_data_t* data);
-			Effect(Mask::MaskData* parent, std::string name, std::string filename);
+			using Cache = Mask::Resource::Cache;
+			Effect(Mask::MaskData* parent, std::string name, obs_data_t* data, Cache *cache);
+			Effect(Mask::MaskData* parent, std::string name, std::string filename, Cache *cache);
 			virtual ~Effect();
 
 			virtual Type GetType() override;
@@ -42,7 +44,7 @@ namespace Mask {
 			virtual void Render(Mask::Part* part) override;
 
 			static const std::map<std::string, std::string> g_textureTypes;
-			static std::shared_ptr<GS::Effect> compile(std::string name, std::string filename);
+			static std::shared_ptr<GS::Effect> compile(std::string name, std::string filename, Cache *cache);
 
 			void SetActiveTextures(const std::vector<std::string> &textures) { m_active_textures = textures; }
 			std::vector<std::string> GetActiveTextures() { return m_active_textures; }
@@ -56,6 +58,9 @@ namespace Mask {
 
 			// for dynamic shader creation
 			std::vector<std::string> m_active_textures;
+
+			// cache
+			Cache *m_cache;
 		};
 	}
 }

@@ -172,34 +172,45 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	// TODO precompile to avoid doing this during startup
 
 	f = obs_module_file("effects/pbr.effect");
-	Mask::Resource::Effect::compile("PBR", f);
+	Mask::Resource::Effect::compile("PBR", f, &m_cache);
 	if (f) {
 		bfree(f);
 	}
 
 	f = obs_module_file("effects/phong.effect");
-	Mask::Resource::Effect::compile("effectPhong", f);
+	Mask::Resource::Effect::compile("effectPhong", f, &m_cache);
 	if (f) {
 		bfree(f);
 	}
 
 	// depth head uses default effect
 	f = obs_module_file("effects/default.effect");
-	Mask::Resource::Effect::compile("effectDefault", f);
+	Mask::Resource::Effect::compile("effectDefault", f, &m_cache);
 	if (f) {
 		bfree(f);
 	}
 
 	// preload cubemaps
-	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_museum_specular");
-	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_mossy_forest_specular");
-	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_cayley_interior_specular");
+	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_museum_specular", &m_cache);
+	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_mossy_forest_specular", &m_cache);
+	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_cayley_interior_specular", &m_cache);
 
-	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_museum_diffuse");
-	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_mossy_forest_diffuse");
-	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_cayley_interior_diffuse");
+	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_museum_diffuse", &m_cache);
+	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_mossy_forest_diffuse", &m_cache);
+	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_cayley_interior_diffuse", &m_cache);
 
-	GS::Texture::init_empty_texture();
+	// init empty
+	{
+		const uint8_t *zero_tex[1];
+		zero_tex[0] = new uint8_t[4]();
+
+		obs_enter_graphics();
+		gs_texture_t *empty_texture = gs_texture_create(1, 1, GS_RGBA, 1, (const uint8_t **)&zero_tex, 0);
+		obs_leave_graphics();
+		m_cache.add_permanent(CacheableType::Texture, "empty_texture", empty_texture);
+
+		delete zero_tex[0];
+	}
 
 
 	vidLightTex = NULL;
@@ -207,7 +218,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	// Make the smll stuff
 	smllFaceDetector = new smll::FaceDetector();
 #if !defined(PUBLIC_RELEASE)
-	smllRenderer = new smll::OBSRenderer();
+	smllRenderer = new smll::OBSRenderer(&m_cache);
 #endif
 
 	// set our mm thread task
@@ -291,9 +302,8 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 	maskData = nullptr;
 	obs_leave_graphics();
 
-	// also destroy effect and texture pool
-	GS::Effect::destroy_pool();
-	GS::Texture::destroy_pool();
+	// also destroy cache
+	m_cache.destroy();
 
 	delete smllFaceDetector;
 #if !defined(PUBLIC_RELEASE)
@@ -1811,7 +1821,7 @@ Plugin::FaceMaskFilter::Instance::LoadMask(std::string filename) {
 	PLOG_INFO("Loading mask json '%s'...", filename.c_str());
 
 	// new mask data
-	Mask::MaskData* mdat = new Mask::MaskData();
+	Mask::MaskData* mdat = new Mask::MaskData(&m_cache);
 
 	// load the json
 	try {

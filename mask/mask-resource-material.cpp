@@ -332,7 +332,7 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 
 	m_effect->SetActiveTextures(active_textures);
 
-	// early optimization is root of all evil
+	// compile and load effect file
 	m_effect->Render(nullptr);
 }
 
@@ -481,7 +481,8 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 				else
 				{
 					gs_eparam_t* param = gs_effect_get_param_by_name(m_effect->GetEffect()->GetObject(), tex_type_ent.first.c_str());
-					gs_texture_t *tex = GS::Texture::get_empty_texture();
+					gs_texture_t *tex = nullptr;
+					m_parent->GetCache()->load_permanent("empty_texture", (void**)&tex);
 					if (param && tex)
 					{
 						gs_effect_set_texture(param, tex);
@@ -496,7 +497,11 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 
 		// attach video texture
 		gs_eparam_t* param = gs_effect_get_param_by_name(m_effect->GetEffect()->GetObject(), PARAM_VIDEO_LIGHTING_TEX);
-		gs_texture_t *tex = m_use_video_lighting ? m_parent->GetVideoLightingTexture() : GS::Texture::get_empty_texture();
+		gs_texture_t *tex = nullptr;
+		if (m_use_video_lighting)
+			tex = m_parent->GetVideoLightingTexture();
+		else
+			m_parent->GetCache()->load_permanent("empty_texture", (void**)&tex);
 		if (param && tex)
 		{
 			gs_effect_set_texture(param, tex);

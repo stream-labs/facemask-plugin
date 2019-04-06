@@ -25,6 +25,8 @@
 #include <vector>
 #include <map>
 #include "plugin/exceptions.h"
+#include "mask/mask-resource.h"
+
 extern "C" {
 	#pragma warning( push )
 	#pragma warning( disable: 4201 )
@@ -87,8 +89,11 @@ namespace GS {
 
 	class Effect {
 		public:
-		Effect(std::string file);
-		Effect(std::string code, std::string name);
+		using Cache = Mask::Resource::Cache;
+		using CacheableType = Cache::CacheableType;
+
+		Effect(std::string file, Cache *cache);
+		Effect(std::string code, std::string name, Cache *cache);
 		virtual ~Effect();
 
 		gs_effect_t* GetObject();
@@ -96,18 +101,12 @@ namespace GS {
 		std::vector<EffectParameter> GetParameters();
 		EffectParameter GetParameterByName(std::string name);
 
-		static void add_to_cache(std::string, gs_effect_t*);
-		static void load_from_cache(std::string, gs_effect_t**);
-		static void unload_effect(std::string, gs_effect_t *);
-		static void destroy_pool();
-
 		protected:
 		gs_effect_t* m_effect;
 		std::string m_name;
 
-		// caching
-		static const size_t MAX_POOL_SIZE;
-		static std::map<std::string, std::pair<size_t, gs_effect_t*> > pool;
+		// cache manager from FM instance
+		Cache *m_cache;
 
 	};
 }

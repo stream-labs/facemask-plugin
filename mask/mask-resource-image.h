@@ -21,6 +21,7 @@
 #include "mask-resource.h"
 #include "gs/gs-texture.h"
 #include "mask.h"
+#include "mask-resource.h"
 extern "C" {
 	#pragma warning( push )
 	#pragma warning( disable: 4201 )
@@ -39,8 +40,8 @@ namespace Mask {
 	namespace Resource {
 		class Image : public IBase {
 		public:
-			Image(Mask::MaskData* parent, std::string name, obs_data_t* data);
-			Image(Mask::MaskData* parent, std::string name, std::string filename);
+			Image(Mask::MaskData* parent, std::string name, obs_data_t* data, Cache *cache);
+			Image(Mask::MaskData* parent, std::string name, std::string filename, Cache *cache);
 			virtual ~Image();
 
 			virtual Type GetType() override;
@@ -64,6 +65,7 @@ namespace Mask {
 			
 
 		protected:
+			Cache *m_cache;
 			std::shared_ptr<GS::Texture> m_Texture;
 			bool m_is_cubemap;
 

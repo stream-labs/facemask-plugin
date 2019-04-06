@@ -19,84 +19,12 @@
 
 #include "gs-effect.h"
 
-const size_t GS::Effect::MAX_POOL_SIZE = 10;
-std::map<std::string, std::pair<size_t, gs_effect_t*> > GS::Effect::pool;
-
-
-void GS::Effect::add_to_cache(std::string name, gs_effect_t *effect) {
-
-	auto it = pool.find(name);
-	if (it != pool.end() && it->second.second != nullptr) {
-		throw "Incorrect use of add_to_cache, before calling load_from_cache";
-	}
-
-	if (pool.size() < MAX_POOL_SIZE)
-	{
-		//blog(LOG_DEBUG, "Caching effect: %s", name.c_str());
-		pool[name] = std::make_pair(1, effect);
-	}
-	else
-	{
-		// remove the least re-used effect
-		auto min_it = pool.begin();
-		size_t min_ref = min_it->second.first;
-		for (auto it = pool.begin(); it != pool.end(); it++)
-		{
-			if (min_ref > it->second.first)
-			{
-				min_ref = it->second.first;
-				min_it = it;
-			}
-		}
-		pool.erase(min_it);
-		//blog(LOG_DEBUG, "Pool full. Removing least used effect: %s, #ref = %d", min_it->first.c_str(), min_it->second.first);
-
-		pool[name] = std::make_pair(1, effect);
-	}
-}
-
-void GS::Effect::load_from_cache(std::string name, gs_effect_t **effect_ptr) {
-	if (pool.find(name) != pool.end()) {
-		//blog(LOG_DEBUG, "Re-using effect: %s", name.c_str());
-		pool[name].first++;
-		*effect_ptr = pool[name].second;
-	}
-	else
-		*effect_ptr = nullptr;
-}
-
-void GS::Effect::unload_effect(std::string name, gs_effect_t *effect) {
-	// only destroy if the effect is not managed by the pool
-	if (pool.find(name) == pool.end()) {
-		//blog(LOG_DEBUG, "Destroying unmanaged effect: %s", name.c_str());
-		obs_enter_graphics();
-		if(effect)
-			gs_effect_destroy(effect);
-		obs_leave_graphics();
-		return;
-	}
-
-	//blog(LOG_DEBUG, "Delaying destroying managed effect: %s", name.c_str());
-
-}
-
-void GS::Effect::destroy_pool() {
-	obs_enter_graphics();
-	for (auto &ent : pool) {
-		//blog(LOG_DEBUG, "POOL DESTROY: destroying managed effect: %s", ent.first.c_str());
-		if (ent.second.second)
-		{
-			gs_effect_destroy(ent.second.second);
-			ent.second.second = nullptr;
-		}
-	}
-	obs_leave_graphics();
-}
-
-GS::Effect::Effect(std::string file) {
+GS::Effect::Effect(std::string file, Cache *cache):m_cache(cache) {
 	m_name = file;
 	obs_enter_graphics();
-	GS::Effect::load_from_cache(m_name, &m_effect);
+	m_effect = nullptr;
+	if (m_cache != nullptr)
+		m_cache->load(CacheableType::Effect, m_name, (void **)&m_effect);
 	if (m_effect == nullptr)
 	{
 		char* errorMessage = nullptr;
@@ -107,15 +35,18 @@ GS::Effect::Effect(std::string file) {
 			obs_leave_graphics();
 			throw std::runtime_error(error);
 		}
-		GS::Effect::add_to_cache(m_name, m_effect);
+		if (!m_cache->add(CacheableType::Effect, m_name, (void *)m_effect))
+			blog(LOG_WARNING, "Caching effect failed: %s", m_name.c_str());
 	}
 	obs_leave_graphics();
 }
 
-GS::Effect::Effect(std::string code, std::string name) {
+GS::Effect::Effect(std::string code, std::string name, Cache *cache):m_cache(cache) {
 	m_name = name;
 	obs_enter_graphics();
-	GS::Effect::load_from_cache(m_name, &m_effect);
+	m_effect = nullptr;
+	if (m_cache != nullptr)
+		m_cache->load(CacheableType::Effect, m_name, (void **)&m_effect);
 	if (m_effect == nullptr)
 	{
 		char* errorMessage = nullptr;
@@ -126,14 +57,15 @@ GS::Effect::Effect(std::string code, std::string name) {
 			obs_leave_graphics();
 			throw std::runtime_error(error);
 		}
-
-		GS::Effect::add_to_cache(m_name, m_effect);
+		if(!m_cache->add(CacheableType::Effect, m_name, (void *)m_effect))
+			blog(LOG_WARNING, "Caching effect failed: %s", m_name.c_str());
 	}
 	obs_leave_graphics();
 }
 
 GS::Effect::~Effect() {
-	GS::Effect::unload_effect(m_name, m_effect);
+	m_cache->try_destroy_resource(m_name, m_effect,
+		CacheableType::Effect);
 }
 
 gs_effect_t* GS::Effect::GetObject() {

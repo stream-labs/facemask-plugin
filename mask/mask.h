@@ -103,7 +103,9 @@ namespace Mask {
 
 	class MaskData : public Resource::IAnimationControls {
 	public:
-		MaskData();
+		using Cache = Resource::Cache;
+		using CacheableType = Cache::CacheableType;
+		MaskData(Cache *cache);
 		virtual ~MaskData();
 
 		// data
@@ -173,6 +175,8 @@ namespace Mask {
 		MaskInstanceDatas	instanceDatas;
 		void				ResetInstanceDatas();
 
+		Cache *GetCache() { return m_cache; }
+
 	private:
 		std::shared_ptr<Part> LoadPart(std::string name, obs_data_t* data);
 		static void PartCalcMatrix(Part *part);
@@ -203,5 +207,8 @@ namespace Mask {
 		float				m_introFadeTime;
 		float				m_introDuration;
 		float				m_elapsedTime;
+
+		// cache manager
+		Cache *m_cache;
 	};
 }
