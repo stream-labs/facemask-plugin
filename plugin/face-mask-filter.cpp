@@ -79,7 +79,7 @@ Plugin::FaceMaskFilter::FaceMaskFilter() {
 	std::memset(&filter, 0, sizeof(obs_source_info));
 	filter.id = "face_mask_filter";
 	filter.type = OBS_SOURCE_TYPE_FILTER;
-	filter.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_ASYNC;
+	filter.output_flags = OBS_SOURCE_VIDEO;
 
 	filter.get_name = get_name;
 	filter.create = create;
@@ -711,93 +711,6 @@ void Plugin::FaceMaskFilter::Instance::hide() {
 		std::unique_lock<std::mutex> lock(detection.mutex);
 		detection.facesIndex = -1;
 	}
-}
-
-struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(void *ptr, struct obs_source_frame *frame) {
-	if (ptr == nullptr)
-		return NULL;
-
-	obs_source_frame * frame_to_render = reinterpret_cast<Instance*>(ptr)->filter_video(frame);
-	return frame_to_render;
-}
-
-struct obs_source_frame * Plugin::FaceMaskFilter::Instance::filter_video(struct obs_source_frame * frame) {
-
-	// No need to do detection if mask will not be drawn
-	if (!isActive || !isVisible ||
-		// or if the alert is done
-		(!drawMask && alertElapsedTime > alertDuration)) {
-		return frame;
-	}
-
-	// only if first render after video tick
-	if (!videoTicked)
-		return frame;
-
-	// timestamp for this frame
-	TimeStamp sourceTimestamp = NEW_TIMESTAMP;
-	bool frameSent = false;
-
-	// if there's already an active frame, bail
-	if (detection.frame.active)
-		return frame;
-
-	obs_source_t *target = obs_filter_get_target(source);
-	obs_source_t *parent = obs_filter_get_parent(source);
-
-	if (parent == NULL || target == NULL) {
-		return frame;
-	}
-
-	// Target base width and height.
-	baseWidth = obs_source_get_base_width(target);
-	baseHeight = obs_source_get_base_height(target);
-	if (baseWidth <= 0 || baseHeight <= 0) {
-		return frame;
-	}
-
-	// Send frame information to detection thread.
-	// Lock current frame.
-	{
-		std::unique_lock<std::mutex> lock(detection.frame.mutex,
-			std::try_to_lock);
-		if (lock.owns_lock()) {
-			frameSent = true;
-			 
-			detection.frame.active = true;
-			detection.frame.timestamp = sourceTimestamp;
-
-			detection.frame.grayImage = convert_frame_to_gray_mat(frame);
-			detection.frame.resizeWidth = smll::Config::singleton().get_int(smll::CONFIG_INT_FACE_DETECT_WIDTH);
-			detection.frame.resizeHeight = (int)((float)detection.frame.resizeWidth * (float)baseHeight / (float)baseWidth);
-
-			// get the right mask data
-			Mask::MaskData* mdat = maskData.get();
-			if (demoModeGenPreviews && !demoModeInDelay) {
-				if (demoCurrentMask >= 0 && demoCurrentMask < demoMaskDatas.size())
-					mdat = demoMaskDatas[demoCurrentMask].get();
-			}
-
-			// ask mask for a morph resource
-			Mask::Resource::Morph* morph = nullptr;
-			if (mdat) {
-				morph = mdat->GetMorph();
-			}
-
-			// (possibly) update morph buffer 
-			if (morph) {
-				if (morph->GetMorphData().IsNewerThan(detection.frame.morphData) || demoModeGenPreviews) {
-					detection.frame.morphData = morph->GetMorphData();
-				}
-			}
-			else {
-				// Make sure current is invalid
-				detection.frame.morphData.Invalidate();
-			}
-		}
-	}
-
-	return frame;
 }
 
 void Plugin::FaceMaskFilter::Instance::video_tick(void *ptr, float timeDelta) {
