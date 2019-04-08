@@ -221,7 +221,7 @@ bool Mask::Resource::Cache::add(CacheableType resource_type, std::string name, v
 				// no one is using the old one
 				// probably a name clash from an older mask load
 				// can safely replace
-				blog(LOG_DEBUG, "Caching resource (replacing inactive older version): %s", name.c_str());
+				//blog(LOG_DEBUG, "Caching resource (replacing inactive older version): %s", name.c_str());
 				pool[name] = CacheItem(resource);
 				return true;
 			}
@@ -229,14 +229,14 @@ bool Mask::Resource::Cache::add(CacheableType resource_type, std::string name, v
 				throw "Incorrect use of add before calling load";
 		}
 		else {
-			blog(LOG_DEBUG, "Caching resource (re-bind): %s", name.c_str());
+			//blog(LOG_DEBUG, "Caching resource (re-bind): %s", name.c_str());
 			pool[name] = CacheItem(resource);
 			return true;
 		}
 	}
 	else if (pool.size() < POOL_SIZE)
 	{
-		blog(LOG_DEBUG, "Caching resource: %s", name.c_str());
+		//blog(LOG_DEBUG, "Caching resource: %s", name.c_str());
 		pool[name] = CacheItem(resource);
 		return true;
 	}
@@ -270,8 +270,8 @@ bool Mask::Resource::Cache::add(CacheableType resource_type, std::string name, v
 			}
 		}
 
-		blog(LOG_DEBUG, "Pool full. Removing least used/active resource: %s, #active = %d, #use = %d",
-			min_it->first.c_str(), min_it->second.active_count, min_it->second.use_count);
+		//blog(LOG_DEBUG, "Pool full. Removing least used/active resource: %s, #active = %d, #use = %d",
+		//	min_it->first.c_str(), min_it->second.active_count, min_it->second.use_count);
 
 		if (min_it->second.active_count == 1)
 		{
@@ -292,11 +292,11 @@ bool Mask::Resource::Cache::add(CacheableType resource_type, std::string name, v
 			// sorry we cannot cache
 			// the pool is full and
 			// no one can leave it currently
-			blog(LOG_DEBUG, "Caching failed because the pool is full, and no one is willing to leave. Resource: %s", name.c_str());
+			//blog(LOG_DEBUG, "Caching failed because the pool is full, and no one is willing to leave. Resource: %s", name.c_str());
 			return false;
 		}
 
-		blog(LOG_DEBUG, "Caching resource: %s", name.c_str());
+		//blog(LOG_DEBUG, "Caching resource: %s", name.c_str());
 
 		pool[name] = CacheItem(resource);
 
@@ -312,7 +312,7 @@ void Mask::Resource::Cache::load(CacheableType resource_type, std::string name, 
 	}
 	CachePool &pool = pool_it->second;
 	if (pool.find(name) != pool.end()) {
-		blog(LOG_DEBUG, "Re-using texture: %s", name.c_str());
+		//blog(LOG_DEBUG, "Re-using resource: %s", name.c_str());
 		pool[name].active_count++;
 		pool[name].use_count++;
 		*resource_ptr = pool[name].resource;
@@ -380,7 +380,7 @@ void Mask::Resource::Cache::try_destroy_resource(std::string name, void *resourc
 		destruct_by_type(resource, resource_type);
 	}
 	else {
-		blog(LOG_DEBUG, "Delaying destroying managed resource: %s, #active = %d", name.c_str(), it->second.active_count);
+		//blog(LOG_DEBUG, "Delaying destroying managed resource: %s, #active = %d", name.c_str(), it->second.active_count);
 		it->second.active_count--;
 	}
 }
@@ -393,7 +393,7 @@ void Mask::Resource::Cache::destroy() {
 	{
 		CachePool &pool = pool_ent.second;
 		for (auto &ent : pool) {
-			blog(LOG_DEBUG, "Cache Destroy: destroying managed resource: %s", ent.first.c_str());
+			//blog(LOG_DEBUG, "Cache Destroy: destroying managed resource: %s", ent.first.c_str());
 			destruct_by_type(ent.second.resource, pool_ent.first);
 			ent.second.resource = nullptr;
 		}
@@ -401,7 +401,7 @@ void Mask::Resource::Cache::destroy() {
 
 	// destroy permanent cache
 	for (auto &ent : permanent_cache) {
-		blog(LOG_DEBUG, "Cache Destroy: destroying permanent resource: %s", ent.first.c_str());
+		//blog(LOG_DEBUG, "Cache Destroy: destroying permanent resource: %s", ent.first.c_str());
 		// ent.second = pair<CacheableType, void *resource>
 		destruct_by_type(ent.second.second, ent.second.first);
 		ent.second.second = nullptr;
