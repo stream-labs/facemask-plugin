@@ -46,7 +46,9 @@ using namespace std;
 namespace smll {
 
 	FaceDetector::FaceDetector()
-		: m_trackingTimeout(0)
+		: m_captureStage(nullptr)
+		, m_stageSize(0)
+		, m_trackingTimeout(0)
         , m_detectionTimeout(0)
 		, m_trackingFaceIndex(0)
 		, m_camera_w(0)
@@ -91,6 +93,13 @@ namespace smll {
 
 		bfree(filename);
 
+	}
+
+	FaceDetector::~FaceDetector() {
+		obs_enter_graphics();
+		if (m_captureStage)
+			gs_stagesurface_destroy(m_captureStage);
+		obs_leave_graphics();
 	}
 
 	void FaceDetector::MakeVtxBitmaskLookup() {
@@ -236,7 +245,7 @@ namespace smll {
 		currentImage = cropped.clone();
 	}
 
-	void FaceDetector::DetectFaces(cv::Mat &inputImage, int width, int height, DetectionResults& results) {
+	void FaceDetector::DetectFaces(const OBSTexture& capture, int width, int height, DetectionResults& results) {
 		// better check if the camera res has changed on us
 		if ((resizeWidth != width) ||
 			(resizeHeight != height)) {
@@ -248,7 +257,15 @@ namespace smll {
 		resizeWidth = width;
 		resizeHeight = height;
 
-		grayImage = inputImage;
+		// convenience	
+		m_capture = capture;
+
+		obs_enter_graphics();
+		StageCaptureTexture();
+
+		UnstageCaptureTexture();
+		obs_leave_graphics();
+
 
 		// Resize and cut out region of interest
 		cv::resize(grayImage, currentImage, cv::Size(resizeWidth, resizeHeight), 0, 0, cv::INTER_LINEAR);
@@ -1222,6 +1239,75 @@ namespace smll {
 			blog(LOG_DEBUG, "[FaceMask] DLL can not loaded. error code: %d", err);
 		}
 	}
+
+	void FaceDetector::StageCaptureTexture() {
+		// need to stage the surface so we can read from it	
+		// (re)alloc the stage surface if necessary	
+		if (m_captureStage == nullptr ||
+			(int)gs_stagesurface_get_width(m_captureStage) != m_capture.width ||
+			(int)gs_stagesurface_get_height(m_captureStage) != m_capture.height) {
+			if (m_captureStage)
+				gs_stagesurface_destroy(m_captureStage);
+			m_captureStage = gs_stagesurface_create(m_capture.width, m_capture.height,
+				gs_texture_get_color_format(m_capture.texture));
+		}
+		gs_stage_texture(m_captureStage, m_capture.texture);
+
+		// mapping the stage surface 	
+		uint8_t *data; uint32_t linesize;
+		if (gs_stagesurface_map(m_captureStage, &data, &linesize)) {
+
+			// Wrap the staged texture data	
+			m_stageWork.w = m_capture.width;
+			m_stageWork.h = m_capture.height;
+			m_stageWork.stride = linesize;
+			m_stageWork.type = OBSRenderer::OBSToSMLL(
+				gs_texture_get_color_format(m_capture.texture));
+			m_stageWork.data = (char*)data;
+		}
+		else {
+			blog(LOG_DEBUG, "unable to stage texture!!! bad news!");
+			m_stageWork = ImageWrapper();
+		}
+
+		switch (m_stageWork.type) {
+		case IMAGETYPE_BGR:
+		{
+			cv::Mat bgrImage(m_stageWork.h, m_stageWork.w, CV_8UC3, m_stageWork.data, m_stageWork.getStride());
+			cv::cvtColor(bgrImage, grayImage, cv::COLOR_BGR2GRAY);
+
+			break;
+		}
+		case IMAGETYPE_RGB:
+		{
+			cv::Mat rgbImage(m_stageWork.h, m_stageWork.w, CV_8UC3, m_stageWork.data, m_stageWork.getStride());
+			cv::cvtColor(rgbImage, grayImage, cv::COLOR_RGB2GRAY);
+			break;
+		}
+		case IMAGETYPE_RGBA:
+		{
+			cv::Mat rgbaImage(m_stageWork.h, m_stageWork.w, CV_8UC4, m_stageWork.data, m_stageWork.getStride());
+			cv::cvtColor(rgbaImage, grayImage, cv::COLOR_RGBA2GRAY);
+			break;
+		}
+		case IMAGETYPE_GRAY:
+		{
+			grayImage = cv::Mat(m_stageWork.h, m_stageWork.w, CV_8UC1, m_stageWork.data, m_stageWork.getStride());
+			break;
+		}
+		default:
+			throw std::invalid_argument(
+				"bad image type for face detection - handle better");
+			break;
+		}
+
+	}
+
+	void FaceDetector::UnstageCaptureTexture() {
+		// unstage the surface and leave graphics context	
+		gs_stagesurface_unmap(m_captureStage);
+	}
+
 } // smll namespace
 
 
