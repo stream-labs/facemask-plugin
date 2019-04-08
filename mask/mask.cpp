@@ -790,8 +790,8 @@ void Mask::MaskData::Render(bool depthOnly, bool staticOnly, bool rotationDisabl
 
 	// TRANSPARENT
 	if (!depthOnly) {
-		gs_blend_function(gs_blend_type::GS_BLEND_SRCALPHA,
-			gs_blend_type::GS_BLEND_INVSRCALPHA);
+		gs_blend_function_separate(gs_blend_type::GS_BLEND_SRCALPHA,
+			gs_blend_type::GS_BLEND_INVSRCALPHA, gs_blend_type::GS_BLEND_ONE, gs_blend_type::GS_BLEND_ONE);
 
 		for (unsigned int i = 0; i < NUM_DRAW_BUCKETS; i++) {
 			SortedDrawObject* sdo = m_drawBuckets[i];
