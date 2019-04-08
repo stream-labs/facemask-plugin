@@ -95,7 +95,6 @@ Plugin::FaceMaskFilter::FaceMaskFilter() {
 	filter.hide = Instance::hide;
 	filter.video_tick = Instance::video_tick;
 	filter.video_render = Instance::video_render;
-	filter.filter_video = Instance::filter_video;
 
 	obs_register_source(&filter);
 }
@@ -449,6 +448,84 @@ static void add_float_slider(obs_properties_t *props, const char* name, float mi
 		P_TRANSLATE(name), min, max, step);
 	std::string n = name; n += ".Description";
 	obs_property_set_long_description(p, P_TRANSLATE(n.c_str()));
+}
+
+
+bool Plugin::FaceMaskFilter::Instance::SendSourceTextureToThread(gs_texture* sourceTexture) {
+
+	// only if first render after video tick
+	if (!videoTicked)
+		return false;
+
+	// timestamp for this frame
+	TimeStamp sourceTimestamp = NEW_TIMESTAMP;
+	bool frameSent = false;
+
+	// if there's already an active frame, bail
+	if (detection.frame.active)
+		return false;
+
+	// lock current frame
+	{
+		std::unique_lock<std::mutex> lock(detection.frame.mutex,
+			std::try_to_lock);
+		if (lock.owns_lock()) {
+			frameSent = true;
+
+			smll::OBSTexture& capture = detection.frame.capture;
+
+			detection.frame.active = true;
+			detection.frame.timestamp = sourceTimestamp;
+
+			detection.frame.resizeWidth = smll::Config::singleton().get_int(smll::CONFIG_INT_FACE_DETECT_WIDTH);
+			detection.frame.resizeHeight = (int)((float)detection.frame.resizeWidth * (float)baseHeight / (float)baseWidth);
+
+			// (re) allocate capture texture if necessary
+			if (capture.width != baseWidth ||
+				capture.height != baseHeight) {
+				capture.width = baseWidth;
+				capture.height = baseHeight;
+				if (capture.texture)
+					gs_texture_destroy(capture.texture);
+				gs_color_format fmt = gs_texture_get_color_format(sourceTexture);
+				capture.texture = gs_texture_create(baseWidth, baseHeight, fmt, 1, 0, 0);
+			}
+
+			// copy capture texture
+			gs_copy_texture(capture.texture, sourceTexture);
+
+			// get the right mask data
+			Mask::MaskData* mdat = maskData.get();
+			if (demoModeGenPreviews && !demoModeInDelay) {
+				if (demoCurrentMask >= 0 && demoCurrentMask < demoMaskDatas.size())
+					mdat = demoMaskDatas[demoCurrentMask].get();
+			}
+
+			// ask mask for a morph resource
+			Mask::Resource::Morph* morph = nullptr;
+			if (mdat) {
+				morph = mdat->GetMorph();
+			}
+
+			// (possibly) update morph buffer
+			if (morph) {
+				if (morph->GetMorphData().IsNewerThan(detection.frame.morphData) || demoModeGenPreviews) {
+					detection.frame.morphData = morph->GetMorphData();
+				}
+			}
+			else {
+				// Make sure current is invalid
+				detection.frame.morphData.Invalidate();
+			}
+		}
+	}
+
+	// Advance frame index if we copied a frame
+	if (frameSent) {
+		std::unique_lock<std::mutex> lock(detection.mutex);
+	}
+
+	return frameSent;
 }
 
 void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
@@ -898,6 +975,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	// smll needs a "viewport" to draw
 	smllRenderer->SetViewport(baseWidth, baseHeight);
 #endif
+
+	SendSourceTextureToThread(vidTex);
 
 	// set up alphas
 	bool introActive = false;
@@ -1504,7 +1583,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 				}
 				else {
 					// new frame - do the face detection
-					smllFaceDetector->DetectFaces(detection.frame.grayImage, detection.frame.resizeWidth, detection.frame.resizeHeight, detect_results);
+					smllFaceDetector->DetectFaces(detection.frame.capture, detection.frame.resizeWidth, detection.frame.resizeHeight, detect_results);
 
 					smllFaceDetector->DetectLandmarks(detect_results);
 					smllFaceDetector->DoPoseEstimation(detect_results);

@@ -111,6 +111,8 @@ namespace Plugin {
 			static int32_t StaticThreadMain(Instance*);
 			int32_t LocalThreadMain();
 
+			bool SendSourceTextureToThread(gs_texture* sourceTexture);
+
 			// mask data loading thread
 			static int32_t StaticMaskDataThreadMain(Instance*);
 			int32_t LocalMaskDataThreadMain();
@@ -286,6 +288,7 @@ namespace Plugin {
 					int					resizeHeight;
 					bool				active;
 					cv::Mat             grayImage;
+					smll::OBSTexture	capture;
 				};
 				Frame frame;
 
