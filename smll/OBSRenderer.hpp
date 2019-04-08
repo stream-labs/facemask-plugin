@@ -32,7 +32,7 @@
 #include <libobs/graphics/graphics.h>
 #pragma warning( pop )
 
-
+#include "OBSTexture.hpp"
 #include "ImageWrapper.hpp"
 #include "FaceDetector.hpp"
 #include "DetectionResults.hpp"
