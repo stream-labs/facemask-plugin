@@ -20,6 +20,7 @@
 */
 
 #include "FaceDetector.hpp"
+#include "../Plugin/plugin.h"
 
 #define HULL_POINTS_SCALE		(1.25f)
 // border points = 4 corners + subdivide
@@ -69,6 +70,12 @@ namespace smll {
 		count = 0;
 		
 		char *filename = obs_module_file(kFileShapePredictor68);
+		if (!filename) {
+			PLOG_ERROR("Failed to get predictor68 file path");
+			throw std::runtime_error("Failed to get predictor68 file path");
+		}
+
+		PLOG_INFO("Shape Predictor File: %s.", filename);
 
 #ifdef _WIN32
 		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
@@ -81,6 +88,7 @@ namespace smll {
 		std::ifstream predictor68_file(wide_filename.c_str(), std::ios::binary);
 
 		if (!predictor68_file) {
+			PLOG_ERROR("Cannot Open Shape Predictor File, Error: %s.", strerror(errno));
 			throw std::runtime_error("Failed to open predictor68 file");
 		}
 
@@ -88,7 +96,6 @@ namespace smll {
 #else
 		deserialize(filename) >> m_predictor68;
 #endif
-
 		bfree(filename);
 
 	}
