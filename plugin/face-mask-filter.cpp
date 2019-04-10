@@ -124,7 +124,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	: source(source), canvasWidth(0), canvasHeight(0), baseWidth(640), baseHeight(480),
 	demoModeRecord(false), recordTriggered(false),
 	isActive(true), isVisible(true), videoTicked(true),
-	taskHandle(NULL), maskDataShutdown(false), 
+	taskHandle(NULL), 
 	introFilename(nullptr),	outroFilename(nullptr),	alertActivate(true), alertDoIntro(false),
 	alertDoOutro(false), alertDuration(10.0f),
 	alertElapsedTime(BIG_FLOAT), alertTriggered(false), alertShown(false), alertsLoaded(false),
@@ -135,6 +135,12 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	lastResultIndex(-1), sameFrameResults(false), logMode(false), lastLogMode(false), timestampInited(false), lastTimestampInited(false) {
 
 	PLOG_DEBUG("<%" PRIXPTR "> Initializing...", this);
+	// first set both atomic flags
+	mask_load_thread_running.test_and_set();
+	detection_thread_running.test_and_set();
+
+	mask_load_thread_destructing.test_and_set();
+	detection_thread_destructing.test_and_set();
 
 	obs_enter_graphics();
 	sourceRenderTarget = gs_texrender_create(GS_RGBA, GS_ZS_NONE);
@@ -233,7 +239,6 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	// initialize face detection thread data
 	{
 		std::unique_lock<std::mutex> lock(detection.mutex);
-		detection.shutdown = false;
 		detection.facesIndex = -1;
 		detection.thread = std::thread(StaticThreadMain, this);
 		clearFramesActiveStatus();
@@ -267,19 +272,44 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 		T->SendString("stopping threads");
 	}
 
+	PLOG_DEBUG("<%" PRIXPTR "> Signalling exit to worker Threads...", this);
 
+	// signal to mask loading and detection threads to exit
+	mask_load_thread_running.clear();
+	detection_thread_running.clear();
+
+	graphics_t *graphics = gs_get_context();
+	bool destructing_from_graphics_thread = (graphics != NULL);
+	if (destructing_from_graphics_thread)
 	{
-		std::unique_lock<std::mutex> lock(maskDataMutex);
-		maskDataShutdown = true;
+		PLOG_DEBUG("OBS is destructing us from graphics thread. Momentarily leaving graphics context to destruct other threads safely.");
+		// leave the graphics context momentarily
+		obs_leave_graphics();
 	}
-	PLOG_DEBUG("<%" PRIXPTR "> Stopping worker Threads...", this);
+
+	// wait for them to finish their work
+	while(mask_load_thread_destructing.test_and_set())
 	{
-		std::unique_lock<std::mutex> lock(detection.mutex);
-		detection.shutdown = true;
+		std::this_thread::sleep_for(std::chrono::milliseconds(20));
 	}
-	// wait for them to die
+		
+	while(detection_thread_destructing.test_and_set())
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(20));
+	}
+
+	// now it is safe to join
+	PLOG_DEBUG("<%" PRIXPTR "> Joining worker Threads...", this);
 	detection.thread.join();
 	maskDataThread.join();
+
+	if (destructing_from_graphics_thread)
+	{
+		// enter graphics context again
+		// otherwise obs will be surprised and will crash
+		obs_enter_graphics();
+	}
+
 	if (T) {
 		T->SendString("threads stopped");
 	}
@@ -304,11 +334,6 @@ Plugin::FaceMaskFilter::Instance::~Instance() {
 
 	// also destroy cache
 	m_cache.destroy();
-
-	delete smllFaceDetector;
-#if !defined(PUBLIC_RELEASE)
-	delete smllRenderer;
-#endif
 
 	if (taskHandle != NULL) {
 		AvRevertMmThreadCharacteristics(taskHandle);
@@ -1565,7 +1590,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 
 	// run until we're shut down
 	TimeStamp lastTimestamp;
-	while (true) {
+	while (detection_thread_running.test_and_set()) {
 
 		if (loading_mask) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(20));
@@ -1576,12 +1601,6 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			auto frameStart = std::chrono::system_clock::now();
 
 			// get the frame index
-			bool shutdown;
-			{
-				std::unique_lock<std::mutex> lock(detection.mutex);
-				shutdown = detection.shutdown;
-			}
-			if (shutdown) break;
 			if (!detection.frame.active) {
 				std::this_thread::sleep_for(std::chrono::milliseconds(16));
 				continue;
@@ -1625,7 +1644,10 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 			if (face_idx < 0)
 				face_idx = 0;
 
+			// acquire the locks in the correct order
+			obs_enter_graphics();
 			{
+
 				std::unique_lock<std::mutex> facelock(detection.faces[face_idx].mutex);
 
 				// pass on timestamp to results
@@ -1649,6 +1671,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 				detection.faces[face_idx].detectionResults.motionRect = detect_results.motionRect;
 
 			}
+			obs_leave_graphics();
 
 			{
 				std::unique_lock<std::mutex> lock(detection.mutex);
@@ -1671,9 +1694,19 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 		}
 	}
 
+	
+	delete smllFaceDetector;
+#if !defined(PUBLIC_RELEASE)
+	delete smllRenderer;
+#endif
+
+
 	if (hTask != NULL) {
 		AvRevertMmThreadCharacteristics(hTask);
 	}
+
+	PLOG_DEBUG("Detection thread finished successfully.");
+	detection_thread_destructing.clear();
 
 	return 0;
 }
@@ -1690,13 +1723,10 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 
 	// Loading loop
 	bool lastDemoMode = false; 
-	while (true) {
+	while (mask_load_thread_running.test_and_set()) {
 		{
 			std::unique_lock<std::mutex> lock(maskDataMutex, std::try_to_lock);
 			if (lock.owns_lock()) {
-				if (maskDataShutdown) {
-					break;
-				}
 				// time to load mask?
 				if ((maskData == nullptr) &&
 					maskFilename.length() > 0) {
@@ -1766,6 +1796,8 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 		std::this_thread::sleep_for(std::chrono::milliseconds(33));
 	}
 
+	PLOG_DEBUG("Mask loading thread finished successfully.");
+	mask_load_thread_destructing.clear();
 
 	return 0;
 }

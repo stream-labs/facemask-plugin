@@ -24,6 +24,7 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+#include <atomic>
 
 #include "smll/FaceDetector.hpp"
 #include "smll/OBSRenderer.hpp"
@@ -192,7 +193,6 @@ namespace Plugin {
 			float				alertShowDelay;
 
 			// mask data loading thread
-			bool				maskDataShutdown;
 			std::thread			maskDataThread;
 			std::mutex			maskDataMutex;
 			std::unique_ptr<Mask::MaskData>	maskData;
@@ -202,6 +202,14 @@ namespace Plugin {
 			bool				loading_mask;
 			std::mutex          passFrameToDetection;
 			std::mutex          loadMaskDetectionMutex;
+			// lock-free atomic flag
+			// 1. for signaling to threads to finish their work
+			std::atomic_flag mask_load_thread_running = ATOMIC_FLAG_INIT;
+			std::atomic_flag detection_thread_running = ATOMIC_FLAG_INIT;
+			// 2. for the threads to signal back they're ready to be joined
+			std::atomic_flag mask_load_thread_destructing = ATOMIC_FLAG_INIT;
+			std::atomic_flag detection_thread_destructing = ATOMIC_FLAG_INIT;
+
 			// alert location
 			enum AlertLocation {
 				LEFT_BOTTOM,
@@ -285,7 +293,6 @@ namespace Plugin {
 
 				std::thread thread;
 				std::mutex mutex;
-				bool shutdown;
 
 				// frames circular buffer (video_render()'s thread -> detection thread)
 				struct Frame {
