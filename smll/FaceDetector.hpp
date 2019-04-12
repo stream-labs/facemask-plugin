@@ -23,6 +23,7 @@
 
 #include "Face.hpp"
 #include "Config.hpp"
+#include "OBSTexture.hpp"
 #include "ImageWrapper.hpp"
 #include "DetectionResults.hpp"
 #include "TriangulationResult.hpp"
@@ -60,8 +61,9 @@ class FaceDetector
 public:
 
 	FaceDetector();
+	~FaceDetector();
 
-	void DetectFaces(cv::Mat &inputImage, int w, int h, DetectionResults& results);
+	void DetectFaces(const OBSTexture& capture, int w, int h, DetectionResults& results);
 	void DetectLandmarks(DetectionResults& results);
 	void DoPoseEstimation(DetectionResults& results);
 	void ResetFaces();
@@ -70,10 +72,10 @@ public:
 		TriangulationResult& result);
 
 	int CaptureWidth() const {
-		return grayImage.cols;
+		return m_capture.width;
 	}
 	int CaptureHeight() const {
-		return grayImage.rows;
+		return m_capture.height;
 	}
 
 private:
@@ -151,6 +153,18 @@ private:
 	cv::Mat diffImage;
 	cv::Mat diff;
 	bool isPrevInit;
+
+	// Image Buffers	
+	OBSTexture		m_capture;
+
+	// For staging the capture texture	
+	gs_stagesurf_t* m_captureStage;
+	int				m_stageSize;
+	ImageWrapper	m_stageWork;
+
+	// Staging the capture texture	
+	void 	StageCaptureTexture();
+	void 	UnstageCaptureTexture();
 
 	// For 3d pose
 	float	ReprojectionError(const std::vector<cv::Point3f>& model_points,

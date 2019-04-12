@@ -101,8 +101,6 @@ namespace Plugin {
 			void hide();
 			static void video_tick(void *, float);
 			void video_tick(float);
-			static struct obs_source_frame * filter_video(void *, struct obs_source_frame *);
-			struct obs_source_frame * filter_video(struct obs_source_frame *);
 			static void video_render(void *, gs_effect_t *);
 			void video_render(gs_effect_t *);
 			// callbacks
@@ -119,6 +117,8 @@ namespace Plugin {
 			// face detection thread
 			static int32_t StaticThreadMain(Instance*);
 			int32_t LocalThreadMain();
+
+			bool SendSourceTextureToThread(gs_texture* sourceTexture);
 
 			// mask data loading thread
 			static int32_t StaticMaskDataThreadMain(Instance*);
@@ -303,6 +303,7 @@ namespace Plugin {
 					int					resizeHeight;
 					bool				active;
 					cv::Mat             grayImage;
+					smll::OBSTexture	capture;
 				};
 				Frame frame;
 
