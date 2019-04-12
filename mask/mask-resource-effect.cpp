@@ -43,7 +43,7 @@ const std::map<std::string, std::string> Mask::Resource::Effect::g_textureTypes 
 };
 
 
-std::shared_ptr<GS::Effect> Mask::Resource::Effect::compile(std::string name, std::string filename)
+std::shared_ptr<GS::Effect> Mask::Resource::Effect::compile(std::string name, std::string filename, Cache *cache)
 {
 	char *file_string;
 	file_string = os_quick_read_utf8_file(filename.c_str());
@@ -83,10 +83,10 @@ std::shared_ptr<GS::Effect> Mask::Resource::Effect::compile(std::string name, st
 	*/
 	std::string code = file_string;
 	bfree(file_string);
-	return std::make_shared<GS::Effect>(code, name);
+	return std::make_shared<GS::Effect>(code, name, cache);
 }
 
-Mask::Resource::Effect::Effect(Mask::MaskData* parent, std::string name, obs_data_t* data)
+Mask::Resource::Effect::Effect(Mask::MaskData* parent, std::string name, obs_data_t* data, Cache *cache)
 	: IBase(parent, name) {
 	const char* const S_DATA = "data";
 	if (!obs_data_has_user_value(data, S_DATA)) {
@@ -102,13 +102,19 @@ Mask::Resource::Effect::Effect(Mask::MaskData* parent, std::string name, obs_dat
 	// write to temp file
 	m_filename = Utils::Base64ToTempFile(base64data);
 	m_filenameIsTemp = true;
+
+	// cache
+	m_cache = cache;
 }
 
-Mask::Resource::Effect::Effect(Mask::MaskData* parent, std::string name, std::string filename)
+Mask::Resource::Effect::Effect(Mask::MaskData* parent, std::string name, std::string filename, Cache *cache)
 	: IBase(parent, name) {
 
 	m_filename = filename;
 	m_filenameIsTemp = false;
+
+	// cache
+	m_cache = cache;
 }
 
 
@@ -128,7 +134,7 @@ void Mask::Resource::Effect::Render(Mask::Part* part) {
 	UNUSED_PARAMETER(part);
 	if (m_Effect == nullptr) {
 
-		m_Effect = Effect::compile(m_name, m_filename);
+		m_Effect = Effect::compile(m_name, m_filename, m_cache);
 
 		if (m_filenameIsTemp) {
 			Utils::DeleteTempFile(m_filename);

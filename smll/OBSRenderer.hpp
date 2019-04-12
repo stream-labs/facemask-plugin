@@ -37,14 +37,16 @@
 #include "FaceDetector.hpp"
 #include "DetectionResults.hpp"
 
+#include "mask/mask-resource.h"
+
 namespace smll {
 
 
 	class OBSRenderer 
 	{
 	public:
-
-		OBSRenderer();
+		using Cache = Mask::Resource::Cache;
+		OBSRenderer(Cache *cache);
 		~OBSRenderer();
 
 		void	SetDrawColor(unsigned char red, 

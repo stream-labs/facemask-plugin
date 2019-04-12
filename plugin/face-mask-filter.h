@@ -24,6 +24,7 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+#include <atomic>
 
 #include "smll/FaceDetector.hpp"
 #include "smll/OBSRenderer.hpp"
@@ -33,6 +34,7 @@
 
 
 #include "mask/mask.h"
+#include "mask/mask-resource.h"
 
 extern "C" {
 #pragma warning( push )
@@ -107,6 +109,11 @@ namespace Plugin {
 			static bool generate_videos(obs_properties_t *pr, obs_property_t *p, void *data);
 			bool generate_videos(obs_properties_t *pr, obs_property_t *p);
 			cv::Mat convert_frame_to_gray_mat(obs_source_frame* frame);
+
+			// resource cache manager
+			using Cache = Mask::Resource::Cache;
+			using CacheableType = Cache::CacheableType;
+			Cache m_cache;
 			
 		protected:
 			// face detection thread
@@ -161,6 +168,8 @@ namespace Plugin {
 			gs_texrender_t*		vidLightTexRender;
 			gs_texrender_t*		vidLightTexRenderBack;
 			gs_texture_t*		vidLightTex;
+			
+			Cache resource_cache;
 
 			// mask filenames
 			std::string			maskFolder;
@@ -184,7 +193,6 @@ namespace Plugin {
 			float				alertShowDelay;
 
 			// mask data loading thread
-			bool				maskDataShutdown;
 			std::thread			maskDataThread;
 			std::mutex			maskDataMutex;
 			std::unique_ptr<Mask::MaskData>	maskData;
@@ -194,6 +202,14 @@ namespace Plugin {
 			bool				loading_mask;
 			std::mutex          passFrameToDetection;
 			std::mutex          loadMaskDetectionMutex;
+			// lock-free atomic flag
+			// 1. for signaling to threads to finish their work
+			std::atomic_flag mask_load_thread_running = ATOMIC_FLAG_INIT;
+			std::atomic_flag detection_thread_running = ATOMIC_FLAG_INIT;
+			// 2. for the threads to signal back they're ready to be joined
+			std::atomic_flag mask_load_thread_destructing = ATOMIC_FLAG_INIT;
+			std::atomic_flag detection_thread_destructing = ATOMIC_FLAG_INIT;
+
 			// alert location
 			enum AlertLocation {
 				LEFT_BOTTOM,
@@ -277,7 +293,6 @@ namespace Plugin {
 
 				std::thread thread;
 				std::mutex mutex;
-				bool shutdown;
 
 				// frames circular buffer (video_render()'s thread -> detection thread)
 				struct Frame {

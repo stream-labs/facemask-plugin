@@ -51,10 +51,61 @@ namespace Mask {
 			Animation,
 		};
 
+		class Cache {
+		public:
+			// each cache pool will try to cap at this number
+			static const size_t POOL_SIZE;
+
+			struct CacheItem {
+				// if a resource is used many times
+				// we should try to keep it in the pool
+				size_t use_count;
+				// if we want a resource to leave the pool
+				// the number of instances this resource is
+				// actively used in will tell us if it is safe
+				// for it to leave the pool.
+				// e.g. if no one is using it, no one will
+				// care. if one is using it, that
+				// resource will take care of destructing
+				// but if two are using it, it
+				// is unsafe, as both of them will try to
+				// destruct the same resource
+				size_t active_count;
+				void *resource;
+				CacheItem():resource(nullptr) {}
+				CacheItem(void *resource) :resource(resource) {
+					active_count = use_count = 1;
+				}
+			};
+			// map < resource name, cache item >
+			using CachePool = std::map<std::string, CacheItem>;
+
+			enum class CacheableType {
+				Texture,
+				Effect,
+				OBSData
+			};
+			using PermanentResource = std::pair<CacheableType, void*>;
+			 
+			bool add(CacheableType resource_type, std::string name, void *resource);
+			bool add_permanent(CacheableType resource_type, std::string name, void *resource);
+
+			void load(CacheableType resource_type, std::string name, void **resource_ptr);
+			void load_permanent(std::string name, void **resource_ptr);
+
+			void destruct_by_type(void *resource, CacheableType resource_type);
+			void try_destroy_resource(std::string name, void *resource, CacheableType resource_type);
+			void destroy();
+		private:
+			std::map<CacheableType, CachePool> pool_map;
+			std::map<std::string, PermanentResource> permanent_cache;
+		};
+
 		class IBase {
 		public:
-			static std::shared_ptr<IBase> Load(Mask::MaskData* parent, std::string name, obs_data_t* data);
-			static std::shared_ptr<IBase> LoadDefault(Mask::MaskData* parent, std::string name);
+			using CacheableType = Cache::CacheableType;
+			static std::shared_ptr<IBase> Load(Mask::MaskData* parent, std::string name, obs_data_t* data, Cache *cache);
+			static std::shared_ptr<IBase> LoadDefault(Mask::MaskData* parent, std::string name, Cache *cache);
 
 		protected:
 			IBase(Mask::MaskData* parent, std::string name);

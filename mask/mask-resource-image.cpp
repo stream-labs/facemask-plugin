@@ -24,8 +24,8 @@
 
 static const unsigned int MAX_MIP_LEVELS = 32;
 
-Mask::Resource::Image::Image(Mask::MaskData* parent, std::string name, obs_data_t* data)
-	: IBase(parent, name), m_width(0), m_height(0), m_fmt(GS_RGBA), m_mipLevels(-1), m_is_cubemap(false) {
+Mask::Resource::Image::Image(Mask::MaskData* parent, std::string name, obs_data_t* data, Cache *cache)
+	: IBase(parent, name), m_width(0), m_height(0), m_fmt(GS_RGBA), m_mipLevels(-1), m_is_cubemap(false), m_cache(cache) {
 
 	char mipdat[128];
 	snprintf(mipdat, sizeof(mipdat), S_MIP_DATA, 0);
@@ -206,7 +206,7 @@ Mask::Resource::Image::Image(Mask::MaskData* parent, std::string name, obs_data_
 
 	// temp file?
 	if (m_tempFile.length() > 0) {
-		m_Texture = std::make_shared<GS::Texture>(m_tempFile);
+		m_Texture = std::make_shared<GS::Texture>(m_tempFile, m_cache);
 		Utils::DeleteTempFile(m_tempFile);
 		m_tempFile.clear();
 	}
@@ -219,7 +219,7 @@ Mask::Resource::Image::Image(Mask::MaskData* parent, std::string name, obs_data_
 					sides_mips[side * m_mipLevels + i] = m_decoded_mips[side * m_mipLevels + i].data();
 				}
 			}
-			m_Texture = std::make_shared<GS::Texture>(m_name, m_width, m_fmt, m_mipLevels, sides_mips, 0);
+			m_Texture = std::make_shared<GS::Texture>(m_name, m_width, m_fmt, m_mipLevels, sides_mips, 0, m_cache);
 			m_decoded_mips.clear();
 		}
 		else {
@@ -227,16 +227,16 @@ Mask::Resource::Image::Image(Mask::MaskData* parent, std::string name, obs_data_
 			for (int i = 0; i < m_mipLevels; i++) {
 				mips[i] = m_decoded_mips[i].data();
 			}
-			m_Texture = std::make_shared<GS::Texture>(m_width, m_height, m_fmt, m_mipLevels, mips, 0);
+			m_Texture = std::make_shared<GS::Texture>(m_width, m_height, m_fmt, m_mipLevels, mips, 0, m_cache);
 			m_decoded_mips.clear();
 		}
 	}
 }
 
-Mask::Resource::Image::Image(Mask::MaskData* parent, std::string name, std::string filename) 
-	: IBase(parent, name) {
+Mask::Resource::Image::Image(Mask::MaskData* parent, std::string name, std::string filename, Cache *cache)
+	: IBase(parent, name), m_cache(cache) {
 
-	m_Texture = std::make_shared<GS::Texture>(filename);
+	m_Texture = std::make_shared<GS::Texture>(filename, m_cache);
 }
 
 
@@ -257,7 +257,7 @@ void Mask::Resource::Image::Render(Mask::Part* part) {
 
 		// temp file?
 		if (m_tempFile.length() > 0) {
-			m_Texture = std::make_shared<GS::Texture>(m_tempFile);
+			m_Texture = std::make_shared<GS::Texture>(m_tempFile, m_cache);
 			Utils::DeleteTempFile(m_tempFile);
 			m_tempFile.clear();
 		}
@@ -270,7 +270,7 @@ void Mask::Resource::Image::Render(Mask::Part* part) {
 						sides_mips[side * m_mipLevels + i] = m_decoded_mips[side * m_mipLevels + i].data();
 					}
 				}
-				m_Texture = std::make_shared<GS::Texture>(m_name, m_width, m_fmt, m_mipLevels, sides_mips, 0);
+				m_Texture = std::make_shared<GS::Texture>(m_name, m_width, m_fmt, m_mipLevels, sides_mips, 0, m_cache);
 				m_decoded_mips.clear();
 			}
 			else {
@@ -278,7 +278,7 @@ void Mask::Resource::Image::Render(Mask::Part* part) {
 				for (int i = 0; i < m_mipLevels; i++) {
 					mips[i] = m_decoded_mips[i].data();
 				}
-				m_Texture = std::make_shared<GS::Texture>(m_width, m_height, m_fmt, m_mipLevels, mips, 0);
+				m_Texture = std::make_shared<GS::Texture>(m_width, m_height, m_fmt, m_mipLevels, mips, 0, m_cache);
 				m_decoded_mips.clear();
 			}
 		}

@@ -100,7 +100,8 @@ static const int NUM_DRAW_BUCKETS = 1024;
 static const float BUCKETS_MAX_Z = 10.0f;
 static const float BUCKETS_MIN_Z = -100.0f;
 
-Mask::MaskData::MaskData() : m_data(nullptr), m_morph(nullptr), m_elapsedTime(0.0f) {
+Mask::MaskData::MaskData(Cache *cache) : m_data(nullptr), m_morph(nullptr),
+m_cache(cache), m_elapsedTime(0.0f) {
 	m_drawBuckets = new Mask::SortedDrawObject*[NUM_DRAW_BUCKETS];
 	ClearSortedDrawObjects();
 	m_vidLightTex = nullptr;
@@ -286,8 +287,9 @@ std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::GetResource(const std::st
 	}
 
 	// Default Resources
-	std::shared_ptr<Mask::Resource::IBase> p = Resource::IBase::LoadDefault(this, name);
+	std::shared_ptr<Mask::Resource::IBase> p = Resource::IBase::LoadDefault(this, name, GetCache());
 	if (p) {
+		/*
 		// if resource is an effect, change to name to include active #defines
 		auto effect = std::dynamic_pointer_cast<Mask::Resource::Effect>(p);
 		if (effect) {
@@ -296,6 +298,7 @@ std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::GetResource(const std::st
 			for (const auto &t : effect->GetActiveTextures())
 				res_name += "_" + t;
 		}
+		*/
 		this->AddResource(res_name, p);
 		return p;
 	}
@@ -330,7 +333,7 @@ std::shared_ptr<Mask::Resource::IBase> Mask::MaskData::GetResource(const std::st
 		return nullptr;
 	}
 	try {
-		auto res = Resource::IBase::Load(this, res_name, elmd);
+		auto res = Resource::IBase::Load(this, res_name, elmd, GetCache());
 		if (res) {
 			this->AddResource(res_name, res);
 			obs_data_item_release(&element);

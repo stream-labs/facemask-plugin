@@ -22,6 +22,7 @@
 #include <string>
 #include <map>
 #include "plugin/exceptions.h"
+#include "mask/mask-resource.h"
 #include <sys/stat.h>
 #include <fstream>
 extern "C" {
@@ -47,6 +48,9 @@ namespace GS {
 			BuildMipMaps,
 		};
 
+		using Cache = Mask::Resource::Cache;
+		using CacheableType = Cache::CacheableType;
+
 		public:
 		/*!
 		 * \brief Create a new texture from data
@@ -61,7 +65,8 @@ namespace GS {
 		 * \param flags
 		 */
 		Texture(uint32_t width, uint32_t height, gs_color_format format, 
-			uint32_t mip_levels, const uint8_t **mip_data, uint32_t flags);
+			uint32_t mip_levels, const uint8_t **mip_data, uint32_t flags,
+			Cache *cache);
 
 		/*!
 		 * \brief Create a new volume texture from data
@@ -78,7 +83,8 @@ namespace GS {
 		 */
 		Texture(uint32_t width, uint32_t height, uint32_t depth, 
 			gs_color_format format, uint32_t mip_levels, 
-			const uint8_t **mip_data, uint32_t flags);
+			const uint8_t **mip_data, uint32_t flags,
+			Cache *cache);
 
 		/*!
 		 * \brief Create a new cube texture from data
@@ -93,7 +99,8 @@ namespace GS {
 		 */
 		Texture(std::string name,uint32_t size, gs_color_format format, 
 			uint32_t mip_levels, const uint8_t **mip_data,
-			uint32_t flags);
+			uint32_t flags,
+			Cache *cache);
 
 		/*!
 		* \brief Load a texture from a file
@@ -105,19 +112,19 @@ namespace GS {
 		*
 		* \param file File to create the texture from.
 		*/
-		Texture(std::string file);
+		Texture(std::string file, Cache *cache);
 
 		/*!
 		* \brief Default constructor
 		*/
 		Texture() 
-			: m_texture(nullptr), m_destroy(true) {}
+			: m_texture(nullptr), m_destroy(true), m_cache(nullptr) {}
 
 		/*!
 		* \brief Wrapper constructur
 		*/
 		Texture(gs_texture* tex, bool destroy=false) 
-			: m_texture(tex), m_destroy(destroy) {}
+			: m_texture(tex), m_destroy(destroy), m_cache(nullptr) {}
 
 		/*!
 		 * \brief Destructor
@@ -147,25 +154,14 @@ namespace GS {
 		 */
 		gs_texture_t* GetObject();
 
-		static void init_empty_texture();
-		static gs_texture_t *get_empty_texture();
-		static void add_to_cache(std::string, gs_texture_t*);
-		static void load_from_cache(std::string, gs_texture_t**);
-		static void unload_texture(std::string, gs_texture_t *);
-		static void destroy_pool();
-
-
 		protected:
 		gs_texture_t* m_texture;
 		bool m_destroy;
 		std::string m_name;
 
-		void DestroyTexture();
-
-		// caching, for now only the cubemaps 
-		static const size_t MAX_POOL_SIZE;
-		static std::map<std::string, std::pair<size_t, gs_texture_t*> > pool;
-		static gs_texture_t *empty_texture;
+		// cache manager from FM instance
+		// currently only caching cubemaps
+		Cache *m_cache;
 
 	};
 }

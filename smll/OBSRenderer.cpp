@@ -57,7 +57,7 @@ namespace smll {
 
 	static int TEXUNIT = 0;
 
-	OBSRenderer::OBSRenderer()
+	OBSRenderer::OBSRenderer(Cache *cache)
 		: m_viewportWidth(0)
 		, m_viewportHeight(0)
 		, m_phongEffect(nullptr)
@@ -75,25 +75,33 @@ namespace smll {
 		obs_enter_graphics();
 		m_samplerState = gs_samplerstate_create(&sinfo);
 		obs_leave_graphics();
-		static const char* const fn = "effects/color_conversion.effect";
-		char* filename = obs_module_file(fn);
-		char* error;
-		obs_enter_graphics();
-		m_colorConversion = gs_effect_create_from_file(filename, &error);
-		obs_leave_graphics();
-		if (!m_colorConversion) {
-			blog(LOG_ERROR, "Cannot open color_conversion.effect. %s", error);
+
+		cache->load(Cache::CacheableType::Effect, "color_conversion", (void**)&m_colorConversion);
+		if (m_colorConversion == nullptr)
+		{
+			static const char* const fn = "effects/color_conversion.effect";
+			char* error;
+			char* filename = obs_module_file(fn);
+			obs_enter_graphics();
+			m_colorConversion = gs_effect_create_from_file(filename, &error);
+			obs_leave_graphics();
+			cache->add(Cache::CacheableType::Effect, "color_conversion", m_colorConversion);
+			if (!m_colorConversion) {
+				blog(LOG_ERROR, "Cannot open color_conversion.effect. %s", error);
+			}
+			bfree(filename);
 		}
-		bfree(filename);
 
 		// load the phong shader effect
-		GS::Effect::load_from_cache("effectPhong", &m_phongEffect);
+		cache->load(Cache::CacheableType::Effect, "effectPhong", (void**)&m_phongEffect);
 		if (m_phongEffect == nullptr)
 		{
 			char* phongFilename = obs_module_file("effects/phong.effect");
+			char* error;
 			obs_enter_graphics();
 			m_phongEffect = gs_effect_create_from_file(phongFilename, &error);
 			obs_leave_graphics();
+			cache->add(Cache::CacheableType::Effect, "effectPhong", m_phongEffect);
 			if (!m_phongEffect) {
 				blog(LOG_ERROR, "Cannot load phong effect %s", error);
 			}
