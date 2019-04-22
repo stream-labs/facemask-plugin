@@ -39,6 +39,10 @@ before_deploy:
 - tar cvaf "%SignedArtifact%.tar.gz" "distribute"
 - ps: Push-AppveyorArtifact "$env:SignedArtifact.tar.gz"
 
+test_script:
+- cmd: ./test.bat
+
+
 deploy:
   - provider: S3
     access_key_id:
