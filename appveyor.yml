@@ -40,7 +40,7 @@ before_deploy:
 - ps: Push-AppveyorArtifact "$env:SignedArtifact.tar.gz"
 
 test_script:
-- cmd: ./test.bat
+- cmd: test.bat
 
 
 deploy:
