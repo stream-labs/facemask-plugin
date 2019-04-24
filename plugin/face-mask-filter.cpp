@@ -127,7 +127,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	introFilename(nullptr),	outroFilename(nullptr),	alertActivate(true), alertDoIntro(false),
 	alertDoOutro(false), alertDuration(10.0f),
 	alertElapsedTime(BIG_FLOAT), alertTriggered(false), alertShown(false), alertsLoaded(false),
-	demoCurrentMask(0),
+	demoCurrentMask(0), smllFaceDetector(nullptr), caching_done(false),
 	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), loading_mask(false),
 	drawMask(true),	drawAlert(false), drawFaces(false), drawMorphTris(false), drawFDRect(false), drawMotionRect(false),
 	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr), testMode(false), antialiasing_effect(nullptr), color_grading_filter_effect(nullptr),
@@ -195,15 +195,6 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 		bfree(f);
 	}
 
-	// preload cubemaps
-	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_museum_specular", &m_cache);
-	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_mossy_forest_specular", &m_cache);
-	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_cayley_interior_specular", &m_cache);
-
-	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_museum_diffuse", &m_cache);
-	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_mossy_forest_diffuse", &m_cache);
-	Mask::Resource::IBase::LoadDefault(nullptr, "ibl_cayley_interior_diffuse", &m_cache);
-
 	// init empty
 	{
 		const uint8_t *zero_tex[1];
@@ -221,7 +212,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	vidLightTex = NULL;
 
 	// Make the smll stuff
-	smllFaceDetector = new smll::FaceDetector();
+	
 #if !defined(PUBLIC_RELEASE)
 	smllRenderer = new smll::OBSRenderer(&m_cache);
 #endif
@@ -833,11 +824,30 @@ void Plugin::FaceMaskFilter::Instance::video_tick(void *ptr, float timeDelta) {
 
 void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 
+	if (!loading_mask && !caching_done)
+	{
+		// preload cubemaps in background
+		blog(LOG_DEBUG, "[FaceMask] Caching environment maps...");
+
+		Mask::Resource::IBase::LoadDefault(nullptr, "ibl_museum_specular", &m_cache);
+		Mask::Resource::IBase::LoadDefault(nullptr, "ibl_museum_diffuse", &m_cache);
+
+		Mask::Resource::IBase::LoadDefault(nullptr, "ibl_mossy_forest_specular", &m_cache);
+		Mask::Resource::IBase::LoadDefault(nullptr, "ibl_mossy_forest_diffuse", &m_cache);
+
+		Mask::Resource::IBase::LoadDefault(nullptr, "ibl_cayley_interior_specular", &m_cache);
+		Mask::Resource::IBase::LoadDefault(nullptr, "ibl_cayley_interior_diffuse", &m_cache);
+
+		caching_done = true;
+		blog(LOG_DEBUG, "[FaceMask] Caching done");
+	}
+
 	videoTicked = true;
 	if (!isVisible || !isActive || loading_mask) {
 		// *** SKIP TICK ***
 		return;
 	}
+
 
 	// ----- GET FACES FROM OTHER THREAD -----
 	updateFaces();
@@ -946,7 +956,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		detection.facesIndex = -1;
 		// reset the detected faces
 		clearFramesActiveStatus();
-		smllFaceDetector->ResetFaces();
+		if(smllFaceDetector)
+			smllFaceDetector->ResetFaces();
 		faces.length = 0;
 		// make sure file loads still happen
 		checkForMaskUnloading();
@@ -1580,6 +1591,8 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 
 	obs_source_t *parent = obs_filter_get_parent(source);
 
+	smllFaceDetector = new smll::FaceDetector();
+
 	// run until we're shut down
 	TimeStamp lastTimestamp;
 	while (detection_thread_running.test_and_set()) {
@@ -1686,8 +1699,8 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 		}
 	}
 
-	
-	delete smllFaceDetector;
+	if(smllFaceDetector)
+		delete smllFaceDetector;
 #if !defined(PUBLIC_RELEASE)
 	delete smllRenderer;
 #endif

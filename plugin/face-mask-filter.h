@@ -112,6 +112,7 @@ namespace Plugin {
 			using Cache = Mask::Resource::Cache;
 			using CacheableType = Cache::CacheableType;
 			Cache m_cache;
+			bool caching_done;
 			
 		protected:
 			// face detection thread
@@ -168,8 +169,6 @@ namespace Plugin {
 			gs_texrender_t*		vidLightTexRender;
 			gs_texrender_t*		vidLightTexRenderBack;
 			gs_texture_t*		vidLightTex;
-			
-			Cache resource_cache;
 
 			// mask filenames
 			std::string			maskFolder;
