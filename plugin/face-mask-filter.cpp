@@ -127,7 +127,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	introFilename(nullptr),	outroFilename(nullptr),	alertActivate(true), alertDoIntro(false),
 	alertDoOutro(false), alertDuration(10.0f),
 	alertElapsedTime(BIG_FLOAT), alertTriggered(false), alertShown(false), alertsLoaded(false),
-	demoCurrentMask(0),
+	demoCurrentMask(0), smllFaceDetector(nullptr),
 	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), loading_mask(false),
 	drawMask(true),	drawAlert(false), drawFaces(false), drawMorphTris(false), drawFDRect(false), drawMotionRect(false),
 	filterPreviewMode(false), autoBGRemoval(false), cartoonMode(false), testingStage(nullptr), testMode(false), antialiasing_effect(nullptr), color_grading_filter_effect(nullptr),
@@ -221,7 +221,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	vidLightTex = NULL;
 
 	// Make the smll stuff
-	smllFaceDetector = new smll::FaceDetector();
+	
 #if !defined(PUBLIC_RELEASE)
 	smllRenderer = new smll::OBSRenderer(&m_cache);
 #endif
@@ -946,7 +946,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 		detection.facesIndex = -1;
 		// reset the detected faces
 		clearFramesActiveStatus();
-		smllFaceDetector->ResetFaces();
+		if(smllFaceDetector)
+			smllFaceDetector->ResetFaces();
 		faces.length = 0;
 		// make sure file loads still happen
 		checkForMaskUnloading();
@@ -1580,6 +1581,8 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 
 	obs_source_t *parent = obs_filter_get_parent(source);
 
+	smllFaceDetector = new smll::FaceDetector();
+
 	// run until we're shut down
 	TimeStamp lastTimestamp;
 	while (detection_thread_running.test_and_set()) {
@@ -1686,8 +1689,8 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 		}
 	}
 
-	
-	delete smllFaceDetector;
+	if(smllFaceDetector)
+		delete smllFaceDetector;
 #if !defined(PUBLIC_RELEASE)
 	delete smllRenderer;
 #endif
