@@ -7,3 +7,6 @@
 [submodule "thirdparty/assimp"]
 	path = thirdparty/assimp
 	url = https://github.com/kamyarinfinity/assimp.git
+[submodule "thirdparty/cpputest"]
+	path = thirdparty/cpputest
+	url = https://github.com/glaba13/cpputest
