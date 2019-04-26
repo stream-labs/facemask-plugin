@@ -51,25 +51,3 @@ TEST(imageTest, propertiestTest) {
 	CHECK_EQUAL(3, actualNums);
 
 }
-
-
-TEST(imageTest, resizeTest) {
-
-	smll::ImageWrapper image(width, height, 0, smll::IMAGETYPE_RGB, (char*)_pixel_map);
-	uint8_t * resizedImageData= new uint8_t[(width * height * 3) / 4];
-	smll::ImageWrapper resizedImage(width / 2, height/2, 0, smll::IMAGETYPE_RGB, (char*)resizedImageData);
-	
-	image.ResizeTo(resizedImage);
-
-	for (size_t i = 0; i < height/2; i++) {
-		for (size_t j = 0; j < (width/2)*3; j++) {
-			char expected = *(image.data + ((width*3*i) + j));
-			char actual = *(resizedImage.data + (((width / 2) * 3)*i + j));
-			CHECK_EQUAL(expected, actual);
-		}
-	}
-	
-	//release memory for test
-	delete[] resizedImageData;
-
-}
