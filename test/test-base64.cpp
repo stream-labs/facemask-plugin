@@ -21,52 +21,23 @@
 #include <CppUTest/TestHarness.h>
 #include "Plugin/base64.h"
 #include <cmath>
-
+#include <iostream>
+using namespace std;
 TEST_GROUP(base64Test) {};
 
-TEST(base64Test, base64DecodeZTest) {
-	std::string const encodedText = "eJxzS0xOVfBNLM4uVkjLL1IIzvF3CgYAR0YGuQ==";
+TEST(base64Test, base64EncodeDecodeZTest) {
 	std::vector<uint8_t> actaulResult;
-	std::string const expectedResult = "Face Masks for SlOBS";
-	base64_decodeZ(encodedText, actaulResult);
+	std::string const input = "Face Masks for SlOBS";
+	string encoded = base64_encodeZ((uint8_t *const)input.c_str(), input.size());
+	base64_decodeZ(encoded, actaulResult);
 
 	//check length
-	CHECK_EQUAL(actaulResult.size(), expectedResult.size());
+	CHECK_EQUAL(input.size(), actaulResult.size());
 
 	//verify content
 	for (size_t i = 0; i < actaulResult.size(); i++){
-		CHECK_EQUAL(actaulResult[i], expectedResult[i]);
-	}
-}
-
-TEST(base64Test, zlibSizeTest) {
-	//inflated: Face Masks for SlOBS 
-	std::vector<uint8_t> testData = { 120, 156, 115, 75, 76, 78, 85, 240, 77, 44,
-		206, 46, 86, 72, 203, 47, 82, 8, 206, 241, 119, 10, 6, 0, 71, 70, 6, 185 };
-	const int expectedSize = 20;
-	
-	int actualSize = zlib_size(testData);
-
-	//check sizes
-	CHECK_EQUAL(actualSize, expectedSize);
-
-}
-
-TEST(base64Test, zlibDecodeTest) {
-	//inflated: Face Masks for SlOBS 
-	std::vector<uint8_t> testData = { 120, 156, 115, 75, 76, 78, 85, 240, 77, 44,
-		206, 46, 86, 72, 203, 47, 82, 8, 206, 241, 119, 10, 6, 0, 71, 70, 6, 185 };
-	std::vector<uint8_t> actaulResult;
-	std::string const expectedResult = "Face Masks for SlOBS";
-	actaulResult.resize(expectedResult.length());
-	zlib_decode(testData, actaulResult.data());
-
-	//check length
-	CHECK_EQUAL(actaulResult.size(), expectedResult.size());
-
-	//verify content
-	for (size_t i = 0; i < actaulResult.size(); i++) {
-		CHECK_EQUAL(actaulResult[i], expectedResult[i]);
+		
+		CHECK_EQUAL(input[i], actaulResult[i], );
 	}
 }
 
