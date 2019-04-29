@@ -41,8 +41,7 @@ before_deploy:
 
 test_script:
 - cmd: cd
-- cmd: cd ..
-- cmd: test.bat
+- cmd: RelWithDebInfo/facemask-plugin-test.exe
 
 
 deploy:
