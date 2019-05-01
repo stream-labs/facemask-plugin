@@ -21,7 +21,6 @@ install:
   - git submodule update --init --recursive
   - mkdir build
   - cd build
-  - echo %LibobsFileURL%
   - ps: Start-FileDownload $env:LibobsFileURL -FileName $env:LibobsFile
   - 7z x %LibobsFile% -oc:\projects\source\build\ -r
   - ps: $env:SignedArtifact = "facemask-plugin-$(git describe --tags --abbrev=0)"
@@ -40,8 +39,6 @@ before_deploy:
 - ps: Push-AppveyorArtifact "$env:SignedArtifact.tar.gz"
 
 test_script:
-- cmd: cd
-- cmd: dir
 - cmd: RelWithDebInfo\facemask-plugin-test.exe
 
 
