@@ -184,12 +184,9 @@ Turn ON the **'Command Line Clients Tool'** option during the installation
 
 ## Unit Testing
 
-For Unit Testing CppUtest framework is used.
-* Clone CppUtest:
-  [CppUtest](https://github.com/cpputest/cpputest)
+For Unit Testing CppUtest framework is used
 * During building the facemaks project with CMAKE:
   * Set **BUILD_UNIT_TESTS** option *ON*
-  * Set **PATH_CPP_UTEST** Path to the cpputest folder
   * Build and Run the *facemask-plugin-test* project, it will show the report of tests
   
   

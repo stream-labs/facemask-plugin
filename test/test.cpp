@@ -33,9 +33,6 @@ int main(int argc, char ** argv) {
 	argvCopy[i] = "-c"; // enable colored output
 	argvCopy[i + 1] = "-v"; // enable detailed results
 	//run
-    RUN_ALL_TESTS(argc + 2, argvCopy);
+    return RUN_ALL_TESTS(argc + 2, argvCopy);
 
-	//wait to see and verify results
-	std::cout << "press any key to exit..." << std::endl;
-	getchar(); // wait key
 }

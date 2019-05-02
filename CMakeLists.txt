@@ -24,6 +24,13 @@ SET(PATH_FREETYPE "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/freetype2")
 # Configuration
 ################################################################################
 
+
+# Distribute format
+OPTION(BUILD_FOR_PUBLIC "Build for public release" ON)
+if(BUILD_FOR_PUBLIC)
+	add_definitions(-DPUBLIC_RELEASE)
+endif()
+
 # dlib
 if(PATH_DLIB STREQUAL "")
 	message(FATAL_ERROR "PATH_DLIB not set!")
@@ -37,11 +44,16 @@ endif()
 include(${PATH_DLIB}/dlib/cmake)
 include_directories(${PATH_DLIB})
 
-OPTION(BUILD_UNIT_TESTS "Build Unit tests for facemask plugin" OFF)
+if(BUILD_FOR_PUBLIC)
+	OPTION(BUILD_UNIT_TESTS "Build Unit tests for facemask plugin" ON)
+else()
+	OPTION(BUILD_UNIT_TESTS "Build Unit tests for facemask plugin" OFF)
+endif()
+
 
 if(BUILD_UNIT_TESTS)
 	# CPPUTEST
-	SET(PATH_CPP_UTEST "" CACHE PATH "CPPUtest test framework")
+	SET(PATH_CPP_UTEST "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cpputest")
 	SET(EXTENSIONS OFF CACHE BOOL "Use the CppUTest extenstion library" FORCE)
 	SET(TESTS OFF CACHE BOOL "Compile and make tests for the code?" FORCE)
 	if(PATH_CPP_UTEST STREQUAL "")
@@ -161,13 +173,6 @@ else()
 	SET(obsPath "${PATH_OBS_STUDIO}")
 	INCLUDE("${PATH_OBS_STUDIO}/cmake/external/Findlibobs.cmake")
 	INCLUDE_DIRECTORIES("${PATH_OBS_STUDIO}/")
-endif()
-
-
-# Distribute format
-OPTION(BUILD_FOR_PUBLIC "Build for public release" ON)
-if(BUILD_FOR_PUBLIC)
-	add_definitions(-DPUBLIC_RELEASE)
 endif()
 
 
