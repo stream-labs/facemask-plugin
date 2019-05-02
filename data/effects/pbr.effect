@@ -127,6 +127,11 @@ uniform float shininess = 8.0;
 uniform int transformNormals = 1;
 uniform float alpha = 1.0;
 
+// DEPTH VARS
+uniform int renderLayer = 0;
+uniform int numRenderLayers = 1;
+uniform float depthBias = 0.0;
+
 // TEXTURE SAMPLERS
 sampler_state tex_sampler {
 	Filter    = MIN_MAG_MIP_LINEAR;
@@ -499,7 +504,13 @@ VertDataOut VSPhong(VertDataIn v_in)
 		vintangent = float4(normalize(restangent), 0.0);
 	}
 	
-	vert_out.pos = mul(vinpos, ViewProj);
+	float4x4 infinite_proj = ViewProj;
+	infinite_proj[3][2] = 1.0;
+	vert_out.pos = mul(vinpos, infinite_proj);
+	float depth_ratio = 1.0/float(numRenderLayers);
+	float start_depth = renderLayer*depth_ratio;
+	vert_out.pos.z = start_depth + (1.0/(vert_out.pos.w+depthBias))*depth_ratio;
+	vert_out.pos.z *= vert_out.pos.w;
 	vert_out.vpos = mul(vinpos, World);	
 	
 	if (transformNormals == 1) {

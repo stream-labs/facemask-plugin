@@ -85,7 +85,14 @@ namespace Mask {
 
 	class SortedDrawObject {
 	public:
-
+		SortedDrawObject() {
+			m_render_order = 0;
+			m_render_layer = 0;
+			m_depth_bias = 0.0;
+			sortDrawPart = nullptr;
+			nextDrawObject = nullptr;
+			instanceId = 0;
+		}
 		virtual ~SortedDrawObject() {}
 
 		virtual float	SortDepth() = 0;
@@ -94,6 +101,10 @@ namespace Mask {
 		Part*				sortDrawPart;
 		SortedDrawObject*	nextDrawObject;
 		size_t				instanceId;
+
+		int		m_render_order;
+		int		m_render_layer;
+		float	m_depth_bias;
 	};
 
 	namespace Resource {
@@ -175,6 +186,9 @@ namespace Mask {
 		MaskInstanceDatas	instanceDatas;
 		void				ResetInstanceDatas();
 
+		int GetNumRenderLayers() { return m_num_render_layers; }
+		int GetNumRenderOrders() { return m_num_render_orders; }
+
 		Cache *GetCache() { return m_cache; }
 
 	private:
@@ -198,6 +212,10 @@ namespace Mask {
 
 		// video light data
 		gs_texture_t* m_vidLightTex;
+
+		// render layer and order info
+		int m_num_render_layers;
+		int m_num_render_orders;
 
 		// for certain masks that need to blend with video
 		bool				m_drawVideoWithMask;

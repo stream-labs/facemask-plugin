@@ -32,6 +32,9 @@ extern "C" {
 
 static const char* const S_MESH = "mesh";
 static const char* const S_MATERIAL = "material";
+static const char* const S_ORDER = "order";
+static const char* const S_LAYER = "layer";
+static const char* const S_DEPTH_BIAS = "depth-bias";
 
 
 Mask::Resource::Model::Model(Mask::MaskData* parent, std::string name, obs_data_t* data)
@@ -68,6 +71,16 @@ Mask::Resource::Model::Model(Mask::MaskData* parent, std::string name, obs_data_
 		PLOG_ERROR("<Model '%s'> Resolved material dependency on '%s' is not a material.",
 			m_name.c_str(), materialName.c_str());
 		throw std::logic_error("Material dependency of Model is not a material.");
+	}
+
+	if (obs_data_has_user_value(data, S_ORDER)) {
+		m_render_order = obs_data_get_int(data, S_ORDER);
+	}
+	if (obs_data_has_user_value(data, S_LAYER)) {
+		m_render_layer = obs_data_get_int(data, S_LAYER);
+	}
+	if (obs_data_has_user_value(data, S_DEPTH_BIAS)) {
+		m_depth_bias = obs_data_get_double(data, S_DEPTH_BIAS);
 	}
 }
 

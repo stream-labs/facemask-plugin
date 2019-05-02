@@ -7,6 +7,11 @@ uniform float4x4 TexMat = {
 0.0, 0.0, 0.0, 1.0 };
 uniform float alpha = 1.0;
 
+// DEPTH VARS
+uniform int renderLayer = 0;
+uniform int numRenderLayers = 1;
+uniform float depthBias = 0.0;
+
 sampler_state defaultSampler {
 	Filter = Linear;
 	AddressU = Wrap;
@@ -25,7 +30,13 @@ struct VertDataOut {
 
 VertDataOut VSDefault(VertDataIn v_in) {
 	VertDataOut vert_out;
-	vert_out.pos = mul(float4(v_in.pos.xyz, 1.0), ViewProj);
+	float4x4 infinite_proj = ViewProj;
+	infinite_proj[3][2] = 1.0;
+	vert_out.pos = mul(float4(v_in.pos.xyz, 1.0), infinite_proj);
+	float depth_ratio = 1.0/float(numRenderLayers);
+	float start_depth = renderLayer*depth_ratio;
+	vert_out.pos.z = start_depth + (1.0/(vert_out.pos.w+depthBias))*depth_ratio;
+	vert_out.pos.z *= vert_out.pos.w;
 	vert_out.uv = mul(float4(v_in.uv, 0.0, 1.0), TexMat).xy;
 	return vert_out;
 }
