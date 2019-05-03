@@ -65,6 +65,13 @@ namespace smll {
 	static const char* const CONFIG_FLOAT_SMOOTHING_FACTOR =
 		"smoothingFactor";
 
+	static const char* const CONFIG_KF_0 = "KF0";
+	static const char* const CONFIG_KF_1 = "KF1";
+	static const char* const CONFIG_KF_2 = "KF2";
+	static const char* const CONFIG_KF_3 = "KF3";
+	static const char* const CONFIG_KF_4 = "KF4";
+	static const char* const CONFIG_KF_5 = "KF5";
+
 	// Face Detection Vars ----------
 	// Movement threshold
 	static const char* const CONFIG_DOUBLE_MOVEMENT_THRESHOLD =

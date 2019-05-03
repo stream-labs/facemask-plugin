@@ -56,6 +56,13 @@ namespace smll {
 
 		AddParam(CONFIG_BOOL_KALMAN_ENABLE,true);
 		AddParam(CONFIG_FLOAT_SMOOTHING_FACTOR, 0.666, 0.0, 10.0, 0.1);
+		AddParam(CONFIG_KF_0, 1e-4, 0.0, 10.0, 2*1e-4);
+		AddParam(CONFIG_KF_1, 1e-4, 0.0, 10.0, 1e-4);
+		AddParam(CONFIG_KF_2, 1e-2, 0.0, 10.0, 1e-2);
+		AddParam(CONFIG_KF_3, 1e-4, 0.0, 10.0, 1e-4);
+		AddParam(CONFIG_KF_4, 1e-4, 0.0, 10.0, 1e-4);
+		AddParam(CONFIG_KF_5, 1e-4, 0.0, 10.0, 1e-4);
+		
 
 		AddParam(CONFIG_DOUBLE_MOVEMENT_THRESHOLD, 50, 0, 200, 1);
 		AddParam(CONFIG_DOUBLE_BLUR_FACTOR, 3, 1, 7, 2);
