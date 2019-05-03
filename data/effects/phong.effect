@@ -529,7 +529,7 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 			light3Specular,
 			light3Angle);
 	}
-	
+	if(cutoutThreshold >= 0.0 && dffColor.a <= cutoutThreshold) discard;
 	
 	return float4(outColor.rgb, dffColor.a * alpha);
 }
