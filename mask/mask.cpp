@@ -106,6 +106,7 @@ m_cache(cache), m_elapsedTime(0.0f) {
 	ClearSortedDrawObjects();
 	m_vidLightTex = nullptr;
 	m_num_render_layers = 1;
+	m_num_render_orders = 1;
 }
 
 Mask::MaskData::~MaskData() {
@@ -259,7 +260,8 @@ void Mask::MaskData::Load(const std::string& file) {
 		return a->m_render_layer < b->m_render_layer;
 	};
 	auto comp_order = [](RenderObj a, RenderObj b) {
-		return a->m_render_order < b->m_render_order;
+		return (a->m_render_layer < b->m_render_layer) ||
+			   (a->m_render_layer == b->m_render_layer && (a->m_render_order < b->m_render_order));
 	};
 	std::multiset<RenderObj, decltype(comp_layer)> layer_set(comp_layer);
 	std::multiset<RenderObj, decltype(comp_order)> order_set(comp_order);
@@ -286,12 +288,16 @@ void Mask::MaskData::Load(const std::string& file) {
 
 	int current_order = -1;
 	int last_render_order = -1;
+	last_render_layer = -1;
 	for (auto it = order_set.begin(); it != order_set.end(); it++)
 	{
-		if (current_order == -1 || (*it)->m_render_order > last_render_order)
+		if (current_order == -1 ||
+			(*it)->m_render_order > last_render_order ||
+			(*it)->m_render_layer > last_render_layer)
 			current_order++;
 
 		last_render_order = (*it)->m_render_order;
+		last_render_layer = (*it)->m_render_layer;
 		(*it)->m_render_order = current_order;
 	}
 	m_num_render_orders = current_order + 1;
