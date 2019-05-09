@@ -1263,12 +1263,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 						}
 					}
 				}
-#if !defined(PUBLIC_RELEASE)
-				// draw face detection data
-				if (drawFaces)
-					smllRenderer->DrawFaces(faces);
-#endif
-
 				gs_texrender_end(drawTexRender);
 			}
 		}
