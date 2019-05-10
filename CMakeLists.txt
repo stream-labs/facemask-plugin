@@ -211,6 +211,8 @@ SET(smll_HEADERS
 	"${SMLLDir}/sarray.hpp"
 	"${SMLLDir}/TriangulationResult.hpp"
 	"${SMLLDir}/TestingPipe.hpp"
+	"${SMLLDir}/SingleValueKalman.hpp"
+	"${SMLLDir}/Kalman.hpp"
 )
 SET(gs_HEADERS
 	"${PROJECT_SOURCE_DIR}/gs/gs-effect.h"
@@ -262,6 +264,7 @@ SET(smll_SOURCES
 	"${SMLLDir}/MorphData.cpp"
 	"${SMLLDir}/TriangulationResult.cpp"
 	"${SMLLDir}/TestingPipe.cpp"
+	"${SMLLDir}/SingleValueKalman.cpp"
 )
 SET(gs_SOURCES
 	"${PROJECT_SOURCE_DIR}/gs/gs-effect.cpp"
