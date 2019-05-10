@@ -104,6 +104,8 @@ namespace smll {
 		struct vec4					veccol;
 		void						drawLines(const dlib::point* points,
 			int start, int end, bool closed = false);
+		void						drawPoints(const dlib::point* points,
+			int start, int end);
 		void						drawLine(const dlib::point* points,
 			int start, int end);
 	};
