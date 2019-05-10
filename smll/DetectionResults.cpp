@@ -330,6 +330,9 @@ namespace smll {
 
 		if (!kalmanFilterInitialized) {
 			*this = r;
+			for (int i = 0; i < smll::NUM_FACIAL_LANDMARKS; i++) {
+				landmarks68[i] = r.landmarks68[i];
+			}
 			InitKalmanFilter();
 		}
 
@@ -394,7 +397,9 @@ namespace smll {
 		bounds = bnd;
 		
 		for (int i = 0; i < smll::NUM_FACIAL_LANDMARKS; i++) {
-			landmarks68[i] = r.landmarks68[i];
+			double x = kalmanFilters[2*i].Update(r.landmarks68[i].x());
+			double  y = kalmanFilters[2*i + 1].Update(r.landmarks68[i].y());
+			landmarks68[i] = dlib::point(x, y);
 		}
 		
 	}
@@ -402,7 +407,6 @@ namespace smll {
 	void DetectionResult::InitKalmanFilter() {
 		if (Config::singleton().get_bool(CONFIG_BOOL_KALMAN_ENABLE)) {
 			kalmanFilter.init(nStates, nMeasurements, nInputs, CV_64F);					// init Kalman Filter
-
 			cv::setIdentity(kalmanFilter.processNoiseCov, cv::Scalar::all(1e-5));		// set process noise
 			cv::setIdentity(kalmanFilter.measurementNoiseCov, cv::Scalar::all(1e-4));   // set measurement noise
 			cv::setIdentity(kalmanFilter.errorCovPost, cv::Scalar::all(1));             // error covariance
@@ -462,6 +466,15 @@ namespace smll {
 			kalmanFilter.measurementMatrix.at<double>(3, 9) = 1;  // roll  
 			kalmanFilter.measurementMatrix.at<double>(4, 10) = 1; // pitch  
 			kalmanFilter.measurementMatrix.at<double>(5, 11) = 1; // yaw  
+
+			double smoothing = Config::singleton().get_double(CONFIG_FLOAT_SMOOTHING_FACTOR);
+			for (size_t i = 0; i < NUM_FACIAL_LANDMARKS; i++)
+			{
+				kalmanFilters[2*i].Init(landmarks68[i].x());
+				kalmanFilters[2 * i + 1].Init(landmarks68[i].y());
+				kalmanFilters[2 * i].SetMeasurementNoiseCovariance(smoothing);
+				kalmanFilters[2 * i + 1].SetMeasurementNoiseCovariance(smoothing);
+			}
 
 			kalmanFilterInitialized = true;
 		}

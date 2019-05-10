@@ -37,6 +37,7 @@
 #include <array>
 
 #include "landmarks.hpp"
+#include "SingleValueKalman.hpp"
 #include "Face.hpp"
 #include "../Plugin/utils.h"
 #include <opencv2/opencv.hpp>
@@ -129,6 +130,7 @@ namespace smll {
 	private:
 		// Kalman Filter variables
 		cv::KalmanFilter kalmanFilter; // Initialize Kalman Filter
+		std::array<SingleValueKalman, 2*NUM_FACIAL_LANDMARKS> kalmanFilters;
 		int nStates;
 		int nMeasurements;
 		int nInputs;
