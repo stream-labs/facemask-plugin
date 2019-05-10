@@ -1110,7 +1110,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 				vec4 empty;
 				vec4_zero(&empty);
-				gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &empty, 1.0f, 0);
+				gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &empty, 0.0f, 0);
 
 				while (gs_effect_loop(color_grading_filter_effect, "Draw")) {
 					gs_effect_set_texture(gs_effect_get_param_by_name(color_grading_filter_effect,
@@ -1171,7 +1171,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 				vec4_zero(&black);
 				float vv = (float)0x9a / 255.0f;
 				vec4_set(&thumbbg, vv, vv, vv, 1.0f);
-				gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
+				gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 0.0f, 0);
 
 				if (mask_data) {
 
@@ -1199,11 +1199,11 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					// if we are generating thumbs
 					if (genThumbs) {
 						// clear the color buffer (leaving depth info there)
-						gs_clear(GS_CLEAR_COLOR, &thumbbg, 1.0f, 0);
+						gs_clear(GS_CLEAR_COLOR, &thumbbg, 0.0f, 0);
 					}
 					else {
 						// clear the color buffer (leaving depth info there)
-						gs_clear(GS_CLEAR_COLOR, &black, 1.0f, 0);
+						gs_clear(GS_CLEAR_COLOR, &black, 0.0f, 0);
 					}
 
 					// draw video to the mask texture?
@@ -1246,7 +1246,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					}
 
 					if (introActive || outroActive)
-						gs_clear(GS_CLEAR_DEPTH, &black, 1.0f, 0);
+						gs_clear(GS_CLEAR_DEPTH, &black, 0.0f, 0);
 
 					for (int i = 0; i < faces.length; i++) {
 						if (introActive) {
@@ -1565,10 +1565,11 @@ void Plugin::FaceMaskFilter::Instance::drawMaskData(Mask::MaskData*	_maskData,
 
 	gs_set_viewport(0, 0, w, h);
 	gs_enable_depth_test(true);
-	gs_depth_function(GS_LESS);
+	gs_depth_function(GS_GREATER);
 
 	float aspect = (float)w / (float)h;
-	gs_perspective(FOVA(aspect), aspect, NEAR_Z, FAR_Z);
+	// using reversed-z depth with infinite far
+	gs_perspective(FOVA(aspect), aspect, NEAR_Z, 0.0);
 
 	_maskData->Render(depthOnly, staticOnly, rotationDisable);
 

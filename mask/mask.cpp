@@ -27,7 +27,7 @@
 #include "plugin/plugin.h"
 #include "plugin/utils.h"
 
-
+#include <set>
 
 Mask::Part::Part(std::shared_ptr<Part> p_parent,
 	std::shared_ptr<Resource::IBase> p_resource) :
@@ -105,6 +105,8 @@ m_cache(cache), m_elapsedTime(0.0f) {
 	m_drawBuckets = new Mask::SortedDrawObject*[NUM_DRAW_BUCKETS];
 	ClearSortedDrawObjects();
 	m_vidLightTex = nullptr;
+	m_num_render_layers = 1;
+	m_num_render_orders = 1;
 }
 
 Mask::MaskData::~MaskData() {
@@ -249,6 +251,57 @@ void Mask::MaskData::Load(const std::string& file) {
 	if (resources) {
 		obs_data_release(resources);
 	}
+
+	// iterate resources and renumber render layer and order
+	// this will help with both avoid illegal order numbers
+	// and wasting space when layers/orders have gap between them
+	using RenderObj = std::shared_ptr<SortedDrawObject>;
+	auto comp_layer = [](RenderObj a, RenderObj b) {
+		return a->m_render_layer < b->m_render_layer;
+	};
+	auto comp_order = [](RenderObj a, RenderObj b) {
+		return (a->m_render_layer < b->m_render_layer) ||
+			   (a->m_render_layer == b->m_render_layer && (a->m_render_order < b->m_render_order));
+	};
+	std::multiset<RenderObj, decltype(comp_layer)> layer_set(comp_layer);
+	std::multiset<RenderObj, decltype(comp_order)> order_set(comp_order);
+	for (const auto &kv : m_resources) {
+		std::shared_ptr<SortedDrawObject> model = std::dynamic_pointer_cast<SortedDrawObject>(kv.second);
+		if (model)
+		{
+			layer_set.insert(model);
+			order_set.insert(model);
+		}
+	}
+
+	int current_layer = -1;
+	int last_render_layer = -1;
+	for (auto it = layer_set.begin(); it != layer_set.end(); it++)
+	{
+		if (current_layer == -1 || (*it)->m_render_layer > last_render_layer)
+			current_layer++;
+
+		last_render_layer = (*it)->m_render_layer;
+		(*it)->m_render_layer = current_layer;
+	}
+	m_num_render_layers = current_layer + 1;
+
+	int current_order = -1;
+	int last_render_order = -1;
+	last_render_layer = -1;
+	for (auto it = order_set.begin(); it != order_set.end(); it++)
+	{
+		if (current_order == -1 ||
+			(*it)->m_render_order > last_render_order ||
+			(*it)->m_render_layer > last_render_layer)
+			current_order++;
+
+		last_render_order = (*it)->m_render_order;
+		last_render_layer = (*it)->m_render_layer;
+		(*it)->m_render_order = current_order;
+	}
+	m_num_render_orders = current_order + 1;
+
 }
 
 void Mask::MaskData::AddResource(const std::string& name, std::shared_ptr<Mask::Resource::IBase> resource) {
@@ -510,16 +563,37 @@ void  Mask::MaskData::ClearSortedDrawObjects() {
 }
 
 void  Mask::MaskData::AddSortedDrawObject(SortedDrawObject* obj) {
-	float z = obj->SortDepth();
+	float z = obj->SortDepth() + obj->m_depth_bias;
 	if (z > BUCKETS_MAX_Z)
 		z = BUCKETS_MAX_Z;
 	if (z < BUCKETS_MIN_Z)
 		z = BUCKETS_MIN_Z;
 	z = (z - BUCKETS_MIN_Z) / (BUCKETS_MAX_Z - BUCKETS_MIN_Z);
 	int idx = (int)(z * (float)(NUM_DRAW_BUCKETS - 1));
-	obj->nextDrawObject = m_drawBuckets[idx];
+
+	if (m_drawBuckets[idx] != nullptr)
+	{
+		float z2=m_drawBuckets[idx]->SortDepth();
+		if (z < z2)
+		{
+			// add new obj before current
+			obj->nextDrawObject = m_drawBuckets[idx];
+			m_drawBuckets[idx] = obj;
+		}
+		else
+		{
+			// add it after current
+			obj->nextDrawObject = m_drawBuckets[idx]->nextDrawObject;
+			m_drawBuckets[idx]->nextDrawObject = obj;
+		}
+	}
+	else {
+		obj->nextDrawObject = m_drawBuckets[idx]; // which is nullptr
+		m_drawBuckets[idx] = obj;
+	}
+
 	obj->instanceId = instanceDatas.CurrentId();
-	m_drawBuckets[idx] = obj;
+
 }
 
 void Mask::MaskData::Decompose(const matrix4 *src, vec3 *s, matrix4 *R, vec3 *t)
@@ -796,17 +870,23 @@ void Mask::MaskData::Render(bool depthOnly, bool staticOnly, bool rotationDisabl
 		gs_blend_function_separate(gs_blend_type::GS_BLEND_SRCALPHA,
 			gs_blend_type::GS_BLEND_INVSRCALPHA, gs_blend_type::GS_BLEND_ONE, gs_blend_type::GS_BLEND_ONE);
 
-		for (unsigned int i = 0; i < NUM_DRAW_BUCKETS; i++) {
-			SortedDrawObject* sdo = m_drawBuckets[i];
-			while (sdo) {
-				Part* part = sdo->sortDrawPart;
-				instanceDatas.PushDirect(sdo->instanceId);
-				gs_matrix_push();
-				gs_matrix_mul(&part->global);
-				sdo->SortedRender();
-				gs_matrix_pop();
-				instanceDatas.Pop();
-				sdo = sdo->nextDrawObject;
+		for (size_t current_order = 0; current_order < m_num_render_orders; current_order++)
+		{
+			for (unsigned int i = 0; i < NUM_DRAW_BUCKETS; i++) {
+				SortedDrawObject* sdo = m_drawBuckets[i];
+				while (sdo) {
+					if (sdo->m_render_order == current_order)
+					{
+						Part* part = sdo->sortDrawPart;
+						instanceDatas.PushDirect(sdo->instanceId);
+						gs_matrix_push();
+						gs_matrix_mul(&part->global);
+						sdo->SortedRender();
+						gs_matrix_pop();
+						instanceDatas.Pop();
+					}
+					sdo = sdo->nextDrawObject;
+				}
 			}
 		}
 	}

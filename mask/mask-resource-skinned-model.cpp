@@ -39,6 +39,9 @@ static const char* const S_POSITION = "position";
 static const char* const S_ROTATION = "rotation";
 static const char* const S_QROTATION = "qrotation";
 static const char* const S_SCALE = "scale";
+static const char* const S_ORDER = "order";
+static const char* const S_LAYER = "layer";
+static const char* const S_DEPTH_BIAS = "depth-bias";
 
 
 
@@ -200,6 +203,16 @@ Mask::Resource::SkinnedModel::SkinnedModel(Mask::MaskData* parent, std::string n
 	}
 	if (skinsItem) {
 		obs_data_item_release(&skinsItem);
+	}
+
+	if (obs_data_has_user_value(data, S_ORDER)) {
+		m_render_order = obs_data_get_int(data, S_ORDER);
+	}
+	if (obs_data_has_user_value(data, S_LAYER)) {
+		m_render_layer = obs_data_get_int(data, S_LAYER);
+	}
+	if (obs_data_has_user_value(data, S_DEPTH_BIAS)) {
+		m_depth_bias = obs_data_get_double(data, S_DEPTH_BIAS);
 	}
 }
 

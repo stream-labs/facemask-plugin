@@ -116,9 +116,6 @@ uniform float3 color_balance = {1.0,1.0,1.0};
 uniform float ibl_intensity = 1.0;
 uniform float3 ibl_rotate_offset = {0.0, 0.0, 0.0};
 
-// PBR Glass
-uniform float glass_spec_ratio = 1.0;
-
 // Emissive
 uniform float emissive_intensity = 10.0;
 
@@ -126,6 +123,14 @@ uniform float emissive_intensity = 10.0;
 uniform float shininess = 8.0;
 uniform int transformNormals = 1;
 uniform float alpha = 1.0;
+
+// DEPTH VARS
+uniform int renderLayer = 0;
+uniform int numRenderLayers = 1;
+uniform float depthBias = 0.0;
+
+// Cutout threshold for discarding fragments
+uniform float cutoutThreshold = -1.0;
 
 // TEXTURE SAMPLERS
 sampler_state tex_sampler {
@@ -355,6 +360,7 @@ float  lightAngle) {
 
 		float max_ibl_spec = max(lightSpecular.r, max(lightSpecular.g, lightSpecular.b));
 		float max_ibl_spec_reflectivity = max(spec_contrib.r, max(spec_contrib.g, spec_contrib.b));
+		float glass_spec_ratio = cutoutThreshold < 0 ? 1.0 : 0.0;
 		float opacity = albedo.a+(glass_spec_ratio*max_ibl_spec_reflectivity)*max_ibl_spec;
 		opacity = saturate(opacity);
 
@@ -499,7 +505,13 @@ VertDataOut VSPhong(VertDataIn v_in)
 		vintangent = float4(normalize(restangent), 0.0);
 	}
 	
-	vert_out.pos = mul(vinpos, ViewProj);
+	float4x4 infinite_proj = ViewProj;
+	infinite_proj[3][2] = 1.0;
+	vert_out.pos = mul(vinpos, infinite_proj);
+	float depth_ratio = 1.0/float(numRenderLayers);
+	float start_depth = renderLayer*depth_ratio;
+	vert_out.pos.z = start_depth + (1.0/(vert_out.pos.w+depthBias))*depth_ratio;
+	vert_out.pos.z *= vert_out.pos.w;
 	vert_out.vpos = mul(vinpos, World);	
 	
 	if (transformNormals == 1) {
@@ -622,6 +634,7 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 
 		float max_ibl_spec = max(ibl_spec_light.r, max(ibl_spec_light.g, ibl_spec_light.b));
 		float max_ibl_spec_reflectivity = max(kr.r, max(kr.g, kr.b));
+		float glass_spec_ratio = cutoutThreshold < 0 ? 1.0 : 0.0;
 		float opacity = albedoColor.a+(glass_spec_ratio*max_ibl_spec_reflectivity)*max_ibl_spec;
 		opacity = saturate(opacity);
 
@@ -805,6 +818,10 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 	float4 srgb_final_color; 
 	srgb_final_color.rgb = linear_to_srgb(linear_color);
 	srgb_final_color.a = final_color.a;
+	
+	if(cutoutThreshold >= 0.0 && srgb_final_color.a <= cutoutThreshold) discard;
+
+	srgb_final_color.a *= alpha;
 
 	return srgb_final_color;
 }

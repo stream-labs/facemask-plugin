@@ -57,6 +57,9 @@ static const char* const PARAM_ALPHA = "alpha";
 static const char* const PARAM_NUMBONES = "numBones";
 static const char* const PARAM_NUMLIGHTS = "numLights";
 
+static const char* const PARAM_NUM_RENDER_LAYERS = "numRenderLayers";
+static const char* const PARAM_RENDER_LAYER = "renderLayer";
+
 #undef GetObject
 
 Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs_data_t* data)
@@ -113,18 +116,20 @@ Mask::Resource::Material::Material(Mask::MaskData* parent, std::string name, obs
 	m_depthTest = gs_depth_test::GS_LESS;
 	if (obs_data_has_user_value(data, S_DEPTHTEST)) {
 		std::string test = obs_data_get_string(data, S_DEPTHTEST);
+		// we are using a reversed depth buffer
+		// so less becomes greater and vice versa
 		if (test == "never")
 			m_depthTest = gs_depth_test::GS_NEVER;
 		else if (test == "less")
-			m_depthTest = gs_depth_test::GS_LESS;
+			m_depthTest = gs_depth_test::GS_GREATER;
 		else if (test == "less-equal")
-			m_depthTest = gs_depth_test::GS_LEQUAL;
+			m_depthTest = gs_depth_test::GS_GEQUAL;
 		else if (test == "equal")
 			m_depthTest = gs_depth_test::GS_EQUAL;
 		else if (test == "greater-equal")
-			m_depthTest = gs_depth_test::GS_GEQUAL;
+			m_depthTest = gs_depth_test::GS_LEQUAL;
 		else if (test == "greater")
-			m_depthTest = gs_depth_test::GS_GREATER;
+			m_depthTest = gs_depth_test::GS_LESS;
 		else if (test == "not-equal")
 			m_depthTest = gs_depth_test::GS_NOTEQUAL;
 		else if (test == "always")
@@ -506,6 +511,18 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 		{
 			gs_effect_set_texture(param, tex);
 			gs_effect_set_next_sampler(param, m_samplerState);
+		}
+
+		// attach render layer params from the model resource and mask data
+		if (part != nullptr && part->resources.size() > 0) {
+			gs_eparam_t* param_num_layers = gs_effect_get_param_by_name(eff, PARAM_NUM_RENDER_LAYERS);
+			gs_eparam_t* param_layer = gs_effect_get_param_by_name(eff, PARAM_RENDER_LAYER);
+			std::shared_ptr<SortedDrawObject> model = std::dynamic_pointer_cast<SortedDrawObject>(part->resources[0]);
+			if (param_num_layers && param_layer)
+			{
+				gs_effect_set_int(param_num_layers, m_parent->GetNumRenderLayers());
+				gs_effect_set_int(param_layer, model->m_render_layer);
+			}
 		}
 
 		// set params for lighting
