@@ -199,8 +199,8 @@ namespace smll {
 		gs_effect_t    *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
 
 		for (int i = 0; i < faces.length; i++) {
-			SetDrawColor(255, 255, 0);
-			DrawRect(faces[i].bounds);
+			//SetDrawColor(255, 255, 0);
+			//DrawRect(faces[i].bounds);
 
 			DrawLandmarks(faces[i].landmarks68, 0, 255, 0);
 
