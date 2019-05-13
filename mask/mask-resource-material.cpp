@@ -527,7 +527,8 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 				}
 				else
 				{
-					// use defaul render layer for other model types like emitter
+					// use default render layer for model types that don't have
+					// SortedDrawObject interface, like emitter
 					gs_effect_set_int(param_num_layers, m_parent->GetNumRenderLayers());
 					gs_effect_set_int(param_layer, 0);
 				}
