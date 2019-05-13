@@ -38,7 +38,8 @@ const std::map<std::string, std::string> Mask::Resource::Effect::g_textureTypes 
 			{"iblBRDFTex", "IBL_BRDF_TEX"},
 			{"roughnessTex", "ROUGHNESS_TEX"},
 			{"metalnessTex", "METALNESS_TEX"},
-			{"metallicRoughnessTex", "METALLICROUGHNESS_TEX"}/*,
+			{"metallicRoughnessTex", "METALLICROUGHNESS_TEX"},
+			{"image","EFFECT_DEFAULT_IMAGE"}/*,
 			{"vidLightingTex", "USE_VIDEO_LIGHTING"}*/
 };
 

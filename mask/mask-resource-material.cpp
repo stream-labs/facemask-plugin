@@ -520,8 +520,18 @@ bool Mask::Resource::Material::Loop(Mask::Part* part, BonesList* bones) {
 			std::shared_ptr<SortedDrawObject> model = std::dynamic_pointer_cast<SortedDrawObject>(part->resources[0]);
 			if (param_num_layers && param_layer)
 			{
-				gs_effect_set_int(param_num_layers, m_parent->GetNumRenderLayers());
-				gs_effect_set_int(param_layer, model->m_render_layer);
+				if (model)
+				{
+					gs_effect_set_int(param_num_layers, m_parent->GetNumRenderLayers());
+					gs_effect_set_int(param_layer, model->m_render_layer);
+				}
+				else
+				{
+					// use default render layer for model types that don't have
+					// SortedDrawObject interface, like emitter
+					gs_effect_set_int(param_num_layers, m_parent->GetNumRenderLayers());
+					gs_effect_set_int(param_layer, 0);
+				}
 			}
 		}
 
