@@ -64,5 +64,6 @@ namespace Utils {
 
 	extern std::wstring ConvertStringToWstring(const std::string &str);
 	extern std::string ConvertWstringToString(const std::wstring& s);
+	extern void flip_list(bool *list, size_t start, size_t end);
 }
 

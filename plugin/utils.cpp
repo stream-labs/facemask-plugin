@@ -262,4 +262,12 @@ namespace Utils {
 		return r;
 	}
 
+	void flip_list(bool *list, size_t start, size_t end)
+	{
+		for (size_t i = start; i < end; i++)
+		{
+			list[i] = !list[i];
+		}
+	}
+
 }
