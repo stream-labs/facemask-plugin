@@ -397,9 +397,16 @@ namespace smll {
 		bounds = bnd;
 		
 		for (int i = 0; i < smll::NUM_FACIAL_LANDMARKS; i++) {
-			double x = kalmanFilters[2*i].Update(r.landmarks68[i].x());
-			double  y = kalmanFilters[2*i + 1].Update(r.landmarks68[i].y());
-			landmarks68[i] = dlib::point(x, y);
+			bool landmark_smoothing = Config::singleton().get_bool((std::string(CONFIG_BOOL_SMOOTH_LANDMARK) + std::to_string(i + 1)).c_str());
+			if (landmark_smoothing) {
+				double x = kalmanFilters[2 * i].Update(r.landmarks68[i].x());
+				double y = kalmanFilters[2 * i + 1].Update(r.landmarks68[i].y());
+				landmarks68[i] = dlib::point(x, y);
+			}
+			else {
+				landmarks68[i] = r.landmarks68[i];
+			}
+
 		}
 		
 	}
