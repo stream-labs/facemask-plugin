@@ -65,6 +65,8 @@ namespace smll {
 	static const char* const CONFIG_FLOAT_SMOOTHING_FACTOR =
 		"smoothingFactor";
 
+	static const char* const CONFIG_BOOL_SMOOTH_LANDMARK =
+		"Smooth Landmark ";
 	// Face Detection Vars ----------
 	// Movement threshold
 	static const char* const CONFIG_DOUBLE_MOVEMENT_THRESHOLD =
