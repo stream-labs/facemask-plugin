@@ -55,6 +55,10 @@ namespace smll {
 		AddParam(CONFIG_BOOL_TOGGLE_SETTINGS, false);
 
 		AddParam(CONFIG_BOOL_KALMAN_ENABLE,true);
+		for (int i = 0; i < 68; i++)	{
+			AddParam((std::string(CONFIG_BOOL_SMOOTH_LANDMARK) + std::to_string(i + 1)).c_str(), false);
+		}
+		
 		AddParam(CONFIG_FLOAT_SMOOTHING_FACTOR, 0.666, 0.0, 10.0, 0.1);
 
 		AddParam(CONFIG_DOUBLE_MOVEMENT_THRESHOLD, 50, 0, 200, 1);

@@ -66,8 +66,7 @@ namespace smll {
 		void    DestroyVertexBufffer(int which);
 
 		void	DrawFaces(const DetectionResults& faces);
-		void	DrawLandmarks(const dlib::point* points, uint8_t r, 
-			uint8_t g, uint8_t b);
+		void	DrawLandmarks(const dlib::point* points, bool * checklist);
 		void	DrawRect(const dlib::rectangle& r, int width = 1);
 
 		void    DrawGlasses(const DetectionResult& face, int texture);
@@ -104,6 +103,8 @@ namespace smll {
 		struct vec4					veccol;
 		void						drawLines(const dlib::point* points,
 			int start, int end, bool closed = false);
+		void						drawPoints(const dlib::point* points,
+			int start, int end, bool * checklist);
 		void						drawLine(const dlib::point* points,
 			int start, int end);
 	};
