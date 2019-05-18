@@ -10,3 +10,7 @@
 [submodule "thirdparty/cpputest"]
 	path = thirdparty/cpputest
 	url = https://github.com/glaba13/cpputest
+[submodule "thirdparty/expression"]
+	path = thirdparty/expression
+	url = git@github.com:kamyarinfinity/expression.git
+	branch = master

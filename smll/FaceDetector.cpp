@@ -401,6 +401,8 @@ namespace smll {
 				warpedpoints[i] += projectedDeltas[i] - c;
 			}
 		}
+		// save 2D points for use in event system
+		result.points = warpedpoints;
 
 		// add smoothing points
 		for (int i = 0; i < NUM_FACE_CONTOURS; i++) {

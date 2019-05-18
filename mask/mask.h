@@ -19,6 +19,7 @@
 
 #pragma once
 #include "mask-resource.h"
+#include "mask-events.h"
 #include "mask-instance-data.h"
 #include "mask-resource-morph.h"
 #include "smll/TriangulationResult.hpp"
@@ -191,6 +192,8 @@ namespace Mask {
 
 		Cache *GetCache() { return m_cache; }
 
+		EventSystem& EventSystem() { return event_system; }
+
 	private:
 		std::shared_ptr<Part> LoadPart(std::string name, obs_data_t* data);
 		static void PartCalcMatrix(Part *part);
@@ -225,6 +228,9 @@ namespace Mask {
 		float				m_introFadeTime;
 		float				m_introDuration;
 		float				m_elapsedTime;
+
+		// events are handled here
+		EventSystem event_system;
 
 		// cache manager
 		Cache *m_cache;

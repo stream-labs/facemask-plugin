@@ -46,6 +46,7 @@ namespace smll {
 
 			NUM_INDEX_BUFFERS,
 		};
+		std::vector<cv::Point2f> points;
 
 		typedef std::array<LandmarkBitmask, NUM_INDEX_BUFFERS> BitmaskTable;
 

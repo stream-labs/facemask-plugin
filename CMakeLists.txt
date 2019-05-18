@@ -113,6 +113,10 @@ SET(SMLLDir "${PROJECT_SOURCE_DIR}/smll")
 include_directories("thirdparty/tinyobjloader")
 SET(TINYOBJDir "thirdparty/tinyobjloader")
 
+# nlohmann/json
+include_directories("thirdparty/nlohmann-json")
+SET(NLOHMANNJSONDir "thirdparty/nlohmann-json")
+
 # freetype
 if(PATH_FREETYPE STREQUAL "")
 	message(FATAL_ERROR "PATH_FREETYPE not set!")
@@ -222,6 +226,7 @@ SET(gs_HEADERS
 )
 SET(mask_HEADERS
 	"${PROJECT_SOURCE_DIR}/mask/mask.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-events.h"
 	"${PROJECT_SOURCE_DIR}/mask/mask-instance-data.h"
 	"${PROJECT_SOURCE_DIR}/mask/mask-resource.h"
 	"${PROJECT_SOURCE_DIR}/mask/mask-resource-animation.h"
@@ -233,6 +238,7 @@ SET(mask_HEADERS
 	"${PROJECT_SOURCE_DIR}/mask/mask-resource-mesh.h"
 	"${PROJECT_SOURCE_DIR}/mask/mask-resource-model.h"
 	"${PROJECT_SOURCE_DIR}/mask/mask-resource-morph.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-model-view.h"
 	"${PROJECT_SOURCE_DIR}/mask/mask-resource-skinned-model.h"
 	"${PROJECT_SOURCE_DIR}/mask/mask-resource-sound.h"
 	"${PROJECT_SOURCE_DIR}/mask/mask-resource-emitter.h"
@@ -247,6 +253,7 @@ SET(facemask-plugin_HEADERS
 	"${PROJECT_SOURCE_DIR}/plugin/utils.h"
 	"${PROJECT_BINARY_DIR}/version.h"
 	"${TINYOBJDir}/tiny_obj_loader.h"
+	"${NLOHMANNJSONDir}/nlohmann/json.hpp"
 	"${gs_HEADERS}"
 	"${mask_HEADERS}"
 	"${smll_HEADERS}"
@@ -272,6 +279,7 @@ SET(gs_SOURCES
 )
 SET(mask_SOURCES
 	"${PROJECT_SOURCE_DIR}/mask/mask.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-events.cpp"
 	"${PROJECT_SOURCE_DIR}/mask/mask-resource.cpp"
 	"${PROJECT_SOURCE_DIR}/mask/mask-resource-animation.cpp"
 	"${PROJECT_SOURCE_DIR}/mask/mask-resource-image.cpp"
@@ -282,6 +290,7 @@ SET(mask_SOURCES
 	"${PROJECT_SOURCE_DIR}/mask/mask-resource-mesh.cpp"
 	"${PROJECT_SOURCE_DIR}/mask/mask-resource-model.cpp"
 	"${PROJECT_SOURCE_DIR}/mask/mask-resource-morph.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-model-view.cpp"
 	"${PROJECT_SOURCE_DIR}/mask/mask-resource-skinned-model.cpp"
 	"${PROJECT_SOURCE_DIR}/mask/mask-resource-sound.cpp"
 	"${PROJECT_SOURCE_DIR}/mask/mask-resource-emitter.cpp"
