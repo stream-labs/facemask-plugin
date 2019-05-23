@@ -117,6 +117,10 @@ SET(TINYOBJDir "thirdparty/tinyobjloader")
 include_directories("thirdparty/nlohmann-json")
 SET(NLOHMANNJSONDir "thirdparty/nlohmann-json")
 
+# expression calculator
+include_directories("thirdparty/expression/include")
+SET(EXPRESSIONDir "thirdparty/expression/include")
+
 # freetype
 if(PATH_FREETYPE STREQUAL "")
 	message(FATAL_ERROR "PATH_FREETYPE not set!")
@@ -254,6 +258,7 @@ SET(facemask-plugin_HEADERS
 	"${PROJECT_BINARY_DIR}/version.h"
 	"${TINYOBJDir}/tiny_obj_loader.h"
 	"${NLOHMANNJSONDir}/nlohmann/json.hpp"
+	"${EXPRESSIONDir}/calculate.hpp"
 	"${gs_HEADERS}"
 	"${mask_HEADERS}"
 	"${smll_HEADERS}"

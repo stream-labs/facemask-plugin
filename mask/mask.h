@@ -192,7 +192,8 @@ namespace Mask {
 
 		Cache *GetCache() { return m_cache; }
 
-		EventSystem& EventSystem() { return event_system; }
+		EventSystem& GetEventSystem() { return event_system; }
+		bool         HasEventSystem() { return event_system.IsActive(); }
 
 	private:
 		std::shared_ptr<Part> LoadPart(std::string name, obs_data_t* data);

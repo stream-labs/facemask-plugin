@@ -180,7 +180,7 @@ namespace smll {
 	}
 
 	void TriangulationResult::TakeBuffersFrom(TriangulationResult& other) {
-
+		points = std::move(other.points);
 		obs_enter_graphics();
 		if (other.vertexBuffer) {
 			if (vertexBuffer) {

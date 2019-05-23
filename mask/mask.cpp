@@ -87,6 +87,7 @@ static const char* const JSON_METADATA_DESCRIPTION = "description";
 static const char* const JSON_METADATA_AUTHOR = "author";
 static const char* const JSON_METADATA_WEBSITE = "website";
 static const char* const JSON_RESOURCES = "resources";
+static const char* const JSON_EVENT_SYSTEM = "event-system";
 static const char* const JSON_PARTS = "parts";
 static const char* const JSON_TYPE = "type";
 static const char* const JSON_ANIMATION = "animation";
@@ -250,6 +251,13 @@ void Mask::MaskData::Load(const std::string& file) {
 
 	if (resources) {
 		obs_data_release(resources);
+	}
+	// And event system
+	if (obs_data_has_user_value(m_data, JSON_EVENT_SYSTEM))
+	{
+		obs_data_t* event_system_data = obs_data_get_obj(m_data, JSON_EVENT_SYSTEM);
+		event_system = EventSystem(this, event_system_data);
+		if (event_system_data) obs_data_release(event_system_data);
 	}
 
 	// iterate resources and renumber render layer and order
@@ -1127,9 +1135,9 @@ bool Mask::MaskData::RenderMorphVideo(gs_texture* vidtex, uint32_t width, uint32
 	std::shared_ptr<Mask::AlphaInstanceData> aid =
 		instanceDatas.GetData<Mask::AlphaInstanceData>(Mask::AlphaInstanceDataId);
 
-	// Add an empty morph resource if they want to use 
-	// other features that depend on it
-	if ((trires.autoBGRemoval || trires.cartoonMode) && m_morph == nullptr) {
+	// Add an empty morph resource if there's no morph
+	// this will trigger triangulation for all masks
+	if (m_morph == nullptr) {
 		std::string n("auto_morph");
 		std::shared_ptr<Mask::Resource::IBase> r = 
 			std::make_shared<Mask::Resource::Morph>(this, n);

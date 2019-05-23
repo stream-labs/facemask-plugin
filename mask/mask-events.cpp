@@ -19,17 +19,21 @@
 
 #include "mask-events.h"
 
+#include "mask.h"
+#include "smll/landmarks.hpp"
+
 namespace Mask {
 
-	std::shared_ptr<Signal> Signal::Create(MaskData *mask_data, json signal_info) {
+	std::shared_ptr<Signal> Signal::Create(MaskData *mask_data, json signal_info, const json &initial_context) {
 		std::string type = signal_info["type"].get<std::string>();
 		if (type == "timeout")
 		{
 			// create timeout event
+			return std::make_shared<TimeoutSignal>(signal_info);
 		}
 	}
 
-	Signal::Data TimeoutSignal::check(float time_delta, smll::TriangulationResult *triangulation) {
+	Signal::Data TimeoutSignal::check(float time_delta, smll::TriangulationResult * /* not used */, const json & /*context*/) {
 		elapsed += time_delta;
 
 		if (elapsed >= duration)
@@ -41,25 +45,26 @@ namespace Mask {
 		return std::make_pair(false,json());
 	}
 
-	EventSystem::EventSystem(Mask::MaskData* parent, obs_data_t* data) {
+	EventSystem::EventSystem(MaskData* parent, obs_data_t* data) {
 		this->parent = parent;
 		json events = json::parse(obs_data_get_json(data));
-		state = events["state"];
+		state = events.value("state",json::object());
 		for (const auto &itm: events["items"])
 		{
 			SignalList signals;
 			EventHandlerList handlers;
 			for (const auto &sig : itm["signals"])
-				signals.push_back(Signal::Create(sig));
+				signals.push_back(Signal::Create(parent,sig,state));
 
 			for (const auto& h : itm["handlers"])
-				handlers.push_back(EventHandler(parent,h));
+				handlers.push_back(EventHandler(parent,h,state));
 
 			event_list.push_back(std::make_pair(signals, handlers));
 		}
 	}
 
 	void EventSystem::Tick(float time_delta, smll::TriangulationResult *triangulation) {
+		json current_full_state = get_full_state(time_delta, triangulation);
 		for (auto& ev : event_list)
 		{
 			bool is_triggered = false;
@@ -68,7 +73,7 @@ namespace Mask {
 			{
 				// use of `current_triggered` var forces
 				// `signal->is_on()` to be called on every tick
-				Signal::Data current_data = signal->is_on(time_delta, triangulation);
+				Signal::Data current_data = signal->is_on(time_delta, triangulation, current_full_state);
 				is_triggered = is_triggered || current_data.first;
 				if (current_data.first)
 					signal_data_list.push_back(current_data.second);
@@ -76,9 +81,40 @@ namespace Mask {
 			if (is_triggered)
 			{
 				for (EventHandler &handler : ev.second)
-					handler.handle(signal_data_list, time_delta, triangulation);
+					handler.handle(signal_data_list, time_delta, triangulation, current_full_state);
 			}
 		}
+	}
+
+	json EventSystem::get_full_state(float time_delta, smll::TriangulationResult* triangulation) {
+		json full_state = state;
+
+		for (size_t i = 0; i < smll::NUM_FACIAL_LANDMARKS; i++)
+		{
+			full_state[std::string("LANDMARK") + std::to_string(i) + "_X"] = triangulation->points[i].x;
+			full_state[std::string("LANDMARK") + std::to_string(i) + "_Y"] = triangulation->points[i].y;
+		}
+
+		auto dist = [](cv::Point2f p1, cv::Point2f p2) {
+			return cv::norm(p1 - p2);
+		};
+
+		full_state["MOUTH_OUTER_WIDTH"] = dist(triangulation->points[smll::RIGHT_MOUTH_CORNER],
+			                        triangulation->points[smll::LEFT_MOUTH_CORNER]);
+		full_state["MOUTH_OUTER_HEIGHT"] = dist(triangulation->points[smll::MOUTH_OUTER_4],
+			                        triangulation->points[smll::MOUTH_OUTER_10]);
+		full_state["FACE_HEIGHT"] = dist(triangulation->points[smll::HEAD_6],
+			triangulation->points[smll::JAW_9]);
+		full_state["FACE_WIDTH"] = dist(triangulation->points[smll::JAW_1],
+			triangulation->points[smll::JAW_17]);
+
+		blog(LOG_DEBUG, "Mouth Width: %f", full_state["MOUTH_OUTER_WIDTH"].get<float>());
+		blog(LOG_DEBUG, "Mouth Height: %f", full_state["MOUTH_OUTER_HEIGHT"].get<float>());
+		blog(LOG_DEBUG, "Face Width: %f", full_state["FACE_WIDTH"].get<float>());
+		blog(LOG_DEBUG, "Face Height: %f", full_state["FACE_HEIGHT"].get<float>());
+		blog(LOG_DEBUG, "Mouth Width (Norm): %f", full_state["MOUTH_OUTER_WIDTH"].get<float>()/full_state["FACE_WIDTH"].get<float>());
+		blog(LOG_DEBUG, "Mouth Height (Norm): %f", full_state["MOUTH_OUTER_HEIGHT"].get<float>()/full_state["FACE_HEIGHT"].get<float>());
+		return full_state;
 	}
 
 }

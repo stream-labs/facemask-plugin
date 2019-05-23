@@ -50,6 +50,7 @@ namespace Utils {
 	extern std::string dirname(const std::string &p);
 	extern int count_spaces(const std::string& s);
 	extern void find_and_replace(std::string& source, std::string const& find, std::string const& replace);
+	extern std::string trim(std::string str);
 
 	extern void DeleteTempFile(std::string filename);
 	extern std::vector<std::string> ListFolderRecursive(std::string path, std::string glob);
