@@ -21,6 +21,7 @@
 #include "mask-resource-model.h"
 #include "mask-resource-material.h"
 #include "mask-resource-animation.h"
+#include "mask-resource-animation-target.h"
 #include "mask-resource-sequence.h"
 #include "plugin/exceptions.h"
 #include "plugin/strings.h"
@@ -230,7 +231,7 @@ void Mask::MaskData::Load(const std::string& file) {
 	// yield
 	::Sleep(0);
 
-	// Except for animations. 
+	// Except for animations and animation targets. 
 	obs_data_t* resources = obs_data_get_obj(m_data, JSON_RESOURCES);
 	for (obs_data_item_t* el = obs_data_first(resources); el; obs_data_item_next(&el)) {
 		std::string resourceName = obs_data_item_get_name(el);
@@ -243,8 +244,12 @@ void Mask::MaskData::Load(const std::string& file) {
 		}
 		std::string resourceType = obs_data_get_string(resd, JSON_TYPE);
 		if (resourceType == "animation") {
-			m_animations.emplace(resourceName, 
+			m_animations.emplace(resourceName,
 				std::dynamic_pointer_cast<Resource::Animation>(GetResource(resourceName)));
+		}
+		else if (resourceType == "animation-target-list") {
+			m_animation_targets.emplace(resourceName,
+				std::dynamic_pointer_cast<Resource::AnimationTarget>(GetResource(resourceName)));
 		}
 		obs_data_release(resd);
 	}
@@ -1175,3 +1180,6 @@ void Mask::MaskData::ResetInstanceDatas() {
 }
 
 
+void Mask::MaskData::SetAnimationTargetWeight(std::string name, int target_index, float weight) {
+	m_animation_targets[name]->SetWeight(target_index, weight);
+}

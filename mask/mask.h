@@ -110,6 +110,7 @@ namespace Mask {
 
 	namespace Resource {
 		class Animation;
+		class AnimationTarget;
 		class Material;
 	}
 
@@ -195,6 +196,9 @@ namespace Mask {
 		EventSystem& GetEventSystem() { return event_system; }
 		bool         HasEventSystem() { return event_system.IsActive(); }
 
+		// adjust animation targets
+		void SetAnimationTargetWeight(std::string name, int target_index, float weight);
+
 	private:
 		std::shared_ptr<Part> LoadPart(std::string name, obs_data_t* data);
 		static void PartCalcMatrix(Part *part);
@@ -209,6 +213,7 @@ namespace Mask {
 		std::map<std::string, std::shared_ptr<Resource::IBase>> m_resources;
 		std::map<std::string, std::shared_ptr<Part>> m_parts;
 		std::map<std::string, std::shared_ptr<Resource::Animation>> m_animations;
+		std::map<std::string, std::shared_ptr<Resource::AnimationTarget>> m_animation_targets;
 		obs_data_t* m_data;
 		std::shared_ptr<Mask::Part> m_partWorld;
 		SortedDrawObject**	m_drawBuckets;

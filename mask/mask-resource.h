@@ -49,6 +49,7 @@ namespace Mask {
 			Emitter,
 			Light,
 			Animation,
+			AnimationTarget,
 		};
 
 		class Cache {

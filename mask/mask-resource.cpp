@@ -33,6 +33,7 @@
 #include "mask-resource-sound.h"
 #include "mask-resource-light.h"
 #include "mask-resource-animation.h"
+#include "mask-resource-animation-target.h"
 
 #include <Windows.h>
 
@@ -99,11 +100,15 @@ std::shared_ptr<Mask::Resource::IBase> Mask::Resource::IBase::Load(Mask::MaskDat
 	else if (type == "light") {
 		// Light
 		return std::make_shared<Mask::Resource::Light>(parent, name, data);
-	} 
+	}
 	else if (type == "animation") {
 		// Animation
 		return std::make_shared<Mask::Resource::Animation>(parent, name, data);
-	} 
+	}
+	else if (type == "animation-target-list") {
+		// Animation
+		return std::make_shared<Mask::Resource::AnimationTarget>(parent, name, data);
+	}
 	else if (type == "sound") {
 		// Sound (not supported)
 		//return std::make_shared<Mask::Resource::Effect>(parent, name, data);

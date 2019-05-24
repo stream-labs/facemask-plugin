@@ -95,7 +95,7 @@ namespace Mask {
 			previous_state = new_data.first;
 			return std::make_pair(state,new_data.second);
 		}
-	private:
+	protected:
 		bool previous_state;
 		EdgeType edge_type;
 		virtual Data check(float time_delta, smll::TriangulationResult *triangulation, const json &context) = 0;
@@ -111,6 +111,7 @@ namespace Mask {
 			duration = info.value("duration", 1.0/60.0); // default to 60 fps
 			repeat = info.value("repeat", true);
 			elapsed = 0.0;
+			edge_type = EdgeType::ACTIVE;
 		}
 		virtual Data check(float time_delta, smll::TriangulationResult *triangulation, const json &context) override;
 	};
@@ -136,28 +137,12 @@ namespace Mask {
 			{
 				exp = std::make_unique<Expression>(handler_data["expression"].get<std::string>(), initial_context);
 			}
-		}
-		void handle(json signal_data_list, float time_delta, smll::TriangulationResult *result, json &context) {
-			if (handler_data["type"].get<std::string>() == "expression")
+			else if (handler_data["type"].get<std::string>() == "assign-animation-target-weight")
 			{
-				std::string var = exp->get_assign_variable();
-				if (var.length() > 0)
-				{
-					if (context[var].is_number_integer())
-						context[var] = exp->eval_to_int(context).value;
-					else if (context[var].is_number_float())
-						context[var] = exp->eval_to_double(context).value;
-				}
-				else
-				{
-					// NOTE at this point, such a expression has no side effect
-					if (context[var].is_number_integer())
-						exp->eval<int>(context);
-					else if (context[var].is_number_float())
-						exp->eval<double>(context);
-				}
+				exp = std::make_unique<Expression>(handler_data["expression"].get<std::string>(), initial_context);
 			}
 		}
+		void handle(json signal_data_list, float time_delta, smll::TriangulationResult* result, json& context);
 	};
 
 	class EventSystem {
