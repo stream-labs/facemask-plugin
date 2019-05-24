@@ -198,11 +198,17 @@ namespace smll {
 	void OBSRenderer::DrawFaces(const DetectionResults& faces) {
 		gs_effect_t    *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
 
-		for (int i = 0; i < faces.length; i++) {
-			SetDrawColor(255, 255, 0);
-			DrawRect(faces[i].bounds);
+		//check list of landmarks drawing
+		bool landmark_checks[smll::NUM_FACIAL_LANDMARKS];
+		for (int i = 0; i < smll::NUM_FACIAL_LANDMARKS; i++) {
+			landmark_checks[i] = Config::singleton().get_bool((std::string(CONFIG_BOOL_SMOOTH_LANDMARK) + std::to_string(i + 1)).c_str());
+		}
 
-			DrawLandmarks(faces[i].landmarks68, 0, 255, 0);
+		for (int i = 0; i < faces.length; i++) {
+			//SetDrawColor(255, 255, 0);
+			//DrawRect(faces[i].bounds);
+
+			DrawLandmarks(faces[i].landmarks68, landmark_checks);
 
 			/* 5 landmarks 
 			SetDrawColor(255, 0, 255);
@@ -246,26 +252,13 @@ namespace smll {
 	}
 
 	void OBSRenderer::DrawLandmarks(const dlib::point* points, 
-		uint8_t r, uint8_t g, uint8_t b) {
+		bool * checklist) {
 		// landmarks
-		SetDrawColor(r, g, b);
-		drawLines(points, JAW_1, JAW_17);
-		SetDrawColor(r, g, b);
-		drawLines(points, EYEBROW_LEFT_1, EYEBROW_LEFT_5);
-		SetDrawColor(r, g, b);
-		drawLines(points, EYEBROW_RIGHT_1, EYEBROW_RIGHT_5);
-		SetDrawColor(r, g, b);
-		drawLines(points, NOSE_1, NOSE_TIP);
-		SetDrawColor(r, g, b);
-		drawLines(points, NOSE_TIP, NOSE_9, true);
-		SetDrawColor(r, g, b);
-		drawLines(points, EYE_LEFT_1, EYE_LEFT_6, true);
-		SetDrawColor(r, g, b);
-		drawLines(points, EYE_RIGHT_1, EYE_RIGHT_6, true);
-		SetDrawColor(r, g, b);
-		drawLines(points, MOUTH_OUTER_1, MOUTH_OUTER_12, true);
-		SetDrawColor(r, g, b);
-		drawLines(points, MOUTH_INNER_1, MOUTH_INNER_8, true);
+		SetDrawColor(0, 255, 0);
+		drawPoints(points, 0, NUM_FACIAL_LANDMARKS, checklist);
+		SetDrawColor(255, 0, 0);
+		Utils::flip_list(checklist, 0, NUM_FACIAL_LANDMARKS);
+		drawPoints(points, 0, NUM_FACIAL_LANDMARKS, checklist);
 	}
 
 	void OBSRenderer::DrawRect(const dlib::rectangle& r, int width) {
@@ -699,6 +692,30 @@ namespace smll {
 			gs_load_vertexbuffer(vertbuff);
 			gs_load_indexbuffer(nullptr);
 			gs_draw(GS_LINESTRIP, 0, 0);
+		}
+		gs_vertexbuffer_destroy(vertbuff);
+	}
+
+	void	OBSRenderer::drawPoints(const dlib::point* points, int start,
+		int end, bool * checklist) {
+		// make vb
+		gs_render_start(true);
+		// verts
+		for (int i = start; i <= end; i++) {
+			if (checklist[i]) {
+				for (int j = -2; j < 2; j++) {
+					for (int k = -2; k < 2; k++) {
+						gs_vertex2f((float)points[i].x() + j, (float)points[i].y() + k);
+					}
+				}
+			}
+		}
+		gs_vertbuffer_t *vertbuff = gs_render_save();
+
+		while (gs_effect_loop(obs_get_base_effect(OBS_EFFECT_SOLID), "Solid")) {
+			gs_load_vertexbuffer(vertbuff);
+			gs_load_indexbuffer(nullptr);
+			gs_draw(GS_POINTS, 0, 0);
 		}
 		gs_vertexbuffer_destroy(vertbuff);
 	}
