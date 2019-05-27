@@ -1678,7 +1678,6 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 				}
 				catch (const std::exception&)
 				{
-
 				}
 
 
