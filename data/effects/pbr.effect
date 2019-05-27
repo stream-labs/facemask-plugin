@@ -117,7 +117,7 @@ uniform float ibl_intensity = 1.0;
 uniform float3 ibl_rotate_offset = {0.0, 0.0, 0.0};
 
 // Emissive
-uniform float emissive_intensity = 10.0;
+uniform float emissive_intensity = 1.0;
 
 // OTHER VARS
 uniform float shininess = 8.0;
@@ -757,6 +757,8 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 	// NOTE here we don't let emissive material change opacity
 	//      if we need to, we can make emissive luminance add to opacity
 	float4 final_color = base_color + float4(emmColor.rgb * emissive_intensity, 0);
+	// apply emmissive color transparency on top of everything else
+	final_color.a = final_color.a * emmColor.a;
 
 	float final_exposure = exposure;
 	float final_contrast = contrast;
