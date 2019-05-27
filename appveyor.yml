@@ -48,7 +48,6 @@ before_deploy:
 test_script:
 - cmd: RelWithDebInfo\facemask-plugin-test.exe
 
-
 deploy:
   - provider: S3
     access_key_id:
