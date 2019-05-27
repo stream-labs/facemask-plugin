@@ -1220,7 +1220,15 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 						if (mask_data && (autoBGRemoval || cartoonMode || demoModeGenPreviews || recordTriggered)) {
 							triangulation.autoBGRemoval = autoBGRemoval;
 							triangulation.cartoonMode = cartoonMode;
-							mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
+							try
+							{
+								mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
+							}
+							catch (const std::exception&)
+							{
+
+							}
+							
 						}
 
 						// restore transform state
@@ -1321,7 +1329,14 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	if (mask_data) {
 		triangulation.autoBGRemoval = autoBGRemoval;
 		triangulation.cartoonMode = cartoonMode;
-		mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
+		try
+		{
+			mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
+		}
+		catch (const std::exception&)
+		{
+
+		}
 	}
 	else {
 		// Draw the source video	
@@ -1656,8 +1671,16 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 
 				// Make the triangulation
 				detection.faces[face_idx].triangulationResults.buildLines = drawMorphTris;
-				smllFaceDetector->MakeTriangulation(detection.frame.morphData,
-					detect_results, detection.faces[face_idx].triangulationResults);
+				try
+				{
+					smllFaceDetector->MakeTriangulation(detection.frame.morphData,
+						detect_results, detection.faces[face_idx].triangulationResults);
+				}
+				catch (const std::exception&)
+				{
+
+				}
+
 
 				detection.frame.active = false;
 
