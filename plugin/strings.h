@@ -29,6 +29,7 @@
 
 // Properties
 #define P_MASK					"Mask"
+#define P_FAILED_MASK			"failedMask"
 #define P_MASK_BROWSE			"Browse to mask"
 #define P_BEFORE				"Before Video"
 #define P_AFTER					"After Video"
