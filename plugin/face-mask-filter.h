@@ -177,6 +177,7 @@ namespace Plugin {
 			std::string			maskFilePath;
 			std::string			maskInternal;
 			std::string			currentMaskFilename;
+			std::string			failedMask;
 			const char*			introFilename;
 			std::string			currentIntroFilename;
 			const char*			outroFilename;

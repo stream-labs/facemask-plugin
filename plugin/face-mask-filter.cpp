@@ -123,7 +123,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	: source(source), canvasWidth(0), canvasHeight(0), baseWidth(640), baseHeight(480),
 	demoModeRecord(false), recordTriggered(false),
 	isActive(true), isVisible(true), videoTicked(true),
-	taskHandle(NULL), 
+	taskHandle(NULL), failedMask(""),
 	introFilename(nullptr),	outroFilename(nullptr),	alertActivate(true), alertDoIntro(false),
 	alertDoOutro(false), alertDuration(10.0f),
 	alertElapsedTime(BIG_FLOAT), alertTriggered(false), alertShown(false), alertsLoaded(false),
@@ -394,6 +394,8 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 
 	obs_data_set_default_string(data, P_BEFORE_TEXT, kDefaultBeforeText);
 	obs_data_set_default_string(data, P_AFTER_TEXT, kDefaultAfterText);
+	obs_data_set_default_string(data, P_FAILED_MASK, "");
+	
 #if !defined(PUBLIC_RELEASE)
 	// default advanced params
 	smll::Config::singleton().set_defaults(data);
@@ -558,7 +560,7 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 #if !defined(PUBLIC_RELEASE)
 	// mask 
 	add_json_file_property(props, P_MASK_BROWSE, NULL);
-
+	add_text_property(props, P_FAILED_MASK);
 	// ALERT PROPERTIES
 	add_bool_property(props, P_ALERT_ACTIVATE);
 	add_float_slider(props, P_ALERT_DURATION, 10.0f, 60.0f, 0.1f);
@@ -765,6 +767,8 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	beforeFile = (char*)obs_data_get_string(data, P_BEFORE);
 	afterText = (char*)obs_data_get_string(data, P_AFTER_TEXT);
 	afterFile = (char*)obs_data_get_string(data, P_AFTER);
+	// set last failed mask
+	obs_data_set_string(data, P_FAILED_MASK, failedMask.c_str());
 }
 
 void Plugin::FaceMaskFilter::Instance::activate(void *ptr) {
@@ -1881,9 +1885,11 @@ Plugin::FaceMaskFilter::Instance::LoadMask(std::string filename) {
 	try {
 		mdat->Load(filename);
 		PLOG_INFO("Loading mask '%s' successful!", filename.c_str());
+		failedMask = "";
 	}
 	catch (...) {
 		PLOG_ERROR("Failed to load mask %s.", filename.c_str());
+		failedMask = filename;
 	}
 
 	return mdat;
