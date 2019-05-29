@@ -261,7 +261,7 @@ void Mask::MaskData::Load(const std::string& file) {
 	};
 	auto comp_order = [](RenderObj a, RenderObj b) {
 		return (a->m_render_layer < b->m_render_layer) ||
-			   (a->m_render_layer == b->m_render_layer && (a->m_render_order < b->m_render_order));
+			(a->m_render_layer == b->m_render_layer && (a->m_render_order < b->m_render_order));
 	};
 	std::multiset<RenderObj, decltype(comp_layer)> layer_set(comp_layer);
 	std::multiset<RenderObj, decltype(comp_order)> order_set(comp_order);
@@ -868,7 +868,7 @@ void Mask::MaskData::Render(bool depthOnly, bool staticOnly, bool rotationDisabl
 	// TRANSPARENT
 	if (!depthOnly) {
 		gs_blend_function_separate(gs_blend_type::GS_BLEND_SRCALPHA,
-			gs_blend_type::GS_BLEND_INVSRCALPHA, gs_blend_type::GS_BLEND_ONE, gs_blend_type::GS_BLEND_ONE);
+			gs_blend_type::GS_BLEND_INVSRCALPHA, gs_blend_type::GS_BLEND_ONE, gs_blend_type::GS_BLEND_INVSRCALPHA);
 
 		for (size_t current_order = 0; current_order < m_num_render_orders; current_order++)
 		{
