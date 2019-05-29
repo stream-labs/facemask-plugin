@@ -59,7 +59,7 @@ namespace smll {
 			AddParam((std::string(CONFIG_BOOL_SMOOTH_LANDMARK) + std::to_string(i + 1)).c_str(), false);
 		}
 		
-		AddParam(CONFIG_FLOAT_SMOOTHING_FACTOR, 0.666, 0.0, 10.0, 0.1);
+		AddParam(CONFIG_FLOAT_SMOOTHING_FACTOR, 3.0, 0.0, 10.0, 0.1);
 
 		AddParam(CONFIG_DOUBLE_MOVEMENT_THRESHOLD, 50, 0, 200, 1);
 		AddParam(CONFIG_DOUBLE_BLUR_FACTOR, 3, 1, 7, 2);
