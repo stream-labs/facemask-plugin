@@ -560,7 +560,7 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 #if !defined(PUBLIC_RELEASE)
 	// mask 
 	add_json_file_property(props, P_MASK_BROWSE, NULL);
-	add_text_property(props, P_FAILED_MASK);
+	//add_text_property(props, P_FAILED_MASK);
 	// ALERT PROPERTIES
 	add_bool_property(props, P_ALERT_ACTIVATE);
 	add_float_slider(props, P_ALERT_DURATION, 10.0f, 60.0f, 0.1f);
@@ -1776,7 +1776,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 				}
 
 				// time to load intro?
-				if ((introData == nullptr) &&
+				/*if ((introData == nullptr) &&
 					introFilename && introFilename[0]) {
 					// save current
 					currentIntroFilename = introFilename;
@@ -1801,7 +1801,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);
 					outroData = std::unique_ptr<Mask::MaskData>(LoadMask(maskFn));
 					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_END);
-				}
+				}*/
 
 
 				// demo mode
@@ -1885,7 +1885,6 @@ Plugin::FaceMaskFilter::Instance::LoadMask(std::string filename) {
 	try {
 		mdat->Load(filename);
 		PLOG_INFO("Loading mask '%s' successful!", filename.c_str());
-		failedMask = "";
 	}
 	catch (...) {
 		PLOG_ERROR("Failed to load mask %s.", filename.c_str());
