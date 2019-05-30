@@ -131,11 +131,7 @@ namespace Plugin {
 			void drawCropRects(int width, int height);
 			void drawMotionRects(int width, int height);
 			void updateFaces();
-			void setFaceTransform(const smll::ThreeDPose& pose,
-				bool billboard = false);
 			void setupRenderingState();
-			void drawMaskData(Mask::MaskData*	maskData, bool depthOnly, 
-				bool staticOnly, bool rotationDisable);
 			gs_texture* RenderSourceTexture(gs_effect_t* effect);
 			void clearFramesActiveStatus();
 

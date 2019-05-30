@@ -22,6 +22,7 @@
 #include "mask-instance-data.h"
 #include "mask-resource-morph.h"
 #include "smll/TriangulationResult.hpp"
+#include "smll/DetectionResults.hpp"
 #include <string>
 #include <vector>
 #include <memory>
@@ -140,7 +141,7 @@ namespace Mask {
 
 		// main: tick & render
 		void Tick(float time);
-		void Render(bool depthOnly = false, bool staticOnly = false, bool rotationDisable = false);
+		void Render(const smll::DetectionResults& faces, int width, int height, bool depthOnly = false);
 
 		// IAnimationControls
 		void	Play() override;
@@ -195,6 +196,7 @@ namespace Mask {
 		std::shared_ptr<Part> LoadPart(std::string name, obs_data_t* data);
 		static void PartCalcMatrix(Part *part);
 		static void Decompose(const matrix4 *src, vec3 *s, matrix4 *R, vec3 *t);
+		void SetTransform(const smll::ThreeDPose& pose, bool billboard);
 
 		struct {
 			std::string name;

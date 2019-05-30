@@ -29,6 +29,11 @@
 
 #include <set>
 
+static float FOVA(float aspect) {
+	// field of view angle matched to focal length for solvePNP
+	return 56.0f / aspect;
+}
+
 Mask::Part::Part(std::shared_ptr<Part> p_parent,
 	std::shared_ptr<Resource::IBase> p_resource) :
 	parent(p_parent), 
@@ -837,8 +842,30 @@ void Mask::MaskData::Tick(float time) {
 	m_elapsedTime += time;
 }
 
-void Mask::MaskData::Render(bool depthOnly, bool staticOnly, bool rotationDisable) {
+void Mask::MaskData::SetTransform(const smll::ThreeDPose& pose, bool billboard)
+{
+	gs_matrix_identity();
+	gs_matrix_translate3f((float)pose.translation[0],
+		(float)pose.translation[1], (float)-pose.translation[2]);
+	if (!billboard) {
+		gs_matrix_rotaa4f((float)pose.rotation[0], (float)pose.rotation[1],
+			(float)-pose.rotation[2], (float)-pose.rotation[3]);
+	}
+}
 
+void Mask::MaskData::Render(const smll::DetectionResults &faces, int width, int height, bool depthOnly) {
+
+	gs_viewport_push();
+	gs_projection_push();
+
+	gs_set_viewport(0, 0, width, height);
+	gs_enable_depth_test(true);
+	gs_depth_function(GS_GREATER);
+
+	float aspect = (float)width / (float)height;
+	// using reversed-z depth with infinite far
+	gs_perspective(FOVA(aspect), aspect, 1.0, 0.0);
+	
 	ClearSortedDrawObjects();
 
 	gs_blend_state_push();
@@ -848,50 +875,83 @@ void Mask::MaskData::Render(bool depthOnly, bool staticOnly, bool rotationDisabl
 		gs_blend_type::GS_BLEND_ZERO);
 	gs_enable_color(true, true, true, true);
 
+	// save a matrix for face transforms
+	gs_matrix_push();
+
 	// OPAQUE
 	for (auto kv : m_parts) {
 		if (kv.second->resources.size() == 0)
 			continue;
 		instanceDatas.Push(kv.second->hash_id);
-		gs_matrix_push();
-		gs_matrix_mul(&kv.second->global);
 		for (auto  it = kv.second->resources.begin();
 			it != kv.second->resources.end(); it++) {
-			if ((*it)->IsDepthOnly() == depthOnly && (*it)->IsStatic() == staticOnly && (*it)->IsRotationDisabled() == rotationDisable) {
+
+			if ((*it)->IsDepthOnly() != depthOnly) continue;
+
+			bool billboard = (*it)->IsRotationDisabled();
+
+			for (int i = 0; i < faces.length; i++) {
+				// NOTE for some reason, some masks
+				// have their depth head set to static
+				if ((*it)->IsStatic() && (*it)->IsDepthOnly() == false)
+					SetTransform(faces[i].startPose, billboard);
+				else
+					SetTransform(faces[i].pose, billboard);
+
+				gs_matrix_push();
+				gs_matrix_mul(&kv.second->global);
+
 				(*it)->Render(kv.second.get());
+
+				gs_matrix_pop();
 			}
 		}
-		gs_matrix_pop();
 		instanceDatas.Pop();
 	}
 
 	// TRANSPARENT
-	if (!depthOnly) {
-		gs_blend_function_separate(gs_blend_type::GS_BLEND_SRCALPHA,
-			gs_blend_type::GS_BLEND_INVSRCALPHA, gs_blend_type::GS_BLEND_ONE, gs_blend_type::GS_BLEND_INVSRCALPHA);
+	gs_blend_function_separate(gs_blend_type::GS_BLEND_SRCALPHA,
+		gs_blend_type::GS_BLEND_INVSRCALPHA, gs_blend_type::GS_BLEND_ONE, gs_blend_type::GS_BLEND_INVSRCALPHA);
 
-		for (size_t current_order = 0; current_order < m_num_render_orders; current_order++)
-		{
-			for (unsigned int i = 0; i < NUM_DRAW_BUCKETS; i++) {
-				SortedDrawObject* sdo = m_drawBuckets[i];
-				while (sdo) {
-					if (sdo->m_render_order == current_order)
-					{
-						Part* part = sdo->sortDrawPart;
-						instanceDatas.PushDirect(sdo->instanceId);
+	for (size_t current_order = 0; current_order < m_num_render_orders; current_order++)
+	{
+		for (unsigned int i = 0; i < NUM_DRAW_BUCKETS; i++) {
+			SortedDrawObject* sdo = m_drawBuckets[i];
+			Resource::IBase* res = dynamic_cast<Resource::IBase*>(sdo);
+			if (!res) continue; // skip if sdo is not a resource type
+			while (sdo) {
+				if (sdo->m_render_order == current_order)
+				{
+					Part* part = sdo->sortDrawPart;
+					instanceDatas.PushDirect(sdo->instanceId);
+					
+					bool billboard = res->IsRotationDisabled();
+
+					for (int i = 0; i < faces.length; i++) {
+						if (res->IsStatic())
+							SetTransform(faces[i].startPose, billboard);
+						else
+							SetTransform(faces[i].pose, billboard);
+
 						gs_matrix_push();
 						gs_matrix_mul(&part->global);
 						sdo->SortedRender();
 						gs_matrix_pop();
-						instanceDatas.Pop();
 					}
-					sdo = sdo->nextDrawObject;
+					instanceDatas.Pop();
 				}
+				sdo = sdo->nextDrawObject;
 			}
 		}
 	}
 
+	gs_matrix_pop();
+
 	gs_blend_state_pop();
+
+	gs_projection_pop();
+	gs_viewport_pop();
+
 }
 
 static const char* const S_POSITION = "position";
