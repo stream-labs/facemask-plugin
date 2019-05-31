@@ -209,7 +209,8 @@ namespace Mask {
 		std::map<std::string, std::shared_ptr<Resource::Animation>> m_animations;
 		obs_data_t* m_data;
 		std::shared_ptr<Mask::Part> m_partWorld;
-		SortedDrawObject**	m_drawBuckets;
+		static const int NUM_DRAW_BUCKETS = 1024;
+		SortedDrawObject*	m_drawBuckets[NUM_DRAW_BUCKETS];
 		Resource::Morph*	m_morph;
 
 		// video light data

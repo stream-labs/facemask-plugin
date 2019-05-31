@@ -101,13 +101,11 @@ static const char* const JSON_INTRO_FADE_TIME = "intro_fade_time";
 static const char* const JSON_INTRO_DURATION = "intro_duration";
 
 
-static const int NUM_DRAW_BUCKETS = 1024;
 static const float BUCKETS_MAX_Z = 10.0f;
 static const float BUCKETS_MIN_Z = -100.0f;
 
 Mask::MaskData::MaskData(Cache *cache) : m_data(nullptr), m_morph(nullptr),
 m_cache(cache), m_elapsedTime(0.0f) {
-	m_drawBuckets = new Mask::SortedDrawObject*[NUM_DRAW_BUCKETS];
 	ClearSortedDrawObjects();
 	m_vidLightTex = nullptr;
 	m_num_render_layers = 1;
@@ -115,7 +113,6 @@ m_cache(cache), m_elapsedTime(0.0f) {
 }
 
 Mask::MaskData::~MaskData() {
-	delete[] m_drawBuckets;
 	Clear();
 }
 
@@ -569,27 +566,49 @@ void  Mask::MaskData::ClearSortedDrawObjects() {
 
 void  Mask::MaskData::AddSortedDrawObject(SortedDrawObject* obj) {
 	float z = obj->SortDepth() + obj->m_depth_bias;
+	float normalized_z = z;
 	if (z > BUCKETS_MAX_Z)
-		z = BUCKETS_MAX_Z;
+		normalized_z = BUCKETS_MAX_Z;
 	if (z < BUCKETS_MIN_Z)
-		z = BUCKETS_MIN_Z;
-	z = (z - BUCKETS_MIN_Z) / (BUCKETS_MAX_Z - BUCKETS_MIN_Z);
-	int idx = (int)(z * (float)(NUM_DRAW_BUCKETS - 1));
+		normalized_z = BUCKETS_MIN_Z;
+	normalized_z = (normalized_z - BUCKETS_MIN_Z) / (BUCKETS_MAX_Z - BUCKETS_MIN_Z);
+	int idx = (int)(normalized_z * (float)(NUM_DRAW_BUCKETS - 1));
 
 	if (m_drawBuckets[idx] != nullptr)
 	{
-		float z2=m_drawBuckets[idx]->SortDepth();
+		if (m_drawBuckets[idx] == obj)
+		{
+			// we are adding something twice which will
+			// create an endless loop, discard and log
+			blog(LOG_ERROR, "Redundant adding of SortedDrawObject was discarded.");
+			return;
+		}
+
+		float z2=m_drawBuckets[idx]->SortDepth() + m_drawBuckets[idx]->m_depth_bias;
 		if (z < z2)
 		{
-			// add new obj before current
+			// add new obj before head
 			obj->nextDrawObject = m_drawBuckets[idx];
 			m_drawBuckets[idx] = obj;
 		}
 		else
 		{
-			// add it after current
-			obj->nextDrawObject = m_drawBuckets[idx]->nextDrawObject;
-			m_drawBuckets[idx]->nextDrawObject = obj;
+			// search for place in the tail
+			SortedDrawObject* node = m_drawBuckets[idx]->nextDrawObject;
+			while (node) {
+				if (node == obj)
+				{
+					// we are adding something twice which will
+					// create an endless loop, discard and log
+					blog(LOG_ERROR, "Redundant adding of SortedDrawObject was discarded.");
+					return;
+				}
+
+				if (z < node->SortDepth() + node->m_depth_bias) break;
+				node = node->nextDrawObject;
+			}
+			obj->nextDrawObject = node;
+			node = obj;
 		}
 	}
 	else {
@@ -916,7 +935,8 @@ void Mask::MaskData::Render(const smll::DetectionResults &faces, int width, int 
 	for (size_t current_order = 0; current_order < m_num_render_orders; current_order++)
 	{
 		for (unsigned int i = 0; i < NUM_DRAW_BUCKETS; i++) {
-			SortedDrawObject* sdo = m_drawBuckets[i];
+			SortedDrawObject* head_sdo = m_drawBuckets[i];
+			SortedDrawObject* sdo = head_sdo;
 			Resource::IBase* res = dynamic_cast<Resource::IBase*>(sdo);
 			if (!res) continue; // skip if sdo is not a resource type
 			while (sdo) {
@@ -941,6 +961,10 @@ void Mask::MaskData::Render(const smll::DetectionResults &faces, int width, int 
 					instanceDatas.Pop();
 				}
 				sdo = sdo->nextDrawObject;
+				if (sdo == head_sdo) {
+					blog(LOG_ERROR, "Loop found in SortedDrawObject list. Breaking the loop...");
+					break;
+				}
 			}
 		}
 	}
