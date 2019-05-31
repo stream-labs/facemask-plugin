@@ -574,47 +574,19 @@ void  Mask::MaskData::AddSortedDrawObject(SortedDrawObject* obj) {
 	normalized_z = (normalized_z - BUCKETS_MIN_Z) / (BUCKETS_MAX_Z - BUCKETS_MIN_Z);
 	int idx = (int)(normalized_z * (float)(NUM_DRAW_BUCKETS - 1));
 
-	if (m_drawBuckets[idx] != nullptr)
-	{
-		if (m_drawBuckets[idx] == obj)
+	SortedDrawObject **node = &m_drawBuckets[idx];
+	while (*node) {
+		if (*node == obj)
 		{
-			// we are adding something twice which will
-			// create an endless loop, discard and log
-			blog(LOG_ERROR, "Redundant adding of SortedDrawObject was discarded.");
+			blog(LOG_ERROR, "Duplicate SortedDrawObject was found. Discarding...");
 			return;
 		}
 
-		float z2=m_drawBuckets[idx]->SortDepth() + m_drawBuckets[idx]->m_depth_bias;
-		if (z < z2)
-		{
-			// add new obj before head
-			obj->nextDrawObject = m_drawBuckets[idx];
-			m_drawBuckets[idx] = obj;
-		}
-		else
-		{
-			// search for place in the tail
-			SortedDrawObject* node = m_drawBuckets[idx]->nextDrawObject;
-			while (node) {
-				if (node == obj)
-				{
-					// we are adding something twice which will
-					// create an endless loop, discard and log
-					blog(LOG_ERROR, "Redundant adding of SortedDrawObject was discarded.");
-					return;
-				}
-
-				if (z < node->SortDepth() + node->m_depth_bias) break;
-				node = node->nextDrawObject;
-			}
-			obj->nextDrawObject = node;
-			node = obj;
-		}
+		if (z < ((*node)->SortDepth() + (*node)->m_depth_bias)) break;
+		node = &(*node)->nextDrawObject;
 	}
-	else {
-		obj->nextDrawObject = m_drawBuckets[idx]; // which is nullptr
-		m_drawBuckets[idx] = obj;
-	}
+	obj->nextDrawObject = *node;
+	*node = obj;
 
 	obj->instanceId = instanceDatas.CurrentId();
 
@@ -962,7 +934,7 @@ void Mask::MaskData::Render(const smll::DetectionResults &faces, int width, int 
 				}
 				sdo = sdo->nextDrawObject;
 				if (sdo == head_sdo) {
-					blog(LOG_ERROR, "Loop found in SortedDrawObject list. Breaking the loop...");
+					blog(LOG_ERROR, "Loop found in SortedDrawObject list. Looped back to '%s'. Breaking the loop...", res->GetName().c_str());
 					break;
 				}
 			}
