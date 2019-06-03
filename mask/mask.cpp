@@ -1180,6 +1180,6 @@ void Mask::MaskData::ResetInstanceDatas() {
 }
 
 
-void Mask::MaskData::SetAnimationTargetWeight(std::string name, int target_index, float weight) {
-	m_animation_targets[name]->SetWeight(target_index, weight);
+void Mask::MaskData::SetAnimationTargetWeights(std::string name, std::map<int,float> index_to_weight_list) {
+	m_animation_targets[name]->SetWeights(index_to_weight_list);
 }

@@ -32,11 +32,6 @@ extern "C" {
 namespace Mask {
 
 	namespace Resource {
-		struct AnimationTargetInstanceData : public InstanceData {
-			float current_frame;
-			AnimationTargetInstanceData() : current_frame(0.0) {}
-			void Reset() override { current_frame = 0.0; }
-		};
 
 		class AnimationTarget : public IBase {
 		public:
@@ -47,7 +42,7 @@ namespace Mask {
 			virtual void Update(Mask::Part* part, float time) override;
 			virtual void Render(Mask::Part* part) override;
 
-			void SetWeight(int target_index, float weight);
+			void SetWeights(std::map<int, float> index_to_weight_list);
 			
 		private:
 			const char* const S_DURATION = "duration";
@@ -61,6 +56,7 @@ namespace Mask {
 			float							m_frames_count;
 			float							m_frames_per_target;
 			std::vector<AnimationChannel>	m_channels;
+			std::vector<std::unordered_set<int>> channel_targets;
 
 			AnimationChannelType AnimationTypeFromString(const std::string& s);
 		};

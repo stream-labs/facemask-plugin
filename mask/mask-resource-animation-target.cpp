@@ -16,6 +16,7 @@
 * along with this program; if not, write to the Free Software
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
+#define NOMINMAX
 
 #include "mask.h"
 #include "mask-resource-animation.h"
@@ -101,6 +102,33 @@ Mask::Resource::AnimationTarget::AnimationTarget(Mask::MaskData* parent, std::st
 		obs_data_release(chand);
 	}
 	obs_data_release(channels);
+
+	// clean out target channels
+	int target_count = std::ceil(m_frames_count / m_frames_per_target);
+	bool target_includes_channel;
+	
+	for (size_t i = 0; i < m_channels.size(); i++)
+	{
+		std::unordered_set<int> current_targets;
+		for (size_t k = 0; k < target_count; k++)
+		{
+			target_includes_channel = false;
+			for (size_t f = k*m_frames_per_target + 1; f < (k+1) * m_frames_per_target; f++)
+			{
+				if (!(std::abs(m_channels[i].values[f] - m_channels[i].values[f-1]) <=
+					  std::max(std::abs(m_channels[i].values[f]), std::abs(m_channels[i].values[f-1]))* std::numeric_limits<float>::epsilon()
+				   ))
+				{
+					// nequal
+					target_includes_channel = true;
+					break;
+				}
+			}
+			if (target_includes_channel)
+				current_targets.insert(k);
+		}
+		channel_targets.emplace_back(current_targets);
+	}
 }
 
 Mask::Resource::AnimationTarget::~AnimationTarget() {}
@@ -119,26 +147,38 @@ void Mask::Resource::AnimationTarget::Render(Mask::Part* part) {
 	return;
 }
 
-void Mask::Resource::AnimationTarget::SetWeight(int target_index, float weight) {
-	m_parent->instanceDatas.Push(m_id);
+void Mask::Resource::AnimationTarget::SetWeights(std::map<int, float> index_to_weight_list) {
 
-	// get our instance data
-	std::shared_ptr<AnimationTargetInstanceData> instData =
-		m_parent->instanceDatas.GetData<AnimationTargetInstanceData>();
-
-	// time has elapsed
-	instData->current_frame = (target_index + weight) * m_frames_per_target;
-
-	// process animation channels
-	int frame = (int)(instData->current_frame);
 	for (int i = 0; i < m_channels.size(); i++) {
 		AnimationChannel& ch = m_channels[i];
 		if (ch.item != nullptr) {
-			ch.item->SetAnimatableValue(ch.GetValue(frame), ch.type);
+			float total_weight = 0.0;
+			float total_weighted_value = 0.0;
+			for (auto& e : index_to_weight_list) {
+				if(channel_targets[i].find(e.first) != channel_targets[i].end())
+				{
+					// TODO apply slerp for quaternions
+					float f_frame = (e.first + e.second) * m_frames_per_target;
+					float intpart;
+					float frac = std::modf(f_frame, &intpart);
+					int l_f = intpart;
+					int h_f = intpart+1;
+					if (l_f < e.first * m_frames_per_target)
+						l_f = (int)(e.first * m_frames_per_target);
+					if (h_f >= (e.first+1) * m_frames_per_target)
+						h_f = (int)((e.first + 1) * m_frames_per_target) - 1;
+
+					float val = ch.values[l_f] * (1.0 - frac) + ch.values[h_f] * (frac);
+					total_weight += e.second;
+					total_weighted_value += val * e.second;
+				}
+			}
+			// normalize the weights so sum(weights) = 1
+			if(total_weight > 0.0)
+				ch.item->SetAnimatableValue(total_weighted_value / total_weight, ch.type);
 		}
 	}
 
-	m_parent->instanceDatas.Pop();
 }
 
 Mask::Resource::AnimationChannelType 

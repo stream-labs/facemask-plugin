@@ -115,32 +115,76 @@ namespace Mask {
 		}
 		virtual Data check(float time_delta, smll::TriangulationResult *triangulation, const json &context) override;
 	};
+
 	class EventHandler {
+	protected:
 		MaskData* mask_data;
 		json handler_data;
-		std::unique_ptr<Expression> exp;
 	public:
-		EventHandler(EventHandler&& ev) {
-			mask_data = ev.mask_data;
-			handler_data = ev.handler_data;
-			exp = std::move(ev.exp);
-		}
 		EventHandler(const EventHandler &ev) {
 			mask_data = ev.mask_data;
 			handler_data = ev.handler_data;
-			exp = std::make_unique<Expression>(*ev.exp);
 		}
-		EventHandler(MaskData *mask_data, json handler_data, const json &initial_context) {
+		EventHandler(EventHandler &&ev) {
+			mask_data = ev.mask_data;
+			handler_data = std::move(ev.handler_data);
+		}
+		EventHandler(MaskData* mask_data, json handler_data) {
 			this->mask_data = mask_data;
 			this->handler_data = handler_data;
-			if (handler_data["type"].get<std::string>() == "expression")
-			{
-				exp = std::make_unique<Expression>(handler_data["expression"].get<std::string>(), initial_context);
+		}
+		static std::shared_ptr<EventHandler> Create(MaskData* mask_data, json handler_data, const json& initial_context);
+		virtual void handle(json signal_data_list, float time_delta, smll::TriangulationResult* result, json& context) = 0;
+	};
+
+
+	class AnimationTargetHandler: public EventHandler {
+		struct DataItem {
+			std::string animation_target_list;
+			int target_index;
+			std::unique_ptr<Expression> expression;
+			DataItem(std::string target_list, int index, std::unique_ptr<Expression>&& exp) {
+				animation_target_list = target_list;
+				target_index = index;
+				expression = std::move(exp);
 			}
-			else if (handler_data["type"].get<std::string>() == "assign-animation-target-weight")
-			{
-				exp = std::make_unique<Expression>(handler_data["expression"].get<std::string>(), initial_context);
+			DataItem(DataItem&& di) {
+				animation_target_list = std::move(di.animation_target_list);
+				target_index = di.target_index;
+				expression = std::move(di.expression);
 			}
+			DataItem(const DataItem &di) {
+				animation_target_list = di.animation_target_list;
+				target_index = di.target_index;
+				expression = std::make_unique<Expression>(*di.expression);
+			}
+			DataItem& operator=(const DataItem& other) {
+				animation_target_list = other.animation_target_list;
+				target_index = other.target_index;
+				expression = std::make_unique<Expression>(*other.expression);
+				return *this;
+			}
+		};
+		std::vector<DataItem> targets;
+	public:
+		AnimationTargetHandler(MaskData* mask_data, json handler_data, json initial_context) : EventHandler(mask_data, handler_data) {
+			json items = handler_data.value("items", json::array());
+			for (const auto &it: items)
+			{
+				targets.emplace_back(
+					DataItem{
+						it["animation-target-list"].get<std::string>(),
+						it["target-index"].get<int>(),
+						std::make_unique<Expression>(it["expression"].get<std::string>(), initial_context)
+					}
+				);
+			}
+		}
+		AnimationTargetHandler(AnimationTargetHandler&& ath):EventHandler(std::move(ath)) {
+			targets = std::move(ath.targets);
+		}
+		AnimationTargetHandler(const AnimationTargetHandler& ath):EventHandler(ath) {
+			targets = ath.targets;
 		}
 		void handle(json signal_data_list, float time_delta, smll::TriangulationResult* result, json& context);
 	};
@@ -148,7 +192,7 @@ namespace Mask {
 	class EventSystem {
 	public:
 		using SignalList = std::vector<std::shared_ptr<Signal>>;
-		using EventHandlerList = std::vector<EventHandler>;
+		using EventHandlerList = std::vector< std::shared_ptr<EventHandler>>;
 		using Event = std::pair<SignalList, EventHandlerList>;
 
 		json state;

@@ -33,6 +33,19 @@ namespace Mask {
 		}
 	}
 
+	std::shared_ptr<EventHandler> EventHandler::Create(MaskData* mask_data, json handler_data, const json& initial_context) {
+
+		if (handler_data["type"].get<std::string>() == "expression")
+		{
+			//return std::make_shared<ExpressionHandler>(handler_data["expression"].get<std::string>(), initial_context);
+		}
+		else if (handler_data["type"].get<std::string>() == "animation-target-weight-list")
+		{
+			return std::make_shared<AnimationTargetHandler>(mask_data, handler_data, initial_context);
+		}
+		throw std::runtime_error("Unsupported event handler");
+	}
+
 	Signal::Data TimeoutSignal::check(float time_delta, smll::TriangulationResult * /* not used */, const json & /*context*/) {
 		elapsed += time_delta;
 
@@ -45,29 +58,48 @@ namespace Mask {
 		return std::make_pair(false,json());
 	}
 
-	void EventHandler::handle(json signal_data_list, float time_delta, smll::TriangulationResult* result, json& context) {
-		if (handler_data["type"].get<std::string>() == "expression")
+	//void EventHandler::handle(json signal_data_list, float time_delta, smll::TriangulationResult* result, json& context) {
+	//	if (handler_data["type"].get<std::string>() == "expression")
+	//	{
+	//		std::string var = exp->get_assign_variable();
+	//		if (var.length() > 0)
+	//		{
+	//			if (context[var].is_number_integer())
+	//				context[var] = exp->eval_to_int(context).value;
+	//			else if (context[var].is_number_float())
+	//				context[var] = exp->eval_to_double(context).value;
+	//		}
+	//		else
+	//		{
+	//			// NOTE at this point, such a expression has no side effect
+	//			//      for now just evaluate for no reason
+	//			exp->eval<double>(context);
+	//		}
+	//	}
+	//	else if (handler_data["type"].get<std::string>() == "animation-target-weight-list")
+	//	{
+
+	//		mask_data->SetAnimationTargetWeight(handler_data["animation-target-list"].get<std::string>(),
+	//			handler_data["target-index"].get<int>(),
+	//			exp->eval_to_double(context).value);
+	//	}
+	//}
+
+	void AnimationTargetHandler::handle(json signal_data_list, float time_delta, smll::TriangulationResult* result, json& context) {
+		std::map<std::string, std::vector<std::pair<int, double>>> weights;
+		for (const auto& target : targets)
 		{
-			std::string var = exp->get_assign_variable();
-			if (var.length() > 0)
+			if (weights.find(target.animation_target_list) == weights.end())
 			{
-				if (context[var].is_number_integer())
-					context[var] = exp->eval_to_int(context).value;
-				else if (context[var].is_number_float())
-					context[var] = exp->eval_to_double(context).value;
+				weights[target.animation_target_list] = std::vector<std::pair<int, double>>();
 			}
-			else
-			{
-				// NOTE at this point, such a expression has no side effect
-				//      for now just evaluate for no reason
-				exp->eval<double>(context);
-			}
+			weights[target.animation_target_list].push_back(
+				std::make_pair(target.target_index, target.expression->eval_to_double(context).value)
+			);
 		}
-		else if (handler_data["type"].get<std::string>() == "assign-animation-target-weight")
+		for (const auto& ent : weights)
 		{
-			mask_data->SetAnimationTargetWeight(handler_data["animation-target-list"].get<std::string>(),
-				handler_data["target-index"].get<int>(),
-				exp->eval_to_double(context).value);
+			mask_data->SetAnimationTargetWeights(ent.first, { ent.second.begin(), ent.second.end() });
 		}
 	}
 
@@ -84,7 +116,7 @@ namespace Mask {
 				signals.push_back(Signal::Create(parent,sig,state));
 
 			for (const auto& h : itm["handlers"])
-				handlers.push_back(EventHandler(parent,h,state));
+				handlers.push_back(EventHandler::Create(parent,h,state));
 
 			event_list.push_back(std::make_pair(signals, handlers));
 		}
@@ -107,8 +139,8 @@ namespace Mask {
 			}
 			if (is_triggered)
 			{
-				for (EventHandler &handler : ev.second)
-					handler.handle(signal_data_list, time_delta, triangulation, current_full_state);
+				for (auto &handler : ev.second)
+					handler->handle(signal_data_list, time_delta, triangulation, current_full_state);
 			}
 		}
 	}

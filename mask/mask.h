@@ -197,7 +197,7 @@ namespace Mask {
 		bool         HasEventSystem() { return event_system.IsActive(); }
 
 		// adjust animation targets
-		void SetAnimationTargetWeight(std::string name, int target_index, float weight);
+		void SetAnimationTargetWeights(std::string name, std::map<int, float> index_to_weight_list);
 
 	private:
 		std::shared_ptr<Part> LoadPart(std::string name, obs_data_t* data);
