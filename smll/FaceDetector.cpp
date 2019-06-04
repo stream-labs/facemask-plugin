@@ -491,8 +491,7 @@ namespace smll {
 					vtxMap[vid] = i;
 				}
 				catch (const std::exception& e) {
-					blog(LOG_DEBUG, "[FaceMask] ***** CAUGHT EXCEPTION CV::SUBDIV2D: %s", e.what());
-					blog(LOG_DEBUG, "[FaceMask] ***** whilst adding point %d at (%f,%f)", i, p.x, p.y);
+					// ignore
 				}
 			}
 		}

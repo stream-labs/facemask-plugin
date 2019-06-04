@@ -59,13 +59,6 @@
 // Big enough
 #define BIG_FLOAT					    (100000.0f)
 
-static float FOVA(float aspect) {
-	// field of view angle matched to focal length for solvePNP
-	return 56.0f / aspect;
-}
-
-static const float_t NEAR_Z = 1.0f;
-static const float_t FAR_Z = 15000.0f;
 
 bool gs_rect_equal(const gs_rect& a, const gs_rect& b) {
 	if (a.x != b.x || a.y != b.y || a.cx != b.cx || a.cy != b.cy) {
@@ -1188,16 +1181,7 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					}
 
 					// Draw depth-only stuff
-					for (int i = 0; i < faces.length; i++) {
-						gs_matrix_push();
-						setFaceTransform(faces[i].pose);
-						drawMaskData(mask_data, true, false, false);
-						drawMaskData(mask_data, true, true, false);
-						setFaceTransform(faces[i].pose, true);
-						drawMaskData(mask_data, true, false, true);
-						drawMaskData(mask_data, true, true, true);
-						gs_matrix_pop();
-					}
+					mask_data->Render(faces, baseWidth * m_scale_rate, baseHeight * m_scale_rate, true);
 
 					// if we are generating thumbs
 					if (genThumbs) {
@@ -1223,7 +1207,15 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 						if (mask_data && (autoBGRemoval || cartoonMode || demoModeGenPreviews || recordTriggered)) {
 							triangulation.autoBGRemoval = autoBGRemoval;
 							triangulation.cartoonMode = cartoonMode;
-							mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
+							try
+							{
+								mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
+							}
+							catch (const std::exception&)
+							{
+
+							}
+							
 						}
 
 						// restore transform state
@@ -1233,19 +1225,8 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					}
 
 					// Draw regular stuff
-					for (int i = 0; i < faces.length; i++) {
-						if (maskAlpha > 0.0f) {
-							gs_matrix_push();
-							setFaceTransform(faces[i].startPose);
-							drawMaskData(mask_data, false, true, false);
-							setFaceTransform(faces[i].startPose, true);
-							drawMaskData(mask_data, false, true, true);
-							setFaceTransform(faces[i].pose);
-							drawMaskData(mask_data, false, false, false);
-							setFaceTransform(faces[i].pose, true);
-							drawMaskData(mask_data, false, false, true);
-							gs_matrix_pop();
-						}
+					if (maskAlpha > 0.0f) {
+						mask_data->Render(faces, baseWidth * m_scale_rate, baseHeight * m_scale_rate, false);
 					}
 
 					if (introActive || outroActive)
@@ -1253,16 +1234,10 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 
 					for (int i = 0; i < faces.length; i++) {
 						if (introActive) {
-							gs_matrix_push();
-							setFaceTransform(faces[i].pose, true);
-							drawMaskData(introData.get(), false, false, true);
-							gs_matrix_pop();
+							introData->Render(faces, baseWidth* m_scale_rate, baseHeight* m_scale_rate);
 						}
 						if (outroActive) {
-							gs_matrix_push();
-							setFaceTransform(faces[i].pose, true);
-							drawMaskData(outroData.get(), false, false, true);
-							gs_matrix_pop();
+							outroData->Render(faces, baseWidth* m_scale_rate, baseHeight* m_scale_rate);
 						}
 					}
 				}
@@ -1324,7 +1299,14 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	if (mask_data) {
 		triangulation.autoBGRemoval = autoBGRemoval;
 		triangulation.cartoonMode = cartoonMode;
-		mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
+		try
+		{
+			mask_data->RenderMorphVideo(vidTex, baseWidth, baseHeight, triangulation);
+		}
+		catch (const std::exception&)
+		{
+
+		}
 	}
 	else {
 		// Draw the source video	
@@ -1537,43 +1519,6 @@ void Plugin::FaceMaskFilter::Instance::setupRenderingState() {
 		gs_blend_type::GS_BLEND_INVSRCALPHA);
 }
 
-
-void Plugin::FaceMaskFilter::Instance::setFaceTransform(const smll::ThreeDPose& pose,
-	bool billboard) {
-
-	gs_matrix_identity();
-	gs_matrix_translate3f((float)pose.translation[0],
-		(float)pose.translation[1], (float)-pose.translation[2]);
-	if (!billboard) {
-		gs_matrix_rotaa4f((float)pose.rotation[0], (float)pose.rotation[1],
-			(float)-pose.rotation[2], (float)-pose.rotation[3]);
-	}
-}
-
-
-void Plugin::FaceMaskFilter::Instance::drawMaskData(Mask::MaskData*	_maskData, 
-	bool depthOnly, bool staticOnly, bool rotationDisable){
-
-	gs_viewport_push();
-	gs_projection_push();
-
-	uint32_t w = baseWidth*m_scale_rate;
-	uint32_t h = baseHeight*m_scale_rate;
-
-	gs_set_viewport(0, 0, w, h);
-	gs_enable_depth_test(true);
-	gs_depth_function(GS_GREATER);
-
-	float aspect = (float)w / (float)h;
-	// using reversed-z depth with infinite far
-	gs_perspective(FOVA(aspect), aspect, NEAR_Z, 0.0);
-
-	_maskData->Render(depthOnly, staticOnly, rotationDisable);
-
-	gs_projection_pop();
-	gs_viewport_pop();
-}
-
 int32_t Plugin::FaceMaskFilter::Instance::StaticThreadMain(Instance *ptr) {
 	return ptr->LocalThreadMain();
 }
@@ -1659,8 +1604,15 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalThreadMain() {
 
 				// Make the triangulation
 				detection.faces[face_idx].triangulationResults.buildLines = drawMorphTris;
-				smllFaceDetector->MakeTriangulation(detection.frame.morphData,
-					detect_results, detection.faces[face_idx].triangulationResults);
+				try
+				{
+					smllFaceDetector->MakeTriangulation(detection.frame.morphData,
+						detect_results, detection.faces[face_idx].triangulationResults);
+				}
+				catch (const std::exception&)
+				{
+				}
+
 
 				detection.frame.active = false;
 

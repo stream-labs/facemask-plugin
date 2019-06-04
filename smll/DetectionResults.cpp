@@ -395,10 +395,12 @@ namespace smll {
 
 		// copy values
 		bounds = bnd;
-		
+		double smoothing = Config::singleton().get_double(CONFIG_FLOAT_SMOOTHING_FACTOR);
 		for (int i = 0; i < smll::NUM_FACIAL_LANDMARKS; i++) {
 			bool landmark_smoothing = Config::singleton().get_bool((std::string(CONFIG_BOOL_SMOOTH_LANDMARK) + std::to_string(i + 1)).c_str());
 			if (landmark_smoothing) {
+				kalmanFilters[2 * i].SetMeasurementNoiseCovariance(smoothing);
+				kalmanFilters[2 * i + 1].SetMeasurementNoiseCovariance(smoothing);
 				double x = kalmanFilters[2 * i].Update(r.landmarks68[i].x());
 				double y = kalmanFilters[2 * i + 1].Update(r.landmarks68[i].y());
 				landmarks68[i] = dlib::point(x, y);
