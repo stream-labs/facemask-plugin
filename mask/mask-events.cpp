@@ -120,9 +120,28 @@ namespace Mask {
 
 			event_list.push_back(std::make_pair(signals, handlers));
 		}
+#ifdef EVENT_SYSTEM_GRAPH_LOG
+		const char *log_path = os_get_config_path_ptr("slobs-client/node-obs/logs");
+		std::string path = std::string(log_path) + "/event_system_graph_log.csv";
+		graph_log = std::ofstream(path, std::ios::out | std::ios::trunc);
+		graph_log << "TIMESTAMP" << ", " <<
+			"MOUTH_INNER_WIDTH" << ", " <<
+			"MOUTH_INNER_WIDTH_NORM" << ", " <<
+			"MOUTH_OUTER_WIDTH" << ", " <<
+			"MOUTH_OUTER_WIDTH_NORM" << ", " <<
+			"MOUTH_INNER_HEIGHT" << ", " <<
+			"MOUTH_INNER_HEIGHT_NORM" << ", " <<
+			"MOUTH_OUTER_HEIGHT" << ", " <<
+			"MOUTH_OUTER_HEIGHT_NORM" << std::endl;
+#endif
 	}
 
 	void EventSystem::Tick(float time_delta, smll::TriangulationResult *triangulation) {
+
+		// if we are collecting the last element in period
+		// we are ready to take moving average
+		if (run == MOVING_AVERAGE_PERIOD - 1) moving_average_active = true;
+
 		json current_full_state = get_full_state(time_delta, triangulation);
 		for (auto& ev : event_list)
 		{
@@ -143,6 +162,34 @@ namespace Mask {
 					handler->handle(signal_data_list, time_delta, triangulation, current_full_state);
 			}
 		}
+		run = (run + 1) % MOVING_AVERAGE_PERIOD;
+	}
+
+	float EventSystem::smooth(std::string name, float value) {
+		if (moving_average_map.find(name) == moving_average_map.end())
+			moving_average_map[name] = std::array<float, MOVING_AVERAGE_PERIOD>();
+
+		moving_average_map[name][run] = value;
+		float smooth_val = 0.0;
+		if (moving_average_active)
+		{
+			for (size_t i = 0; i < MOVING_AVERAGE_PERIOD; i++)
+			{
+				smooth_val += moving_average_map[name][i];
+			}
+			smooth_val /= MOVING_AVERAGE_PERIOD;
+		}
+		else
+		{
+			for (size_t i = 0; i <= run; i++)
+			{
+				smooth_val += moving_average_map[name][i];
+			}
+			smooth_val /= run + 1;
+		}
+			
+
+		return smooth_val;
 	}
 
 	json EventSystem::get_full_state(float time_delta, smll::TriangulationResult* triangulation) {
@@ -160,19 +207,44 @@ namespace Mask {
 
 		full_state["MOUTH_OUTER_WIDTH"] = dist(triangulation->points[smll::RIGHT_MOUTH_CORNER],
 			                        triangulation->points[smll::LEFT_MOUTH_CORNER]);
+		full_state["MOUTH_OUTER_WIDTH"] = smooth("MOUTH_OUTER_WIDTH",full_state["MOUTH_OUTER_WIDTH"].get<float>());
+
 		full_state["MOUTH_OUTER_HEIGHT"] = dist(triangulation->points[smll::MOUTH_OUTER_4],
 			                        triangulation->points[smll::MOUTH_OUTER_10]);
+		full_state["MOUTH_OUTER_HEIGHT"] = smooth("MOUTH_OUTER_HEIGHT", full_state["MOUTH_OUTER_HEIGHT"].get<float>());
+
+
+		full_state["MOUTH_INNER_WIDTH"] = dist(triangulation->points[smll::MOUTH_INNER_1],
+			triangulation->points[smll::MOUTH_INNER_5]);
+		full_state["MOUTH_INNER_WIDTH"] = smooth("MOUTH_INNER_WIDTH", full_state["MOUTH_INNER_WIDTH"].get<float>());
+
+		full_state["MOUTH_INNER_HEIGHT"] = dist(triangulation->points[smll::MOUTH_INNER_7],
+			triangulation->points[smll::MOUTH_INNER_3]);
+		full_state["MOUTH_INNER_HEIGHT"] = smooth("MOUTH_INNER_HEIGHT", full_state["MOUTH_INNER_HEIGHT"].get<float>());
+
 		full_state["FACE_HEIGHT"] = dist(triangulation->points[smll::HEAD_6],
 			triangulation->points[smll::JAW_9]);
+		full_state["FACE_HEIGHT"] = smooth("FACE_HEIGHT", full_state["FACE_HEIGHT"].get<float>());
+
 		full_state["FACE_WIDTH"] = dist(triangulation->points[smll::JAW_1],
 			triangulation->points[smll::JAW_17]);
+		full_state["FACE_WIDTH"] = smooth("FACE_WIDTH", full_state["FACE_WIDTH"].get<float>());
 
-		blog(LOG_DEBUG, "Mouth Width: %f", full_state["MOUTH_OUTER_WIDTH"].get<float>());
-		blog(LOG_DEBUG, "Mouth Height: %f", full_state["MOUTH_OUTER_HEIGHT"].get<float>());
-		blog(LOG_DEBUG, "Face Width: %f", full_state["FACE_WIDTH"].get<float>());
-		blog(LOG_DEBUG, "Face Height: %f", full_state["FACE_HEIGHT"].get<float>());
-		blog(LOG_DEBUG, "Mouth Width (Norm): %f", full_state["MOUTH_OUTER_WIDTH"].get<float>()/full_state["FACE_WIDTH"].get<float>());
-		blog(LOG_DEBUG, "Mouth Height (Norm): %f", full_state["MOUTH_OUTER_HEIGHT"].get<float>()/full_state["FACE_HEIGHT"].get<float>());
+#ifdef EVENT_SYSTEM_GRAPH_LOG
+		total_time += time_delta;
+		graph_log << total_time << ", " <<
+			         full_state["MOUTH_INNER_WIDTH"].get<float>() << ", " <<
+			         full_state["MOUTH_INNER_WIDTH"].get<float>() / full_state["FACE_WIDTH"].get<float>() << ", " <<
+		             full_state["MOUTH_OUTER_WIDTH"].get<float>() << ", " <<
+			         full_state["MOUTH_OUTER_WIDTH"].get<float>() / full_state["FACE_WIDTH"].get<float>() << ", " <<
+			         // mouth height columns
+					 full_state["MOUTH_INNER_HEIGHT"].get<float>() << ", " <<
+					 full_state["MOUTH_INNER_HEIGHT"].get<float>() / full_state["FACE_HEIGHT"].get<float>() << ", " <<
+					 full_state["MOUTH_OUTER_HEIGHT"].get<float>() << ", " <<
+					 full_state["MOUTH_OUTER_HEIGHT"].get<float>() / full_state["FACE_HEIGHT"].get<float>() << ", " << std::endl;
+#endif
+
+
 		return full_state;
 	}
 

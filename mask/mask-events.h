@@ -32,6 +32,12 @@ extern "C" {
 	#pragma warning( pop )
 }
 
+#define EVENT_SYSTEM_GRAPH_LOG
+
+#ifdef EVENT_SYSTEM_GRAPH_LOG
+#include <fstream>
+#endif
+
 namespace Mask {
 
 	using json = nlohmann::json;
@@ -204,5 +210,14 @@ namespace Mask {
 	private:
 		json get_full_state(float time_delta, smll::TriangulationResult* triangulation);
 		MaskData *parent;
+		int run = 0;
+		bool moving_average_active = false;
+		static const int MOVING_AVERAGE_PERIOD = 10;
+		std::map<std::string, std::array<float, MOVING_AVERAGE_PERIOD>> moving_average_map;
+		float smooth(std::string name, float param);
+#ifdef EVENT_SYSTEM_GRAPH_LOG
+		std::ofstream graph_log;
+		float total_time = 0.0;
+#endif
 	};
 }
