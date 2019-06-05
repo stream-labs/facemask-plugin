@@ -69,6 +69,9 @@ namespace smll {
 #else
 		m_detector = get_frontal_face_detector();
 #endif
+		// set the overlap out
+		dlib::test_box_overlap overlap_bounds(0.15, 0.75);
+		m_detector.set_overlap_tester(overlap_bounds);
 		count = 0;
 		
 		char *filename = obs_module_file(kFileShapePredictor68);
