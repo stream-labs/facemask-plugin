@@ -158,7 +158,7 @@ void Mask::Resource::AnimationTarget::SetWeights(std::map<int, float> index_to_w
 				if(channel_targets[i].find(e.first) != channel_targets[i].end())
 				{
 					// TODO apply slerp for quaternions
-					float f_frame = (e.first + e.second) * m_frames_per_target;
+					float f_frame = (e.first + e.second) * (m_frames_per_target - 1);
 					float intpart;
 					float frac = std::modf(f_frame, &intpart);
 					int l_f = intpart;
