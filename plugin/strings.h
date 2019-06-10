@@ -65,10 +65,8 @@
 #define P_FXAA_ANTI_ALIASING	"fxaaAntialiasing"
 
 // Other static strings
-static const char* const kDefaultMask = "b41214ab-8ef1-4842-924d-be113e2b5566.json";
-static const char* const kDefaultIntro = "f99e23b1-0393-4a01-b4ec-369823528635.json";
-static const char* const kDefaultOutro = "f99e23b1-0393-4a01-b4ec-369823528635.json";
-static const char* const kDefaultMaskFolder = "masks";
+static const char* const kDefaultMask = "";
+static const char* const kDefaultMaskFolder = "";
 static const char* const kDefaultBeforeText = "Before";
 static const char* const kDefaultAfterText	= "After";
 
