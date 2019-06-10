@@ -78,7 +78,6 @@ namespace smll {
 #else
 		m_detector = get_frontal_face_detector();
 #endif
-
 		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converterFD;
 		std::wstring wide_filenameFD(converterFD.from_bytes(filename_fd));
 		std::ifstream detector_file(wide_filenameFD.c_str(), std::ios::binary);
@@ -90,7 +89,6 @@ namespace smll {
 #else
 		deserialize(filename) >> m_predictor68;
 #endif
-
 
 		// set the overlap out
 		dlib::test_box_overlap overlap_bounds(0.15, 0.75);
