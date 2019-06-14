@@ -38,7 +38,7 @@ typedef void(*facemask_init_face_detector)(dlib::frontal_face_detector&);
 typedef std::vector<dlib::rectangle>(*facemask_detect_faces)(dlib::frontal_face_detector&, dlib::cv_image<unsigned char>&);
 
 static const char* const kFileShapePredictor68 = "shape_predictor_68_face_landmarks.dat";
-
+static const char* const kFileFaceDetector = "FD.dat";
 
 using namespace dlib;
 using namespace std;
@@ -60,6 +60,15 @@ namespace smll {
 		, avx(false)
 		, hGetProcIDDLL(NULL) {
 		// Load face detection and pose estimation models.
+
+		char *filename_fd = obs_module_file(kFileFaceDetector);
+		if (!filename_fd) {
+			PLOG_ERROR("Failed to get face detector file path");
+			throw std::runtime_error("Failed to get face detector file path");
+		}
+
+		PLOG_INFO("Face Detector File: %s.", filename_fd);
+
 #ifdef PUBLIC_RELEASE
 		load_dll();
 		facemask_init_face_detector fcn = (facemask_init_face_detector)GetProcAddress(hGetProcIDDLL, "facemask_init_face_detector");
@@ -69,6 +78,18 @@ namespace smll {
 #else
 		m_detector = get_frontal_face_detector();
 #endif
+		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converterFD;
+		std::wstring wide_filenameFD(converterFD.from_bytes(filename_fd));
+		std::ifstream detector_file(wide_filenameFD.c_str(), std::ios::binary);
+		if (!detector_file) {
+			throw std::runtime_error("Failed to open face detector file");
+		}
+#ifdef _WIN32
+		deserialize(m_detector, detector_file);
+#else
+		deserialize(filename) >> m_predictor68;
+#endif
+
 		// set the overlap out
 		dlib::test_box_overlap overlap_bounds(0.15, 0.75);
 		m_detector.set_overlap_tester(overlap_bounds);
@@ -102,6 +123,7 @@ namespace smll {
 		deserialize(filename) >> m_predictor68;
 #endif
 		bfree(filename);
+		bfree(filename_fd);
 
 	}
 
