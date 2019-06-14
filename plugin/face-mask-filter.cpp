@@ -116,9 +116,7 @@ Plugin::FaceMaskFilter::Instance::Instance(obs_data_t *data, obs_source_t *sourc
 	: source(source), canvasWidth(0), canvasHeight(0), baseWidth(640), baseHeight(480),
 	demoModeRecord(false), recordTriggered(false),
 	isActive(true), isVisible(true), videoTicked(true),
-	taskHandle(NULL), 
-	introFilename(nullptr),	outroFilename(nullptr),	alertActivate(true), alertDoIntro(false),
-	alertDoOutro(false), alertDuration(10.0f),
+	taskHandle(NULL), alertActivate(true),  alertDuration(10.0f),
 	alertElapsedTime(BIG_FLOAT), alertTriggered(false), alertShown(false), alertsLoaded(false),
 	demoCurrentMask(0), smllFaceDetector(nullptr), caching_done(false),
 	demoModeInDelay(false), demoModeGenPreviews(false),	demoModeSavingFrames(false), loading_mask(false),
@@ -358,8 +356,6 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 
 	obs_data_set_default_string(data, P_MASK, kDefaultMask);
 	obs_data_set_default_string(data, P_MASK_BROWSE, kDefaultMask);
-	obs_data_set_default_string(data, P_ALERT_INTRO, kDefaultIntro);
-	obs_data_set_default_string(data, P_ALERT_OUTRO, kDefaultOutro);
 
 	bfree(defMaskFolder);
 	
@@ -368,8 +364,6 @@ void Plugin::FaceMaskFilter::Instance::get_defaults(obs_data_t *data) {
 	// ALERTS
 	obs_data_set_default_bool(data, P_ALERT_ACTIVATE, false);
 	obs_data_set_default_double(data, P_ALERT_DURATION, 10.0f);
-	obs_data_set_default_bool(data, P_ALERT_DOINTRO, false);
-	obs_data_set_default_bool(data, P_ALERT_DOOUTRO, false);
 
 	obs_data_set_default_bool(data, P_CARTOON, false);
 	obs_data_set_default_bool(data, P_BGREMOVAL, false);
@@ -555,8 +549,6 @@ void Plugin::FaceMaskFilter::Instance::get_properties(obs_properties_t *props) {
 	// ALERT PROPERTIES
 	add_bool_property(props, P_ALERT_ACTIVATE);
 	add_float_slider(props, P_ALERT_DURATION, 10.0f, 60.0f, 0.1f);
-	add_bool_property(props, P_ALERT_DOINTRO);
-	add_bool_property(props, P_ALERT_DOOUTRO);
 
 	add_bool_property(props, P_TEST_MODE);
 	add_bool_property(props, P_LOG_MODE);
@@ -702,10 +694,6 @@ void Plugin::FaceMaskFilter::Instance::update(obs_data_t *data) {
 	alertActivate = obs_data_get_bool(data, P_ALERT_ACTIVATE);
 	alertTriggered = (!lastAlertActivate && alertActivate);
 	alertDuration = (float)obs_data_get_double(data, P_ALERT_DURATION);
-	alertDoIntro = obs_data_get_bool(data, P_ALERT_DOINTRO);
-	alertDoOutro = obs_data_get_bool(data, P_ALERT_DOOUTRO);
-	introFilename = (char*)obs_data_get_string(data, P_ALERT_INTRO);
-	outroFilename = (char*)obs_data_get_string(data, P_ALERT_OUTRO);
 	alertShowDelay = 0; //Default value
 
 	// demo mode
@@ -853,26 +841,11 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 	}
 
 	// Figure out what's going on
-	bool introActive = false;
-	bool outroActive = false;
 	float maskActiveTime = 0.0f;
 	float alertOnTime = MASK_FADE_TIME;
-	if (alertDoIntro && introData) {
-		alertOnTime = introData->GetIntroDuration();
-		maskActiveTime = introData->GetIntroDuration() - 
-			introData->GetIntroFadeTime();
-		if (alertElapsedTime <= introData->GetIntroDuration())
-			introActive = true;
-	}
+
 	float maskInactiveTime = alertDuration;
 	float alertOffTime = alertDuration - MASK_FADE_TIME;
-	if (alertDoOutro && outroData) {
-		maskInactiveTime -= outroData->GetIntroDuration() -
-			outroData->GetIntroFadeTime();
-		alertOffTime = alertDuration - outroData->GetIntroDuration();
-		if (alertElapsedTime >= (alertDuration - outroData->GetIntroDuration()))
-			outroActive = true;
-	}
 	alertOnTime += alertShowDelay;
 	bool maskActive = (alertElapsedTime >= maskActiveTime &&
 		alertElapsedTime <= maskInactiveTime);
@@ -893,10 +866,6 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 		// rewind everything
 		if (mdat)
 			mdat->Rewind();
-		if (introData)
-			introData->Rewind();
-		if (outroData)
-			outroData->Rewind();
 		alertTriggered = false;
 		alertShown = false;
 	}
@@ -914,13 +883,6 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 		alertElapsedTime += timeDelta;
 	}
 
-	// Tick the intro/outro
-	if (introActive) {
-		introData->Tick(timeDelta);
-	}
-	if (outroActive) {
-		outroData->Tick(timeDelta);
-	}
 }
 
 /*
@@ -1018,44 +980,17 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 	SendSourceTextureToThread(vidTex);
 
 	// set up alphas
-	bool introActive = false;
-	bool outroActive = false;
 	float maskAlpha = 1.0f;
-	if (alertDoIntro && introData) {
-		float t1 = introData->GetIntroDuration() -
-			introData->GetIntroFadeTime();
-		float t2 = introData->GetIntroDuration();
-		if (alertElapsedTime < t1)
-			maskAlpha = 0.0f;
-		else if (alertElapsedTime < t2)
-			maskAlpha = Utils::hermite((alertElapsedTime - t1) / (t2 - t1), 0.0f, 1.0f);
-		if (alertElapsedTime <= introData->GetIntroDuration())
-			introActive = true;
-	}
-	else {
-		if (alertElapsedTime < MASK_FADE_TIME)
-			maskAlpha = Utils::hermite(alertElapsedTime / MASK_FADE_TIME, 0.0f, 1.0f);
-	}
-	float outroDuration = MASK_FADE_TIME;
-	if (alertDoOutro && outroData) {
-		outroDuration = outroData->GetIntroDuration();
-		float t1 = alertDuration - outroData->GetIntroDuration();
-		float t2 = t1 + outroData->GetIntroFadeTime();
-		if (alertElapsedTime > t2)
-			maskAlpha = 0.0f;
-		else if (alertElapsedTime > t1)
-			maskAlpha = Utils::hermite((alertElapsedTime - t1) / (t2 - t1), 1.0f, 0.0f);
-		if (alertElapsedTime < alertDuration &&
-			alertElapsedTime >= (alertDuration - outroData->GetIntroDuration()))
-			outroActive = true;
-	}
-	else {
-		float t = alertDuration - MASK_FADE_TIME;
-		if (alertElapsedTime > alertDuration)
-			maskAlpha = 0.0f;
-		else if (alertElapsedTime > t)
-			maskAlpha = Utils::hermite((alertElapsedTime - t) / MASK_FADE_TIME, 1.0f, 0.0f);
-	}
+	
+	if (alertElapsedTime < MASK_FADE_TIME)
+		maskAlpha = Utils::hermite(alertElapsedTime / MASK_FADE_TIME, 0.0f, 1.0f);
+
+	float t = alertDuration - MASK_FADE_TIME;
+	if (alertElapsedTime > alertDuration)
+		maskAlpha = 0.0f;
+	else if (alertElapsedTime > t)
+		maskAlpha = Utils::hermite((alertElapsedTime - t) / MASK_FADE_TIME, 1.0f, 0.0f);
+
 	if (drawMask)
 		maskAlpha = 1.0f;
 	if (mask_data) {
@@ -1225,18 +1160,6 @@ void Plugin::FaceMaskFilter::Instance::video_render(gs_effect_t *effect) {
 					if (maskAlpha > 0.0f) {
 						mask_data->Render(faces, baseWidth * m_scale_rate, baseHeight * m_scale_rate, false);
 					}
-
-					if (introActive || outroActive)
-						gs_clear(GS_CLEAR_DEPTH, &black, 0.0f, 0);
-
-					for (int i = 0; i < faces.length; i++) {
-						if (introActive) {
-							introData->Render(faces, baseWidth* m_scale_rate, baseHeight* m_scale_rate);
-						}
-						if (outroActive) {
-							outroData->Render(faces, baseWidth* m_scale_rate, baseHeight* m_scale_rate);
-						}
-					}
 				}
 				gs_texrender_end(drawTexRender);
 			}
@@ -1378,17 +1301,9 @@ void Plugin::FaceMaskFilter::Instance::checkForMaskUnloading() {
 	if (currentMaskFilename != maskFilename) {
 		maskData = nullptr;
 	}
-	if (introFilename && currentIntroFilename != introFilename) {
-		introData = nullptr;
-	}
-	if (outroFilename && currentOutroFilename != outroFilename) {
-		outroData = nullptr;
-	}
 
 	if (currentMaskFolder != maskFolder) {
 		maskData = nullptr;
-		introData = nullptr;
-		outroData = nullptr;
 	}
 }
 
@@ -1701,35 +1616,7 @@ int32_t Plugin::FaceMaskFilter::Instance::LocalMaskDataThreadMain() {
 					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_END);
 				}
 
-				// time to load intro?
-				if ((introData == nullptr) &&
-					introFilename && introFilename[0]) {
-					// save current
-					currentIntroFilename = introFilename;
-					currentMaskFolder = maskFolder;
-					// mask filename
-					std::string maskFn = currentMaskFolder + "\\" + currentIntroFilename;
-					// load mask
-					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);
-					introData = std::unique_ptr<Mask::MaskData>(LoadMask(maskFn));
-					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_END);
-				}
-
-				// time to load outro?
-				if ((outroData == nullptr) && 
-					outroFilename && outroFilename[0]) {
-					// save current
-					currentOutroFilename = outroFilename;
-					currentMaskFolder = maskFolder;
-					// mask filename
-					std::string maskFn = currentMaskFolder + "\\" + currentOutroFilename;
-					// load mask
-					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);
-					outroData = std::unique_ptr<Mask::MaskData>(LoadMask(maskFn));
-					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_END);
-				}
-
-
+				
 				// demo mode
 				if (demoModeGenPreviews && !lastDemoMode) {
 					SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);

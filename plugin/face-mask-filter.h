@@ -173,17 +173,11 @@ namespace Plugin {
 			std::string			maskFilePath;
 			std::string			maskInternal;
 			std::string			currentMaskFilename;
-			const char*			introFilename;
-			std::string			currentIntroFilename;
-			const char*			outroFilename;
-			std::string			currentOutroFilename;
 
 			void	checkForMaskUnloading();
 
 			// alert params
 			bool				alertActivate;
-			bool				alertDoIntro;
-			bool				alertDoOutro;
 			float				alertDuration;
 			float				alertShowDelay;
 
@@ -191,8 +185,6 @@ namespace Plugin {
 			std::thread			maskDataThread;
 			std::mutex			maskDataMutex;
 			std::unique_ptr<Mask::MaskData>	maskData;
-			std::unique_ptr<Mask::MaskData>	introData;
-			std::unique_ptr<Mask::MaskData>	outroData;
 
 			bool				loading_mask;
 			std::mutex          passFrameToDetection;
