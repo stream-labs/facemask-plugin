@@ -211,13 +211,13 @@ namespace Mask {
 		json get_full_state(float time_delta, smll::TriangulationResult* triangulation);
 		MaskData *parent;
 		int run = 0;
-		bool moving_average_active = false;
-		static const int MOVING_AVERAGE_PERIOD = 10;
-		std::map<std::string, std::array<float, MOVING_AVERAGE_PERIOD>> moving_average_map;
-		float smooth(std::string name, float param);
+		bool filter_active = false;
+		static const int FILTER_PERIOD = 10;
+		std::map<std::string, std::array<float, FILTER_PERIOD>> value_history_map;
+		float smooth(std::string name, float param, float time);
 #ifdef EVENT_SYSTEM_GRAPH_LOG
 		std::ofstream graph_log;
-		float total_time = 0.0;
 #endif
+		double total_time = 0.0;
 	};
 }
