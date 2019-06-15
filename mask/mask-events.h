@@ -32,7 +32,11 @@ extern "C" {
 	#pragma warning( pop )
 }
 
+//#define DEBUG_EVENT_SYSTEM
+
+#if !defined(PUBLIC_RELEASE) && defined(DEBUG_EVENT_SYSTEM)
 #define EVENT_SYSTEM_GRAPH_LOG
+#endif
 
 #ifdef EVENT_SYSTEM_GRAPH_LOG
 #include <fstream>
@@ -213,8 +217,8 @@ namespace Mask {
 		int run = 0;
 		bool filter_active = false;
 		static const int FILTER_PERIOD = 10;
-		std::map<std::string, std::array<float, FILTER_PERIOD>> value_history_map;
-		float smooth(std::string name, float param, float time);
+		std::map<std::string, std::array<double, FILTER_PERIOD>> value_history_map;
+		double smooth(std::string name, double param, double time, double sma_ratio = 0.0);
 #ifdef EVENT_SYSTEM_GRAPH_LOG
 		std::ofstream graph_log;
 #endif
