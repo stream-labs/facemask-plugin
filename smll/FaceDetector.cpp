@@ -255,6 +255,66 @@ namespace smll {
 		currentImage = cropped.clone();
 	}
 
+	double FaceDetector::GetGazeRatio(dlib::point *eye_landmarks) {
+		cv::Mat greyCopy;
+		cv::cvtColor(grayImage, greyCopy, cv::COLOR_GRAY2RGB);
+		std::vector<cv::Point> area;
+
+		area.push_back(cv::Point(eye_landmarks[36].x(), eye_landmarks[36].y()));
+		area.push_back(cv::Point(eye_landmarks[37].x(), eye_landmarks[37].y()));
+		area.push_back(cv::Point(eye_landmarks[38].x(), eye_landmarks[38].y()));
+		area.push_back(cv::Point(eye_landmarks[39].x(), eye_landmarks[39].y()));
+		area.push_back(cv::Point(eye_landmarks[40].x(), eye_landmarks[40].y()));
+		area.push_back(cv::Point(eye_landmarks[41].x(), eye_landmarks[41].y()));
+		cv::polylines(greyCopy, area, true, cv::Scalar(255, 0, 0), 2, 150, 0);
+
+		int min_x = area[0].x;
+		int max_x = area[0].x;
+		int min_y = area[0].y;
+		int max_y = area[0].y;
+
+		for (size_t i = 1; i < area.size(); i++)	{
+			min_x = std::min(area[i].x, min_x);
+			max_x = std::max(area[i].x, max_x);
+			min_y = std::min(area[i].y, min_y);
+			max_y = std::max(area[i].y, max_y);
+		}
+
+		cv::Range rows(min_y, max_y);
+		cv::Range cols(min_x, max_x);
+		cv::Mat eye = grayImage(rows, cols);
+		cv::resize(eye, eye, cv::Size(), 10.0, 10.0);
+		cv::imshow("image", greyCopy);
+		cv::imshow("eye", eye);
+
+		cv::waitKey(1);
+			//mask = np.zeros((height, width), np.uint8)
+			//cv::polylines(mask, [left_eye_region], True, 255, 2)
+			/*cv2.fillPoly(mask, [left_eye_region], 255)
+			eye = cv2.bitwise_and(gray, gray, mask = mask)
+
+			min_x = np.min(left_eye_region[:, 0])
+			max_x = np.max(left_eye_region[:, 0])
+			min_y = np.min(left_eye_region[:, 1])
+			max_y = np.max(left_eye_region[:, 1])
+
+			gray_eye = eye[min_y:max_y, min_x : max_x]
+			_, threshold_eye = cv2.threshold(gray_eye, 70, 255, cv2.THRESH_BINARY)
+			height, width = threshold_eye.shape
+			left_side_threshold = threshold_eye[0:height, 0 : int(width / 2)]
+			left_side_white = cv2.countNonZero(left_side_threshold)
+
+			right_side_threshold = threshold_eye[0:height, int(width / 2) : width]
+			right_side_white = cv2.countNonZero(right_side_threshold)
+
+			if left_side_white == 0:
+		gaze_ratio = 1
+			elif right_side_white == 0 :
+			gaze_ratio = 5
+			else:
+		gaze_ratio = left_side_white / right_side_white
+			return gaze_ratio*/
+	}
 	void FaceDetector::DetectFaces(const OBSTexture& capture, int width, int height, DetectionResults& results) {
 		// better check if the camera res has changed on us
 		if ((resizeWidth != width) ||
@@ -336,6 +396,8 @@ namespace smll {
 			results[i] = m_faces[i];
 		}
 		results.length = m_faces.length;
+
+
 	}
 
 	void FaceDetector::MakeTriangulation(MorphData& morphData, 
@@ -1119,6 +1181,7 @@ namespace smll {
 			for (int j = 0; j < NUM_FACIAL_LANDMARKS; j++) {
 				results[f].landmarks68[j] = point(d68.part(j).x(), d68.part(j).y());
 			}
+			GetGazeRatio(results[f].landmarks68);
 		}
 
 		results.length = m_faces.length;

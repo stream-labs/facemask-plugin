@@ -67,7 +67,7 @@ public:
 	void DetectLandmarks(DetectionResults& results);
 	void DoPoseEstimation(DetectionResults& results);
 	void ResetFaces();
-
+	double GetGazeRatio(dlib::point *eye_landmarks);
 	void MakeTriangulation(MorphData& morphData, DetectionResults& results, 
 		TriangulationResult& result);
 
