@@ -257,8 +257,11 @@ namespace smll {
 
 	double FaceDetector::GetGazeRatio(dlib::point *eye_landmarks) {
 		cv::Mat greyCopy;
+		cv::Mat treshEye;
 		cv::cvtColor(grayImage, greyCopy, cv::COLOR_GRAY2RGB);
+		cv::Mat mask = cv::Mat::zeros(grayImage.size(), CV_8UC1);
 		std::vector<cv::Point> area;
+		cv::Point corners[1][6];
 
 		area.push_back(cv::Point(eye_landmarks[36].x(), eye_landmarks[36].y()));
 		area.push_back(cv::Point(eye_landmarks[37].x(), eye_landmarks[37].y()));
@@ -266,8 +269,18 @@ namespace smll {
 		area.push_back(cv::Point(eye_landmarks[39].x(), eye_landmarks[39].y()));
 		area.push_back(cv::Point(eye_landmarks[40].x(), eye_landmarks[40].y()));
 		area.push_back(cv::Point(eye_landmarks[41].x(), eye_landmarks[41].y()));
-		cv::polylines(greyCopy, area, true, cv::Scalar(255, 0, 0), 2, 150, 0);
 
+		for (size_t i = 0; i < area.size(); i++)	{
+			corners[0][i] = area[i];
+		}
+		cv::polylines(greyCopy, area, true, cv::Scalar(255, 0, 0), 2, 150, 0);
+		cv::polylines(mask, area, true, cv::Scalar(255, 0, 0), 2,150, 0);
+		int num_points = 6;
+		const cv::Point* corner_list[1] = { corners[0] };
+		cv::fillPoly(mask, corner_list,  &num_points, 1, cv::Scalar(255), 8);
+		cv::Mat left_eye;
+		cv::bitwise_and(grayImage, grayImage, left_eye, mask);
+		//cv::fillPoly(mask, area, cv::Scalar(255), 150, 0);
 		int min_x = area[0].x;
 		int max_x = area[0].x;
 		int min_y = area[0].y;
@@ -284,8 +297,11 @@ namespace smll {
 		cv::Range cols(min_x, max_x);
 		cv::Mat eye = grayImage(rows, cols);
 		cv::resize(eye, eye, cv::Size(), 10.0, 10.0);
+		cv::threshold(eye, treshEye, 70, 255, cv::THRESH_BINARY);
+
 		cv::imshow("image", greyCopy);
 		cv::imshow("eye", eye);
+		cv::imshow("thresheye", treshEye);
 
 		cv::waitKey(1);
 			//mask = np.zeros((height, width), np.uint8)
