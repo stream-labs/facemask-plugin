@@ -255,31 +255,29 @@ namespace smll {
 		currentImage = cropped.clone();
 	}
 
-	double FaceDetector::GetGazeRatio(dlib::point *eye_landmarks) {
+	double FaceDetector::GetGazeRatio(dlib::point *eye_landmarks, int start, int end, bool orient) {
 		cv::Mat greyCopy;
 		cv::Mat treshEye;
 		cv::cvtColor(grayImage, greyCopy, cv::COLOR_GRAY2RGB);
-		cv::Mat mask = cv::Mat::zeros(grayImage.size(), CV_8UC1);
+		cv::Mat mask = cv::Mat(grayImage.size(), CV_8UC1);
+		mask.setTo(cv::Scalar(255, 255, 255));
 		std::vector<cv::Point> area;
 		cv::Point corners[1][6];
 
-		area.push_back(cv::Point(eye_landmarks[36].x(), eye_landmarks[36].y()));
-		area.push_back(cv::Point(eye_landmarks[37].x(), eye_landmarks[37].y()));
-		area.push_back(cv::Point(eye_landmarks[38].x(), eye_landmarks[38].y()));
-		area.push_back(cv::Point(eye_landmarks[39].x(), eye_landmarks[39].y()));
-		area.push_back(cv::Point(eye_landmarks[40].x(), eye_landmarks[40].y()));
-		area.push_back(cv::Point(eye_landmarks[41].x(), eye_landmarks[41].y()));
+		for (size_t i = start; i <= end; i++)	{
+			area.push_back(cv::Point(eye_landmarks[i].x(), eye_landmarks[i].y())); // 36 41
+		}
 
 		for (size_t i = 0; i < area.size(); i++)	{
 			corners[0][i] = area[i];
 		}
 		cv::polylines(greyCopy, area, true, cv::Scalar(255, 0, 0), 2, 150, 0);
-		cv::polylines(mask, area, true, cv::Scalar(255, 0, 0), 2,150, 0);
+		cv::polylines(mask, area, true, cv::Scalar(0, 0, 0), 2,150, 0);
 		int num_points = 6;
 		const cv::Point* corner_list[1] = { corners[0] };
-		cv::fillPoly(mask, corner_list,  &num_points, 1, cv::Scalar(255), 8);
+		cv::fillPoly(mask, corner_list,  &num_points, 1, cv::Scalar(0), 8);
 		cv::Mat left_eye;
-		cv::bitwise_and(grayImage, grayImage, left_eye, mask);
+		cv::bitwise_or(grayImage, mask, left_eye);
 		//cv::fillPoly(mask, area, cv::Scalar(255), 150, 0);
 		int min_x = area[0].x;
 		int max_x = area[0].x;
@@ -295,76 +293,53 @@ namespace smll {
 
 		cv::Range rows(min_y, max_y);
 		cv::Range cols(min_x, max_x);
-		cv::Mat eye = grayImage(rows, cols);
+		cv::Mat eye = left_eye(rows, cols);
 		cv::resize(eye, eye, cv::Size(), 10.0, 10.0);
-		cv::threshold(eye, treshEye, 70, 255, cv::THRESH_BINARY);
+		cv::threshold(eye, treshEye, 70, 255, cv::THRESH_BINARY_INV);
 
 		cv::Mat left_side_threshold, right_side_threshold;
-		cv::Range rows_e(0, treshEye.rows);
-		cv::Range cols_l(0, treshEye.cols/2);
-		cv::Range cols_r(treshEye.cols/2, treshEye.cols - 1);
+		cv::Range rows_l;
+		cv::Range rows_r;
+		cv::Range cols_l;
+		cv::Range cols_r;
+		if (orient) {
+			rows_l = cv::Range(0, treshEye.rows);
+			rows_r = cv::Range(0, treshEye.rows);
+			cols_l = cv::Range (0, treshEye.cols / 2);
+			cols_r = cv::Range (treshEye.cols / 2, treshEye.cols);
+		} else{
+			rows_l = cv::Range(0, treshEye.rows/2);
+			rows_r = cv::Range(treshEye.rows / 2, treshEye.rows);
+			cols_l = cv::Range(0, treshEye.cols);
+			cols_r = cv::Range(0, treshEye.cols);
+		}
 
-		cv::Mat left = treshEye(rows_e, cols_l);
-		cv::Mat right = treshEye(rows_e, cols_r);
+
+
+		cv::Mat left = treshEye(rows_l, cols_l);
+		cv::Mat right = treshEye(rows_r, cols_r);
 
 		double left_side_white = cv::countNonZero(left);
 		double right_side_white = cv::countNonZero(right);
 
 		double gaze_ratio = 0;
 		if (left_side_white == 0) {
-			gaze_ratio = 1;
+			gaze_ratio = 0;
 		}
 		else if(right_side_white == 0) {
-			gaze_ratio = 5;
+			gaze_ratio = 1;
 		}
 		else {
-			gaze_ratio = left_side_white / right_side_white;
+			gaze_ratio = left_side_white / (left_side_white +  right_side_white);
 		}
-		
-
-		if (gaze_ratio <= 1) {
-			cv::putText(greyCopy, "RIGHT", cv::Point(50, 100), 0, 2, (0, 0, 255), 3);
+		if (orient) {
+			cv::imshow("eye" + std::to_string(start), eye);
+				cv::imshow("mask" + std::to_string(start), mask);
+			cv::imshow("thresheye" + std::to_string(start), treshEye);
 		}
-		else if (gaze_ratio < 1.7  && gaze_ratio > 1) {
 
-			cv::putText(greyCopy, "CENTER", cv::Point(50, 100), 0, 2, (0, 0, 255), 3);
-		}
-		else {
-			cv::putText(greyCopy, "LEFT", cv::Point(50, 100), 0, 2, (0, 0, 255), 3);
-		}
-			
 
-		cv::imshow("image", greyCopy);
-		cv::imshow("eye", eye);
-		cv::imshow("thresheye", treshEye);
-
-		cv::waitKey(1);
-			//mask = np.zeros((height, width), np.uint8)
-			//cv::polylines(mask, [left_eye_region], True, 255, 2)
-			/*cv2.fillPoly(mask, [left_eye_region], 255)
-			eye = cv2.bitwise_and(gray, gray, mask = mask)
-
-			min_x = np.min(left_eye_region[:, 0])
-			max_x = np.max(left_eye_region[:, 0])
-			min_y = np.min(left_eye_region[:, 1])
-			max_y = np.max(left_eye_region[:, 1])
-
-			gray_eye = eye[min_y:max_y, min_x : max_x]
-			_, threshold_eye = cv2.threshold(gray_eye, 70, 255, cv2.THRESH_BINARY)
-			height, width = threshold_eye.shape
-			left_side_threshold = threshold_eye[0:height, 0 : int(width / 2)]
-			left_side_white = cv2.countNonZero(left_side_threshold)
-
-			right_side_threshold = threshold_eye[0:height, int(width / 2) : width]
-			right_side_white = cv2.countNonZero(right_side_threshold)
-
-			if left_side_white == 0:
-		gaze_ratio = 1
-			elif right_side_white == 0 :
-			gaze_ratio = 5
-			else:
-		gaze_ratio = left_side_white / right_side_white
-			return gaze_ratio*/
+		return gaze_ratio;
 	}
 	void FaceDetector::DetectFaces(const OBSTexture& capture, int width, int height, DetectionResults& results) {
 		// better check if the camera res has changed on us
@@ -1232,7 +1207,43 @@ namespace smll {
 			for (int j = 0; j < NUM_FACIAL_LANDMARKS; j++) {
 				results[f].landmarks68[j] = point(d68.part(j).x(), d68.part(j).y());
 			}
-			GetGazeRatio(results[f].landmarks68);
+			double l_ratio = GetGazeRatio(results[f].landmarks68, 36, 41, true);
+			double r_ratio = GetGazeRatio(results[f].landmarks68, 42,  47, true);
+			double u_ratio = GetGazeRatio(results[f].landmarks68, 36, 41, false);
+			double d_ratio = GetGazeRatio(results[f].landmarks68, 42, 47, false);
+			double gaze_ratio = (l_ratio + r_ratio) / 2;
+			double gaze_ratio_u_d = (u_ratio + d_ratio) / 2;
+			cv::Mat greyCopy;
+			cv::cvtColor(grayImage, greyCopy, cv::COLOR_GRAY2RGB);
+			std::string up_down;
+			if (gaze_ratio_u_d <= 0.3) {
+				up_down = " UP: ";
+			}
+			else if (gaze_ratio_u_d < 0.7) {
+
+				up_down = " CENTER: ";
+			}
+			else {
+				up_down = " DOWN: ";
+			}
+
+			if (gaze_ratio <= 0.3) {
+				cv::putText(greyCopy, "RIGHT: " + std::to_string(gaze_ratio) + up_down+ std::to_string(gaze_ratio_u_d), cv::Point(50, 100), 0, 2, (0, 0, 255), 3);
+			}
+			else if (gaze_ratio < 0.7) {
+
+				cv::putText(greyCopy, "CENTER: " + std::to_string(gaze_ratio) + up_down + std::to_string(gaze_ratio_u_d), cv::Point(50, 100), 0, 2, (0, 0, 255), 3);
+			}
+			else {
+				cv::putText(greyCopy, "LEFT: " + std::to_string(gaze_ratio) + up_down  + std::to_string(gaze_ratio_u_d), cv::Point(50, 100), 0, 2, (0, 0, 255), 3);
+			}
+
+			cv::line(greyCopy, cv::Point(50, 190), cv::Point(250, 190), cv::Scalar(255, 0, 255), 20);
+			cv::line(greyCopy, cv::Point(150, 140), cv::Point(150, 240), cv::Scalar(255, 0, 255), 20);
+			cv::circle(greyCopy, cv::Point(50 + int(200 * (1 - gaze_ratio)), 140  + int(100 * (1 - gaze_ratio_u_d))), 8, cv::Scalar(0, 255, 255), 20);
+			cv::imshow("image", greyCopy);
+
+			cv::waitKey(1);
 		}
 
 		results.length = m_faces.length;
