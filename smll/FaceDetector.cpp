@@ -299,6 +299,41 @@ namespace smll {
 		cv::resize(eye, eye, cv::Size(), 10.0, 10.0);
 		cv::threshold(eye, treshEye, 70, 255, cv::THRESH_BINARY);
 
+		cv::Mat left_side_threshold, right_side_threshold;
+		cv::Range rows_e(0, treshEye.rows);
+		cv::Range cols_l(0, treshEye.cols/2);
+		cv::Range cols_r(treshEye.cols/2, treshEye.cols - 1);
+
+		cv::Mat left = treshEye(rows_e, cols_l);
+		cv::Mat right = treshEye(rows_e, cols_r);
+
+		double left_side_white = cv::countNonZero(left);
+		double right_side_white = cv::countNonZero(right);
+
+		double gaze_ratio = 0;
+		if (left_side_white == 0) {
+			gaze_ratio = 1;
+		}
+		else if(right_side_white == 0) {
+			gaze_ratio = 5;
+		}
+		else {
+			gaze_ratio = left_side_white / right_side_white;
+		}
+		
+
+		if (gaze_ratio <= 1) {
+			cv::putText(greyCopy, "RIGHT", cv::Point(50, 100), 0, 2, (0, 0, 255), 3);
+		}
+		else if (gaze_ratio < 1.7  && gaze_ratio > 1) {
+
+			cv::putText(greyCopy, "CENTER", cv::Point(50, 100), 0, 2, (0, 0, 255), 3);
+		}
+		else {
+			cv::putText(greyCopy, "LEFT", cv::Point(50, 100), 0, 2, (0, 0, 255), 3);
+		}
+			
+
 		cv::imshow("image", greyCopy);
 		cv::imshow("eye", eye);
 		cv::imshow("thresheye", treshEye);
