@@ -97,11 +97,17 @@ namespace Mask {
 		const char *log_path = os_get_config_path_ptr("slobs-client/node-obs/logs");
 		std::string path = std::string(log_path) + "/event_system_graph_log.csv";
 		graph_log = std::ofstream(path, std::ios::out | std::ios::trunc);
-		graph_log << "TIMESTAMP, HEIGHT, SMOOTH_HEIGHT, SMOOTH_WIDTH" << std::endl;
+		//graph_log << "TIMESTAMP, HEIGHT, SMOOTH_HEIGHT, SMOOTH_WIDTH" << std::endl;
+		graph_log << "TIMESTAMP, EL_W, ER_W, EYE_LEFT, EYE_RIGHT" << std::endl;
 #endif
 	}
 
 	void EventSystem::Tick(float time_delta, smll::TriangulationResult *triangulation) {
+
+		total_time += time_delta;
+
+		// discard frames without a triangulation
+		if (!triangulation || triangulation->points.size() == 0) return;
 
 		// if we are collecting the last element in period
 		// we are ready to apply filter
@@ -186,7 +192,6 @@ namespace Mask {
 	json EventSystem::get_full_state(float time_delta, smll::TriangulationResult* triangulation) {
 		json full_state = state;
 
-		total_time += time_delta;
 		full_state["TIME"] = total_time;
 		if (value_history_map.find("TIME") == value_history_map.end())
 			value_history_map["TIME"] = std::array<double, FILTER_PERIOD>();
@@ -226,7 +231,7 @@ namespace Mask {
 
 		full_state["MOUTH_INNER_HEIGHT"] = dist(triangulation->points[smll::MOUTH_INNER_7],triangulation->points[smll::MOUTH_INNER_3]);
 #ifdef EVENT_SYSTEM_GRAPH_LOG
-		graph_log << full_state["MOUTH_INNER_HEIGHT"].get<double>() / full_state["FACE_HEIGHT"].get<double>() << ", ";
+//		graph_log << full_state["MOUTH_INNER_HEIGHT"].get<double>() / full_state["FACE_HEIGHT"].get<double>() << ", ";
 #endif
 
 		full_state["MOUTH_INNER_HEIGHT"] = smooth("MOUTH_INNER_HEIGHT", full_state["MOUTH_INNER_HEIGHT"].get<double>(), total_time);
@@ -237,10 +242,34 @@ namespace Mask {
 		full_state["MOUTH_WIDTH_NORM"] = std::min(1.0, std::max(0.0,
 			(full_state["MOUTH_INNER_WIDTH"].get<double>() / full_state["FACE_WIDTH"].get<double>() - 0.25) * 6.66));
 
+		full_state["EYE_LEFT_HEIGHT"] = dist(triangulation->points[smll::EYE_LEFT_2], triangulation->points[smll::EYE_LEFT_6]);
+		full_state["EYE_RIGHT_HEIGHT"] = dist(triangulation->points[smll::EYE_RIGHT_3], triangulation->points[smll::EYE_RIGHT_5]);
+
+		//full_state["EYE_LEFT_HEIGHT"] = smooth("EYE_LEFT_HEIGHT", full_state["EYE_LEFT_HEIGHT"].get<double>(), total_time);
+		//full_state["EYE_RIGHT_HEIGHT"] = smooth("EYE_RIGHT_HEIGHT", full_state["EYE_RIGHT_HEIGHT"].get<double>(), total_time);
+
+		full_state["EYE_LEFT_WIDTH"] = dist(triangulation->points[smll::EYE_LEFT_1], triangulation->points[smll::EYE_LEFT_4]);
+		full_state["EYE_LEFT_WIDTH"] = smooth("EYE_LEFT_WIDTH", full_state["EYE_LEFT_WIDTH"].get<double>(), total_time, 1.0);
+
+		full_state["EYE_RIGHT_WIDTH"] = dist(triangulation->points[smll::EYE_RIGHT_1], triangulation->points[smll::EYE_RIGHT_4]);
+		full_state["EYE_RIGHT_WIDTH"] = smooth("EYE_RIGHT_WIDTH", full_state["EYE_RIGHT_WIDTH"].get<double>(), total_time, 1.0);
+
+		full_state["EYE_LEFT_HEIGHT_NORM"] = ((
+			(full_state["EYE_LEFT_HEIGHT"].get<double>() / full_state["FACE_HEIGHT"].get<double>()) * 100.0));
+		full_state["EYE_RIGHT_HEIGHT_NORM"] = ((
+			(full_state["EYE_RIGHT_HEIGHT"].get<double>() / full_state["FACE_HEIGHT"].get<double>()) * 100.0));
+
+		full_state["EYE_LEFT_WIDTH_NORM"] = ((
+			(full_state["EYE_LEFT_WIDTH"].get<double>() / full_state["FACE_WIDTH"].get<double>()) * 100.0));
+		full_state["EYE_RIGHT_WIDTH_NORM"] = ((
+			(full_state["EYE_RIGHT_WIDTH"].get<double>() / full_state["FACE_WIDTH"].get<double>()) * 100.0));
+
 #ifdef EVENT_SYSTEM_GRAPH_LOG
 		graph_log << 
-			full_state["MOUTH_HEIGHT_NORM"].get<double>() << ", "
-			full_state["MOUTH_WIDTH_NORM"].get<double>() << std::endl;
+			full_state["EYE_LEFT_WIDTH_NORM"].get<double>() << ", " <<
+			full_state["EYE_RIGHT_WIDTH_NORM"].get<double>() << ", " <<
+			full_state["EYE_LEFT_HEIGHT_NORM"].get<double>() << ", " <<
+			full_state["EYE_RIGHT_HEIGHT_NORM"].get<double>() << std::endl;
 #endif
 
 		return full_state;

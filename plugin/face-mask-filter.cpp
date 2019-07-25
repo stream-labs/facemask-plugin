@@ -907,7 +907,7 @@ void Plugin::FaceMaskFilter::Instance::video_tick(float timeDelta) {
 			// tick main mask
 			mdat->Tick(timeDelta);
 			// tick event system as well, only when face is detected
-			if(mdat->HasEventSystem() && triangulation.points.size() > 0)
+			if (mdat->HasEventSystem())
 				mdat->GetEventSystem().Tick(timeDelta, &triangulation);
 		}
 	}

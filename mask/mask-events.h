@@ -32,7 +32,7 @@ extern "C" {
 	#pragma warning( pop )
 }
 
-//#define DEBUG_EVENT_SYSTEM
+#define DEBUG_EVENT_SYSTEM
 
 #if !defined(PUBLIC_RELEASE) && defined(DEBUG_EVENT_SYSTEM)
 #define EVENT_SYSTEM_GRAPH_LOG
