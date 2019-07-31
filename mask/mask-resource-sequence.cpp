@@ -193,7 +193,19 @@ void Mask::Resource::Sequence::Update(Mask::Part* part, float time) {
 					update_repeating_mode(true);
 				}
 				else if (IsRepeatMode()) {
-					update_repeating_mode(false);
+					if (IsDelayMode())
+					{
+						if (m_randomStart) {
+							instData->Reset(m_first, m_last);
+						}
+						else {
+							instData->Reset();
+						}
+						m_parent->instanceDatas.Pop();
+						return;
+					}
+					else
+						update_repeating_mode(false);
 				}
 				else if (m_mode == Mask::Resource::Sequence::ONCE) {
 					instData->current = m_last;
