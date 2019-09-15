@@ -202,4 +202,3 @@ void zlib_decode(const std::vector<uint8_t>& decoded, uint8_t* outbuf) {
 	// yield
 	::Sleep(0);
 }
-

@@ -410,7 +410,6 @@ namespace smll {
 			}
 
 		}
-		
 	}
 
 	void DetectionResult::InitKalmanFilter() {
