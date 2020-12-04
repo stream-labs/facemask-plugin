@@ -1,0 +1,12 @@
+[submodule "dlib"]
+	path = thirdparty/dlib
+	url = https://github.com/stream-labs/dlib.git
+[submodule "freetype2"]
+	path = thirdparty/freetype2
+	url = https://github.com/stream-labs/freetype2.git
+[submodule "thirdparty/assimp"]
+	path = thirdparty/assimp
+	url = https://github.com/kamyarinfinity/assimp.git
+[submodule "thirdparty/cpputest"]
+	path = thirdparty/cpputest
+	url = https://github.com/glaba13/cpputest

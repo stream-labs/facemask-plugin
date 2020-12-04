@@ -19,6 +19,7 @@
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "OBSRenderer.hpp"
+#include "gs/gs-effect.h"
 
 #pragma warning( push )
 #pragma warning( disable: 4127 )
@@ -56,13 +57,12 @@ namespace smll {
 
 	static int TEXUNIT = 0;
 
-	OBSRenderer::OBSRenderer()
+	OBSRenderer::OBSRenderer(Cache *cache)
 		: m_viewportWidth(0)
 		, m_viewportHeight(0)
 		, m_phongEffect(nullptr)
 		, m_samplerState(nullptr) 
 		, m_colorConversion(nullptr) {
-		obs_enter_graphics();
 
 		gs_sampler_info sinfo;
 		sinfo.address_u = GS_ADDRESS_CLAMP;
@@ -72,24 +72,43 @@ namespace smll {
 		sinfo.border_color = 0;
 		sinfo.max_anisotropy = 0;
 
+		obs_enter_graphics();
 		m_samplerState = gs_samplerstate_create(&sinfo);
-		static const char* const fn = "effects/color_conversion.effect";
-		char* filename = obs_module_file(fn);
-		char* error;
-		m_colorConversion = gs_effect_create_from_file(filename, &error);
-		if (!m_colorConversion) {
-			blog(LOG_ERROR, "Cannot open color_conversion.effect. %s", error);
+		obs_leave_graphics();
+
+		cache->load(Cache::CacheableType::Effect, "color_conversion", (void**)&m_colorConversion);
+		if (m_colorConversion == nullptr)
+		{
+			static const char* const fn = "effects/color_conversion.effect";
+			char* error;
+			char* filename = obs_module_file(fn);
+			obs_enter_graphics();
+			m_colorConversion = gs_effect_create_from_file(filename, &error);
+			obs_leave_graphics();
+			cache->add(Cache::CacheableType::Effect, "color_conversion", m_colorConversion);
+			if (!m_colorConversion) {
+				blog(LOG_ERROR, "Cannot open color_conversion.effect. %s", error);
+			}
+			bfree(filename);
 		}
-		bfree(filename);
 
 		// load the phong shader effect
-		char* phongFilename = obs_module_file("effects/phong.effect");
-		m_phongEffect = gs_effect_create_from_file(phongFilename, &error);
-		if (!m_phongEffect) {
-			blog(LOG_ERROR, "Cannot load phong effect %s", error);
+		cache->load(Cache::CacheableType::Effect, "effectPhong", (void**)&m_phongEffect);
+		if (m_phongEffect == nullptr)
+		{
+			char* phongFilename = obs_module_file("effects/phong.effect");
+			char* error;
+			obs_enter_graphics();
+			m_phongEffect = gs_effect_create_from_file(phongFilename, &error);
+			obs_leave_graphics();
+			cache->add(Cache::CacheableType::Effect, "effectPhong", m_phongEffect);
+			if (!m_phongEffect) {
+				blog(LOG_ERROR, "Cannot load phong effect %s", error);
+			}
+			bfree(phongFilename);
 		}
-		bfree(phongFilename);
 
+		obs_enter_graphics();
 		// make vertex buffers
 		// x axis
 		BeginVertexBuffer();
@@ -130,7 +149,6 @@ namespace smll {
 		gs_effect_t    *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
 		gs_eparam_t    *color = gs_effect_get_param_by_name(solid, "color");
 
-		struct vec4 veccol;
 		vec4_from_rgba(&veccol, MakeColor(red, green, blue, alpha));
 		gs_effect_set_vec4(color, &veccol);
 	}
@@ -180,11 +198,17 @@ namespace smll {
 	void OBSRenderer::DrawFaces(const DetectionResults& faces) {
 		gs_effect_t    *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
 
-		for (int i = 0; i < faces.length; i++) {
-			SetDrawColor(255, 255, 0);
-			DrawRect(faces[i].bounds);
+		//check list of landmarks drawing
+		bool landmark_checks[smll::NUM_FACIAL_LANDMARKS];
+		for (int i = 0; i < smll::NUM_FACIAL_LANDMARKS; i++) {
+			landmark_checks[i] = Config::singleton().get_bool((std::string(CONFIG_BOOL_SMOOTH_LANDMARK) + std::to_string(i + 1)).c_str());
+		}
 
-			DrawLandmarks(faces[i].landmarks68, 0, 255, 0);
+		for (int i = 0; i < faces.length; i++) {
+			//SetDrawColor(255, 255, 0);
+			//DrawRect(faces[i].bounds);
+
+			DrawLandmarks(faces[i].landmarks68, landmark_checks);
 
 			/* 5 landmarks 
 			SetDrawColor(255, 0, 255);
@@ -228,36 +252,31 @@ namespace smll {
 	}
 
 	void OBSRenderer::DrawLandmarks(const dlib::point* points, 
-		uint8_t r, uint8_t g, uint8_t b) {
+		bool * checklist) {
 		// landmarks
-		SetDrawColor(r, g, b);
-		drawLines(points, JAW_1, JAW_17);
-		SetDrawColor(r, g, b);
-		drawLines(points, EYEBROW_LEFT_1, EYEBROW_LEFT_5);
-		SetDrawColor(r, g, b);
-		drawLines(points, EYEBROW_RIGHT_1, EYEBROW_RIGHT_5);
-		SetDrawColor(r, g, b);
-		drawLines(points, NOSE_1, NOSE_TIP);
-		SetDrawColor(r, g, b);
-		drawLines(points, NOSE_TIP, NOSE_9, true);
-		SetDrawColor(r, g, b);
-		drawLines(points, EYE_LEFT_1, EYE_LEFT_6, true);
-		SetDrawColor(r, g, b);
-		drawLines(points, EYE_RIGHT_1, EYE_RIGHT_6, true);
-		SetDrawColor(r, g, b);
-		drawLines(points, MOUTH_OUTER_1, MOUTH_OUTER_12, true);
-		SetDrawColor(r, g, b);
-		drawLines(points, MOUTH_INNER_1, MOUTH_INNER_8, true);
+		SetDrawColor(0, 255, 0);
+		drawPoints(points, 0, NUM_FACIAL_LANDMARKS, checklist);
+		SetDrawColor(255, 0, 0);
+		Utils::flip_list(checklist, 0, NUM_FACIAL_LANDMARKS);
+		drawPoints(points, 0, NUM_FACIAL_LANDMARKS, checklist);
 	}
 
-	void OBSRenderer::DrawRect(const dlib::rectangle& r) {
+	void OBSRenderer::DrawRect(const dlib::rectangle& r, int width) {
 		// rect
 		dlib::point p[4];
-		p[0] = dlib::point(r.left(), r.top());
-		p[1] = dlib::point(r.right(), r.top());
-		p[2] = dlib::point(r.right(), r.bottom());
-		p[3] = dlib::point(r.left(), r.bottom());
-		drawLines(p, 0, 3, true);
+		gs_effect_t    *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
+		gs_eparam_t    *color = gs_effect_get_param_by_name(solid, "color");
+
+		for (size_t i = 0; i < width; i++)
+		{
+			gs_effect_set_vec4(color, &veccol);
+			p[0] = dlib::point(r.left() + i, r.top() + i);
+			p[1] = dlib::point(r.right() - i, r.top() + i);
+			p[2] = dlib::point(r.right() - i, r.bottom() - i);
+			p[3] = dlib::point(r.left() + i, r.bottom() - i);
+			drawLines(p, 0, 3, true);
+		}
+		
 	}
 
 	void   OBSRenderer::DrawGlasses(const DetectionResult& face, int texture) {
@@ -614,7 +633,7 @@ namespace smll {
 
 	gs_color_format	OBSRenderer::SMLLToOBS(smll::ImageType t) {
 		switch (t) {
-		case ImageType::IMAGETYPE_LUMA:
+		case ImageType::IMAGETYPE_GRAY:
 			return GS_R8;
 		case ImageType::IMAGETYPE_RGBA:
 			return GS_RGBA;
@@ -629,7 +648,7 @@ namespace smll {
 		switch (f) {
 		case GS_A8:
 		case GS_R8:
-			return ImageType::IMAGETYPE_LUMA;
+			return ImageType::IMAGETYPE_GRAY;
 		case GS_RGBA:
 			return ImageType::IMAGETYPE_RGBA;
 		case GS_BGRX:
@@ -673,6 +692,30 @@ namespace smll {
 			gs_load_vertexbuffer(vertbuff);
 			gs_load_indexbuffer(nullptr);
 			gs_draw(GS_LINESTRIP, 0, 0);
+		}
+		gs_vertexbuffer_destroy(vertbuff);
+	}
+
+	void	OBSRenderer::drawPoints(const dlib::point* points, int start,
+		int end, bool * checklist) {
+		// make vb
+		gs_render_start(true);
+		// verts
+		for (int i = start; i <= end; i++) {
+			if (checklist[i]) {
+				for (int j = -2; j < 2; j++) {
+					for (int k = -2; k < 2; k++) {
+						gs_vertex2f((float)points[i].x() + j, (float)points[i].y() + k);
+					}
+				}
+			}
+		}
+		gs_vertbuffer_t *vertbuff = gs_render_save();
+
+		while (gs_effect_loop(obs_get_base_effect(OBS_EFFECT_SOLID), "Solid")) {
+			gs_load_vertexbuffer(vertbuff);
+			gs_load_indexbuffer(nullptr);
+			gs_draw(GS_POINTS, 0, 0);
 		}
 		gs_vertexbuffer_destroy(vertbuff);
 	}
@@ -728,59 +771,6 @@ namespace smll {
 		gs_viewport_pop();
 		gs_projection_pop();
 	}
-
-	gs_texture*	OBSRenderer::RenderTextToTexture(const std::vector<std::string>& lines,
-		int tex_width, int tex_height, OBSFont* font) {
-
-		gs_matrix_push();
-		gs_projection_push();
-		gs_viewport_push();
-
-		gs_matrix_identity();
-		gs_set_viewport(0, 0, tex_width, tex_height);
-		gs_ortho(0.0f, (float)tex_width, 0.0f, (float)tex_height, 0.0f, 100.0f);
-
-		gs_set_cull_mode(GS_NEITHER);
-		gs_enable_blending(true);
-		gs_enable_depth_test(false);
-		gs_enable_color(true, true, true, true);
-		gs_blend_function(gs_blend_type::GS_BLEND_SRCALPHA,
-			gs_blend_type::GS_BLEND_INVSRCALPHA);
-
-		float y = (float)font->GetHeight();
-		float height = (float)font->GetHeight() * lines.size();
-		if (height < tex_height)
-			y += (tex_height - height) / 2.0f;
-
-		int fontSize = font->GetSize();
-
-		gs_texrender_reset(drawTexRender);
-		if (gs_texrender_begin(drawTexRender, tex_width, tex_height)) {
-
-			// clear
-			vec4 black;
-			vec4_zero(&black);
-			gs_clear(GS_CLEAR_COLOR | GS_CLEAR_DEPTH, &black, 1.0f, 0);
-
-			for (int i = 0; i < lines.size(); i++) {
-				float x = (tex_width - font->GetTextWidth(fontSize, lines[i])) / 2;
-				font->RenderText(lines[i], x, y);
-				y += font->GetHeight();
-			}
-
-			gs_texrender_end(drawTexRender);
-		}
-		gs_matrix_pop();
-		gs_viewport_pop();
-		gs_projection_pop();
-
-		// Make a copy of the texture
-		gs_texture* t = gs_texture_create(tex_width, tex_height, GS_RGBA, 1, 0, 0);
-		gs_copy_texture(t, gs_texrender_get_texture(drawTexRender));
-
-		return t; 
-	}
-
 
 
 } // smll namespace

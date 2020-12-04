@@ -94,6 +94,14 @@ uniform float shininess = 8.0;
 uniform int transformNormals = 1;
 uniform float alpha = 1.0;
 
+// DEPTH VARS
+uniform int renderLayer = 0;
+uniform int numRenderLayers = 1;
+uniform float depthBias = 0.0;
+
+// Cutout threshold for discarding fragments
+uniform float cutoutThreshold = -1.0;
+
 
 // TEXTURE SAMPLERS
 sampler_state normalSampler {
@@ -227,7 +235,7 @@ float  lightAngle) {
 			
 		// point and spot lights have attenuation
 		if (lightType == 2 || lightType == 3) {
-			float d = length(lightV) / 100.0;
+			float d = length(lightPosition - vpos) / 100.0;
 			float attenuation = 1.0 / 
 				(lightAttenuation.x + 
 				 (lightAttenuation.y * d) +
@@ -240,7 +248,7 @@ float  lightAngle) {
 				float cosAngle = dot( lightDir, -lightV );
 				attenuation *= smoothstep( minCos, maxCos, cosAngle ); 
 			}
-			lightColor *= attenuation;
+			lightColor *= saturate(attenuation);
 		}
 		
 		outColor += lightColor;
@@ -371,7 +379,13 @@ VertDataOut VSPhong(VertDataIn v_in)
 		vintangent = float4(normalize(restangent), 0.0);
 	}
 	
-	vert_out.pos = mul(vinpos, ViewProj);
+	float4x4 infinite_proj = ViewProj;
+	infinite_proj[3][2] = 1.0;
+	vert_out.pos = mul(vinpos, infinite_proj);
+	float depth_ratio = 1.0/float(numRenderLayers);
+	float start_depth = renderLayer*depth_ratio;
+	vert_out.pos.z = start_depth + (1.0/(vert_out.pos.w+depthBias))*depth_ratio;
+	vert_out.pos.z *= vert_out.pos.w;
 	vert_out.vpos = mul(vinpos, World);	
 	
 	if (transformNormals == 1) {
@@ -425,10 +439,9 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 
 	// reflection map trumps diffuse
 	if (reflectMap != 0) {
-		float3 r = reflect(normalize(-vpos), normal);
+		float3 r = -normalize(reflect(-vpos, normal));
 		float m = 2.0 * sqrt( pow( r.x, 2.0 ) + pow( r.y, 2.0 ) + pow( r.z + 1.0, 2.0 ) );
 		float2 vN = r.xy / m + 0.5;
-		vN.y = 1.0 - vN.y; // need to flip Y
 		
 		dffColor = reflectTex.Sample(reflectSampler, vN);
 	}
@@ -516,7 +529,7 @@ float4 PSPhong(VertDataOut v_in) : TARGET
 			light3Specular,
 			light3Angle);
 	}
-	
+	if(cutoutThreshold >= 0.0 && dffColor.a <= cutoutThreshold) discard;
 	
 	return float4(outColor.rgb, dffColor.a * alpha);
 }

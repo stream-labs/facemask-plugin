@@ -19,7 +19,7 @@
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 #include "imageWrapper.hpp"
-#include "utils.h"
+#include "plugin/utils.h"
 
 #define ICV_BASE  (1)
 
@@ -80,7 +80,7 @@ namespace smll {
 
 	IwiColorFmt smllToIwi(ImageType t) {
 		switch (t) {
-		case IMAGETYPE_LUMA:
+		case IMAGETYPE_GRAY:
 			return iwiColorGray;
 		case IMAGETYPE_RGB:
 			return iwiColorRGB;
@@ -96,47 +96,7 @@ namespace smll {
 		return iwiColorUndefined;
 	}
 
-	void ImageWrapper::ResizeTo(ImageWrapper& other) const {
-
-		IppStatus result;
-
-		IwiImage dest;
-		IwiSize dest_size;
-		dest_size.width = other.w;
-		dest_size.height = other.h;
-		result = iwiImage_InitExternal(&dest, dest_size, ipp8u, other.getNumElems(), NULL, other.data, other.getStride());
-
-		IwiImage src;
-		IwiSize src_size;
-		src_size.width = other.w;
-		src_size.height = other.h;
-		result = iwiImage_InitExternalConst(&src, src_size, ipp8u, getNumElems(), NULL, data, getStride());
-
-		iwiResize(&src, &dest, ippLinear, NULL, ippBorderInMem, NULL, NULL);
-	}
-
-	void ImageWrapper::ColorConvertTo(ImageWrapper& other) const {
-
-		IppStatus result;
-
-		IwiImage dest;
-		IwiColorFmt dest_colorfmt = smllToIwi(other.type);
-		IwiSize dest_size;
-		dest_size.width = other.w;
-		dest_size.height = other.h;
-		result = iwiImage_InitExternal(&dest, dest_size, ipp8u, other.getNumElems(), NULL, other.data, other.getStride());
-
-		IwiImage src;
-		IwiColorFmt src_colorfmt = smllToIwi(type);
-		IwiSize src_size;
-		src_size.width = other.w;
-		src_size.height = other.h;
-		result = iwiImage_InitExternalConst(&src, src_size, ipp8u, getNumElems(), NULL, data, getStride());
-
-		const IwiImage* const srcList[1] = { &src };
-		IwiImage* const destList[1] = { &dest };
-		iwiColorConvert(srcList, src_colorfmt, destList, dest_colorfmt, 1.0f, NULL, NULL);
-	}
+	
 
 	void ImageWrapper::CopyTo(ImageWrapper& other) const {
 		IppStatus result;

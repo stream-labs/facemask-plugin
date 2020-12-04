@@ -25,6 +25,7 @@
 
 #define P_TRANSLATE(x)			obs_module_text(x)
 
+
 namespace smll {
 
 
@@ -54,7 +55,17 @@ namespace smll {
 		AddParam(CONFIG_BOOL_TOGGLE_SETTINGS, false);
 
 		AddParam(CONFIG_BOOL_KALMAN_ENABLE,true);
-		AddParam(CONFIG_FLOAT_SMOOTHING_FACTOR, 0.666, 0.0, 10.0, 0.1);
+		for (int i = 0; i < 68; i++)	{
+			AddParam((std::string(CONFIG_BOOL_SMOOTH_LANDMARK) + std::to_string(i + 1)).c_str(), false);
+		}
+		
+		AddParam(CONFIG_FLOAT_SMOOTHING_FACTOR, 3.0, 0.0, 10.0, 0.1);
+
+		AddParam(CONFIG_DOUBLE_MOVEMENT_THRESHOLD, 50, 0, 200, 1);
+		AddParam(CONFIG_DOUBLE_BLUR_FACTOR, 3, 1, 7, 2);
+
+		AddParam(CONFIG_MOTION_RECTANGLE_PADDING, 0.1, 0.0, 1.0, 0.05);
+		AddParam(CONFIG_MIN_MOTION_RECTANGLE, 0.1, 0.0, 1.0, 0.05);
 
 		AddParam(CONFIG_INT_FACE_DETECT_WIDTH, 480, 120, 1200, 20);
 
@@ -66,9 +77,9 @@ namespace smll {
 		AddParam(CONFIG_INT_FACE_DETECT_FREQUENCY, 5, 0, 600, 1);
 		AddParam(CONFIG_INT_FACE_DETECT_RECHECK_FREQUENCY, 30, 0, 600, 1);
 
-		AddParam(CONFIG_INT_TRACKING_FREQUNCY, 3, 0, 600, 1);
+		AddParam(CONFIG_INT_TRACKING_FREQUNCY, 1, 0, 600, 1);
 
-		AddParam(CONFIG_DOUBLE_TRACKING_THRESHOLD, 8.0, 1.0, 100.0, 1.0);
+		AddParam(CONFIG_DOUBLE_TRACKING_THRESHOLD, 7.0, 1.0, 100.0, 1.0);
 
 		AddParam(CONFIG_INT_SPEED_LIMIT, 24, 0, 33 * 16, 1);
 

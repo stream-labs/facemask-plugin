@@ -4,103 +4,55 @@ A libOBS filter plugin that detects faces and draws masks with the detected data
 
 ## Compiling
 
+* Clone this repository with submodules: 
+```console 
+	git clone --recursive https://github.com/stream-labs/facemask-plugin
+```
+
 * Download cmake:
 
   [cmake](https://cmake.org/download/)
 
-* Get Visual Studio 2015 (vc14). When you install it, make sure you include the C++ stuff. libOBS is fixed at this version, so other versions of Visual Studio *will not work*.
+
+* Get Visual Studio 2015 (vc14) or Visual Studio 2017. When you install it, make sure you include the C++ stuff. 
 
   [microsoft](https://www.visualstudio.com/vs/older-downloads/)
 
-* Download dlib:
-
-  [dlib](https://github.com/davisking/dlib)
-
 * Download our fork of OBS Studio:
-
++
   [obs-studio](https://github.com/stream-labs/obs-studio)
 
-* Download freetype:
-
-  [freetype](https://www.freetype.org/download.html)
-  
+  Do not forget the submodules:
+```console
+git clone --recursive https://github.com/stream-labs/obs-studio.git
+```
 * Build obs-studio
-	* Follow the build instructions here:
+  * Follow the build instructions here:
     
     [build instructions](https://github.com/obsproject/obs-studio/wiki/Install-Instructions#windows-build-directions)
-    
-* Configure freetype.
 
-	You will need to turn off a bunch of options in freetype, because we don't need them. 
-    * Edit **freetype/include/freetype/config/ftmodule.h**, and comment out all the lines, except for the truetype driver, names, and rendering modules:
-    
-    ```C
-    FT_USE_MODULE( FT_Module_Class, autofit_module_class )
-    FT_USE_MODULE( FT_Driver_ClassRec, tt_driver_class )
-    //FT_USE_MODULE( FT_Driver_ClassRec, t1_driver_class )
-    //FT_USE_MODULE( FT_Driver_ClassRec, cff_driver_class )
-    //FT_USE_MODULE( FT_Driver_ClassRec, t1cid_driver_class )
-    //FT_USE_MODULE( FT_Driver_ClassRec, pfr_driver_class )
-    //FT_USE_MODULE( FT_Driver_ClassRec, t42_driver_class )
-    //FT_USE_MODULE( FT_Driver_ClassRec, winfnt_driver_class )
-    //FT_USE_MODULE( FT_Driver_ClassRec, pcf_driver_class )
-    //FT_USE_MODULE( FT_Module_Class, psaux_module_class )
-    FT_USE_MODULE( FT_Module_Class, psnames_module_class )
-    //FT_USE_MODULE( FT_Module_Class, pshinter_module_class )
-    //FT_USE_MODULE( FT_Renderer_Class, ft_raster1_renderer_class )
-    FT_USE_MODULE( FT_Module_Class, sfnt_module_class )
-    FT_USE_MODULE( FT_Renderer_Class, ft_smooth_renderer_class )
-    //FT_USE_MODULE( FT_Renderer_Class, ft_smooth_lcd_renderer_class )
-    //FT_USE_MODULE( FT_Renderer_Class, ft_smooth_lcdv_renderer_class )
-    //FT_USE_MODULE( FT_Driver_ClassRec, bdf_driver_class )
-    ```
-	* Edit **freetype/include/freetype/config/ftoption.h**, and comment out the lines:
-    
-    ```C
-    //#define FT_CONFIG_OPTION_USE_LZW
-    
-    ...
-    
-    //#define FT_CONFIG_OPTION_USE_ZLIB
-    
-    ...
-    
-    //#define FT_CONFIG_OPTION_MAC_FONTS
-    ```
+  **Note**: You do not need to install Qt5 as a dependency, just make sure ENABLE\_UI in CMake GUI is not checked before Configure/Generate. You can also handle this by setting ENABLE\_UI to OFF in CMakeLists in the obs-studio folder.
     
 
 * Run cmake in the facemasks folder. When you hit `CONFIGURE`, you will get errors on fields you need to fill in:
 
-    **PATH_DLIB** Path to the Dlib folder
 
-    **PATH_OBS_STUDIO** Path to the obs-studio folder.
-    
-    **PATH_FREETYPE** Path to the freetype folder.
-
-    You will also want to turn on AVX:
-
-    **USE_AVX_INSTRUCTIONS**
-
-    It will default to SSE2, but setting to SSE4 or AVX is much faster. 
-
-    You'll probably want to set these too:
-
-    **DLIB_NO_GUI_SUPPORT** - don't need it
-
-    **DLIB_USE_CUDA** - turn it off.
+    **PATH\_OBS\_STUDIO** Path to the obs-studio folder.
 
     **BUILD_SLOBS** - Distributes to slobs instead of OBS Studio
 
-    **DLIB_GIF_SUPPORT** - don't need it
-    **DLIB_JPEG_SUPPORT** - don't need it
+    If you have the [Intel Math Kernel Library](https://software.intel.com/en-us/mkl) installed on your system, you might have **DLIB\_USE\_BLAS** or **DLIB\_USE\_LAPACK** turned on. Keep in mind that dlib links dynamically with these libs, so the MKL and TBB dlls will need to be found by slobs when it runs (for instance, by copying them into the slobs-client folder). I don't reccommend using these libs for this reason.
 
-    If you have the [Intel Math Kernel Library](https://software.intel.com/en-us/mkl) installed on your system, you might have **DLIB_USE_BLAS** or **DLIB_USE_LAPACK** turned on. Keep in mind that dlib links dynamically with these libs, so the MKL and TBB dlls will need to be found by slobs when it runs (for instance, by copying them into the slobs-client folder). I don't reccommend using these libs for this reason.
+* Once you have successfully configured and generated your Visual Studio project with cmake, you can open the facemask-plugin.sln file in Visual Studio. You can now compile the plugin, which will give you a distribution folder structure that mimics the structure in slobs. For example, if you built your files in the build64 folder:
 
-* Once you have successfully configured and generated your Visual Studio project with cmake, you can compile the plugin, which will give you a distribution folder structure that mimics the structure in slobs. For example, if you built your files in the build64 folder:
+  ```console 
+  build64/distribute/slobs/RelWithDebInfo/obs-plugins
+  ```
 
-	`build64/distribute/slobs/RelWithDebInfo/`
-    
-	You can copy the files in manually, or set up symbolic links so you can easily hit F5 and debug from Visual Studio.
+   If you are going to debug facemask code make sure to build it as RelWithDebInfo configuration. You can set this in Visual Studio.
+
+* You can copy the files in manually, or set up symbolic links so you can easily hit F5 and debug from Visual Studio. You can also modify the CMakeLists to copy the files to a desired location with each build.
+
 
 ## How It Works
 
@@ -190,3 +142,108 @@ The FaceDetect object manages these operations and a current state, so that it p
 * [Spatial indexing with Quadtrees and Hilbert Curves](http://blog.notdot.net/2009/11/Damn-Cool-Algorithms-Spatial-indexing-with-Quadtrees-and-Hilbert-Curves)
 
 * [Geometric Algorithms](https://www.cs.princeton.edu/~rs/AlgsDS07/16Geometric.pdf)
+
+
+## Generating thumbnails
+
+### Setting up:
+* Install FFmpeg:
+  [ffmpeg](https://www.ffmpeg.org/)
+  **Add a Path** of FFmpeg executable in the Environment Variables:
+  The path should look like: *%PATH_TO_YOUR_DIR%\ffmpeg-%VERSION%\bin*
+
+* Install ImageMagick:
+  [ImageMagick](https://www.imagemagick.org/script/download.php#windows)
+Turn OFF the **Install FFmpeg** option during the instalation
+Turn ON the **Install Legacy Utilities (e.g. convert)** option during the instalation
+
+* Download and build giflossy:
+  [giflossy](https://github.com/kornelski/giflossy)
+ *Note: Gifview is not needed*
+**Add a Path** of the gifsicle executable in the Environment Variables:
+The path should look like: *%PATH_TO_YOUR_DIR%\giflossy\src*
+
+* Install SVN:
+  [SVN](https://tortoisesvn.net/downloads.html)
+Turn ON the **'Command Line Clients Tool'** option during the installation
+
+### Generation:
+* Start/Restart Streamlabs-OBS
+* Add a Media Resource
+    * Ensure that **Loop** option is *ON* and **Hide source when playback ends** is *OFF*
+    * Choose video by changing *properties->local file*
+
+* Add a filter: Face Mask Plugin
+* Go to Setting of facemask-plugin:
+    * Set the **Demo Mode Folder** Path (where the masks JSON files are located)
+    * Turn On **Generate Thumbs**
+    * Push **Done** and wait, thumbnails will be generated in the Demo Folder
+
+*Note: if you want to regenerate existing mask, restart the program and remove associated thumbnails from the demo folder*
+
+
+## Unit Testing
+
+For Unit Testing CppUtest framework is used
+* During building the facemaks project with CMAKE:
+  * Set **BUILD_UNIT_TESTS** option *ON*
+  * Build and Run the *facemask-plugin-test* project, it will show the report of tests
+  
+  
+  
+## Video Comparison side by side
+
+### Setting up:
+* Install FFmpeg:
+  [ffmpeg](https://ffmpeg.zeranoe.com/builds/)
+  **Add a Path** of FFmpeg executable in the Environment Variables:
+  The path should look like: *%PATH_TO_YOUR_DIR%\ffmpeg-%VERSION%\bin*
+  
+### Adding red frame at the start of the video:
+Formatting video makes start/end of the looped video detectable by adding a red frame at the start
+- In the *facemask-plugin/data* there is a script: **format.bat**
+- Put your sample video as input.mp4 and click on the format.bat
+- Or call the script from the shell 
+```console 
+./format.bat /path/to/the/input/video /path/to/the/output/video 
+```
+Example:
+```console 
+./format.bat inputfolder/myinput.mp4 outputfolder/myoutput.mp4 
+```
+It will generate output with red frame appended
+
+
+### Record Video:
+* Start/Restart Streamlabs-OBS
+* Add a Media Resource
+    * Ensure that **Loop** option is *ON* and **Hide source when playback ends** is *OFF*
+    * Choose video by changing *properties->local file*
+##### There are 2 ways to record video:
+- ##### Automatically detecting start and end using red frame
+  This is the best way to use this feature. It will align the two videos perfectly.
+  * Add a filter: Face Mask Plugin
+  * Go to Setting of facemask-plugin:
+    * Set the **Demo Mode Folder** Path (where the output video should be generated)
+  * Tick On **Demo Record**
+    * If it is not working, untick and tick **Demo Record** again. It will only record the video the first time it is ticked.
+  * Recording and Rendering will take some time. The video needs to loop through until red frames are detected twice. Note
+  that **the video in the slobs will freeze** while the video is being extracted. You just have to wait until it is done.
+- ##### Manually starting and finishing the recording
+  - Start Steramlabs-OBS recorder *(don't forget to change output format (in settings/output) to mp4)*
+  - Start and End recording as you see **red frame** appears
+
+	
+### Generate Side By Side Video:
+
+* Go to Setting of facemask-plugin:
+    * Choose the before video
+	* Configure the before text for the video
+	* Choose the after video
+	* Configure the after text for the video
+    * Push the Generate button
+- Or call the script from the shell 
+```console 
+./sidebyside.bat /path/to/the/beforeVideo /path/to/the/afterVideo before-text after-text /path/to/output/file
+```
+	

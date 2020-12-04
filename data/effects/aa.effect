@@ -1,0 +1,69 @@
+//
+// Anti-aliasing effect for Face Mask Plugin
+// Author: Kamyar Allahverdi
+// Date: October 23, 2018
+//
+
+uniform float4x4 ViewProj;
+uniform texture2d image;
+
+uniform float inv_width;
+uniform float inv_height;
+
+uniform int antialiasing_method;
+
+#define NO_ANTI_ALIASING 0
+#define SSAA 1
+
+
+sampler_state def_sampler {
+	Filter   = LINEAR;
+	AddressU = Clamp;
+	AddressV = Clamp;
+};
+
+struct VertInOut {
+	float4 pos : POSITION;
+	float2 uv  : TEXCOORD0;
+};
+
+VertInOut VSDefault(VertInOut vert_in)
+{
+	VertInOut vert_out;
+	vert_out.pos = mul(float4(vert_in.pos.xyz, 1.0), ViewProj);
+	vert_out.uv  = vert_in.uv;
+	return vert_out;
+}
+
+float4 average(float2 uv) {
+	float4 samp1 = image.Sample(def_sampler, uv);
+	float4 samp2 = image.Sample(def_sampler, uv, int2(0,-1));
+	float4 samp3 = image.Sample(def_sampler, uv, int2(0,+1));
+	float4 samp4 = image.Sample(def_sampler, uv, int2(+1,0));
+	float4 samp5 = image.Sample(def_sampler, uv, int2(+1,+1));
+	float4 samp6 = image.Sample(def_sampler, uv, int2(+1,-1));
+	float4 samp7 = image.Sample(def_sampler, uv, int2(-1,0));
+	float4 samp8 = image.Sample(def_sampler, uv, int2(-1,+1));
+	float4 samp9 = image.Sample(def_sampler, uv, int2(-1,-1));
+	return (samp1 + samp2 + samp3 + samp4 + samp5 + samp6 + samp7 + samp8 + samp9) / 9.0;
+}
+
+float4 PSDrawBare(VertInOut vert_in) : TARGET
+{
+	float4 orig = image.SampleLevel(def_sampler, vert_in.uv, 0);
+	if(antialiasing_method == NO_ANTI_ALIASING)
+		return orig;
+	else if(antialiasing_method == SSAA)
+		return average(vert_in.uv);
+	else
+		return orig;
+}
+
+technique Draw
+{
+	pass
+	{
+		vertex_shader = VSDefault(vert_in);
+		pixel_shader  = PSDrawBare(vert_in);
+	}
+}

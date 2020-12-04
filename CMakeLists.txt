@@ -2,12 +2,36 @@ cmake_minimum_required(VERSION 2.8.12)
 PROJECT(facemask-plugin)
 math(EXPR BITS "8*${CMAKE_SIZEOF_VOID_P}")
 
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
+
+
+SET(PATH_DLIB "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dlib")
+set(DLIB_NO_GUI_SUPPORT OFF CACHE STRING "DLib GUI support" FORCE)
+set(DLIB_GIF_SUPPORT OFF CACHE STRING "DLib GIF support" FORCE)
+set(DLIB_JPEG_SUPPORT OFF CACHE STRING "DLib JPEG support"  FORCE)
+set(DLIB_PNG_SUPPORT OFF CACHE STRING "DLib PNG support"  FORCE)
+set(DLIB_USE_BLAS OFF CACHE STRING "DLib BLAS support"  FORCE)
+set(DLIB_USE_LAPACK OFF CACHE STRING "DLib LAPACK support"  FORCE)
+set(DLIB_USE_MKL_FFT OFF CACHE STRING "DLib MKL FFT support"  FORCE)
+set(DLIB_USE_MKL_SEQUENTIAL OFF CACHE STRING "DLib MKL Sequential support"  FORCE)
+set(DLIB_USE_MKL_WITH_TBB OFF CACHE STRING "DLib MKL with TBB support"  FORCE)
+
+SET(PATH_FREETYPE "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/freetype2")
+
+
 ################################################################################
 # Configuration
 ################################################################################
 
+
+# Distribute format
+OPTION(BUILD_FOR_PUBLIC "Build for public release" ON)
+if(BUILD_FOR_PUBLIC)
+	add_definitions(-DPUBLIC_RELEASE)
+endif()
+
 # dlib
-SET(PATH_DLIB "" CACHE PATH "Dlib Machine Learning C++ Toolkit Source Code Directory")
 if(PATH_DLIB STREQUAL "")
 	message(FATAL_ERROR "PATH_DLIB not set!")
 	return()
@@ -20,28 +44,55 @@ endif()
 include(${PATH_DLIB}/dlib/cmake)
 include_directories(${PATH_DLIB})
 
+if(BUILD_FOR_PUBLIC)
+	OPTION(BUILD_UNIT_TESTS "Build Unit tests for facemask plugin" ON)
+else()
+	OPTION(BUILD_UNIT_TESTS "Build Unit tests for facemask plugin" OFF)
+endif()
+
+
+if(BUILD_UNIT_TESTS)
+	# CPPUTEST
+	SET(PATH_CPP_UTEST "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cpputest")
+	SET(EXTENSIONS OFF CACHE BOOL "Use the CppUTest extenstion library" FORCE)
+	SET(TESTS OFF CACHE BOOL "Compile and make tests for the code?" FORCE)
+	if(PATH_CPP_UTEST STREQUAL "")
+		message(FATAL_ERROR "PATH_CPP_UTEST not set!")
+		return()
+	endif()
+	if(NOT EXISTS "${PATH_CPP_UTEST}/include/CppUTest/MemoryLeakDetectorNewMacros.h")
+		message(FATAL_ERROR "PATH_CPP_UTEST is invalid!")
+		return()
+	endif()
+
+	add_subdirectory(${PATH_CPP_UTEST} ${PATH_CPP_UTEST})
+	include_directories(${PATH_CPP_UTEST})
+endif()
+
 # OpenCV
 SET(OpenCV_DIR "${PROJECT_SOURCE_DIR}/thirdparty/opencv")
-SET(OpenCV_VERSION "331" CACHE STRING "Version of OpenCV to use.")
+SET(OpenCV_VERSION "400" CACHE STRING "Version of OpenCV to use.")
 SET(OpenCV_LIBS
-	debug "${OpenCV_DIR}/lib/Debug/opencv_calib3d${OpenCV_VERSION}d.lib"
-	optimized "${OpenCV_DIR}/lib/Release/opencv_calib3d${OpenCV_VERSION}.lib"
-	debug "${OpenCV_DIR}/lib/Debug/opencv_core${OpenCV_VERSION}d.lib"
-	optimized "${OpenCV_DIR}/lib/Release/opencv_core${OpenCV_VERSION}.lib"
-	debug "${OpenCV_DIR}/lib/Debug/opencv_highgui${OpenCV_VERSION}d.lib"
-	optimized "${OpenCV_DIR}/lib/Release/opencv_highgui${OpenCV_VERSION}.lib"
-	debug "${OpenCV_DIR}/lib/Debug/opencv_imgcodecs${OpenCV_VERSION}d.lib"
-	optimized "${OpenCV_DIR}/lib/Release/opencv_imgcodecs${OpenCV_VERSION}.lib"
-	debug "${OpenCV_DIR}/lib/Debug/opencv_imgproc${OpenCV_VERSION}d.lib"
-	optimized "${OpenCV_DIR}/lib/Release/opencv_imgproc${OpenCV_VERSION}.lib"
-	debug "${OpenCV_DIR}/3rdparty/lib/Debug/libpngd.lib"
-	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libpng.lib"
+	debug "${OpenCV_DIR}/lib/Debug/opencv_world${OpenCV_VERSION}d.lib"
+	optimized "${OpenCV_DIR}/lib/Release/opencv_world${OpenCV_VERSION}.lib"
 	debug "${OpenCV_DIR}/3rdparty/lib/Debug/zlibd.lib"
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/zlib.lib"
+	debug "${OpenCV_DIR}/3rdparty/lib/Debug/libpngd.lib"
+	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libpng.lib"
 	debug "${OpenCV_DIR}/3rdparty/lib/Debug/ittnotifyd.lib"
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/ittnotify.lib"
 	debug "${OpenCV_DIR}/3rdparty/lib/Debug/ippiwd.lib"
 	optimized "${OpenCV_DIR}/3rdparty/lib/Release/ippiw.lib"
+	debug "${OpenCV_DIR}/3rdparty/lib/Debug/IlmImfd.lib"
+	optimized "${OpenCV_DIR}/3rdparty/lib/Release/IlmImf.lib"
+	debug "${OpenCV_DIR}/3rdparty/lib/Debug/libjpeg-turbod.lib"
+	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libjpeg-turbo.lib"
+	debug "${OpenCV_DIR}/3rdparty/lib/Debug/libtiffd.lib"
+	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libtiff.lib"
+	debug "${OpenCV_DIR}/3rdparty/lib/Debug/libjasperd.lib"
+	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libjasper.lib"
+	debug "${OpenCV_DIR}/3rdparty/lib/Debug/libwebpd.lib"
+	optimized "${OpenCV_DIR}/3rdparty/lib/Release/libwebp.lib"
 	debug "${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_${OpenCV_VERSION}/lib/intel64/ippicvmt.lib"
 	optimized "${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_${OpenCV_VERSION}/lib/intel64/ippicvmt.lib"
 )
@@ -51,8 +102,8 @@ include_directories("${OpenCV_DIR}/include")
 include_directories("${OpenCV_DIR}/3rdparty/include")
 
 # intel IPP
-include_directories("${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_331/include")
-include_directories("${OpenCV_DIR}/3rdparty/ippicv/ippiw_win_331/include")
+include_directories("${OpenCV_DIR}/3rdparty/ippicv/ippicv_win_${OpenCV_VERSION}/include")
+include_directories("${OpenCV_DIR}/3rdparty/ippicv/ippiw_win_${OpenCV_VERSION}/include")
 
 # smll
 include_directories("smll")
@@ -63,7 +114,6 @@ include_directories("thirdparty/tinyobjloader")
 SET(TINYOBJDir "thirdparty/tinyobjloader")
 
 # freetype
-SET(PATH_FREETYPE "" CACHE PATH "FreeType Software Font Rendering Engine")
 if(PATH_FREETYPE STREQUAL "")
 	message(FATAL_ERROR "PATH_FREETYPE not set!")
 	return()
@@ -90,37 +140,48 @@ SET(freetype_SOURCES
 add_definitions(-DFT2_BUILD_LIBRARY)
 include_directories(${PATH_FREETYPE}/include)
 
-# OBS Studio
-SET(PATH_OBS_STUDIO "" CACHE PATH "OBS Studio Source Code Directory")
-if(PATH_OBS_STUDIO STREQUAL "")
-	message(FATAL_ERROR "PATH_OBS_STUDIO not set!")
-	return()
-endif()
-if(NOT EXISTS "${PATH_OBS_STUDIO}/libobs/obs-module.h")
-	message(FATAL_ERROR "PATH_OBS_STUDIO is invalid!")
-	return()
-endif()
-SET(obsPath "${PATH_OBS_STUDIO}")
-INCLUDE("${PATH_OBS_STUDIO}/cmake/external/Findlibobs.cmake")
 
-# Distribute format
-OPTION(BUILD_FOR_PUBLIC "Build for public release" OFF)
-if(BUILD_FOR_PUBLIC)
-	add_definitions(-DPUBLIC_RELEASE)
-endif()
-
-
-# Distribute format
-OPTION(BUILD_SLOBS "Build for Streamlabs OBS" OFF)
-if(BUILD_SLOBS)
-	SET(DISTRIBUTE_PATH "${PROJECT_BINARY_DIR}/distribute/slobs")
-	SET(DISTRIBUTE_PATH_BIN "obs-plugins")
-	add_definitions(-DSLOBS_BUILD)
+if(DEFINED ENV{FM_PLUGIN_APPVEYOR_BUILD})
+    SET(APPVEYOR_BUILD TRUE)
+    SET(libobs_SOURCE_DIR "c:/projects/source/build")
 else()
-	SET(DISTRIBUTE_PATH "${PROJECT_BINARY_DIR}/distribute/obs")
-	SET(DISTRIBUTE_PATH_BIN "obs-plugins/${BITS}bit")
-	add_definitions(-DOBS_STUDIO_BUILD)
+    SET(APPVEYOR_BUILD FALSE)
 endif()
+
+
+# OBS Studio
+if(APPVEYOR_BUILD)	
+
+	include("${libobs_SOURCE_DIR}/cmake/LibObs/LibObsConfig.cmake")
+
+	file(MAKE_DIRECTORY "libobs")
+	file(MAKE_DIRECTORY "deps")
+	file(COPY "${LIBOBS_INCLUDE_DIRS}/" DESTINATION "libobs" FILES_MATCHING PATTERN "*")
+	file(COPY "${libobs_SOURCE_DIR}/deps/" DESTINATION "deps" FILES_MATCHING PATTERN "*")
+	INCLUDE_DIRECTORIES("${LIBOBS_INCLUDE_DIRS}/")
+else()
+	SET(PATH_OBS_STUDIO "" CACHE PATH "OBS Studio Source Code Directory")
+	if(PATH_OBS_STUDIO STREQUAL "")
+		message(FATAL_ERROR "PATH_OBS_STUDIO not set!")
+		return()
+	endif()
+	if(NOT EXISTS "${PATH_OBS_STUDIO}/libobs/obs-module.h")
+		message(FATAL_ERROR "PATH_OBS_STUDIO is invalid!")
+		return()
+	endif()
+
+	SET(obsPath "${PATH_OBS_STUDIO}")
+	INCLUDE("${PATH_OBS_STUDIO}/cmake/external/Findlibobs.cmake")
+	INCLUDE_DIRECTORIES("${PATH_OBS_STUDIO}/")
+endif()
+
+
+# Distribute format
+SET(DISTRIBUTE_PATH "${PROJECT_BINARY_DIR}/distribute/slobs")
+SET(DISTRIBUTE_PATH_BIN "obs-plugins")
+add_definitions(-DSLOBS_BUILD)
+
+
 
 ################################################################################
 # Setup
@@ -140,53 +201,52 @@ SET(smll_HEADERS
 	"${SMLLDir}/Common.hpp"
 	"${SMLLDir}/Config.hpp"
 	"${SMLLDir}/DetectionResults.hpp"
-	"${SMLLDir}/DLibImageWrapper.hpp"
 	"${SMLLDir}/Face.hpp"
 	"${SMLLDir}/FaceDetector.hpp"
-	"${SMLLDir}/Kalman.hpp"
 	"${SMLLDir}/ImageWrapper.hpp"
 	"${SMLLDir}/landmarks.hpp"
 	"${SMLLDir}/MorphData.hpp"
-	"${SMLLDir}/OBSFont.hpp"
 	"${SMLLDir}/OBSRenderer.hpp"
 	"${SMLLDir}/OBSTexture.hpp"
 	"${SMLLDir}/sarray.hpp"
-	"${SMLLDir}/TextShaper.hpp"
 	"${SMLLDir}/TriangulationResult.hpp"
+	"${SMLLDir}/TestingPipe.hpp"
 	"${SMLLDir}/SingleValueKalman.hpp"
+	"${SMLLDir}/Kalman.hpp"
 )
 SET(gs_HEADERS
-	"${PROJECT_SOURCE_DIR}/gs-effect.h"
-	"${PROJECT_SOURCE_DIR}/gs-vertex.h"
-	"${PROJECT_SOURCE_DIR}/gs-vertexbuffer.h"
-	"${PROJECT_SOURCE_DIR}/gs-indexbuffer.h"
-	"${PROJECT_SOURCE_DIR}/gs-rendertarget.h"
-	"${PROJECT_SOURCE_DIR}/gs-texture.h"
+	"${PROJECT_SOURCE_DIR}/gs/gs-effect.h"
+	"${PROJECT_SOURCE_DIR}/gs/gs-vertex.h"
+	"${PROJECT_SOURCE_DIR}/gs/gs-vertexbuffer.h"
+	"${PROJECT_SOURCE_DIR}/gs/gs-indexbuffer.h"
+	"${PROJECT_SOURCE_DIR}/gs/gs-rendertarget.h"
+	"${PROJECT_SOURCE_DIR}/gs/gs-texture.h"
 )
 SET(mask_HEADERS
-	"${PROJECT_SOURCE_DIR}/mask.h"
-	"${PROJECT_SOURCE_DIR}/mask-instance-data.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource-animation.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource-image.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource-sequence.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource-effect.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource-light.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource-material.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource-mesh.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource-model.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource-morph.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource-skinned-model.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource-sound.h"
-	"${PROJECT_SOURCE_DIR}/mask-resource-emitter.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-instance-data.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-animation.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-image.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-sequence.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-effect.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-light.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-material.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-mesh.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-model.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-morph.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-skinned-model.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-sound.h"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-emitter.h"
 )
 SET(facemask-plugin_HEADERS
-	"${PROJECT_SOURCE_DIR}/base64.h"
-	"${PROJECT_SOURCE_DIR}/exceptions.h"
-	"${PROJECT_SOURCE_DIR}/face-mask-filter.h"
-	"${PROJECT_SOURCE_DIR}/plugin.h"
-	"${PROJECT_SOURCE_DIR}/strings.h"
-	"${PROJECT_SOURCE_DIR}/utils.h"
+	"${PROJECT_SOURCE_DIR}/plugin/base64.h"
+	"${PROJECT_SOURCE_DIR}/plugin/exceptions.h"
+	"${PROJECT_SOURCE_DIR}/plugin/face-mask-filter.h"
+	"${PROJECT_SOURCE_DIR}/plugin/plugin.h"
+
+	"${PROJECT_SOURCE_DIR}/plugin/strings.h"
+	"${PROJECT_SOURCE_DIR}/plugin/utils.h"
 	"${PROJECT_BINARY_DIR}/version.h"
 	"${TINYOBJDir}/tiny_obj_loader.h"
 	"${gs_HEADERS}"
@@ -198,50 +258,61 @@ SET(smll_SOURCES
 	"${SMLLDir}/DetectionResults.cpp"
 	"${SMLLDir}/Face.cpp"
 	"${SMLLDir}/FaceDetector.cpp"
-	"${SMLLDir}/OBSFont.cpp"
 	"${SMLLDir}/OBSRenderer.cpp"
 	"${SMLLDir}/ImageWrapper.cpp"
 	"${SMLLDir}/landmarks.cpp"
 	"${SMLLDir}/MorphData.cpp"
-	"${SMLLDir}/TextShaper.cpp"
 	"${SMLLDir}/TriangulationResult.cpp"
+	"${SMLLDir}/TestingPipe.cpp"
 	"${SMLLDir}/SingleValueKalman.cpp"
 )
 SET(gs_SOURCES
-	"${PROJECT_SOURCE_DIR}/gs-effect.cpp"
-	"${PROJECT_SOURCE_DIR}/gs-indexbuffer.cpp"
-	"${PROJECT_SOURCE_DIR}/gs-vertexbuffer.cpp"
-	"${PROJECT_SOURCE_DIR}/gs-rendertarget.cpp"
-	"${PROJECT_SOURCE_DIR}/gs-texture.cpp"
+	"${PROJECT_SOURCE_DIR}/gs/gs-effect.cpp"
+	"${PROJECT_SOURCE_DIR}/gs/gs-indexbuffer.cpp"
+	"${PROJECT_SOURCE_DIR}/gs/gs-vertexbuffer.cpp"
+	"${PROJECT_SOURCE_DIR}/gs/gs-rendertarget.cpp"
+	"${PROJECT_SOURCE_DIR}/gs/gs-texture.cpp"
 )
 SET(mask_SOURCES
-	"${PROJECT_SOURCE_DIR}/mask.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource-animation.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource-image.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource-sequence.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource-effect.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource-light.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource-material.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource-mesh.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource-model.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource-morph.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource-skinned-model.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource-sound.cpp"
-	"${PROJECT_SOURCE_DIR}/mask-resource-emitter.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-animation.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-image.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-sequence.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-effect.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-light.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-material.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-mesh.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-model.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-morph.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-skinned-model.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-sound.cpp"
+	"${PROJECT_SOURCE_DIR}/mask/mask-resource-emitter.cpp"
 )
 SET(facemask-plugin_SOURCES
-	"${PROJECT_SOURCE_DIR}/base64.cpp"
-	"${PROJECT_SOURCE_DIR}/exceptions.cpp"
-	"${PROJECT_SOURCE_DIR}/face-mask-filter.cpp"
-	"${PROJECT_SOURCE_DIR}/plugin.cpp"
-	"${PROJECT_SOURCE_DIR}/utils.cpp"
+	"${PROJECT_SOURCE_DIR}/plugin/base64.cpp"
+	"${PROJECT_SOURCE_DIR}/plugin/exceptions.cpp"
+	"${PROJECT_SOURCE_DIR}/plugin/face-mask-filter.cpp"
+	"${PROJECT_SOURCE_DIR}/plugin/plugin.cpp"
+	"${PROJECT_SOURCE_DIR}/plugin/utils.cpp"
 	"${TINYOBJDir}/tiny_obj_loader.cc"
 	"${gs_SOURCES}"
 	"${mask_SOURCES}"
 	"${smll_SOURCES}"
 	"${freetype_SOURCES}"
 )
+if(BUILD_UNIT_TESTS)
+	SET(facemask-plugin_TEST_SOURCES
+		"${PROJECT_SOURCE_DIR}/test/test.cpp"
+		"${PROJECT_SOURCE_DIR}/test/test-utils.cpp"
+		"${PROJECT_SOURCE_DIR}/test/test-image.cpp"
+		"${PROJECT_SOURCE_DIR}/test/test-base64.cpp"
+		"${PROJECT_SOURCE_DIR}/plugin/base64.cpp"
+		"${PROJECT_SOURCE_DIR}/plugin/exceptions.cpp"
+		"${PROJECT_SOURCE_DIR}/plugin/utils.cpp"
+		"${SMLLDir}/ImageWrapper.cpp"
+	)
+endif()
 SET(facemask-plugin_DATA
 	"${PROJECT_SOURCE_DIR}/data/effects/color_alpha_tex.effect"
 	"${PROJECT_SOURCE_DIR}/data/effects/color_conversion.effect"
@@ -249,20 +320,23 @@ SET(facemask-plugin_DATA
 	"${PROJECT_SOURCE_DIR}/data/effects/denoise.effect"
 	"${PROJECT_SOURCE_DIR}/data/effects/merge.effect"
 	"${PROJECT_SOURCE_DIR}/data/effects/phong.effect"
+	"${PROJECT_SOURCE_DIR}/data/effects/aa.effect"
 	"${PROJECT_SOURCE_DIR}/data/locale/en-US.ini"
 )
 SET(facemask-plugin_LIBRARIES
-	dlib::dlib
 	${OpenCV_LIBS}
 	avrt.lib
 	Shlwapi.lib
 )
 
+
+
 INCLUDE_DIRECTORIES(
 	"${PROJECT_BINARY_DIR}"
 	"${PROJECT_SOURCE_DIR}"
-	"${PATH_OBS_STUDIO}/"
 )
+
+
 
 source_group("Data Files" FILES ${facemask-plugin_DATA})
 source_group("Plugin\\Headers" FILES ${facemask-plugin_HEADERS})
@@ -277,6 +351,8 @@ source_group("Mask\\Sources" FILES ${mask_SOURCES})
 
 # Compiler Configuration
 add_definitions(-D_CRT_SECURE_NO_WARNINGS) # Hide Microsofts insecurities
+add_definitions(-DUNICODE -D_UNICODE)      # Use Unicode Charset
+add_definitions(-D_DISABLE_EXTENDED_ALIGNED_STORAGE) # To supress aligned storage error from Visual Studio 15.8 
 ## All Warnings, Extra Warnings, Pedantic
 if (MSVC)
 	if(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
@@ -291,23 +367,80 @@ endif()
 ################################################################################
 # Building
 ################################################################################
-ADD_LIBRARY(facemask-plugin MODULE
-	${facemask-plugin_HEADERS}
+add_library(facemask-plugin-objlib OBJECT 
+    ${facemask-plugin_HEADERS}
 	${facemask-plugin_SOURCES}
 	${facemask-plugin_DATA}
 )
-TARGET_LINK_LIBRARIES(facemask-plugin
-	${LIBOBS_LIBRARIES}
-	${facemask-plugin_LIBRARIES}
-)
+
+set_property(TARGET facemask-plugin-objlib PROPERTY POSITION_INDEPENDENT_CODE 1)
+
+if (BUILD_FOR_PUBLIC)
+	ADD_LIBRARY(facemask_AVX MODULE 
+		"${PROJECT_SOURCE_DIR}/smll/DetectionFunctions.cpp")
+		
+	ADD_LIBRARY(facemask_NO_AVX MODULE
+		"${PROJECT_SOURCE_DIR}/smll/DetectionFunctions.cpp")
+	
+	ADD_LIBRARY(facemask-plugin MODULE $<TARGET_OBJECTS:facemask-plugin-objlib>)
+
+else()
+	add_library(facemask-plugin MODULE $<TARGET_OBJECTS:facemask-plugin-objlib>)
+
+endif()
+
+if (BUILD_FOR_PUBLIC)
+	TARGET_LINK_LIBRARIES(facemask_AVX
+		${facemask-plugin_LIBRARIES}
+		dlib::dlib
+	)
+	
+	TARGET_LINK_LIBRARIES(facemask_NO_AVX
+		${facemask-plugin_LIBRARIES}
+		dlib::dlib_NO_AVX
+	)
+	
+	TARGET_LINK_LIBRARIES(facemask-plugin ${LIBOBS_LIBRARIES}
+		${facemask-plugin_LIBRARIES}
+		dlib::dlib_NO_AVX
+	)
+else()
+
+	TARGET_LINK_LIBRARIES(facemask-plugin
+		${LIBOBS_LIBRARIES}
+		${facemask-plugin_LIBRARIES}
+		dlib::dlib
+	)
+	
+endif()
+
+if(BUILD_UNIT_TESTS)
+	add_executable(facemask-plugin-test
+		${facemask-plugin_TEST_SOURCES}
+	)
+	TARGET_LINK_LIBRARIES(facemask-plugin-test
+		${facemask-plugin_LIBRARIES} CppUTest
+	)
+endif()	
+
+
+if(MSVC)
+	target_compile_definitions(facemask-plugin
+		PRIVATE _ENABLE_EXTENDED_ALIGNED_STORAGE
+	)
+endif()
 
 ################################################################################
 # Installation / Distribution
 ################################################################################
 
-
 add_custom_command(TARGET facemask-plugin POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_directory
+	"${PROJECT_SOURCE_DIR}/data"
+	"${DISTRIBUTE_PATH}/$<CONFIG>/data/obs-plugins/facemask-plugin"
+)
+add_custom_command(TARGET facemask-plugin POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy
 	"${PROJECT_SOURCE_DIR}/data"
 	"${DISTRIBUTE_PATH}/$<CONFIG>/data/obs-plugins/facemask-plugin"
 )
@@ -321,3 +454,33 @@ add_custom_command(TARGET facemask-plugin POST_BUILD
 	"$<TARGET_FILE_DIR:facemask-plugin>/facemask-plugin.pdb"
 	"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/facemask-plugin.pdb"
 )
+add_custom_command(TARGET facemask-plugin POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy
+	"${PROJECT_SOURCE_DIR}/package.json"
+	"${PROJECT_BINARY_DIR}/distribute/package.json"
+)
+
+if (BUILD_FOR_PUBLIC)
+	add_custom_command(TARGET facemask_AVX POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy
+		"$<TARGET_FILE:facemask_AVX>"
+		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/$<TARGET_FILE_NAME:facemask_AVX>"
+	)
+	add_custom_command(TARGET facemask_AVX POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy
+		"$<TARGET_FILE_DIR:facemask-plugin>/facemask_AVX.pdb"
+		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/facemask_AVX.pdb"
+	)
+	add_custom_command(TARGET facemask_NO_AVX POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy
+		"$<TARGET_FILE:facemask_NO_AVX>"
+		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/$<TARGET_FILE_NAME:facemask_NO_AVX>"
+	)
+	add_custom_command(TARGET facemask_NO_AVX POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy
+		"$<TARGET_FILE_DIR:facemask-plugin>/facemask_NO_AVX.pdb"
+		"${DISTRIBUTE_PATH}/$<CONFIG>/${DISTRIBUTE_PATH_BIN}/facemask_NO_AVX.pdb"
+	)	
+endif()
+
+

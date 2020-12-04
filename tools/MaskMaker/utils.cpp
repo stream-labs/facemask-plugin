@@ -46,7 +46,8 @@ static const vector<string> g_defaultResources = {
 	"meshHead",
 
 	"effectDefault",
-	"effectPhong"
+	"effectPhong",
+	"PBR"
 };
 
 namespace Utils {
@@ -170,7 +171,34 @@ namespace Utils {
 	}
 
 	bool is_default_resource(string name) {
-		return (find(g_defaultResources.begin(), g_defaultResources.end(), name) != g_defaultResources.end());
+		bool is_default = (find(g_defaultResources.begin(), g_defaultResources.end(), name) != g_defaultResources.end());
+
+		string templates_path = "templates.json";
+
+		// read resource file
+		fstream ff(templates_path, ios::in);
+		if (!ff.good()) {
+			ff.open(templates_path, ios::in);
+			if (!ff.good()) {
+				return is_default;
+			}
+		}
+		json j;
+		ff >> j;
+		ff.close();
+
+		// Check IBLs in templates as well
+		json ibls = j["ibl"];
+
+		for (auto it = ibls.begin(); it != ibls.end(); it++)
+		{
+			auto val = it.value();
+			is_default = is_default || (name == val["specular"]);
+			is_default = is_default || (name == val["diffuse"]);
+			is_default = is_default || (name == val["brdf"]);
+		}
+
+		return is_default;
 	}
 
 	bool resource_exists(const json& j, string name, string type) {

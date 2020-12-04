@@ -26,7 +26,7 @@ namespace smll {
 
 typedef enum ImageType
 {
-	IMAGETYPE_LUMA,
+	IMAGETYPE_GRAY,
 	IMAGETYPE_RGB,
 	IMAGETYPE_BGR,
 	IMAGETYPE_RGBA,
@@ -61,8 +61,6 @@ public:
 	int		getNumElems() const;
 
 	// Intel IPP wrappers
-	void	ResizeTo(ImageWrapper& other) const;
-	void	ColorConvertTo(ImageWrapper& other) const;
 	void	CopyTo(ImageWrapper& other) const;
 
 	void    AlignedAlloc();

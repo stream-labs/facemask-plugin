@@ -39,20 +39,8 @@ namespace smll {
 	static std::vector<FaceContour>	g_face_contours;
 	static std::vector<FaceArea>	g_face_areas;
 	static std::vector<cv::Point3f>	g_5_landmark_points;
-	 
-	std::vector<cv::Point3f>&	GetFiveLandmarkPoints() {
-		if (g_5_landmark_points.size() == 0) {
-			// same MEL code as below
-			g_5_landmark_points.push_back(cv::Point3f(2.379f, -1.67f, 2.1f));  //landmark0
-			g_5_landmark_points.push_back(cv::Point3f(0.955f, -1.581f, 2.1f));  //landmark1
-			g_5_landmark_points.push_back(cv::Point3f(-2.379f, -1.67f, 2.1f));  //landmark2
-			g_5_landmark_points.push_back(cv::Point3f(-0.955f, -1.581f, 2.1f));  //landmark3
-			g_5_landmark_points.push_back(cv::Point3f(0.0f, 0.7203533372f, 0.8644320921f));  //landmark4
-		}
-		return g_5_landmark_points;
-	}
-
-	std::vector<cv::Point3f>&	GetLandmarkPoints() {
+	
+	void GetLandmarkPoints() {
 		if (g_landmark_points.size() == 0) {
 			/* This code was generated using the landmarks.ma Maya file (in the tools folder), and the
 			   following MEL code:
@@ -183,7 +171,6 @@ namespace smll {
 			g_landmark_points.push_back(cv::Point3f(-8.881784197e-016f, -7.151991675f, 4.796727772f));  //landmark92
 			g_landmark_points.push_back(cv::Point3f(0.9454320571f, -7.183477499f, 5.25124897f));  //landmark93
 		}
-		return g_landmark_points;
 	}
 
 	std::vector<cv::Point3f> GetLandmarkPoints(const std::vector<int>& indices)	{
@@ -505,6 +492,4 @@ namespace smll {
 		GetFaceAreas();
 		return g_face_areas[which];
 	}
-
-
 }

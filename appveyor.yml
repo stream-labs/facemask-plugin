@@ -1,0 +1,61 @@
+matrix:
+  fast_finish: true
+
+image:
+  - Visual Studio 2017
+
+platform: x64
+
+environment:
+  SignTool: C:\Program Files (x86)\Windows Kits\10\bin\x64\signtool.exe
+  StreamlabsPfxSecret:
+    secure: iZlMSWnmH5FQDpa+/0SgXIyvCobkElj2y5lu94Uo8VnTWHTeTC1/bpVkzsLreENocomvDB5ywsa3+QdathRp8A==
+  StreamlabsSecret:
+    secure: hr+VpykbGiCI5I0ltiqH667wh/YQx2Fi5SBLfkOWHSg=
+  LibobsFileURL: 'https://s3-us-west-2.amazonaws.com/obsstudios3.streamlabs.com/libobs-release-23.0.0-sl.343-win32-x64.7z'
+  LibobsFile: "LibOBS-Release"
+
+clone_folder: c:\projects\source
+
+install:
+  - git submodule update --init --recursive
+  - mkdir build
+  - cd build
+  - ps: Start-FileDownload $env:LibobsFileURL -FileName $env:LibobsFile
+  - 7z x %LibobsFile% -oc:\projects\source\build\ -r
+  - ps: $env:SignedArtifact = "facemask-plugin-$(git describe --tags --abbrev=0)"
+  - ps: $env:UnsignedArtifact = "facemask-plugin-$env:APPVEYOR_BUILD_NUMBER"
+
+build_script:
+  - ps: $env:FM_PLUGIN_APPVEYOR_BUILD=1
+  - cmd: cmake c:\projects\source -G "Visual Studio 15 Win64"
+  - cmd: cmake --build . --config RelWithDebInfo
+
+after_build:
+- cmd: tar cvaf "%UnsignedArtifact%.tar.gz" "distribute/slobs/RelWithDebInfo" 
+
+before_deploy:
+- tar cvaf "%SignedArtifact%.tar.gz" "distribute"
+- ps: Push-AppveyorArtifact "$env:SignedArtifact.tar.gz"
+
+test_script:
+- cmd: RelWithDebInfo\facemask-plugin-test.exe
+
+
+deploy:
+  - provider: S3
+    access_key_id:
+      secure: DkIi00e8MRVWju/XQg+Fmq0NJ/8cYVd1oacrWtd9tMA=
+    secret_access_key:
+      secure: 1i22R8r4wlVkxV/5KDQ+mbbyUFFPZvVdElTti/VN4bdKTHtvjV62kxVMQeBPFNl0
+    bucket: faces-internal.streamlabs.com
+    folder: facemask-plugin-deployment
+    region: us-west-2
+    set_public: true
+    artifact: $(SignedArtifact).tar.gz
+    on:
+      appveyor_repo_tag: true
+
+artifacts:
+  - path: $(UnsignedArtifact).tar.gz
+    name: Unsigned Artifact

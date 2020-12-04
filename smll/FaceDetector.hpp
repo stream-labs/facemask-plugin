@@ -44,6 +44,13 @@
 #include <dlib/image_processing/frontal_face_detector.h>
 #include <dlib/image_processing.h>
 #include <libobs/graphics/graphics.h>
+#include "OBSRenderer.hpp"
+#include <libobs/obs-module.h>
+#include <dlib/opencv.h>
+#include <vector>
+#include <codecvt>
+#include <opencv2/opencv.hpp>
+#include <windows.h>
 #pragma warning( pop )
 
 namespace smll {
@@ -56,9 +63,10 @@ public:
 	FaceDetector();
 	~FaceDetector();
 
-	void DetectFaces(const ImageWrapper& detect, const OBSTexture& capture, DetectionResults& results);
-	void DetectLandmarks(const OBSTexture& capture, DetectionResults& results);
+	void DetectFaces(const OBSTexture& capture, int w, int h, DetectionResults& results);
+	void DetectLandmarks(DetectionResults& results);
 	void DoPoseEstimation(DetectionResults& results);
+	void ResetFaces();
 
 	void MakeTriangulation(MorphData& morphData, DetectionResults& results, 
 		TriangulationResult& result);
@@ -71,26 +79,19 @@ public:
 	}
 
 private:
-
+	dlib::full_object_detection d68;
 	// Saved Faces
 	Faces			m_faces;
 
 	// Saved Poses
 	ThreeDPoses		m_poses;
 
-	// Image Buffers
-	OBSTexture		m_capture;
-	ImageWrapper	m_detect;
-
-	// For staging the capture texture
-	gs_stagesurf_t* m_captureStage;
-	int				m_stageSize;
-	ImageWrapper	m_stageWork;
-
 	// Face detection timeouts
-	int				m_timeout;
     int             m_trackingTimeout;
     int             m_detectionTimeout;
+	int				resizeWidth;
+	int				resizeHeight;
+	int count;
 
 	// Tracking time-slicer
 	int				m_trackingFaceIndex;
@@ -98,8 +99,7 @@ private:
 	// dlib HOG face detector
 	dlib::frontal_face_detector		m_detector;
 
-	// dlib landmark predictors (5 and 68 point)
-	//dlib::shape_predictor			m_predictor5;
+	// dlib landmark predictors (68 point)
 	dlib::shape_predictor			m_predictor68;
 
 	// openCV camera (saved for convenience)
@@ -114,12 +114,55 @@ private:
 	std::vector<LandmarkBitmask>	m_vtxBitmaskLookup;
 	void							MakeVtxBitmaskLookup();
 
+	bool loaded;
+	bool avx;
+	HINSTANCE hGetProcIDDLL;
+
+	bool is_avx();
+	void load_dll();
+
 	// Main methods
     void    DoFaceDetection();
     void    StartObjectTracking();
     void    UpdateObjectTracking();
+	
+	struct CropInfo {
+		int x, y;
+		int width, height;
+		int offsetX, offsetY;
 
-	// Staging the capture texture
+		CropInfo(int x, int y, int width, int height) :
+			x(x), y(y), width(width), height(height) {
+			// Cropping Offset
+			offsetX = x - width / 2;
+			offsetY = y - height / 2;
+		}
+	};
+	CropInfo    cropInfo;
+	CropInfo	GetCropInfo();
+	void		SetCropInfo(DetectionResults& results);
+	// Current Image
+	cv::Mat grayImage;
+	cv::Mat currentImage;
+	cv::Mat currentOrigImage;
+	void computeCurrentImage(DetectionResults& results);
+	void addFaceRectangles(DetectionResults& results);
+	void computeDifference(DetectionResults& results);
+
+	cv::Mat prevImage;
+	cv::Mat diffImage;
+	cv::Mat diff;
+	bool isPrevInit;
+
+	// Image Buffers	
+	OBSTexture		m_capture;
+
+	// For staging the capture texture	
+	gs_stagesurf_t* m_captureStage;
+	int				m_stageSize;
+	ImageWrapper	m_stageWork;
+
+	// Staging the capture texture	
 	void 	StageCaptureTexture();
 	void 	UnstageCaptureTexture();
 

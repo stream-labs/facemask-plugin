@@ -32,12 +32,12 @@
 #include <libobs/graphics/graphics.h>
 #pragma warning( pop )
 
-
 #include "OBSTexture.hpp"
-#include "OBSFont.hpp"
 #include "ImageWrapper.hpp"
 #include "FaceDetector.hpp"
 #include "DetectionResults.hpp"
+
+#include "mask/mask-resource.h"
 
 namespace smll {
 
@@ -45,8 +45,8 @@ namespace smll {
 	class OBSRenderer 
 	{
 	public:
-
-		OBSRenderer();
+		using Cache = Mask::Resource::Cache;
+		OBSRenderer(Cache *cache);
 		~OBSRenderer();
 
 		void	SetDrawColor(unsigned char red, 
@@ -66,9 +66,8 @@ namespace smll {
 		void    DestroyVertexBufffer(int which);
 
 		void	DrawFaces(const DetectionResults& faces);
-		void	DrawLandmarks(const dlib::point* points, uint8_t r, 
-			uint8_t g, uint8_t b);
-		void	DrawRect(const dlib::rectangle& r);
+		void	DrawLandmarks(const dlib::point* points, bool * checklist);
+		void	DrawRect(const dlib::rectangle& r, int width = 1);
 
 		void    DrawGlasses(const DetectionResult& face, int texture);
 		void    DrawMask(const DetectionResult& face, int texture);
@@ -83,10 +82,6 @@ namespace smll {
 			gs_texrender_t* texrender, int width, int height);
 
 		void						SetTransform(const DetectionResult& face);
-
-		// Text rendering
-		gs_texture*		RenderTextToTexture(const std::vector<std::string>& lines,
-			int tex_width, int tex_height, OBSFont* font);
 
 	private:
 
@@ -104,8 +99,12 @@ namespace smll {
 
 		gs_texrender_t*				drawTexRender;
 
+		//color vector
+		struct vec4					veccol;
 		void						drawLines(const dlib::point* points,
 			int start, int end, bool closed = false);
+		void						drawPoints(const dlib::point* points,
+			int start, int end, bool * checklist);
 		void						drawLine(const dlib::point* points,
 			int start, int end);
 	};

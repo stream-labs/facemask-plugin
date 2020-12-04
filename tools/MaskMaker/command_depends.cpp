@@ -59,13 +59,13 @@ void command_depends(Args& args) {
 	map<string, string> textureFiles;
 	for (unsigned int i = 0; i < scene->mNumMaterials; i++) {
 		string imgfile;
-		PRINTTEXTURE(aiTextureType_AMBIENT);
-		PRINTTEXTURE(aiTextureType_DIFFUSE);
-		PRINTTEXTURE(aiTextureType_SPECULAR);
-		PRINTTEXTURE(aiTextureType_EMISSIVE);
-		PRINTTEXTURE(aiTextureType_HEIGHT);
-		PRINTTEXTURE(aiTextureType_NORMALS);
-		PRINTTEXTURE(aiTextureType_LIGHTMAP);
-		PRINTTEXTURE(aiTextureType_REFLECTION);
+		PRINTTEXTURE(aiTextureType_AMBIENT());
+		PRINTTEXTURE(aiTextureType_DIFFUSE());
+		PRINTTEXTURE(aiTextureType_SPECULAR());
+		PRINTTEXTURE(aiTextureType_EMISSIVE());
+		PRINTTEXTURE(aiTextureType_HEIGHT());
+		PRINTTEXTURE(aiTextureType_NORMALS());
+		PRINTTEXTURE(aiTextureType_LIGHTMAP());
+		PRINTTEXTURE(aiTextureType_REFLECTION());
 	}
 }
