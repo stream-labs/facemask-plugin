@@ -1699,6 +1699,9 @@ Plugin::FaceMaskFilter::Instance::LoadMask(std::string filename) {
 		mdat->Load(filename);
 		PLOG_INFO("Loading mask '%s' successful!", filename.c_str());
 	}
+	catch(std::exception &e) {
+		PLOG_ERROR("Failed to load mask %s. Exception: %s", filename.c_str(), e.what());
+	}
 	catch (...) {
 		PLOG_ERROR("Failed to load mask %s.", filename.c_str());
 	}
